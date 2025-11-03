@@ -92,17 +92,14 @@ $(OBJ_DIR_TEST)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	@$(call MKDIR,$(dir $@))
 	$(CC) $(CFLAGS_TEST) -c $< -o $@
 
-# Compile test source files
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp $(HEADERS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -c $< -o $@
 
-# Compile Catch2 itself
 $(CATCH_OBJ): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -c $< -o $@
 
-# Link all test objects into the test binary
 $(TEST_BIN): $(CATCH_OBJ) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -o $@ $^

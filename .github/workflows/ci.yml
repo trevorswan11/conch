@@ -55,7 +55,9 @@ jobs:
           msystem: UCRT64
           install: >-
             clang
-            make
+            mingw-w64-ucrt-x86_64-clang
+            mingw-w64-ucrt-x86_64-clang-tools-extra
+            mingw-w64-ucrt-x86_64-make
 
       - name: Fix make alias (Windows)
         if: runner.os == 'Windows'
