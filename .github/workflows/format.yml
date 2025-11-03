@@ -1,0 +1,38 @@
+name: Formatting
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - '.github/workflows/format.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - '.github/workflows/format.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang-format make
+
+      - name: Check formatting
+        run: make fmt-check
