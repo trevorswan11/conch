@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 typedef uint64_t Hash;
-typedef uint32_t Size;
 
 // Metadata for a slot. It can be in three states: empty, used or
 // tombstone. Tombstones indicate that an entry was previously used.
@@ -59,22 +58,47 @@ typedef struct {
 } Entry;
 
 typedef struct {
-    void* keys;
-    void* values;
-    Size  capacity;
+    void*  keys;
+    size_t key_size;
+    size_t key_align;
+
+    void*  values;
+    size_t value_size;
+    size_t value_align;
+
+    size_t capacity;
 } Header;
 
-/// A HashMap based on open addressing and linear probing.
+// A HashMap based on open addressing and linear probing.
 typedef struct {
-    Size      size;
-    Size      available;
+    size_t    size;
+    size_t    available;
     void*     buffer;
     Header*   header;
     Entry*    entries;
     Metadata* metadata;
+
+    Hash (*hash)(const void*);
+    int (*compare)(const void*, const void*);
 } HashMap;
 
-static const uint64_t MAX_LOAD_PERCENTAGE = 80;
-static const Size     MINIMUM_CAPACITY    = 8;
+static const size_t MAX_LOAD_PERCENTAGE = 80;
+static const size_t MINIMUM_CAPACITY    = 8;
 
-bool hash_map_init(HashMap* hm);
+// Creates a HashMap with the given properties.
+//
+// `compare` must be a function pointer for keys such that:
+// - If the first element is larger, return a positive integer
+// - If the second element is larger, return a negative integer
+// - If the elements are equal, return 0
+//
+// `hash` is a user defined function pointer for hashing keys.
+bool hash_map_init(HashMap* hm,
+                   size_t   capacity,
+                   size_t   key_size,
+                   size_t   key_align,
+                   size_t   value_size,
+                   size_t   value_align,
+                   Hash (*hash)(const void*),
+                   int (*compare)(const void*, const void*));
+void hash_map_deinit(HashMap* hm);

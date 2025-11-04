@@ -4,6 +4,10 @@
 #include <string.h>
 
 #include "util/array_list.h"
+#include "util/math.h"
+#include "util/mem.h"
+
+MAX_FN(size_t, size_t)
 
 bool array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
     void* data = malloc(capacity * item_size);
@@ -53,22 +57,16 @@ bool array_list_resize(ArrayList* a, size_t new_capacity) {
     return true;
 }
 
-#undef max
-static inline size_t max(size_t a, size_t b) {
-    return (a > b) ? a : b;
-}
-
 // Gets a pointer to the without performing safety checks.
 static inline void* array_list_get_unsafe(ArrayList* a, size_t index) {
-    // Casting to an 8 bit ptr is required since the compiler can't do pointer arithmetic on void*
-    return (uint8_t*)a->data + index * a->item_size;
+    return ptr_add(a->data, index * a->item_size);
 }
 
 bool array_list_push(ArrayList* a, void* item) {
     if (!a) {
         return false;
     } else if (a->length == a->capacity) {
-        if (!array_list_resize(a, max(a->capacity * 2, 4))) {
+        if (!array_list_resize(a, max_size_t(a->capacity * 2, 4))) {
             return false;
         }
     }
