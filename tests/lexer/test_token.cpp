@@ -1,9 +1,9 @@
-#include "test_framework/catch_amalgamated.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <string.h>
 
 extern "C" {
-#include "token/token.h"
+#include "lexer/token.h"
 }
 
 TEST_CASE("TokenType conversion") {

@@ -10,13 +10,15 @@ CXX ?= clang++
 
 DEPFLAGS = -MMD -MP
 INCLUDES := -I$(INC_DIR)
+TEST_INCLUDES := -I$(INC_DIR) -I$(TEST_DIR)/test_framework
 
-rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+rwildcard = $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
 SRCS := $(call rwildcard, $(SRC_DIR)/, *.c)
 HEADERS := $(wildcard $(INC_DIR)/*.h)
 
-TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)
+TEST_SRCS := $(filter-out $(TEST_DIR)/test_framework/catch_amalgamated.cpp, \
+             $(call rwildcard, $(TEST_DIR)/, *.cpp))
 TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
 TEST_BIN := $(BIN_ROOT)/tests/run_tests$(EXE)
 
@@ -86,7 +88,7 @@ CFLAGS_TEST := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic $(INCLUDES) $(DEPFL
 TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
 CATCH_OBJ := $(BUILD_DIR)/tests/catch_amalgamated.o
 LIB_OBJS_FOR_TESTS := $(filter-out $(OBJ_DIR_TEST)/main.o,$(OBJS_TEST))
-CXXFLAGS_TEST = -std=c++20 -O2 -Wall -Wextra $(INCLUDES) $(DEPFLAGS) -DTEST
+CXXFLAGS_TEST = -std=c++20 -O2 -Wall -Wextra $(TEST_INCLUDES) $(DEPFLAGS) -DTEST
 
 $(OBJ_DIR_TEST)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	@$(call MKDIR,$(dir $@))

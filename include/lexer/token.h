@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "util/mem.h"
 
 typedef enum {
@@ -8,6 +10,7 @@ typedef enum {
     // Identifiers and literals
     IDENT,
     INT,
+    FLOAT,
 
     // Operators
     ASSIGN,
@@ -33,6 +36,7 @@ static const char* token_strings[ILLEGAL - END + 1] = {
     "EOF",
     "IDENT",
     "INT",
+    "FLOAT",
     "=",
     "+",
     ",",
@@ -57,28 +61,39 @@ static inline const char* string_from_token_type(TokenType t) {
 // Converts the provided char inot its token type representation.
 //
 // Tokens that cannot be represented by a single byte are considered ILLEGAL by this function.
-static inline TokenType token_type_from_char(char c) {
+// In this scenario, `false` is returned.
+static inline bool token_type_from_char(char c, TokenType* t) {
     switch (c) {
     case '=':
-        return ASSIGN;
+        *t = ASSIGN;
+        return true;
     case '+':
-        return PLUS;
+        *t = PLUS;
+        return true;
     case ',':
-        return COMMA;
+        *t = COMMA;
+        return true;
     case ';':
-        return SEMICOLON;
+        *t = SEMICOLON;
+        return true;
     case '(':
-        return LPAREN;
+        *t = LPAREN;
+        return true;
     case ')':
-        return RPAREN;
+        *t = RPAREN;
+        return true;
     case '{':
-        return LBRACE;
+        *t = LBRACE;
+        return true;
     case '}':
-        return RBRACE;
+        *t = RBRACE;
+        return true;
     case '\0':
-        return END;
+        *t = END;
+        return true;
     default:
-        return ILLEGAL;
+        *t = ILLEGAL;
+        return false;
     }
 }
 
