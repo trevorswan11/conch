@@ -69,11 +69,11 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           make clean
-          make test
+          make all test
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         run: |
           make clean
-          make test
+          make all test
         shell: msys2 {0}

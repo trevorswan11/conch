@@ -1,6 +1,6 @@
 IndentWidth: 4
 BreakBeforeBraces: Attach
-ColumnLimit: 80
+ColumnLimit: 100
 AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false

@@ -1,5 +1,5 @@
-#include "welcome.h"
+#include <stdio.h>
 
 int main(void) {
-    say_hi();
+    printf("Hello, World!\n");
 }
