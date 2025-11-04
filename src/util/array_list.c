@@ -60,8 +60,8 @@ static inline size_t max(size_t a, size_t b) {
 
 // Gets a pointer to the without performing safety checks.
 static inline void* array_list_get_unsafe(ArrayList* a, size_t index) {
-    // Casting to char* is required since the compiler can't do pointer arithmetic on void*
-    return (char*)a->data + index * a->item_size;
+    // Casting to an 8 bit ptr is required since the compiler can't do pointer arithmetic on void*
+    return (uint8_t*)a->data + index * a->item_size;
 }
 
 bool array_list_push(ArrayList* a, void* item) {

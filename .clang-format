@@ -20,3 +20,4 @@ Cpp11BracedListStyle: true
 PointerAlignment: Left
 AlwaysBreakAfterReturnType: None
 InsertNewlineAtEOF: true
+AlignConsecutiveBitFields: true
