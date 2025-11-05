@@ -89,8 +89,7 @@ coverage: $(COVERAGE_BIN)
 ifeq ($(OS),Windows_NT)
 	$(error Coverage is not supported on Windows)
 else
-	@export LLVM_PROFILE_FILE := $(BIN_DIR_COVERAGE)/default.profraw
-	@LLVM_PROFILE_FILE=$(LLVM_PROFILE_FILE) $(COVERAGE_BIN)
+	@LLVM_PROFILE_FILE=$(BIN_DIR_COVERAGE)/default.profraw $(COVERAGE_BIN)
 endif
 
 # ================ TESTING BUILD ================
@@ -186,7 +185,7 @@ $(OBJ_DIR_DEBUG)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 
 coverage-report: coverage
 	@mkdir -p coverage_report
-	@llvm-profdata merge -sparse $(LLVM_PROFILE_FILE) -o $(BIN_DIR_COVERAGE)/default.profdata
+	@llvm-profdata merge -sparse $(BIN_DIR_COVERAGE)/default.profdata -o $(BIN_DIR_COVERAGE)/default.profdata
 	@llvm-cov show $(COVERAGE_BIN) \
 	-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
 	-format=html \
