@@ -191,15 +191,14 @@ coverage-report: coverage
 		-format=html \
 		-output-dir=coverage_report \
 		-ignore-filename-regex='.*tests/.*'
-	@echo "Coverage report generated in coverage_report/"
 
 coverage-badge: coverage-report
-	@TOTAL_PERCENT=$$(llvm-cov report $(COVERAGE_BIN) \
+	@llvm-cov report $(COVERAGE_BIN) \
 		-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
-		-ignore-filename-regex='.*tests/.*' | awk '/TOTAL/ {gsub(/%/,""); print int($$NF)}'); \
+		-ignore-filename-regex='.*tests/.*' > coverage_summary.txt
+	@TOTAL_PERCENT=$$(awk '/TOTAL/ {gsub(/%/,""); print int($$NF)}' coverage_summary.txt); \
 	echo "Total coverage: $$TOTAL_PERCENT%"; \
 	curl -o coverage.svg "https://img.shields.io/badge/Coverage-$$TOTAL_PERCENT%25-pink"
-	@echo "Coverage badge generated as coverage.svg"
 
 ARGS ?=
 

@@ -1,18 +1,18 @@
 <h1 align="center">🐚conch🐚</h1>
 
-<p align="center">
+<p align="center" style="text-decoration: none">
     <img src="https://img.shields.io/badge/C-17-blue?logo=&logoColor=white" alt="C17" />
-    <a href="LICENSE">
+    <a href="LICENSE" style="text-decoration: none">
         <img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" />
     </a>
     <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" />
-    <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml">
+    <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml" style="text-decoration: none">
         <img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" />
     </a>
-    <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml">
+    <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml" style="text-decoration: none">
         <img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" />
     </a>
-    <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage.svg">
+    <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage.svg" style="text-decoration: none">
         <img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" />
     </a>
 </p>
