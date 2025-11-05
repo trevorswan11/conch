@@ -1,0 +1,40 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'feature/**'
+    paths:
+      - '.github/workflows/coverage.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+  pull_request:
+    branches:
+      - main
+      - dev
+      - 'feature/**'
+    paths:
+      - '.github/workflows/coverage.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang clang-format make
+
+      - name: Check formatting
+        run: make coverage

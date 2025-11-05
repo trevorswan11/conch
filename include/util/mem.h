@@ -45,8 +45,12 @@ static inline void* ptr_offset(void* p, size_t offset) {
 }
 
 static inline void swap(void* a, void* b, size_t size) {
-    char temp[size];
-    memcpy(temp, a, size);
-    memcpy(a, b, size);
-    memcpy(b, temp, size);
+    char* pa = (char*)a;
+    char* pb = (char*)b;
+
+    for (size_t i = 0; i < size; ++i) {
+        char temp = pa[i];
+        pa[i]     = pb[i];
+        pb[i]     = temp;
+    }
 }
