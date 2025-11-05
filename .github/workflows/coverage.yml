@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
-      - 'feature/**'
     paths:
       - '.github/workflows/coverage.yml'
       - 'src/**'
@@ -15,8 +13,6 @@ on:
   pull_request:
     branches:
       - main
-      - dev
-      - 'feature/**'
     paths:
       - '.github/workflows/coverage.yml'
       - 'src/**'
