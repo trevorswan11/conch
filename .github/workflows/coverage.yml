@@ -51,6 +51,7 @@ jobs:
           git reset --hard
           rm -rf bin build
           cp -r coverage_report/* .
+          rm -rf coverage_report
           git add .
           git commit -m "Update coverage report"
           git push -f origin coverage

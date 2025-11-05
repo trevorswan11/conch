@@ -193,9 +193,9 @@ coverage-report: coverage
 	@echo "Coverage report generated in coverage_report/"
 
 coverage-badge: coverage-report
-	@llvm-cov report $(COVERAGE_BIN) -instr-profile=$(BIN_DIR_COVERAGE)/default.profdata > coverage_summary.txt
-	@TOTAL_PERCENT=$$(awk '/TOTAL/ {gsub(/%/,""); print int($$NF)}' coverage_summary.txt);
-	echo "Total coverage: $$TOTAL_PERCENT%";
+	@llvm-cov report $(COVERAGE_BIN) -instr-profile=$(BIN_DIR_COVERAGE)/default.profdata > coverage_summary.txt; \
+	TOTAL_PERCENT=$$(awk '/TOTAL/ {gsub(/%/,""); print int($$NF)}' coverage_summary.txt); \
+	echo "Total coverage: $$TOTAL_PERCENT%"; \
 	curl -o coverage.svg "https://img.shields.io/badge/Coverage-$$TOTAL_PERCENT%25-brightgreen"
 	@echo "Coverage badge generated as coverage.svg"
 
