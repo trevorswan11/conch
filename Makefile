@@ -83,13 +83,13 @@ test: $(TEST_BIN)
 	@$(TEST_BIN)
 
 BIN_DIR_COVERAGE := $(BIN_ROOT)/coverage
-LLVM_PROFILE_FILE ?= $(BIN_DIR_COVERAGE)/default.profraw
 coverage: CC := clang
 coverage: CXX := clang++
 coverage: $(COVERAGE_BIN)
 ifeq ($(OS),Windows_NT)
 	$(error Coverage is not supported on Windows)
 else
+	@export LLVM_PROFILE_FILE := $(BIN_DIR_COVERAGE)/default.profraw
 	@LLVM_PROFILE_FILE=$(LLVM_PROFILE_FILE) $(COVERAGE_BIN)
 endif
 
@@ -193,6 +193,13 @@ coverage-report: coverage
 	-output-dir=coverage_report
 	@echo "Coverage report generated in coverage_report/"
 
+coverage-badge: coverage-report
+	@llvm-cov report $(COVERAGE_BIN) -instr-profile=$(BIN_DIR_COVERAGE)/default.profdata > coverage_summary.txt
+	@TOTAL_PERCENT=$$(awk '/TOTAL/ {gsub(/%/,""); print int($$NF)}' coverage_summary.txt);
+	echo "Total coverage: $$TOTAL_PERCENT%";
+	curl -o coverage.svg "https://img.shields.io/badge/Coverage-$$TOTAL_PERCENT%25-brightgreen"
+	@echo "Coverage badge generated as coverage.svg"
+
 ARGS ?=
 
 run: run-release
@@ -256,4 +263,5 @@ help              > Print this help menu\n\
 
 .PHONY: default install all dist release debug \
 		run run-dist run-release run-debug \
-		test coverage coverage-report clean fmt fmt-check help
+		test coverage coverage-report coverage-badge \
+		clean fmt fmt-check help

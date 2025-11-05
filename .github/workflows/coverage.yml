@@ -36,12 +36,12 @@ jobs:
           sudo apt update
           sudo apt install -y clang clang-format make lcov llvm llvm-dev
 
-      - name: Run coverage
+      - name: Run coverage report generator
         run: |
           make clean
-          make coverage-report
+          make coverage-badge
 
-      - name: Commit coverage report
+      - name: Commit coverage report & badge
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
