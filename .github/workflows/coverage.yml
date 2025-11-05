@@ -49,6 +49,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout --orphan coverage || git checkout coverage
           git reset --hard
+          rm -rf bin build
           cp -r coverage_report/* .
           git add .
           git commit -m "Update coverage report"

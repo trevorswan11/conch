@@ -185,7 +185,7 @@ $(OBJ_DIR_DEBUG)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 
 coverage-report: coverage
 	@mkdir -p coverage_report
-	@llvm-profdata merge -sparse $(BIN_DIR_COVERAGE)/default.profdata -o $(BIN_DIR_COVERAGE)/default.profdata
+	@llvm-profdata merge -sparse $(BIN_DIR_COVERAGE)/default.profraw -o $(BIN_DIR_COVERAGE)/default.profdata
 	@llvm-cov show $(COVERAGE_BIN) \
 	-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
 	-format=html \
