@@ -59,7 +59,7 @@ bool array_list_resize(ArrayList* a, size_t new_capacity) {
 
 // Gets a pointer to the without performing safety checks.
 static inline void* array_list_get_unsafe(ArrayList* a, size_t index) {
-    return ptr_add(a->data, index * a->item_size);
+    return ptr_offset(a->data, index * a->item_size);
 }
 
 bool array_list_push(ArrayList* a, void* item) {

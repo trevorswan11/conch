@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 // Creates a `max` function for the type `T` which must implicitly be castable from `VA_ARG_TYPE`.
@@ -23,3 +24,21 @@
         va_end(args);                            \
         return max_val;                          \
     }
+
+// Rounds up to the next power of two after the provided 32 bit integer.
+//
+// https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+uint32_t ceil_power_of_two_32(uint32_t n);
+
+// Rounds up to the next power of two after the provided 64 bit integer.
+//
+// https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+uint64_t ceil_power_of_two_64(uint64_t n);
+
+// Checks if the provided size is a power of two.
+//
+// A number is a power of two if it has only one bit set.
+bool is_power_of_two(size_t n);
+
+bool approx_eq_float(float x, float y, float tolerance);
+bool approx_eq_double(double x, double y, double tolerance);

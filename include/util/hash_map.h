@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -15,11 +14,14 @@ typedef struct {
 } Metadata;
 #pragma pack(pop)
 
-static_assert(sizeof(Metadata) == 1, "Metadata must be a single byte in size.");
+typedef enum {
+    FP_OPEN      = 0,
+    FP_TOMBSTONE = 1,
+} Fingerprint;
 
 static const uint8_t  FINGERPRINT_MASK        = 0x7F;
-static const Metadata METADATA_SLOT_OPEN      = {0, 0};
-static const Metadata METADATA_SLOT_TOMBSTONE = {1, 0};
+static const Metadata METADATA_SLOT_OPEN      = {FP_OPEN, 0};
+static const Metadata METADATA_SLOT_TOMBSTONE = {FP_TOMBSTONE, 0};
 
 static inline bool metadata_equal(Metadata a, Metadata b) {
     return a.fingerprint == b.fingerprint && a.used == b.used;
@@ -42,9 +44,12 @@ static inline void metadata_fill(Metadata* m, uint8_t fp) {
     m->used        = 1;
 }
 
+static inline void metadata_clear(Metadata* m) {
+    *m = METADATA_SLOT_OPEN;
+}
+
 static inline void metadata_remove(Metadata* m) {
-    m->fingerprint = METADATA_SLOT_TOMBSTONE.fingerprint;
-    m->used        = 0;
+    *m = METADATA_SLOT_TOMBSTONE;
 }
 
 // Only the first 7 bits of the result are relevant
@@ -56,6 +61,15 @@ typedef struct {
     void* key;
     void* value;
 } Entry;
+
+// A pointer into the map either that mutates the map directly.
+//
+// Must be used for `get_or_put` calls to set the value.
+typedef struct {
+    void* key_ptr;
+    void* value_ptr;
+    bool  found_existing;
+} GetOrPutResult;
 
 typedef struct {
     void*  keys;
@@ -69,13 +83,14 @@ typedef struct {
     size_t capacity;
 } Header;
 
-// A HashMap based on open addressing and linear probing.
+// A HashMap based on open addressing and linear probing. This is not thread-safe.
+//
+// Operations that grow the map or rehash its entries invalidate all pointers.
 typedef struct {
     size_t    size;
     size_t    available;
     void*     buffer;
     Header*   header;
-    Entry*    entries;
     Metadata* metadata;
 
     Hash (*hash)(const void*);
@@ -85,6 +100,15 @@ typedef struct {
 static const size_t MAX_LOAD_PERCENTAGE = 80;
 static const size_t MINIMUM_CAPACITY    = 8;
 
+// A non-owning iterator. Invalid if the underlying map is freed.
+// An iterator is invalidated if it modifies the map during iteration.
+//
+// HashMap growths invalidate pointers.
+typedef struct {
+    HashMap* hm;
+    size_t   index;
+} HashMapIterator;
+
 // Creates a HashMap with the given properties.
 //
 // `compare` must be a function pointer for keys such that:
@@ -93,6 +117,8 @@ static const size_t MINIMUM_CAPACITY    = 8;
 // - If the elements are equal, return 0
 //
 // `hash` is a user defined function pointer for hashing keys.
+//
+// Heavily inspired by Zig's unmanaged HashMap.
 bool hash_map_init(HashMap* hm,
                    size_t   capacity,
                    size_t   key_size,
@@ -102,3 +128,43 @@ bool hash_map_init(HashMap* hm,
                    Hash (*hash)(const void*),
                    int (*compare)(const void*, const void*));
 void hash_map_deinit(HashMap* hm);
+
+size_t hash_map_capacity(HashMap* hm);
+size_t hash_map_count(HashMap* hm);
+void*  hash_map_keys(HashMap* hm);
+void*  hash_map_values(HashMap* hm);
+
+bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
+bool hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
+
+// Rehash the map, in-place.
+//
+// Over time, due to the current tombstone-based implementation, a
+// HashMap could become fragmented due to the buildup of tombstone
+// entries that causes a performance degradation due to excessive
+// probing. The kind of pattern that might cause this is a long-lived
+// HashMap with repeated inserts and deletes.
+//
+// After this function is called, there will be no tombstones in
+// the HashMap, each of the entries is rehashed and any existing
+// key/value pointers into the HashMap are invalidated.
+void hash_map_rehash(HashMap* hm);
+
+// Inserts an entry into the map, assuming it is not present and no growth is needed.
+void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
+GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
+bool           hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result);
+bool           hash_map_put(HashMap* hm, const void* key, const void* value);
+
+bool  hash_map_contains(HashMap* hm, const void* key);
+bool  hash_map_get_index(HashMap* hm, const void* key, size_t* index);
+bool  hash_map_get_value(HashMap* hm, const void* key, void* value);
+void* hash_map_get_value_ptr(HashMap* hm, const void* key);
+
+// Gets the entry corresponding to the provided key. The returned data is owned by the map.
+bool hash_map_get_entry(HashMap* hm, const void* key, Entry* e);
+
+bool hash_map_remove(HashMap* hm, const void* key);
+
+HashMapIterator hash_map_iterator_init(HashMap* hm);
+bool            hash_map_iterator_next(HashMapIterator* it, Entry* e);
