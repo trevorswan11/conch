@@ -74,3 +74,11 @@ TEST_CASE("Swap swaps memory content correctly") {
     REQUIRE(strcmp(str1, "xyz") == 0);
     REQUIRE(strcmp(str2, "abc") == 0);
 }
+
+TEST_CASE("Word size determined correctly") {
+#ifdef WORD_SIZE_64
+    REQUIRE(sizeof(size_t) == 8);
+#elif defined(WORD_SIZE_32)
+    REQUIRE(sizeof(size_t) == 4);
+#endif
+}

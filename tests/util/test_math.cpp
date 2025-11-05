@@ -29,6 +29,11 @@ TEST_CASE("max_double and approx_eq") {
     REQUIRE_FALSE(approx_eq_double(-0.49, -0.5, 0.001));
     REQUIRE(approx_eq_float(-0.49f, -0.5f, 0.1f));
     REQUIRE_FALSE(approx_eq_float(-0.49f, -0.5f, 0.001f));
+
+    REQUIRE_FALSE(approx_eq_float(nanf(""), -0.5f, 0.001f));
+    REQUIRE_FALSE(approx_eq_float(-0.49f, nanf(""), 0.001f));
+    REQUIRE_FALSE(approx_eq_double(nan(""), -0.5, 0.1));
+    REQUIRE_FALSE(approx_eq_double(-0.49, nan(""), 0.1));
 }
 
 TEST_CASE("max_size_t") {

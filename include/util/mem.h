@@ -1,9 +1,12 @@
 #pragma once
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "util/math.h"
 
 #if INTPTR_MAX == INT64_MAX
 #define WORD_SIZE_64
@@ -33,6 +36,7 @@ static inline bool slice_equals_str(const Slice* slice, const char* str) {
 }
 
 static inline uintptr_t align_up(uintptr_t ptr, size_t alignment) {
+    assert(is_power_of_two(alignment));
     return (ptr + (alignment - 1)) & ~(alignment - 1);
 }
 
