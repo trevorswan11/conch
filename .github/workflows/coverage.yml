@@ -25,7 +25,7 @@ on:
       - 'Makefile'
 
 jobs:
-  fmt:
+  coverage:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -34,7 +34,28 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang clang-format make
+          sudo apt install -y clang clang-format make lcov
 
-      - name: Check formatting
-        run: make coverage
+      - name: Run coverage
+        run: |
+          make clean
+          make coverage
+          mkdir -p coverage_report
+          llvm-profdata merge -sparse bin/coverage/default.profraw -o bin/coverage/default.profdata
+          llvm-cov show bin/coverage/run_tests \
+            -instr-profile=bin/coverage/default.profdata \
+            -format=html \
+            -output-dir=coverage_report
+
+      - name: Commit coverage report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan coverage || git checkout coverage
+          git reset --hard
+          cp -r coverage_report/* .
+          git add .
+          git commit -m "Update coverage report"
+          git push -f origin coverage

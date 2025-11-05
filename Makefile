@@ -87,7 +87,11 @@ LLVM_PROFILE_FILE ?= $(BIN_DIR_COVERAGE)/default.profraw
 coverage: CC := clang
 coverage: CXX := clang++
 coverage: $(COVERAGE_BIN)
-	@$(COVERAGE_BIN)
+ifeq ($(OS),Windows_NT)
+	$(error Coverage is not supported on Windows)
+else
+	@LLVM_PROFILE_FILE=$(LLVM_PROFILE_FILE) $(COVERAGE_BIN)
+endif
 
 # ================ TESTING BUILD ================
 
