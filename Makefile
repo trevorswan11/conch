@@ -184,6 +184,15 @@ $(OBJ_DIR_DEBUG)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 
 # ================ OTHER TARGETS ================
 
+coverage-report: coverage
+	@mkdir -p coverage_report
+	@llvm-profdata merge -sparse $(LLVM_PROFILE_FILE) -o $(BIN_DIR_COVERAGE)/default.profdata
+	@llvm-cov show $(COVERAGE_BIN) \
+	-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
+	-format=html \
+	-output-dir=coverage_report
+	@echo "Coverage report generated in coverage_report/"
+
 ARGS ?=
 
 run: run-release
@@ -247,4 +256,4 @@ help              > Print this help menu\n\
 
 .PHONY: default install all dist release debug \
 		run run-dist run-release run-debug \
-		test coverage clean fmt fmt-check help
+		test coverage coverage-report clean fmt fmt-check help

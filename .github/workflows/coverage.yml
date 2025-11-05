@@ -39,13 +39,7 @@ jobs:
       - name: Run coverage
         run: |
           make clean
-          make coverage
-          mkdir -p coverage_report
-          llvm-profdata merge -sparse bin/coverage/default.profraw -o bin/coverage/default.profdata
-          llvm-cov show bin/coverage/run_tests \
-            -instr-profile=bin/coverage/default.profdata \
-            -format=html \
-            -output-dir=coverage_report
+          make coverage-report
 
       - name: Commit coverage report
         env:
