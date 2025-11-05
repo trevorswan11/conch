@@ -1,0 +1,57 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'feature/**'
+    paths:
+      - '.github/workflows/coverage.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+  pull_request:
+    branches:
+      - main
+      - dev
+      - 'feature/**'
+    paths:
+      - '.github/workflows/coverage.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'Makefile'
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang clang-format make lcov llvm llvm-dev
+
+      - name: Run coverage report generator
+        run: |
+          make clean
+          make coverage-badge
+
+      - name: Commit coverage report & badge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan coverage || git checkout coverage
+          git reset --hard
+          rm -rf bin build
+          cp -r coverage_report/* .
+          rm -rf coverage_report
+          git add .
+          git commit -m "Update coverage report"
+          git push -f origin coverage

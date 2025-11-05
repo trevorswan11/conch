@@ -12,6 +12,9 @@
     <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml">
         <img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" />
     </a>
+    <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage.svg">
+        <img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" />
+    </a>
 </p>
 
 <p align="center">

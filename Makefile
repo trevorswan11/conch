@@ -8,24 +8,6 @@ BIN_ROOT := bin
 CC ?= clang
 CXX ?= clang++
 
-DEPFLAGS = -MMD -MP
-INCLUDES := -I$(INC_DIR)
-TEST_INCLUDES := -I$(INC_DIR) -I$(TEST_DIR)/test_framework
-
-rwildcard = $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
-
-SRCS := $(call rwildcard, $(SRC_DIR)/, *.c)
-HEADERS := $(wildcard $(INC_DIR)/*.h)
-
-TEST_SRCS := $(filter-out $(TEST_DIR)/test_framework/catch_amalgamated.cpp, \
-             $(call rwildcard, $(TEST_DIR)/, *.cpp))
-TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
-TEST_BIN := $(BIN_ROOT)/tests/run_tests$(EXE)
-
-FMT_SRCS := $(SRCS) \
-            $(call rwildcard,$(INC_DIR)/,*.h) \
-            $(filter-out $(TEST_DIR)/test_framework/%, $(call rwildcard,$(TEST_DIR)/,*.cpp))
-
 # ================ CROSS PLATFORM SUPPORT ================
 
 ifeq ($(OS),Windows_NT)
@@ -39,6 +21,27 @@ else
     MKDIR = mkdir -p $(1)
     EXE :=
 endif
+
+# ================ SOURCE CONFIG ================
+
+DEPFLAGS = -MMD -MP
+INCLUDES := -I$(INC_DIR)
+TEST_INCLUDES := -I$(INC_DIR) -I$(TEST_DIR)/test_framework
+
+rwildcard = $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+SRCS := $(call rwildcard, $(SRC_DIR)/, *.c)
+HEADERS := $(wildcard $(INC_DIR)/*.h)
+
+TEST_SRCS := $(filter-out $(TEST_DIR)/test_framework/catch_amalgamated.cpp, \
+             $(call rwildcard, $(TEST_DIR)/, *.cpp))
+TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
+TEST_BIN := $(BIN_ROOT)/tests/run_tests$(EXE)
+COVERAGE_BIN := $(BIN_ROOT)/coverage/run_tests$(EXE)
+
+FMT_SRCS := $(SRCS) \
+            $(call rwildcard,$(INC_DIR)/,*.h) \
+            $(filter-out $(TEST_DIR)/test_framework/%, $(call rwildcard,$(TEST_DIR)/,*.cpp))
 
 # ================ DIST CONFIG ================
 
@@ -79,16 +82,26 @@ debug: $(TARGET_BIN_DEBUG)
 test: $(TEST_BIN)
 	@$(TEST_BIN)
 
+BIN_DIR_COVERAGE := $(BIN_ROOT)/coverage
+coverage: CC := clang
+coverage: CXX := clang++
+coverage: $(COVERAGE_BIN)
+ifeq ($(OS),Windows_NT)
+	$(error Coverage is not supported on Windows)
+else
+	@LLVM_PROFILE_FILE=$(BIN_DIR_COVERAGE)/default.profraw $(COVERAGE_BIN)
+endif
+
 # ================ TESTING BUILD ================
 
 OBJ_DIR_TEST := $(BUILD_DIR)/tests
 OBJS_TEST := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_TEST)/%.o,$(SRCS))
-CFLAGS_TEST := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST
+CFLAGS_TEST := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST
 
 TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
-CATCH_OBJ := $(BUILD_DIR)/tests/catch_amalgamated.o
+CATCH_OBJ_TESTS := $(BUILD_DIR)/tests/catch_amalgamated.o
 LIB_OBJS_FOR_TESTS := $(filter-out $(OBJ_DIR_TEST)/main.o,$(OBJS_TEST))
-CXXFLAGS_TEST = -std=c++20 -O2 -Wall -Wextra $(TEST_INCLUDES) $(DEPFLAGS) -DTEST
+CXXFLAGS_TEST = -std=c++20 -O0 -Wall -Wextra -g $(TEST_INCLUDES) $(DEPFLAGS) -DTEST
 
 $(OBJ_DIR_TEST)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	@$(call MKDIR,$(dir $@))
@@ -98,13 +111,40 @@ $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp $(HEADERS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -c $< -o $@
 
-$(CATCH_OBJ): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
+$(CATCH_OBJ_TESTS): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -c $< -o $@
 
-$(TEST_BIN): $(CATCH_OBJ) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
+$(TEST_BIN): $(CATCH_OBJ_TESTS) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -o $@ $^
+
+# ================ COVERAGE BUILD ================
+
+OBJ_DIR_COVERAGE := $(BUILD_DIR)/coverage
+OBJS_COVERAGE := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_COVERAGE)/%.o,$(SRCS))
+CFLAGS_COVERAGE := -std=c17 -fprofile-instr-generate -fcoverage-mapping -O0 -g -Wall -Wextra -Werror -Wpedantic $(INCLUDES) $(DEPFLAGS) -DDEBUG -DCOVERAGE
+
+COVERAGE_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/coverage/%.o,$(TEST_SRCS))
+CATCH_OBJ_COVERAGE := $(BUILD_DIR)/coverage/catch_amalgamated.o
+LIB_OBJS_FOR_COVERAGES := $(filter-out $(OBJ_DIR_COVERAGE)/main.o,$(OBJS_COVERAGE))
+CXXFLAGS_COVERAGE = -std=c++20 -fprofile-instr-generate -fcoverage-mapping -O0 -g -Wall -Wextra $(TEST_INCLUDES) $(DEPFLAGS) -DCOVERAGE
+
+$(OBJ_DIR_COVERAGE)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CC) $(CFLAGS_COVERAGE) -c $< -o $@
+
+$(BUILD_DIR)/coverage/%.o: $(TEST_DIR)/%.cpp $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_COVERAGE) -c $< -o $@
+
+$(CATCH_OBJ_COVERAGE): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_COVERAGE) -c $< -o $@
+
+$(COVERAGE_BIN): $(CATCH_OBJ_COVERAGE) $(COVERAGE_OBJS) $(LIB_OBJS_FOR_COVERAGES)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_COVERAGE) -o $@ $^
 
 # ================ BINARY DIRECTORIES ================
 
@@ -142,6 +182,23 @@ $(OBJ_DIR_DEBUG)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 -include $(TEST_OBJS:.o=.d)
 
 # ================ OTHER TARGETS ================
+
+coverage-report: coverage
+	@mkdir -p coverage_report
+	@llvm-profdata merge -sparse $(BIN_DIR_COVERAGE)/default.profraw -o $(BIN_DIR_COVERAGE)/default.profdata
+	@llvm-cov show $(COVERAGE_BIN) \
+		-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
+		-format=html \
+		-output-dir=coverage_report \
+		-ignore-filename-regex='.*tests/.*'
+
+coverage-badge: coverage-report
+	@llvm-cov report $(COVERAGE_BIN) \
+		-instr-profile=$(BIN_DIR_COVERAGE)/default.profdata \
+		-ignore-filename-regex='.*tests/.*' > coverage_summary.txt
+	@TOTAL_PERCENT=$$(awk '/TOTAL/ {gsub(/%/,""); print int($$10)}' coverage_summary.txt); \
+	echo "Total coverage: $$TOTAL_PERCENT%"; \
+	curl -o coverage.svg "https://img.shields.io/badge/Coverage-$$TOTAL_PERCENT%25-pink"
 
 ARGS ?=
 
@@ -206,4 +263,5 @@ help              > Print this help menu\n\
 
 .PHONY: default install all dist release debug \
 		run run-dist run-release run-debug \
-		test clean fmt fmt-check help
+		test coverage coverage-report coverage-badge \
+		clean fmt fmt-check help
