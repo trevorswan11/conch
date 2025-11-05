@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang clang-format make lcov
+          sudo apt install -y clang clang-format make lcov llvm llvm-dev llvm-tools
 
       - name: Run coverage
         run: |
