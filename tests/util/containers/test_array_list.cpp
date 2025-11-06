@@ -13,8 +13,19 @@ extern "C" {
 TEST_CASE("Init and resize") {
     ArrayList a;
     REQUIRE(array_list_init(&a, 10, sizeof(uint8_t)));
+    REQUIRE(array_list_capacity(&a) == 10);
     REQUIRE(array_list_resize(&a, 12));
+    REQUIRE(array_list_capacity(&a) == 12);
     REQUIRE(array_list_resize(&a, 8));
+    REQUIRE(array_list_capacity(&a) == 8);
+
+    REQUIRE(array_list_ensure_total_capacity(&a, 7));
+    REQUIRE(array_list_capacity(&a) == 8);
+    REQUIRE(array_list_ensure_total_capacity(&a, 8));
+    REQUIRE(array_list_capacity(&a) == 8);
+    REQUIRE(array_list_ensure_total_capacity(&a, 20));
+    REQUIRE(array_list_capacity(&a) == 20);
+
     array_list_deinit(&a);
 
     ArrayList b;

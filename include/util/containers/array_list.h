@@ -22,7 +22,13 @@ size_t array_list_length(const ArrayList* a);
 // Resizes the array, growing/shrinking based on the new capacity.
 //
 // If the new capacity is 0, this is equivalent to a deinit call.
-bool  array_list_resize(ArrayList* a, size_t new_capacity);
+bool array_list_resize(ArrayList* a, size_t new_capacity);
+
+// Resizes the array if and only if the new capacity exceeds the current capacity.
+//
+// If the array does not need to be resized, then true is returned.
+bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
+
 bool  array_list_push(ArrayList* a, void* item);
 bool  array_list_pop(ArrayList* a, void* item);
 bool  array_list_remove(ArrayList* a, size_t index, void* item);

@@ -72,6 +72,14 @@ bool array_list_resize(ArrayList* a, size_t new_capacity) {
     return true;
 }
 
+bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
+    assert(a && a->data && new_capacity > 0);
+    if (a->capacity < new_capacity) {
+        return array_list_resize(a, new_capacity);
+    }
+    return true;
+}
+
 static inline void* _array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
     assert(a && a->data);
     return ptr_offset(a->data, index * a->item_size);
