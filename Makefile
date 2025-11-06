@@ -135,12 +135,12 @@ $(TEST_BIN): $(CATCH_OBJ_TESTS) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
 
 OBJ_DIR_ASAN := $(BUILD_DIR)/asan
 OBJS_ASAN := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ASAN)/%.o,$(SRCS))
-CFLAGS_ASAN := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g -fsanitize=address,undefined $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST -DASAN
+CFLAGS_ASAN := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g -fsanitize=address,undefined -fno-sanitize-recover=all $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST -DASAN
 
 ASAN_TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/asan/%.o,$(TEST_SRCS))
 CATCH_OBJ_ASAN := $(BUILD_DIR)/asan/catch_amalgamated.o
 LIB_OBJS_FOR_ASAN := $(filter-out $(OBJ_DIR_ASAN)/main.o,$(OBJS_ASAN))
-CXXFLAGS_ASAN = -std=c++20 -O0 -Wall -Wextra -g -fsanitize=address,undefined $(TEST_INCLUDES) $(DEPFLAGS) -DTEST -DASAN
+CXXFLAGS_ASAN = -std=c++20 -O0 -Wall -Wextra -g -fsanitize=address,undefined -fno-sanitize-recover=all $(TEST_INCLUDES) $(DEPFLAGS) -DTEST -DASAN
 
 $(OBJ_DIR_ASAN)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	@$(call MKDIR,$(dir $@))

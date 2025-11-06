@@ -26,38 +26,38 @@ uint64_t hash_slice(const void* key);
 // Hash functions accept 8, 16, 32, and 64 bit integers, others are undefined and return 0.
 //
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
-#define HASH_INTEGER_FN(T)                                                \
-    static inline uint64_t HASH_CONCAT_3(hash_, T, _u)(const void* key) { \
-        T val = *(const T*)key;                                           \
-        if (sizeof(T) == 1) {                                             \
-            val = (val ^ 0xAA) + (val << 3);                              \
-            val = val ^ (val >> 4);                                       \
-            val = val * 0x27;                                             \
-            return val;                                                   \
-        } else if (sizeof(T) == 2) {                                      \
-            val = (val ^ 0xAAAA) + (val << 7);                            \
-            val = val ^ (val >> 9);                                       \
-            val = val * 0x27d4;                                           \
-            val = val ^ (val >> 11);                                      \
-            return val;                                                   \
-        } else if (sizeof(T) == 4) {                                      \
-            val = ((val >> 16) ^ val) * 0x45d9f3bu;                       \
-            val = ((val >> 16) ^ val) * 0x45d9f3bu;                       \
-            val = (val >> 16) ^ val;                                      \
-            return val;                                                   \
-        } else if (sizeof(T) == 8) {                                      \
-            val = (val ^ (val >> 30)) * 0xbf58476d1ce4e5b9ULL;            \
-            val = (val ^ (val >> 27)) * 0x94d049bb133111ebULL;            \
-            val = val ^ (val >> 31);                                      \
-            return val;                                                   \
-        } else {                                                          \
-            return 0;                                                     \
-        }                                                                 \
-    }                                                                     \
-                                                                          \
-    static inline uint64_t HASH_CONCAT_3(hash_, T, _s)(const void* key) { \
-        T ux = *(const T*)key;                                            \
-        return HASH_CONCAT_3(hash_, T, _u)(&ux);                          \
+#define HASH_INTEGER_FN(T)                                                                        \
+    static inline uint64_t HASH_CONCAT_3(hash_, T, _u)(const void* key) {                         \
+        T val = *(const T*)key;                                                                   \
+        if (sizeof(T) == 1) {                                                                     \
+            val = (val ^ 0xAA) + (val << 3);                                                      \
+            val = val ^ (val >> 4);                                                               \
+            val = val * 0x27;                                                                     \
+            return val;                                                                           \
+        } else if (sizeof(T) == 2) {                                                              \
+            val = (val ^ 0xAAAA) + (val << 7);                                                    \
+            val = val ^ (val >> 9);                                                               \
+            val = val * 0x27d4;                                                                   \
+            val = val ^ (val >> 11);                                                              \
+            return val;                                                                           \
+        } else if (sizeof(T) == 4) {                                                              \
+            val = ((val >> 16) ^ val) * 0x45d9f3bu;                                               \
+            val = ((val >> 16) ^ val) * 0x45d9f3bu;                                               \
+            val = (val >> 16) ^ val;                                                              \
+            return val;                                                                           \
+        } else if (sizeof(T) == 8) {                                                              \
+            val = (val ^ (val >> 30)) * 0xbf58476d1ce4e5b9ULL;                                    \
+            val = (val ^ (val >> 27)) * 0x94d049bb133111ebULL;                                    \
+            val = val ^ (val >> 31);                                                              \
+            return val;                                                                           \
+        } else {                                                                                  \
+            return 0;                                                                             \
+        }                                                                                         \
+    }                                                                                             \
+                                                                                                  \
+    static inline __attribute__((unused)) uint64_t HASH_CONCAT_3(hash_, T, _s)(const void* key) { \
+        T ux = *(const T*)key;                                                                    \
+        return HASH_CONCAT_3(hash_, T, _u)(&ux);                                                  \
     }
 
 // Generates a compare function for the integer type.
