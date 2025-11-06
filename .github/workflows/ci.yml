@@ -71,7 +71,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           make clean
-          make all test
+          make all test asan
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'

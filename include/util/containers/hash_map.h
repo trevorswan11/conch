@@ -174,4 +174,4 @@ bool hash_map_get_entry(HashMap* hm, const void* key, Entry* e);
 bool hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
-bool            hash_map_iterator_has_next(HashMapIterator* it, Entry* e);
+bool            hash_map_iterator_has_next(HashMapIterator* it, Entry* next);

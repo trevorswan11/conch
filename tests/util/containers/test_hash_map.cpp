@@ -6,8 +6,8 @@
 #include <vector>
 
 extern "C" {
+#include "util/containers/hash_map.h"
 #include "util/hash.h"
-#include "util/hash_map.h"
 #include "util/mem.h"
 }
 
@@ -313,6 +313,47 @@ TEST_CASE("Rehash") {
         if (i % 3 == 0) {
             REQUIRE_FALSE(hash_map_get_value(&hm, &i, &out_val));
         } else {
+            REQUIRE(hash_map_get_value(&hm, &i, &out_val));
+            REQUIRE(out_val == i);
+        }
+    }
+
+    hash_map_deinit(&hm);
+}
+
+TEST_CASE("Remove") {
+    using K = uint32_t;
+    using V = uint32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t));
+
+    for (K i = 0; i < 16; i++) {
+        REQUIRE(hash_map_put(&hm, &i, &i));
+    }
+
+    for (K i = 0; i < 16; i++) {
+        if (i % 3 == 0) {
+            REQUIRE(hash_map_remove(&hm, &i));
+        }
+    }
+    REQUIRE(hash_map_count(&hm) == 10);
+
+    HashMapIterator it = hash_map_iterator_init(&hm);
+    Entry           e;
+    while (hash_map_iterator_has_next(&it, &e)) {
+        K k = *(K*)e.key;
+        V v = *(V*)e.value;
+        REQUIRE(k == v);
+        REQUIRE(k % 3 != 0);
+    }
+
+    for (K i = 0; i < 16; i++) {
+        if (i % 3 == 0) {
+            REQUIRE_FALSE(hash_map_contains(&hm, &i));
+        } else {
+            V out_val;
             REQUIRE(hash_map_get_value(&hm, &i, &out_val));
             REQUIRE(out_val == i);
         }

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/hash_map.h"
+#include "util/containers/hash_map.h"
 #include "util/math.h"
 #include "util/mem.h"
 
@@ -579,7 +579,7 @@ HashMapIterator hash_map_iterator_init(HashMap* hm) {
     };
 }
 
-bool hash_map_iterator_has_next(HashMapIterator* it, Entry* e) {
+bool hash_map_iterator_has_next(HashMapIterator* it, Entry* next) {
     assert(it && it->hm && it->hm->buffer);
     assert(it->index <= it->hm->header->capacity);
     if (it->hm->size == 0) {
@@ -592,7 +592,7 @@ bool hash_map_iterator_has_next(HashMapIterator* it, Entry* e) {
         it->index += 1;
 
         if (metadata_used(it->hm->metadata[i])) {
-            *e = (Entry){
+            *next = (Entry){
                 .key   = ptr_offset(it->hm->header->keys, i * it->hm->header->key_size),
                 .value = ptr_offset(it->hm->header->values, i * it->hm->header->value_size),
             };

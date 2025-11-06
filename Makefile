@@ -119,6 +119,17 @@ $(TEST_BIN): $(CATCH_OBJ_TESTS) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -o $@ $^
 
+asan: CC := clang
+asan: CXX := clang++
+asan: CFLAGS_TEST += -fsanitize=address,undefined
+asan: CXXFLAGS_TEST += -fsanitize=address,undefined
+asan:
+ifeq ($(OS),Windows_NT)
+	$(error Sanitizers not supported on Windows)
+else
+	test
+endif
+
 # ================ COVERAGE BUILD ================
 
 OBJ_DIR_COVERAGE := $(BUILD_DIR)/coverage
@@ -264,4 +275,4 @@ help              > Print this help menu\n\
 .PHONY: default install all dist release debug \
 		run run-dist run-release run-debug \
 		test coverage coverage-report coverage-badge \
-		clean fmt fmt-check help
+		asan clean fmt fmt-check help

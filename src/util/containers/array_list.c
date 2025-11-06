@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/array_list.h"
+#include "util/containers/array_list.h"
 #include "util/math.h"
 #include "util/mem.h"
 

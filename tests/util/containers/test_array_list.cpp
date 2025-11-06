@@ -6,7 +6,7 @@
 #include <vector>
 
 extern "C" {
-#include "util/array_list.h"
+#include "util/containers/array_list.h"
 }
 
 TEST_CASE("Init and resize") {
