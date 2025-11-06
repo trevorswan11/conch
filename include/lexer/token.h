@@ -52,9 +52,8 @@ static const char* token_type_strings[ILLEGAL - END + 1] = {
 
 // Converts the provided token type into its stack-allocated string representation.
 static inline const char* string_from_token_type(TokenType t) {
-    const uint32_t tn = (uint32_t)t;
-    if (tn <= (uint32_t)ILLEGAL) {
-        return token_type_strings[tn];
+    if (t >= END && t <= ILLEGAL) {
+        return token_type_strings[t];
     }
     return token_type_strings[ILLEGAL];
 }

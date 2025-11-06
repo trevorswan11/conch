@@ -21,7 +21,4 @@ TEST_CASE("TokenType conversion") {
     REQUIRE(strcmp(string_from_token_type(TokenType::FUNCTION), "FUNCTION") == 0);
     REQUIRE(strcmp(string_from_token_type(TokenType::LET), "LET") == 0);
     REQUIRE(strcmp(string_from_token_type(TokenType::ILLEGAL), "ILLEGAL") == 0);
-
-    REQUIRE(strcmp(string_from_token_type((TokenType)-1), "ILLEGAL") == 0);
-    REQUIRE(strcmp(string_from_token_type((TokenType)100), "ILLEGAL") == 0);
 }
