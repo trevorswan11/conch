@@ -26,7 +26,7 @@ bool array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
 }
 
 void array_list_deinit(ArrayList* a) {
-    if (!a) {
+    if (!a || !a->data) {
         return;
     }
 
@@ -34,6 +34,20 @@ void array_list_deinit(ArrayList* a) {
     a->data     = NULL;
     a->length   = 0;
     a->capacity = 0;
+}
+
+size_t array_list_capacity(const ArrayList* a) {
+    if (!a || !a->data) {
+        return 0;
+    }
+    return a->capacity;
+}
+
+size_t array_list_length(const ArrayList* a) {
+    if (!a || !a->data) {
+        return 0;
+    }
+    return a->length;
 }
 
 bool array_list_resize(ArrayList* a, size_t new_capacity) {
@@ -58,50 +72,57 @@ bool array_list_resize(ArrayList* a, size_t new_capacity) {
     return true;
 }
 
-// Gets a pointer to the without performing safety checks.
-static inline void* array_list_get_unsafe(ArrayList* a, size_t index) {
+static inline void* _array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
+    assert(a && a->data);
+    return ptr_offset(a->data, index * a->item_size);
+}
+
+static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t index) {
+    assert(a && a->data);
     return ptr_offset(a->data, index * a->item_size);
 }
 
 bool array_list_push(ArrayList* a, void* item) {
-    if (!a) {
-        return false;
-    } else if (a->length == a->capacity) {
+    assert(a && a->data);
+
+    if (a->length == a->capacity) {
         if (!array_list_resize(a, max_size_t(2, a->capacity * 2, 4))) {
             return false;
         }
     }
 
-    void* dest = array_list_get_unsafe(a, a->length);
+    void* dest = _array_list_get_ptr_unsafe(a, a->length);
     memcpy(dest, item, a->item_size);
     a->length += 1;
     return true;
 }
 
 bool array_list_pop(ArrayList* a, void* item) {
-    if (!a || a->length == 0) {
+    assert(a && a->data);
+    if (a->length == 0) {
         return false;
     }
 
-    void* last = array_list_get_unsafe(a, a->length - 1);
+    void* last = _array_list_get_ptr_unsafe(a, a->length - 1);
     memcpy(item, last, a->item_size);
     a->length -= 1;
     return true;
 }
 
 bool array_list_remove(ArrayList* a, size_t index, void* item) {
-    if (!a || index >= a->length) {
+    assert(a && a->data);
+    if (index >= a->length) {
         return false;
     }
 
-    const void* at = array_list_get_unsafe(a, index);
+    const void* at = _array_list_get_ptr_unsafe(a, index);
     if (item) {
         memcpy(item, at, a->item_size);
     }
 
     for (size_t i = index; i < a->length - 1; i++) {
-        const void* src  = array_list_get_unsafe(a, i + 1);
-        void*       dest = array_list_get_unsafe(a, i);
+        const void* src  = _array_list_get_ptr_unsafe(a, i + 1);
+        void*       dest = _array_list_get_ptr_unsafe(a, i);
         memcpy(dest, src, a->item_size);
     }
 
@@ -113,43 +134,54 @@ bool array_list_remove_item(ArrayList*  a,
                             const void* item,
                             int (*compare)(const void*, const void*)) {
     size_t index;
-    if (!a || !item) {
-        return false;
-    } else if (array_list_find(a, &index, item, compare)) {
+    if (array_list_find(a, &index, item, compare)) {
         return array_list_remove(a, index, NULL);
     } else {
         return false;
     }
 }
 
-void* array_list_get(ArrayList* a, size_t index) {
-    if (!a || index >= a->length) {
-        return NULL;
-    }
-
-    return array_list_get_unsafe(a, index);
-}
-
-bool array_list_set(ArrayList* a, size_t index, const void* item) {
-    if (!a || index >= a->length) {
+bool array_list_get(const ArrayList* a, size_t index, void* item) {
+    assert(a && a->data);
+    if (index >= a->length) {
         return false;
     }
 
-    void* dest = array_list_get_unsafe(a, index);
+    memcpy(item, _array_list_get_unsafe(a, index), a->item_size);
+    return true;
+}
+
+void* array_list_get_ptr(ArrayList* a, size_t index) {
+    assert(a && a->data);
+    if (index >= a->length) {
+        return NULL;
+    }
+
+    return _array_list_get_ptr_unsafe(a, index);
+}
+
+bool array_list_set(ArrayList* a, size_t index, const void* item) {
+    assert(a && a->data);
+    if (index >= a->length) {
+        return false;
+    }
+
+    void* dest = _array_list_get_ptr_unsafe(a, index);
     memcpy(dest, item, a->item_size);
     return true;
 }
 
-bool array_list_find(ArrayList*  a,
-                     size_t*     index,
-                     const void* item,
+bool array_list_find(const ArrayList* a,
+                     size_t*          index,
+                     const void*      item,
                      int (*compare)(const void*, const void*)) {
-    if (!a || !index || !item || !compare) {
+    assert(a && a->data);
+    if (!index || !item || !compare) {
         return false;
     }
 
     for (size_t i = 0; i < a->length; i++) {
-        if (compare(item, array_list_get_unsafe(a, i)) == 0) {
+        if (compare(item, _array_list_get_unsafe(a, i)) == 0) {
             *index = i;
             return true;
         }

@@ -28,26 +28,27 @@ uint64_t hash_slice(const void* key);
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 #define HASH_INTEGER_FN(T)                                                                        \
     static inline uint64_t HASH_CONCAT_3(hash_, T, _u)(const void* key) {                         \
-        T val = *(const T*)key;                                                                   \
+        T        t   = *(const T*)key;                                                            \
+        uint64_t val = (uint64_t)(T)t;                                                            \
         if (sizeof(T) == 1) {                                                                     \
-            val = (val ^ 0xAA) + (val << 3);                                                      \
+            val = (val ^ 0xAAU) + (val << 3);                                                     \
             val = val ^ (val >> 4);                                                               \
-            val = val * 0x27;                                                                     \
+            val = val * 0x27U;                                                                    \
             return val;                                                                           \
         } else if (sizeof(T) == 2) {                                                              \
-            val = (val ^ 0xAAAA) + (val << 7);                                                    \
+            val = (val ^ 0xAAAAU) + (val << 7);                                                   \
             val = val ^ (val >> 9);                                                               \
-            val = val * 0x27d4;                                                                   \
+            val = val * 0x27D4U;                                                                  \
             val = val ^ (val >> 11);                                                              \
             return val;                                                                           \
         } else if (sizeof(T) == 4) {                                                              \
-            val = ((val >> 16) ^ val) * 0x45d9f3bu;                                               \
-            val = ((val >> 16) ^ val) * 0x45d9f3bu;                                               \
+            val = ((val >> 16) ^ val) * 0x45D9F3BU;                                               \
+            val = ((val >> 16) ^ val) * 0x45D9F3BU;                                               \
             val = (val >> 16) ^ val;                                                              \
             return val;                                                                           \
         } else if (sizeof(T) == 8) {                                                              \
-            val = (val ^ (val >> 30)) * 0xbf58476d1ce4e5b9ULL;                                    \
-            val = (val ^ (val >> 27)) * 0x94d049bb133111ebULL;                                    \
+            val = (val ^ (val >> 30)) * 0xBF58476D1CE4E5B9ULL;                                    \
+            val = (val ^ (val >> 27)) * 0x94D049BB133111EBULL;                                    \
             val = val ^ (val >> 31);                                                              \
             return val;                                                                           \
         } else {                                                                                  \

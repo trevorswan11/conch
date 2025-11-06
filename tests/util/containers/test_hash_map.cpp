@@ -31,8 +31,8 @@ TEST_CASE("Metadata helpers") {
     REQUIRE(take_fingerprint(0xFFFFFFFFFFFFFFFF) == 127);
 }
 
-HASH_INTEGER_FN(uint16_t);
-COMPARE_INTEGER_FN(uint16_t);
+HASH_INTEGER_FN(uint16_t)
+COMPARE_INTEGER_FN(uint16_t)
 
 TEST_CASE("Malformed map usage") {
     using K = uint16_t;
@@ -68,10 +68,10 @@ TEST_CASE("Malformed map usage") {
                                 hash_uint16_t_u,
                                 compare_uint16_t));
     REQUIRE_FALSE(hash_map_init(&hm,
-                                SIZE_MAX / 2,
+                                SIZE_MAX / 8,
                                 sizeof(K),
                                 alignof(K),
-                                3,
+                                9,
                                 alignof(V),
                                 hash_uint16_t_u,
                                 compare_uint16_t));
@@ -79,16 +79,14 @@ TEST_CASE("Malformed map usage") {
     // Helpers that check self and buffer initialization
     REQUIRE_FALSE(hash_map_capacity(NULL));
     REQUIRE_FALSE(hash_map_count(NULL));
-    REQUIRE_FALSE(hash_map_keys(NULL));
-    REQUIRE_FALSE(hash_map_values(NULL));
     REQUIRE_FALSE(hash_map_ensure_total_capacity(NULL, 10));
+    hash_map_deinit(NULL);
 
     hm.buffer = NULL;
     REQUIRE_FALSE(hash_map_capacity(&hm));
     REQUIRE_FALSE(hash_map_count(&hm));
-    REQUIRE_FALSE(hash_map_keys(&hm));
-    REQUIRE_FALSE(hash_map_values(&hm));
     REQUIRE_FALSE(hash_map_ensure_total_capacity(&hm, 10));
+    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Init") {
@@ -120,8 +118,8 @@ TEST_CASE("Init") {
     hash_map_deinit(&hm);
 }
 
-HASH_INTEGER_FN(uint32_t);
-COMPARE_INTEGER_FN(uint32_t);
+HASH_INTEGER_FN(uint32_t)
+COMPARE_INTEGER_FN(uint32_t)
 
 TEST_CASE("Basic usage") {
     using K = uint32_t;
@@ -142,9 +140,9 @@ TEST_CASE("Basic usage") {
     V               internal_total = 0;
     HashMapIterator it             = hash_map_iterator_init(&hm);
 
-    Entry e;
+    HashEntry e;
     while (hash_map_iterator_has_next(&it, &e)) {
-        internal_total += *(K*)e.key;
+        internal_total += *(K*)e.key_ptr;
     }
     REQUIRE(load_total == internal_total);
 
@@ -184,8 +182,8 @@ TEST_CASE("Ensure total capacity") {
     hash_map_deinit(&hm);
 }
 
-HASH_INTEGER_FN(uint64_t);
-COMPARE_INTEGER_FN(uint64_t);
+HASH_INTEGER_FN(uint64_t)
+COMPARE_INTEGER_FN(uint64_t)
 
 TEST_CASE("Ensure unused capacity") {
     using K = int64_t;
@@ -271,10 +269,10 @@ TEST_CASE("Grow") {
     REQUIRE(hash_map_count(&hm) == grow_to);
 
     HashMapIterator it = hash_map_iterator_init(&hm);
-    Entry           e;
+    HashEntry       e;
     size_t          total = 0;
     while (hash_map_iterator_has_next(&it, &e)) {
-        REQUIRE(*(K*)e.key == *(V*)e.value);
+        REQUIRE(*(K*)e.key_ptr == *(V*)e.value_ptr);
         total += 1;
     }
     REQUIRE(total == grow_to);
@@ -321,6 +319,45 @@ TEST_CASE("Rehash") {
     hash_map_deinit(&hm);
 }
 
+TEST_CASE("Mutable entry access") {
+    using K = uint32_t;
+    using V = uint32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t));
+
+    for (K i = 0; i < 16; i++) {
+        REQUIRE(hash_map_put(&hm, &i, &i));
+    }
+
+    // Basic by-value value retrieval
+    const K query_key_initial = 4;
+    V       query_val;
+    REQUIRE(hash_map_get_value(&hm, &query_key_initial, &query_val));
+    REQUIRE(query_val == 4);
+
+    // Pointer retrieval of value
+    V* mut_val = (V*)hash_map_get_value_ptr(&hm, &query_key_initial);
+    REQUIRE(*mut_val == 4);
+    *mut_val = 20;
+    REQUIRE(query_val == 4);
+    REQUIRE(hash_map_get_value(&hm, &query_key_initial, &query_val));
+    REQUIRE(query_val == 20);
+
+    // Entry retrieval for mutable value access (reasonable)
+    HashEntry e;
+    REQUIRE(hash_map_get_entry(&hm, &query_key_initial, &e));
+    REQUIRE(*(K*)e.key_ptr == query_key_initial);
+    REQUIRE(*(V*)e.value_ptr == 20);
+    *(V*)e.value_ptr = 100;
+    REQUIRE(query_val == 20);
+    REQUIRE(hash_map_get_value(&hm, &query_key_initial, &query_val));
+    REQUIRE(query_val == 100);
+
+    hash_map_deinit(&hm);
+}
+
 TEST_CASE("Remove") {
     using K = uint32_t;
     using V = uint32_t;
@@ -341,10 +378,10 @@ TEST_CASE("Remove") {
     REQUIRE(hash_map_count(&hm) == 10);
 
     HashMapIterator it = hash_map_iterator_init(&hm);
-    Entry           e;
+    HashEntry       e;
     while (hash_map_iterator_has_next(&it, &e)) {
-        K k = *(K*)e.key;
-        V v = *(V*)e.value;
+        K k = *(K*)e.key_ptr;
+        V v = *(V*)e.value_ptr;
         REQUIRE(k == v);
         REQUIRE(k % 3 != 0);
     }

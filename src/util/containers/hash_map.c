@@ -186,7 +186,7 @@ void hash_map_deinit(HashMap* hm) {
     hm->available = 0;
 }
 
-size_t hash_map_capacity(HashMap* hm) {
+size_t hash_map_capacity(const HashMap* hm) {
     if (!hm || !hm->buffer) {
         return 0;
     }
@@ -194,28 +194,12 @@ size_t hash_map_capacity(HashMap* hm) {
     return hm->header->capacity;
 }
 
-size_t hash_map_count(HashMap* hm) {
+size_t hash_map_count(const HashMap* hm) {
     if (!hm || !hm->buffer) {
         return 0;
     }
 
     return hm->size;
-}
-
-void* hash_map_keys(HashMap* hm) {
-    if (!hm || !hm->buffer) {
-        return NULL;
-    }
-
-    return hm->header->keys;
-}
-
-void* hash_map_values(HashMap* hm) {
-    if (!hm || !hm->buffer) {
-        return NULL;
-    }
-
-    return hm->header->values;
 }
 
 void hash_map_clear_retaining_capacity(HashMap* hm) {
@@ -482,12 +466,12 @@ bool hash_map_put(HashMap* hm, const void* key, const void* value) {
     return true;
 }
 
-bool hash_map_contains(HashMap* hm, const void* key) {
+bool hash_map_contains(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     return hash_map_get_index(hm, key, NULL);
 }
 
-bool hash_map_get_index(HashMap* hm, const void* key, size_t* index) {
+bool hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
     assert(hm && hm->buffer && key);
     if (hm->size == 0) {
         return false;
@@ -523,9 +507,19 @@ bool hash_map_get_index(HashMap* hm, const void* key, size_t* index) {
     return false;
 }
 
-bool hash_map_get_value(HashMap* hm, const void* key, void* value) {
+static inline const void* _hash_map_get_value_ptr(const HashMap* hm, const void* key) {
+    assert(hm && hm->buffer && key);
+    size_t index;
+    if (!hash_map_get_index(hm, key, &index)) {
+        return NULL;
+    }
+
+    return ptr_offset(hm->header->values, index * hm->header->value_size);
+}
+
+bool hash_map_get_value(const HashMap* hm, const void* key, void* value) {
     assert(hm && hm->buffer && key && value);
-    const void* stored = hash_map_get_value_ptr(hm, key);
+    const void* stored = _hash_map_get_value_ptr(hm, key);
     if (stored) {
         memcpy(value, stored, hm->header->value_size);
         return true;
@@ -544,16 +538,16 @@ void* hash_map_get_value_ptr(HashMap* hm, const void* key) {
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }
 
-bool hash_map_get_entry(HashMap* hm, const void* key, Entry* e) {
+bool hash_map_get_entry(HashMap* hm, const void* key, HashEntry* e) {
     assert(hm && hm->buffer && key);
     size_t index;
     if (!hash_map_get_index(hm, key, &index)) {
         return false;
     }
 
-    *e = (Entry){
-        .key   = ptr_offset(hm->header->keys, index * hm->header->key_size),
-        .value = ptr_offset(hm->header->values, index * hm->header->value_size),
+    *e = (HashEntry){
+        .key_ptr   = ptr_offset(hm->header->keys, index * hm->header->key_size),
+        .value_ptr = ptr_offset(hm->header->values, index * hm->header->value_size),
     };
     return true;
 }
@@ -579,7 +573,7 @@ HashMapIterator hash_map_iterator_init(HashMap* hm) {
     };
 }
 
-bool hash_map_iterator_has_next(HashMapIterator* it, Entry* next) {
+bool hash_map_iterator_has_next(HashMapIterator* it, HashEntry* next) {
     assert(it && it->hm && it->hm->buffer);
     assert(it->index <= it->hm->header->capacity);
     if (it->hm->size == 0) {
@@ -592,9 +586,9 @@ bool hash_map_iterator_has_next(HashMapIterator* it, Entry* next) {
         it->index += 1;
 
         if (metadata_used(it->hm->metadata[i])) {
-            *next = (Entry){
-                .key   = ptr_offset(it->hm->header->keys, i * it->hm->header->key_size),
-                .value = ptr_offset(it->hm->header->values, i * it->hm->header->value_size),
+            *next = (HashEntry){
+                .key_ptr   = ptr_offset(it->hm->header->keys, i * it->hm->header->key_size),
+                .value_ptr = ptr_offset(it->hm->header->values, i * it->hm->header->value_size),
             };
             return true;
         }

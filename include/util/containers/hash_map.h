@@ -57,10 +57,14 @@ static inline uint8_t take_fingerprint(Hash hash) {
     return FINGERPRINT_MASK & (hash >> (64 - 7));
 }
 
+// A pair of mutable pointers into the table.
+//
+// While you can technically change the key, it will invalidate so much of the
+// backing metadata that the table will be practically unusable.
 typedef struct {
-    void* key;
-    void* value;
-} Entry;
+    void* key_ptr;
+    void* value_ptr;
+} HashEntry;
 
 // A pointer into the map either that mutates the map directly.
 //
@@ -132,10 +136,8 @@ bool hash_map_init(HashMap* hm,
                    int (*compare)(const void*, const void*));
 void hash_map_deinit(HashMap* hm);
 
-size_t hash_map_capacity(HashMap* hm);
-size_t hash_map_count(HashMap* hm);
-void*  hash_map_keys(HashMap* hm);
-void*  hash_map_values(HashMap* hm);
+size_t hash_map_capacity(const HashMap* hm);
+size_t hash_map_count(const HashMap* hm);
 
 void hash_map_clear_retaining_capacity(HashMap* hm);
 bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
@@ -163,15 +165,15 @@ bool           hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult*
 void           hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
 bool           hash_map_put(HashMap* hm, const void* key, const void* value);
 
-bool  hash_map_contains(HashMap* hm, const void* key);
-bool  hash_map_get_index(HashMap* hm, const void* key, size_t* index);
-bool  hash_map_get_value(HashMap* hm, const void* key, void* value);
+bool  hash_map_contains(const HashMap* hm, const void* key);
+bool  hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
+bool  hash_map_get_value(const HashMap* hm, const void* key, void* value);
 void* hash_map_get_value_ptr(HashMap* hm, const void* key);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-bool hash_map_get_entry(HashMap* hm, const void* key, Entry* e);
+bool hash_map_get_entry(HashMap* hm, const void* key, HashEntry* e);
 
 bool hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
-bool            hash_map_iterator_has_next(HashMapIterator* it, Entry* next);
+bool            hash_map_iterator_has_next(HashMapIterator* it, HashEntry* next);

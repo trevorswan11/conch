@@ -7,6 +7,7 @@
 
 extern "C" {
 #include "util/containers/array_list.h"
+#include "util/hash.h"
 }
 
 TEST_CASE("Init and resize") {
@@ -15,19 +16,10 @@ TEST_CASE("Init and resize") {
     REQUIRE(array_list_resize(&a, 12));
     REQUIRE(array_list_resize(&a, 8));
     array_list_deinit(&a);
-}
 
-TEST_CASE("Null safety") {
-    ArrayList* a = NULL;
-    REQUIRE_FALSE(array_list_resize(a, 10));
-
-    int val = 42;
-    REQUIRE_FALSE(array_list_push(a, &val));
-    REQUIRE_FALSE(array_list_get(a, 0));
-
-    int out;
-    REQUIRE_FALSE(array_list_pop(a, &out));
-    array_list_deinit(a);
+    ArrayList b;
+    REQUIRE(array_list_init(&b, 10, sizeof(uint8_t)));
+    REQUIRE(array_list_resize(&b, 0));
 }
 
 TEST_CASE("Push ops w/o resize") {
@@ -41,16 +33,18 @@ TEST_CASE("Push ops w/o resize") {
     }
 
     for (size_t i = 0; i < a.length; i++) {
-        uint8_t item = *(uint8_t*)array_list_get(&a, i);
-        REQUIRE(item == expecteds[i]);
+        uint8_t out_item;
+        REQUIRE(array_list_get(&a, i, &out_item));
+        REQUIRE(out_item == expecteds[i]);
     }
 
     // Set manually
     uint8_t manual_val = 42;
     REQUIRE(array_list_set(&a, 1, &manual_val));
     REQUIRE_FALSE(array_list_set(&a, 100, &manual_val));
-    uint8_t item = *(uint8_t*)array_list_get(&a, 1);
-    REQUIRE(item == manual_val);
+    uint8_t out_item;
+    REQUIRE(array_list_get(&a, 1, &out_item));
+    REQUIRE(out_item == manual_val);
 
     array_list_deinit(&a);
 }
@@ -67,8 +61,9 @@ TEST_CASE("Push ops w/ resize") {
     }
 
     for (size_t i = 0; i < a.length; i++) {
-        uint8_t item = *(uint8_t*)array_list_get(&a, i);
-        REQUIRE(item == expecteds[i]);
+        uint8_t out_item;
+        REQUIRE(array_list_get(&a, i, &out_item));
+        REQUIRE(out_item == expecteds[i]);
     }
 
     // Push and check the remaining elements
@@ -77,19 +72,36 @@ TEST_CASE("Push ops w/ resize") {
     }
 
     for (size_t i = 0; i < a.length; i++) {
-        uint8_t item = *(uint8_t*)array_list_get(&a, i);
-        REQUIRE(item == expecteds[i]);
+        uint8_t out_item;
+        REQUIRE(array_list_get(&a, i, &out_item));
+        REQUIRE(out_item == expecteds[i]);
     }
 
     // Set manually
     uint8_t manual_val = 42;
     REQUIRE(array_list_set(&a, 1, &manual_val));
     REQUIRE_FALSE(array_list_set(&a, 100, &manual_val));
-    uint8_t item = *(uint8_t*)array_list_get(&a, 1);
-    REQUIRE(item == manual_val);
+    uint8_t out_item;
+    REQUIRE(array_list_get(&a, 1, &out_item));
+    REQUIRE(out_item == manual_val);
+    uint8_t* mut_item = (uint8_t*)array_list_get_ptr(&a, 1);
+    REQUIRE(mut_item);
+    REQUIRE(*mut_item == manual_val);
+
+    uint8_t new_val = manual_val + 1;
+    *mut_item       = new_val;
+    REQUIRE_FALSE(array_list_get_ptr(&a, 100));
+    REQUIRE(array_list_get(&a, 1, &out_item));
+    REQUIRE(out_item == new_val);
+
+    REQUIRE(array_list_resize(&a, 2));
+    REQUIRE(array_list_capacity(&a) == 2);
+    REQUIRE(array_list_length(&a) == 2);
 
     array_list_deinit(&a);
 }
+
+COMPARE_INTEGER_FN(uint32_t);
 
 TEST_CASE("Remove ops") {
     ArrayList a;
@@ -99,7 +111,7 @@ TEST_CASE("Remove ops") {
     REQUIRE_FALSE(array_list_pop(&a, &out));
 
     uint32_t in = 10;
-    array_list_push(&a, &in);
+    REQUIRE(array_list_push(&a, &in));
     REQUIRE(array_list_pop(&a, &out));
     REQUIRE(out == in);
 
@@ -114,37 +126,51 @@ TEST_CASE("Remove ops") {
     REQUIRE(out == 5);
     REQUIRE_FALSE(array_list_remove(&a, 100, &out));
 
-    uint32_t target  = 10;
-    auto     compare = [](const void* a, const void* b) {
-        return (int)(*(uint32_t*)a - *(uint32_t*)b);
-    };
-    REQUIRE(array_list_remove_item(&a, &target, compare));
+    uint32_t target = 10;
+    REQUIRE(array_list_remove_item(&a, &target, compare_uint32_t));
 
     std::vector<uint32_t> remaining = {7, 2, 6, 22, 3};
     REQUIRE(a.length == remaining.size());
     for (size_t i = 0; i < remaining.size(); i++) {
-        uint32_t item = *(uint32_t*)array_list_get(&a, i);
-        REQUIRE(item == remaining[i]);
+        uint32_t out_item;
+        REQUIRE(array_list_get(&a, i, &out_item));
+        REQUIRE(out_item == remaining[i]);
     }
+
+    array_list_deinit(&a);
+}
+
+COMPARE_INTEGER_FN(int32_t);
+
+TEST_CASE("Malformed find") {
+    ArrayList a;
+    REQUIRE(array_list_init(&a, 4, sizeof(int32_t)));
+
+    size_t  maybe_idx;
+    int32_t maybe_item;
+    REQUIRE_FALSE(array_list_find(&a, NULL, &maybe_item, compare_int32_t));
+    REQUIRE_FALSE(array_list_find(&a, &maybe_idx, NULL, compare_int32_t));
+    REQUIRE_FALSE(array_list_find(&a, &maybe_idx, &maybe_item, NULL));
 
     array_list_deinit(&a);
 }
 
 TEST_CASE("Find") {
     ArrayList a;
-    array_list_init(&a, 4, sizeof(int));
+    REQUIRE(array_list_init(&a, 4, sizeof(int32_t)));
 
-    std::vector<int> values = {10, 20, 30, 40};
-    for (int i = 0; i < 4; i++) {
+    std::vector<int32_t> values = {10, 20, 30, 40};
+    for (int32_t i = 0; i < 4; i++) {
         array_list_push(&a, &values[i]);
     }
 
-    auto   compare = [](const void* a, const void* b) { return *(int*)a - *(int*)b; };
-    int    target  = 30;
-    size_t idx;
-    bool   found = array_list_find(&a, &idx, &target, compare);
+    int32_t present_target = 30;
+    size_t  idx;
+    REQUIRE(array_list_find(&a, &idx, &present_target, compare_int32_t));
+    REQUIRE(idx == 2);
 
-    REQUIRE(found);
+    int32_t missing_target = 31;
+    REQUIRE_FALSE(array_list_find(&a, &idx, &missing_target, compare_int32_t));
     REQUIRE(idx == 2);
 
     array_list_deinit(&a);
