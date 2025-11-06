@@ -86,20 +86,21 @@ test: $(TEST_BIN)
 BIN_DIR_COVERAGE := $(BIN_ROOT)/coverage
 coverage: CC := clang
 coverage: CXX := clang++
-coverage: $(COVERAGE_BIN)
 ifeq ($(OS),Windows_NT)
+coverage: 
 	$(error Coverage is not supported on Windows)
 else
+coverage: $(COVERAGE_BIN)
 	@LLVM_PROFILE_FILE=$(BIN_DIR_COVERAGE)/default.profraw $(COVERAGE_BIN)
 endif
 
 asan: CC := clang
 asan: CXX := clang++
-asan: 
 ifeq ($(OS),Windows_NT)
+asan: 
 	$(error Sanitizers are not supported on Windows)
 else
-	$(ASAN_BIN)
+asan: $(ASAN_BIN)
 	@$(ASAN_BIN)
 endif
 
@@ -291,7 +292,10 @@ test              > Build and run the project's tests\n\
 run               > Build and run the release binary\n\
 run-dist          > Build and run the dist binary\n\
 run-release       > Build and run the release binary\n\
-run-debug         > Build and run the debug binary\n\
+coverage          > Compile the tests with coverage instrumentation and record its data\n\
+coverage-report   > Gather the test coverage information and emit a comprehensive report\n\
+coverage-badge    > Gather the test coverage information and create its GitHub badge\n\
+asan              > Build and run the tests with address and UB sanitizers\n\
 fmt               > Format all source and header files with clang-format\n\
 fmt-check         > Check formatting rules without modifying files\n\
 clean             > Remove object files, dependency files, and binaries\n\
