@@ -123,11 +123,9 @@ asan: CC := clang
 asan: CXX := clang++
 asan: CFLAGS_TEST += -fsanitize=address,undefined
 asan: CXXFLAGS_TEST += -fsanitize=address,undefined
-asan:
+asan: clean test
 ifeq ($(OS),Windows_NT)
 	$(error Sanitizers not supported on Windows)
-else
-	test
 endif
 
 # ================ COVERAGE BUILD ================
