@@ -24,6 +24,8 @@ on:
 
 jobs:
   build-test:
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
