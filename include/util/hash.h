@@ -16,11 +16,12 @@ int compare_slices(const void* a, const void* b);
 uint64_t hash_string_z(const void* key);
 uint64_t hash_slice(const void* key);
 
+#define HASH_CONCAT_2(a, b) a##b
 #define HASH_CONCAT_3(a, b, c) a##b##c
 
 // Generates a generic hash function for the given unsigned integer.
 // It's corresponding signed integer type is also generated and uses the unsigned variant
-// internally.
+// internally. Use the integer types from stdint.h with this macro.
 //
 // Hash functions accept 8, 16, 32, and 64 bit integers, others are undefined and return 0.
 //
@@ -50,7 +51,7 @@ uint64_t hash_slice(const void* key);
             val = val ^ (val >> 31);                                      \
             return val;                                                   \
         } else {                                                          \
-            return 0; /* unsupported size */                              \
+            return 0;                                                     \
         }                                                                 \
     }                                                                     \
                                                                           \
@@ -59,9 +60,8 @@ uint64_t hash_slice(const void* key);
         return HASH_CONCAT_3(hash_, T, _u)(&ux);                          \
     }
 
-#define HASH_CONCAT_2(a, b) a##b
-
 // Generates a compare function for the integer type.
+// Use the integer types from stdint.h with this macro.
 //
 // This function takes two void pointers and subtracts them.
 // - If the first element is larger, return a positive integer

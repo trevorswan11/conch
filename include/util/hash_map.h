@@ -84,6 +84,7 @@ typedef struct {
 } Header;
 
 // A HashMap based on open addressing and linear probing. This is not thread-safe.
+// For use as a HashSet, use a value size and alignment of 1.
 //
 // Operations that grow the map or rehash its entries invalidate all pointers.
 typedef struct {
@@ -111,6 +112,8 @@ typedef struct {
 
 // Creates a HashMap with the given properties.
 //
+// For use as a HashSet, use a value size and alignment of 1.
+//
 // `compare` must be a function pointer for keys such that:
 // - If the first element is larger, return a positive integer
 // - If the second element is larger, return a negative integer
@@ -134,6 +137,7 @@ size_t hash_map_count(HashMap* hm);
 void*  hash_map_keys(HashMap* hm);
 void*  hash_map_values(HashMap* hm);
 
+void hash_map_clear_retaining_capacity(HashMap* hm);
 bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
 bool hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 
@@ -152,8 +156,11 @@ void hash_map_rehash(HashMap* hm);
 
 // Inserts an entry into the map, assuming it is not present and no growth is needed.
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
+bool hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
+
 GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
 bool           hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result);
+void           hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
 bool           hash_map_put(HashMap* hm, const void* key, const void* value);
 
 bool  hash_map_contains(HashMap* hm, const void* key);
@@ -167,4 +174,4 @@ bool hash_map_get_entry(HashMap* hm, const void* key, Entry* e);
 bool hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
-bool            hash_map_iterator_next(HashMapIterator* it, Entry* e);
+bool            hash_map_iterator_has_next(HashMapIterator* it, Entry* e);

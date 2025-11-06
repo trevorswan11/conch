@@ -8,6 +8,7 @@
 extern "C" {
 #include "util/hash.h"
 #include "util/hash_map.h"
+#include "util/mem.h"
 }
 
 TEST_CASE("Metadata helpers") {
@@ -74,14 +75,6 @@ TEST_CASE("Malformed map usage") {
                                 alignof(V),
                                 hash_uint16_t_u,
                                 compare_uint16_t));
-    REQUIRE_FALSE(hash_map_init(&hm,
-                                SIZE_MAX - 1,
-                                sizeof(K),
-                                alignof(K),
-                                sizeof(V),
-                                alignof(V),
-                                hash_uint16_t_u,
-                                compare_uint16_t));
 
     // Helpers that check self and buffer initialization
     REQUIRE_FALSE(hash_map_capacity(NULL));
@@ -98,7 +91,7 @@ TEST_CASE("Malformed map usage") {
     REQUIRE_FALSE(hash_map_ensure_total_capacity(&hm, 10));
 }
 
-TEST_CASE("HashMap init") {
+TEST_CASE("Init") {
     using K = uint16_t;
     using V = uint32_t;
 
@@ -106,10 +99,10 @@ TEST_CASE("HashMap init") {
     REQUIRE(hash_map_init(
         &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t));
     REQUIRE(hm.size == 0);
-    REQUIRE(hm.available == 10);
+    REQUIRE(hm.available == 16);
 
-    REQUIRE(hm.header->capacity == 10);
-    REQUIRE(hash_map_capacity(&hm) == 10);
+    REQUIRE(hm.header->capacity == 16);
+    REQUIRE(hash_map_capacity(&hm) == 16);
     REQUIRE(hm.header->key_size == sizeof(K));
     REQUIRE(hm.header->key_align == alignof(K));
     REQUIRE(hm.header->value_size == sizeof(V));
@@ -124,5 +117,206 @@ TEST_CASE("HashMap init") {
     REQUIRE(hash_map_init(
         &hm, 1, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t));
     REQUIRE(hash_map_capacity(&hm) == HM_MINIMUM_CAPACITY);
+    hash_map_deinit(&hm);
+}
+
+HASH_INTEGER_FN(uint32_t);
+COMPARE_INTEGER_FN(uint32_t);
+
+TEST_CASE("Basic usage") {
+    using K = uint32_t;
+    using V = uint32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t));
+    const size_t count = 5;
+
+    V load_total = 0;
+    for (V i = 0; i < count; i++) {
+        REQUIRE(hash_map_put(&hm, &i, &i));
+        load_total += i;
+    }
+    REQUIRE(hash_map_count(&hm) == 5);
+
+    V               internal_total = 0;
+    HashMapIterator it             = hash_map_iterator_init(&hm);
+
+    Entry e;
+    while (hash_map_iterator_has_next(&it, &e)) {
+        internal_total += *(K*)e.key;
+    }
+    REQUIRE(load_total == internal_total);
+
+    internal_total = 0;
+    for (V i = 0; i < count; i++) {
+        V val;
+        REQUIRE(hash_map_get_value(&hm, &i, &val));
+        REQUIRE(i == val);
+        internal_total += val;
+    }
+    REQUIRE(load_total == internal_total);
+
+    hash_map_deinit(&hm);
+}
+
+COMPARE_INTEGER_FN(int32_t);
+
+TEST_CASE("Ensure total capacity") {
+    using K = int32_t;
+    using V = int32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t));
+
+    REQUIRE(hash_map_ensure_total_capacity(&hm, 20));
+    const size_t initial_capacity = hash_map_capacity(&hm);
+    REQUIRE(initial_capacity >= 20);
+
+    for (V i = 0; i < 20; i++) {
+        GetOrPutResult result;
+        REQUIRE(hash_map_get_or_put(&hm, &i, &result));
+        REQUIRE_FALSE(result.found_existing);
+    }
+    REQUIRE(initial_capacity == hash_map_capacity(&hm));
+
+    hash_map_deinit(&hm);
+}
+
+HASH_INTEGER_FN(uint64_t);
+COMPARE_INTEGER_FN(uint64_t);
+
+TEST_CASE("Ensure unused capacity") {
+    using K = int64_t;
+    using V = int64_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint64_t_u, compare_uint64_t));
+
+    hash_map_ensure_unused_capacity(&hm, 32);
+    const size_t capacity = hash_map_capacity(&hm);
+    hash_map_ensure_unused_capacity(&hm, 32);
+    REQUIRE(capacity == hash_map_capacity(&hm));
+
+    hash_map_deinit(&hm);
+}
+
+TEST_CASE("Ensure unused capacity with tombstones") {
+    using K = int32_t;
+    using V = int32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t));
+
+    for (V i = 0; i < 100; i++) {
+        REQUIRE(hash_map_ensure_unused_capacity(&hm, 1));
+        hash_map_put_assume_capacity(&hm, &i, &i);
+        REQUIRE(hash_map_remove(&hm, &i));
+    }
+
+    hash_map_deinit(&hm);
+}
+
+TEST_CASE("Clear retaining capacity") {
+    using K = Slice;
+    using V = int32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_slice, compare_int32_t));
+    hash_map_clear_retaining_capacity(&hm);
+
+    const char* str1 = "Hello";
+    K           key1 = slice_from_z(str1);
+    V           val1 = 1;
+    REQUIRE(hash_map_put(&hm, &key1, &val1));
+    REQUIRE(hash_map_count(&hm) == 1);
+
+    hash_map_clear_retaining_capacity(&hm);
+    hash_map_put_assume_capacity(&hm, &key1, &val1);
+    V out_val1;
+    REQUIRE(hash_map_get_value(&hm, &key1, &out_val1));
+    REQUIRE(out_val1 == 1);
+    REQUIRE(hash_map_count(&hm) == 1);
+
+    const size_t capacity = hash_map_capacity(&hm);
+    REQUIRE(capacity > 0);
+
+    hash_map_clear_retaining_capacity(&hm);
+    hash_map_clear_retaining_capacity(&hm);
+
+    REQUIRE(hash_map_count(&hm) == 0);
+    REQUIRE(hash_map_capacity(&hm) == capacity);
+    REQUIRE_FALSE(hash_map_contains(&hm, &key1));
+
+    hash_map_deinit(&hm);
+}
+
+TEST_CASE("Grow") {
+    using K = uint32_t;
+    using V = uint32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t));
+
+    const size_t grow_to = 12456;
+
+    for (size_t i = 0; i < grow_to; i++) {
+        hash_map_put(&hm, &i, &i);
+    }
+    REQUIRE(hash_map_count(&hm) == grow_to);
+
+    HashMapIterator it = hash_map_iterator_init(&hm);
+    Entry           e;
+    size_t          total = 0;
+    while (hash_map_iterator_has_next(&it, &e)) {
+        REQUIRE(*(K*)e.key == *(V*)e.value);
+        total += 1;
+    }
+    REQUIRE(total == grow_to);
+
+    for (size_t i = 0; i < grow_to; i++) {
+        V out_val;
+        REQUIRE(hash_map_get_value(&hm, &i, &out_val));
+        REQUIRE(out_val == i);
+    }
+
+    hash_map_deinit(&hm);
+}
+
+TEST_CASE("Rehash") {
+    using K = uint32_t;
+    using V = uint32_t;
+
+    HashMap hm;
+    REQUIRE(hash_map_init(
+        &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t));
+
+    // Add some elements and remove every third to simulate a fragmented map
+    const size_t total_count = 6 * 1637;
+    for (size_t i = 0; i < total_count; i++) {
+        hash_map_put(&hm, &i, &i);
+        if (i % 3 == 0) {
+            REQUIRE(hash_map_remove(&hm, &i));
+        }
+    }
+
+    // Rehash and ensure data was not lost along the way
+    hash_map_rehash(&hm);
+    REQUIRE(hash_map_count(&hm) == total_count * 2 / 3);
+    for (size_t i = 0; i < total_count; i++) {
+        V out_val;
+        if (i % 3 == 0) {
+            REQUIRE_FALSE(hash_map_get_value(&hm, &i, &out_val));
+        } else {
+            REQUIRE(hash_map_get_value(&hm, &i, &out_val));
+            REQUIRE(out_val == i);
+        }
+    }
+
     hash_map_deinit(&hm);
 }

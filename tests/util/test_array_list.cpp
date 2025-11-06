@@ -9,7 +9,7 @@ extern "C" {
 #include "util/array_list.h"
 }
 
-TEST_CASE("ArrayList init and resize") {
+TEST_CASE("Init and resize") {
     ArrayList a;
     REQUIRE(array_list_init(&a, 10, sizeof(uint8_t)));
     REQUIRE(array_list_resize(&a, 12));
@@ -17,7 +17,7 @@ TEST_CASE("ArrayList init and resize") {
     array_list_deinit(&a);
 }
 
-TEST_CASE("ArrayList null safety") {
+TEST_CASE("Null safety") {
     ArrayList* a = NULL;
     REQUIRE_FALSE(array_list_resize(a, 10));
 
@@ -30,7 +30,7 @@ TEST_CASE("ArrayList null safety") {
     array_list_deinit(a);
 }
 
-TEST_CASE("ArrayList push ops w/o resize") {
+TEST_CASE("Push ops w/o resize") {
     ArrayList a;
     REQUIRE(array_list_init(&a, 10, sizeof(uint8_t)));
 
@@ -55,7 +55,7 @@ TEST_CASE("ArrayList push ops w/o resize") {
     array_list_deinit(&a);
 }
 
-TEST_CASE("ArrayList push ops w/ resize") {
+TEST_CASE("Push ops w/ resize") {
     ArrayList a;
     REQUIRE(array_list_init(&a, 10, sizeof(uint8_t)));
     std::vector<uint8_t> expecteds = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
@@ -91,7 +91,7 @@ TEST_CASE("ArrayList push ops w/ resize") {
     array_list_deinit(&a);
 }
 
-TEST_CASE("ArrayList remove ops") {
+TEST_CASE("Remove ops") {
     ArrayList a;
     REQUIRE(array_list_init(&a, 10, sizeof(uint32_t)));
 
@@ -130,7 +130,7 @@ TEST_CASE("ArrayList remove ops") {
     array_list_deinit(&a);
 }
 
-TEST_CASE("ArrayList find") {
+TEST_CASE("Find") {
     ArrayList a;
     array_list_init(&a, 4, sizeof(int));
 

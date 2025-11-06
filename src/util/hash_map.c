@@ -2,6 +2,7 @@
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,11 +18,7 @@ MAX_FN(size_t, size_t)
 // Determines the new capacity based on the current size.
 static inline size_t _hash_map_capacity_for_size(size_t size) {
     size_t new_cap = (size * 100) / HM_MAX_LOAD_PERCENTAGE + 1;
-#ifdef WORD_SIZE_64
-    return (size_t)ceil_power_of_two_64(new_cap);
-#else
-    return (size_t)ceil_power_of_two_32(new_cap);
-#endif
+    return ceil_power_of_two_size(new_cap);
 }
 
 typedef enum {
@@ -86,6 +83,12 @@ static inline GrowIfNeededResult _hash_map_grow_if_needed(HashMap* hm, size_t ne
     return SUCCESS;
 }
 
+static inline void _hash_map_init_metadatas(HashMap* hm) {
+    assert(METADATA_SLOT_OPEN.fingerprint == 0);
+    assert(METADATA_SLOT_OPEN.used == 0);
+    memset(hm->metadata, 0, sizeof(Metadata) * hm->header->capacity);
+}
+
 bool hash_map_init(HashMap* hm,
                    size_t   capacity,
                    size_t   key_size,
@@ -101,6 +104,9 @@ bool hash_map_init(HashMap* hm,
     }
 
     capacity = capacity < HM_MINIMUM_CAPACITY ? HM_MINIMUM_CAPACITY : capacity;
+    if (!is_power_of_two(capacity)) {
+        capacity = ceil_power_of_two_size(capacity);
+    }
 
     const size_t header_size   = sizeof(Header);
     const size_t metadata_size = sizeof(Metadata) * capacity;
@@ -163,11 +169,7 @@ bool hash_map_init(HashMap* hm,
         .compare   = compare,
     };
 
-    // Initialize metadata to open
-    for (size_t i = 0; i < capacity; i++) {
-        hm->metadata[i] = METADATA_SLOT_OPEN;
-    }
-
+    _hash_map_init_metadatas(hm);
     return true;
 }
 
@@ -214,6 +216,12 @@ void* hash_map_values(HashMap* hm) {
     }
 
     return hm->header->values;
+}
+
+void hash_map_clear_retaining_capacity(HashMap* hm) {
+    _hash_map_init_metadatas(hm);
+    hm->size      = 0;
+    hm->available = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100;
 }
 
 bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
@@ -290,7 +298,7 @@ void hash_map_rehash(HashMap* hm) {
         } else if (probe == current) {
             metadata_fill(&metadata[probe], fingerprint);
         } else {
-            assert(metadata[probe].fingerprint == FP_TOMBSTONE);
+            assert(metadata[probe].fingerprint != FP_TOMBSTONE);
             metadata[probe].fingerprint = FP_TOMBSTONE;
 
             if (metadata_used(metadata[probe])) {
@@ -316,6 +324,23 @@ void hash_map_rehash(HashMap* hm) {
 
         current += 1;
     }
+
+    // Convert graveyard into real fingerprints
+    for (size_t i = 0; i < capacity; i++) {
+        if (metadata[i].fingerprint == FP_TOMBSTONE) {
+            // This was a slot > current that was processed
+            assert(metadata_used(metadata[i]));
+            const Hash hash         = hm->hash(ptr_offset(keys_ptr, i * hm->header->key_size));
+            metadata[i].fingerprint = take_fingerprint(hash);
+        } else {
+            // This was either:
+            // 1. A slot <= current that was processed (has correct fp)
+            // 2. An empty slot (fp=FP_OPEN, used=0)
+            assert(metadata_used(metadata[i]) || metadata_open(metadata[i]));
+        }
+    }
+
+    hm->available = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100 - hm->size;
 }
 
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value) {
@@ -348,6 +373,16 @@ void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const
     hm->size += 1;
 }
 
+bool hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
+    GrowIfNeededResult result = _hash_map_grow_if_needed(hm, 1);
+    if (result == FAILED) {
+        return false;
+    }
+
+    hash_map_put_assume_capacity_no_clobber(hm, key, value);
+    return true;
+}
+
 // The data in the returned result is garbage if an existing key was not found.
 GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
@@ -362,12 +397,8 @@ GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key)
     size_t    first_tombstone_idx = limit;
     Metadata* metadata            = hm->metadata;
 
-    while (limit != 0) {
-        Metadata m = metadata[probe];
-        if (metadata_open(m)) {
-            break;
-        }
-
+    Metadata m = metadata[probe];
+    while (!metadata_open(m) && limit != 0) {
         if (metadata_used(m) && m.fingerprint == fingerprint) {
             void* test_key = ptr_offset(hm->header->keys, probe * hm->header->key_size);
 
@@ -384,6 +415,7 @@ GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key)
 
         limit -= 1;
         probe = (probe + 1) & mask;
+        m     = metadata[probe];
     }
 
     // It's cheaper to lower probing distance after deletions by recycling a tombstone
@@ -430,6 +462,14 @@ bool hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result) {
     return true;
 }
 
+void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value) {
+    assert(hm && hm->buffer && key && value);
+    GetOrPutResult gop = hash_map_get_or_put_assume_capacity(hm, key);
+
+    memcpy(gop.key_ptr, key, hm->header->key_size);
+    memcpy(gop.value_ptr, value, hm->header->value_size);
+}
+
 bool hash_map_put(HashMap* hm, const void* key, const void* value) {
     assert(hm && hm->buffer && key && value);
     GetOrPutResult gop;
@@ -437,6 +477,7 @@ bool hash_map_put(HashMap* hm, const void* key, const void* value) {
         return false;
     }
 
+    memcpy(gop.key_ptr, key, hm->header->key_size);
     memcpy(gop.value_ptr, value, hm->header->value_size);
     return true;
 }
@@ -461,12 +502,8 @@ bool hash_map_get_index(HashMap* hm, const void* key, size_t* index) {
 
     Metadata* metadata = hm->metadata;
 
-    while (limit != 0) {
-        Metadata m = metadata[probe];
-        if (metadata_open(m)) {
-            return false;
-        }
-
+    Metadata m = metadata[probe];
+    while (!metadata_open(m) && limit != 0) {
         if (metadata_used(m) && m.fingerprint == fingerprint) {
             const void* test_key = ptr_offset(hm->header->keys, probe * hm->header->key_size);
 
@@ -480,6 +517,7 @@ bool hash_map_get_index(HashMap* hm, const void* key, size_t* index) {
 
         limit -= 1;
         probe = (probe + 1) & mask;
+        m     = metadata[probe];
     }
 
     return false;
@@ -541,7 +579,7 @@ HashMapIterator hash_map_iterator_init(HashMap* hm) {
     };
 }
 
-bool hash_map_iterator_next(HashMapIterator* it, Entry* e) {
+bool hash_map_iterator_has_next(HashMapIterator* it, Entry* e) {
     assert(it && it->hm && it->hm->buffer);
     assert(it->index <= it->hm->header->capacity);
     if (it->hm->size == 0) {
