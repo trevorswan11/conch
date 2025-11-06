@@ -38,6 +38,7 @@ TEST_SRCS := $(filter-out $(TEST_DIR)/test_framework/catch_amalgamated.cpp, \
 TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
 TEST_BIN := $(BIN_ROOT)/tests/run_tests$(EXE)
 COVERAGE_BIN := $(BIN_ROOT)/coverage/run_tests$(EXE)
+ASAN_BIN := $(BIN_ROOT)/asan/run_tests$(EXE)
 
 FMT_SRCS := $(SRCS) \
             $(call rwildcard,$(INC_DIR)/,*.h) \
@@ -92,6 +93,16 @@ else
 	@LLVM_PROFILE_FILE=$(BIN_DIR_COVERAGE)/default.profraw $(COVERAGE_BIN)
 endif
 
+asan: CC := clang
+asan: CXX := clang++
+asan: 
+ifeq ($(OS),Windows_NT)
+	$(error Sanitizers are not supported on Windows)
+else
+	$(ASAN_BIN)
+	@$(ASAN_BIN)
+endif
+
 # ================ TESTING BUILD ================
 
 OBJ_DIR_TEST := $(BUILD_DIR)/tests
@@ -119,14 +130,32 @@ $(TEST_BIN): $(CATCH_OBJ_TESTS) $(TEST_OBJS) $(LIB_OBJS_FOR_TESTS)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_TEST) -o $@ $^
 
-asan: CC := clang
-asan: CXX := clang++
-asan: CFLAGS_TEST += -fsanitize=address,undefined
-asan: CXXFLAGS_TEST += -fsanitize=address,undefined
-asan: clean test
-ifeq ($(OS),Windows_NT)
-	$(error Sanitizers not supported on Windows)
-endif
+# ================ ASAN BUILD ================
+
+OBJ_DIR_ASAN := $(BUILD_DIR)/asan
+OBJS_ASAN := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ASAN)/%.o,$(SRCS))
+CFLAGS_ASAN := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g -fsanitize=address,undefined $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST -DASAN
+
+ASAN_TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/asan/%.o,$(TEST_SRCS))
+CATCH_OBJ_ASAN := $(BUILD_DIR)/asan/catch_amalgamated.o
+LIB_OBJS_FOR_ASAN := $(filter-out $(OBJ_DIR_ASAN)/main.o,$(OBJS_ASAN))
+CXXFLAGS_ASAN = -std=c++20 -O0 -Wall -Wextra -g -fsanitize=address,undefined $(TEST_INCLUDES) $(DEPFLAGS) -DTEST -DASAN
+
+$(OBJ_DIR_ASAN)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CC) $(CFLAGS_ASAN) -c $< -o $@
+
+$(BUILD_DIR)/asan/%.o: $(TEST_DIR)/%.cpp $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_ASAN) -c $< -o $@
+
+$(CATCH_OBJ_ASAN): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_ASAN) -c $< -o $@
+
+$(ASAN_BIN): $(CATCH_OBJ_ASAN) $(ASAN_TEST_OBJS) $(LIB_OBJS_FOR_ASAN)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_ASAN) -o $@ $^
 
 # ================ COVERAGE BUILD ================
 
@@ -189,6 +218,8 @@ $(OBJ_DIR_DEBUG)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 -include $(OBJS_RELEASE:.o=.d)
 -include $(OBJS_DEBUG:.o=.d)
 -include $(TEST_OBJS:.o=.d)
+-include $(ASAN_TEST_OBJS:.o=.d)
+-include $(OBJS_ASAN:.o=.d)
 
 # ================ OTHER TARGETS ================
 
