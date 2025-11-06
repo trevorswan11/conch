@@ -94,14 +94,14 @@ bool array_list_remove(ArrayList* a, size_t index, void* item) {
         return false;
     }
 
-    void* at = array_list_get_unsafe(a, index);
+    const void* at = array_list_get_unsafe(a, index);
     if (item) {
         memcpy(item, at, a->item_size);
     }
 
     for (size_t i = index; i < a->length - 1; i++) {
-        void* src  = array_list_get_unsafe(a, i + 1);
-        void* dest = array_list_get_unsafe(a, i);
+        const void* src  = array_list_get_unsafe(a, i + 1);
+        void*       dest = array_list_get_unsafe(a, i);
         memcpy(dest, src, a->item_size);
     }
 

@@ -10,8 +10,8 @@ static inline bool is_digit(char byte) {
 //
 // An underscore is considered a letter.
 static inline bool is_letter(char byte) {
-    bool lower = 'a' <= byte && byte <= 'z';
-    bool upper = 'A' <= byte && byte <= 'Z';
+    const bool lower = 'a' <= byte && byte <= 'z';
+    const bool upper = 'A' <= byte && byte <= 'Z';
     return lower || upper || byte == '_';
 }
 

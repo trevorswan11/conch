@@ -26,6 +26,11 @@ static inline Slice slice_from(const char* start, size_t length) {
     return (Slice){.ptr = start, .length = length};
 }
 
+// Creates a slice from a null terminated string.
+static inline Slice slice_from_z(const char* start) {
+    return slice_from(start, strlen(start));
+}
+
 static inline bool slice_equals(const Slice* a, const Slice* b) {
     return a->length == b->length && memcmp(a->ptr, b->ptr, a->length) == 0;
 }

@@ -52,7 +52,7 @@ static inline void metadata_remove(Metadata* m) {
     *m = METADATA_SLOT_TOMBSTONE;
 }
 
-// Only the first 7 bits of the result are relevant
+// Only the 7 most significant bits of the result are relevant
 static inline uint8_t take_fingerprint(Hash hash) {
     return FINGERPRINT_MASK & (hash >> (64 - 7));
 }
@@ -97,8 +97,8 @@ typedef struct {
     int (*compare)(const void*, const void*);
 } HashMap;
 
-static const size_t MAX_LOAD_PERCENTAGE = 80;
-static const size_t MINIMUM_CAPACITY    = 8;
+static const size_t HM_MAX_LOAD_PERCENTAGE = 80;
+static const size_t HM_MINIMUM_CAPACITY    = 8;
 
 // A non-owning iterator. Invalid if the underlying map is freed.
 // An iterator is invalidated if it modifies the map during iteration.

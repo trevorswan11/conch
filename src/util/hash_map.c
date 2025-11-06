@@ -16,7 +16,7 @@ MAX_FN(size_t, size_t)
 
 // Determines the new capacity based on the current size.
 static inline size_t _hash_map_capacity_for_size(size_t size) {
-    size_t new_cap = (size * 100) / MAX_LOAD_PERCENTAGE + 1;
+    size_t new_cap = (size * 100) / HM_MAX_LOAD_PERCENTAGE + 1;
 #ifdef WORD_SIZE_64
     return (size_t)ceil_power_of_two_64(new_cap);
 #else
@@ -32,7 +32,7 @@ typedef enum {
 
 // Grows the map to the new capacity, rehashing along the way.
 static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
-    new_capacity = max_size_t(2, new_capacity, MINIMUM_CAPACITY);
+    new_capacity = max_size_t(2, new_capacity, HM_MINIMUM_CAPACITY);
     assert(new_capacity > hm->header->capacity);
     assert(is_power_of_two(new_capacity));
 
@@ -56,8 +56,8 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
                 continue;
             }
 
-            void* key   = ptr_offset(hm->header->keys, i * hm->header->key_size);
-            void* value = ptr_offset(hm->header->values, i * hm->header->value_size);
+            const void* key   = ptr_offset(hm->header->keys, i * hm->header->key_size);
+            const void* value = ptr_offset(hm->header->values, i * hm->header->value_size);
             hash_map_put_assume_capacity_no_clobber(&map, key, value);
 
             if (map.size == hm->size) {
@@ -65,7 +65,7 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
             }
         }
     }
-    map.available = (new_capacity * MAX_LOAD_PERCENTAGE) / 100 - map.size;
+    map.available = (new_capacity * HM_MAX_LOAD_PERCENTAGE) / 100 - map.size;
 
     hash_map_deinit(hm);
     *hm = map;
@@ -74,12 +74,12 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
 
 // Only grows if the requested count exceeds the current number of available slots.
 static inline GrowIfNeededResult _hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
-    const size_t max_load = (hm->header->capacity * MAX_LOAD_PERCENTAGE) / 100;
+    const size_t max_load = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100;
     if (hm->size + new_count <= max_load) {
         return NOT_NEEDED;
     }
 
-    size_t desired = _hash_map_capacity_for_size(hm->size + new_count);
+    const size_t desired = _hash_map_capacity_for_size(hm->size + new_count);
     if (!_hash_map_grow(hm, desired)) {
         return FAILED;
     }
@@ -100,7 +100,7 @@ bool hash_map_init(HashMap* hm,
         return false;
     }
 
-    capacity = capacity < MINIMUM_CAPACITY ? MINIMUM_CAPACITY : capacity;
+    capacity = capacity < HM_MINIMUM_CAPACITY ? HM_MINIMUM_CAPACITY : capacity;
 
     const size_t header_size   = sizeof(Header);
     const size_t metadata_size = sizeof(Metadata) * capacity;
@@ -231,10 +231,6 @@ bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
 }
 
 bool hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size) {
-    if (!hm || !hm->buffer) {
-        return false;
-    }
-
     return hash_map_ensure_total_capacity(hm, hm->size + additional_size);
 }
 
@@ -491,7 +487,7 @@ bool hash_map_get_index(HashMap* hm, const void* key, size_t* index) {
 
 bool hash_map_get_value(HashMap* hm, const void* key, void* value) {
     assert(hm && hm->buffer && key && value);
-    void* stored = hash_map_get_value_ptr(hm, key);
+    const void* stored = hash_map_get_value_ptr(hm, key);
     if (stored) {
         memcpy(value, stored, hm->header->value_size);
         return true;
@@ -554,7 +550,7 @@ bool hash_map_iterator_next(HashMapIterator* it, Entry* e) {
 
     const size_t capacity = it->hm->header->capacity;
     while (it->index < capacity) {
-        size_t i = it->index;
+        const size_t i = it->index;
         it->index += 1;
 
         if (metadata_used(it->hm->metadata[i])) {

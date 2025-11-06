@@ -45,9 +45,9 @@ void lexer_read_char(Lexer* l) {
 Token lexer_next_token(Lexer* l) {
     lexer_skip_whitespace(l);
 
-    Token     token;
-    TokenType type;
-    bool      single_character = token_type_from_char(l->current_byte, &type);
+    Token      token;
+    TokenType  type;
+    const bool single_character = token_type_from_char(l->current_byte, &type);
 
     if (type == END) {
         token = token_init(type, &l->input[l->position], 0);
@@ -106,6 +106,6 @@ Token lexer_read_number(Lexer* l) {
         return token_init(ILLEGAL, &l->input[start], l->position - start);
     }
 
-    TokenType type = passed_decimal ? FLOAT : INT;
+    const TokenType type = passed_decimal ? FLOAT : INT;
     return token_init(type, &l->input[start], l->position - start);
 }

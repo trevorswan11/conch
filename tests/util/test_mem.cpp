@@ -13,11 +13,13 @@ extern "C" {
 TEST_CASE("Slice creation and equality") {
     const char* text = "hello";
     Slice       s1   = slice_from(text, 5);
+    Slice       s1_z = slice_from_z(text);
     Slice       s2   = slice_from("hello", 5);
     Slice       s3   = slice_from("hellx", 5);
     Slice       s4   = slice_from("hello world", 5);
 
     REQUIRE(s1.length == 5);
+    REQUIRE(slice_equals(&s1, &s1_z));
     REQUIRE(slice_equals(&s1, &s2));
     REQUIRE_FALSE(slice_equals(&s1, &s3));
     REQUIRE(slice_equals_str(&s1, "hello"));
