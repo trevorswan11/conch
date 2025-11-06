@@ -286,12 +286,13 @@ default           > Builds the release configuration (default)\n\
 install           > Builds the dist configuration\n\
 all               > Builds all optimization configurations (dist, release, debug)\n\
 dist              > Max optimization, assertions disabled\n\
-release           > Slightly fewer optimizations, no assertions enabled\n\
+release           > Slightly fewer optimizations, assertions enabled\n\
 debug             > No optimization, assertions enabled, debug symbols included\n\
 test              > Build and run the project's tests\n\
 run               > Build and run the release binary\n\
 run-dist          > Build and run the dist binary\n\
 run-release       > Build and run the release binary\n\
+run-debug         > Build and run the debug binary\n\
 coverage          > Compile the tests with coverage instrumentation and record its data\n\
 coverage-report   > Gather the test coverage information and emit a comprehensive report\n\
 coverage-badge    > Gather the test coverage information and create its GitHub badge\n\
@@ -306,6 +307,6 @@ help              > Print this help menu\n\
 "
 
 .PHONY: default install all dist release debug \
-		run run-dist run-release run-debug \
-		test coverage coverage-report coverage-badge \
-		asan clean fmt fmt-check help
+		test run run-dist run-release run-debug \
+		coverage coverage-report coverage-badge \
+		asan fmt fmt-check clean help

@@ -67,7 +67,7 @@ bool array_list_push(ArrayList* a, void* item) {
     if (!a) {
         return false;
     } else if (a->length == a->capacity) {
-        if (!array_list_resize(a, max_size_t(a->capacity * 2, 4))) {
+        if (!array_list_resize(a, max_size_t(2, a->capacity * 2, 4))) {
             return false;
         }
     }
