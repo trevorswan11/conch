@@ -17,7 +17,7 @@ MAX_FN(size_t, size_t)
 
 // Determines the new capacity based on the current size.
 static inline size_t _hash_map_capacity_for_size(size_t size) {
-    size_t new_cap = (size * 100) / HM_MAX_LOAD_PERCENTAGE + 1;
+    size_t new_cap = (size * 100) / HASH_MAP_MAX_LOAD_PERCENTAGE + 1;
     return ceil_power_of_two_size(new_cap);
 }
 
@@ -29,7 +29,7 @@ typedef enum {
 
 // Grows the map to the new capacity, rehashing along the way.
 static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
-    new_capacity = max_size_t(2, new_capacity, HM_MINIMUM_CAPACITY);
+    new_capacity = max_size_t(2, new_capacity, HASH_MAP_MINIMUM_CAPACITY);
     assert(new_capacity > hm->header->capacity);
     assert(is_power_of_two(new_capacity));
 
@@ -62,7 +62,7 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
             }
         }
     }
-    map.available = (new_capacity * HM_MAX_LOAD_PERCENTAGE) / 100 - map.size;
+    map.available = (new_capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100 - map.size;
 
     hash_map_deinit(hm);
     *hm = map;
@@ -71,7 +71,7 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
 
 // Only grows if the requested count exceeds the current number of available slots.
 static inline GrowIfNeededResult _hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
-    const size_t max_load = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100;
+    const size_t max_load = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
     if (hm->size + new_count <= max_load) {
         return NOT_NEEDED;
     }
@@ -103,12 +103,12 @@ bool hash_map_init(HashMap* hm,
         return false;
     }
 
-    capacity = capacity < HM_MINIMUM_CAPACITY ? HM_MINIMUM_CAPACITY : capacity;
+    capacity = capacity < HASH_MAP_MINIMUM_CAPACITY ? HASH_MAP_MINIMUM_CAPACITY : capacity;
     if (!is_power_of_two(capacity)) {
         capacity = ceil_power_of_two_size(capacity);
     }
 
-    const size_t header_size   = sizeof(Header);
+    const size_t header_size   = sizeof(MapHeader);
     const size_t metadata_size = sizeof(Metadata) * capacity;
     const size_t keys_size     = key_size * capacity;
     const size_t values_size   = value_size * capacity;
@@ -132,8 +132,8 @@ bool hash_map_init(HashMap* hm,
     // Unpack the allocated block of memory
     uintptr_t ptr = (uintptr_t)buffer;
 
-    Header* header = (Header*)ptr;
-    ptr            = (uintptr_t)ptr_offset((void*)ptr, sizeof(Header));
+    MapHeader* header = (MapHeader*)ptr;
+    ptr               = (uintptr_t)ptr_offset((void*)ptr, sizeof(MapHeader));
 
     Metadata* metadata = (Metadata*)ptr;
     ptr                = (uintptr_t)ptr_offset((void*)ptr, sizeof(Metadata) * capacity);
@@ -148,7 +148,7 @@ bool hash_map_init(HashMap* hm,
     assert(((uintptr_t)values % value_align) == 0);
 
     // Fill header info
-    *header = (Header){
+    *header = (MapHeader){
         .keys        = keys,
         .key_size    = key_size,
         .key_align   = key_align,
@@ -205,7 +205,7 @@ size_t hash_map_count(const HashMap* hm) {
 void hash_map_clear_retaining_capacity(HashMap* hm) {
     _hash_map_init_metadatas(hm);
     hm->size      = 0;
-    hm->available = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100;
+    hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
 }
 
 bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
@@ -324,7 +324,7 @@ void hash_map_rehash(HashMap* hm) {
         }
     }
 
-    hm->available = (hm->header->capacity * HM_MAX_LOAD_PERCENTAGE) / 100 - hm->size;
+    hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100 - hm->size;
 }
 
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value) {
@@ -368,7 +368,7 @@ bool hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
 }
 
 // The data in the returned result is garbage if an existing key was not found.
-GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key) {
+MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
 
     const Hash    hash        = hm->hash(key);
@@ -387,7 +387,7 @@ GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key)
             void* test_key = ptr_offset(hm->header->keys, probe * hm->header->key_size);
 
             if (hm->compare(key, test_key) == 0) {
-                return (GetOrPutResult){
+                return (MapGetOrPutResult){
                     .key_ptr   = test_key,
                     .value_ptr = ptr_offset(hm->header->values, probe * hm->header->value_size),
                     .found_existing = true,
@@ -411,14 +411,14 @@ GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key)
     metadata_fill(&hm->metadata[probe], fingerprint);
     hm->size += 1;
 
-    return (GetOrPutResult){
+    return (MapGetOrPutResult){
         .key_ptr        = ptr_offset(hm->header->keys, probe * hm->header->key_size),
         .value_ptr      = ptr_offset(hm->header->values, probe * hm->header->value_size),
         .found_existing = false,
     };
 }
 
-bool hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result) {
+bool hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result) {
     assert(hm && hm->buffer && key);
     const GrowIfNeededResult grow_res = _hash_map_grow_if_needed(hm, 1);
 
@@ -434,7 +434,7 @@ bool hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result) {
             return false;
         }
 
-        *result = (GetOrPutResult){
+        *result = (MapGetOrPutResult){
             .key_ptr        = ptr_offset(hm->header->keys, index * hm->header->key_size),
             .value_ptr      = ptr_offset(hm->header->values, index * hm->header->value_size),
             .found_existing = true,
@@ -448,7 +448,7 @@ bool hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result) {
 
 void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value) {
     assert(hm && hm->buffer && key && value);
-    GetOrPutResult gop = hash_map_get_or_put_assume_capacity(hm, key);
+    MapGetOrPutResult gop = hash_map_get_or_put_assume_capacity(hm, key);
 
     memcpy(gop.key_ptr, key, hm->header->key_size);
     memcpy(gop.value_ptr, value, hm->header->value_size);
@@ -456,7 +456,7 @@ void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* valu
 
 bool hash_map_put(HashMap* hm, const void* key, const void* value) {
     assert(hm && hm->buffer && key && value);
-    GetOrPutResult gop;
+    MapGetOrPutResult gop;
     if (!hash_map_get_or_put(hm, key, &gop)) {
         return false;
     }
@@ -538,14 +538,14 @@ void* hash_map_get_value_ptr(HashMap* hm, const void* key) {
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }
 
-bool hash_map_get_entry(HashMap* hm, const void* key, HashEntry* e) {
+bool hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
     assert(hm && hm->buffer && key);
     size_t index;
     if (!hash_map_get_index(hm, key, &index)) {
         return false;
     }
 
-    *e = (HashEntry){
+    *e = (MapEntry){
         .key_ptr   = ptr_offset(hm->header->keys, index * hm->header->key_size),
         .value_ptr = ptr_offset(hm->header->values, index * hm->header->value_size),
     };
@@ -573,7 +573,7 @@ HashMapIterator hash_map_iterator_init(HashMap* hm) {
     };
 }
 
-bool hash_map_iterator_has_next(HashMapIterator* it, HashEntry* next) {
+bool hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next) {
     assert(it && it->hm && it->hm->buffer);
     assert(it->index <= it->hm->header->capacity);
     if (it->hm->size == 0) {
@@ -586,7 +586,7 @@ bool hash_map_iterator_has_next(HashMapIterator* it, HashEntry* next) {
         it->index += 1;
 
         if (metadata_used(it->hm->metadata[i])) {
-            *next = (HashEntry){
+            *next = (MapEntry){
                 .key_ptr   = ptr_offset(it->hm->header->keys, i * it->hm->header->key_size),
                 .value_ptr = ptr_offset(it->hm->header->values, i * it->hm->header->value_size),
             };

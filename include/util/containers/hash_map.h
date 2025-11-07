@@ -6,10 +6,13 @@
 
 typedef uint64_t Hash;
 
+static const size_t HASH_MAP_MAX_LOAD_PERCENTAGE = 80;
+static const size_t HASH_MAP_MINIMUM_CAPACITY    = 8;
+
 // Metadata for a slot. It can be in three states: empty, used or
 // tombstone. Tombstones indicate that an entry was previously used.
 #pragma pack(push, 1)
-typedef struct {
+typedef struct Metadata {
     uint8_t fingerprint : 7;
     uint8_t used        : 1;
 } Metadata;
@@ -65,7 +68,7 @@ static inline uint8_t take_fingerprint(Hash hash) {
 typedef struct {
     void* key_ptr;
     void* value_ptr;
-} HashEntry;
+} MapEntry;
 
 // A pointer into the map either that mutates the map directly.
 //
@@ -74,7 +77,7 @@ typedef struct {
     void* key_ptr;
     void* value_ptr;
     bool  found_existing;
-} GetOrPutResult;
+} MapGetOrPutResult;
 
 typedef struct {
     void*  keys;
@@ -86,25 +89,21 @@ typedef struct {
     size_t value_align;
 
     size_t capacity;
-} Header;
+} MapHeader;
 
 // A HashMap based on open addressing and linear probing. This is not thread-safe.
-// For use as a HashSet, use a value size and alignment of 1.
 //
 // Operations that grow the map or rehash its entries invalidate all pointers.
 typedef struct {
-    size_t    size;
-    size_t    available;
-    void*     buffer;
-    Header*   header;
-    Metadata* metadata;
+    size_t     size;
+    size_t     available;
+    void*      buffer;
+    MapHeader* header;
+    Metadata*  metadata;
 
     Hash (*hash)(const void*);
     int (*compare)(const void*, const void*);
 } HashMap;
-
-static const size_t HM_MAX_LOAD_PERCENTAGE = 80;
-static const size_t HM_MINIMUM_CAPACITY    = 8;
 
 // A non-owning iterator. Invalid if the underlying map is freed.
 // An iterator is invalidated if it modifies the map during iteration.
@@ -161,10 +160,10 @@ void hash_map_rehash(HashMap* hm);
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
 bool hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
 
-GetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
-bool           hash_map_get_or_put(HashMap* hm, const void* key, GetOrPutResult* result);
-void           hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
-bool           hash_map_put(HashMap* hm, const void* key, const void* value);
+MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
+bool              hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
+void              hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
+bool              hash_map_put(HashMap* hm, const void* key, const void* value);
 
 bool  hash_map_contains(const HashMap* hm, const void* key);
 bool  hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
@@ -172,9 +171,9 @@ bool  hash_map_get_value(const HashMap* hm, const void* key, void* value);
 void* hash_map_get_value_ptr(HashMap* hm, const void* key);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-bool hash_map_get_entry(HashMap* hm, const void* key, HashEntry* e);
+bool hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
 
 bool hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
-bool            hash_map_iterator_has_next(HashMapIterator* it, HashEntry* next);
+bool            hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next);

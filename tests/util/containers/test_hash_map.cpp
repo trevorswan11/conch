@@ -89,7 +89,7 @@ TEST_CASE("Malformed map usage") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Init") {
+TEST_CASE("Init map") {
     using K = uint16_t;
     using V = uint32_t;
 
@@ -114,14 +114,14 @@ TEST_CASE("Init") {
 
     REQUIRE(hash_map_init(
         &hm, 1, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t));
-    REQUIRE(hash_map_capacity(&hm) == HM_MINIMUM_CAPACITY);
+    REQUIRE(hash_map_capacity(&hm) == HASH_MAP_MINIMUM_CAPACITY);
     hash_map_deinit(&hm);
 }
 
 HASH_INTEGER_FN(uint32_t)
 COMPARE_INTEGER_FN(uint32_t)
 
-TEST_CASE("Basic usage") {
+TEST_CASE("Basic map usage") {
     using K = uint32_t;
     using V = uint32_t;
 
@@ -140,7 +140,7 @@ TEST_CASE("Basic usage") {
     V               internal_total = 0;
     HashMapIterator it             = hash_map_iterator_init(&hm);
 
-    HashEntry e;
+    MapEntry e;
     while (hash_map_iterator_has_next(&it, &e)) {
         internal_total += *(K*)e.key_ptr;
     }
@@ -160,7 +160,7 @@ TEST_CASE("Basic usage") {
 
 COMPARE_INTEGER_FN(int32_t);
 
-TEST_CASE("Ensure total capacity") {
+TEST_CASE("Ensure total map capacity") {
     using K = int32_t;
     using V = int32_t;
 
@@ -173,7 +173,7 @@ TEST_CASE("Ensure total capacity") {
     REQUIRE(initial_capacity >= 20);
 
     for (V i = 0; i < 20; i++) {
-        GetOrPutResult result;
+        MapGetOrPutResult result;
         REQUIRE(hash_map_get_or_put(&hm, &i, &result));
         REQUIRE_FALSE(result.found_existing);
     }
@@ -185,7 +185,7 @@ TEST_CASE("Ensure total capacity") {
 HASH_INTEGER_FN(uint64_t)
 COMPARE_INTEGER_FN(uint64_t)
 
-TEST_CASE("Ensure unused capacity") {
+TEST_CASE("Ensure unused map capacity") {
     using K = int64_t;
     using V = int64_t;
 
@@ -201,7 +201,7 @@ TEST_CASE("Ensure unused capacity") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Ensure unused capacity with tombstones") {
+TEST_CASE("Ensure unused map capacity with tombstones") {
     using K = int32_t;
     using V = int32_t;
 
@@ -218,7 +218,7 @@ TEST_CASE("Ensure unused capacity with tombstones") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Clear retaining capacity") {
+TEST_CASE("Clear retaining map capacity") {
     using K = Slice;
     using V = int32_t;
 
@@ -253,7 +253,7 @@ TEST_CASE("Clear retaining capacity") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Grow") {
+TEST_CASE("Grow map") {
     using K = uint32_t;
     using V = uint32_t;
 
@@ -269,7 +269,7 @@ TEST_CASE("Grow") {
     REQUIRE(hash_map_count(&hm) == grow_to);
 
     HashMapIterator it = hash_map_iterator_init(&hm);
-    HashEntry       e;
+    MapEntry        e;
     size_t          total = 0;
     while (hash_map_iterator_has_next(&it, &e)) {
         REQUIRE(*(K*)e.key_ptr == *(V*)e.value_ptr);
@@ -286,7 +286,7 @@ TEST_CASE("Grow") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Rehash") {
+TEST_CASE("Rehash map") {
     using K = uint32_t;
     using V = uint32_t;
 
@@ -319,7 +319,7 @@ TEST_CASE("Rehash") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Mutable entry access") {
+TEST_CASE("Mutable map entry access") {
     using K = uint32_t;
     using V = uint32_t;
 
@@ -346,7 +346,7 @@ TEST_CASE("Mutable entry access") {
     REQUIRE(query_val == 20);
 
     // Entry retrieval for mutable value access (reasonable)
-    HashEntry e;
+    MapEntry e;
     REQUIRE(hash_map_get_entry(&hm, &query_key_initial, &e));
     REQUIRE(*(K*)e.key_ptr == query_key_initial);
     REQUIRE(*(V*)e.value_ptr == 20);
@@ -358,7 +358,7 @@ TEST_CASE("Mutable entry access") {
     hash_map_deinit(&hm);
 }
 
-TEST_CASE("Remove") {
+TEST_CASE("Remove map") {
     using K = uint32_t;
     using V = uint32_t;
 
@@ -378,7 +378,7 @@ TEST_CASE("Remove") {
     REQUIRE(hash_map_count(&hm) == 10);
 
     HashMapIterator it = hash_map_iterator_init(&hm);
-    HashEntry       e;
+    MapEntry        e;
     while (hash_map_iterator_has_next(&it, &e)) {
         K k = *(K*)e.key_ptr;
         V v = *(V*)e.value_ptr;
