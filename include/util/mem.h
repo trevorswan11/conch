@@ -22,44 +22,35 @@ typedef struct {
     size_t      length;
 } Slice;
 
-static inline Slice slice_from(const char* start, size_t length) {
-    return (Slice){.ptr = start, .length = length};
-}
-
 // Creates a slice from a null terminated string.
-static inline Slice slice_from_z(const char* start) {
-    return slice_from(start, strlen(start));
+Slice slice_from_z(const char* start);
+Slice slice_from_s(const char* start, size_t size);
+bool  slice_equals(const Slice* a, const Slice* b);
+
+// Compares a slice to a null terminated string.
+bool slice_equals_str_z(const Slice* slice, const char* str);
+bool slice_equals_str_s(const Slice* slice, const char* str, size_t size);
+
+// A stack allocated slice into a string with a given length.
+typedef struct {
+    char*  ptr;
+    size_t length;
+} MutSlice;
+
+// Creates a mutable slice from a null terminated string.
+MutSlice mut_slice_from_z(char* start);
+MutSlice mut_slice_from_s(char* start, size_t size);
+bool     mut_slice_equals(const MutSlice* a, const MutSlice* b);
+
+// Compares a mutable slice to a null terminated string.
+bool mut_slice_equals_str_z(const MutSlice* slice, const char* str);
+bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size);
+
+static inline bool mut_slice_equals_slice(const MutSlice* a, const Slice* b) {
+    return mut_slice_equals_str_s(a, b->ptr, b->length);
 }
 
-static inline bool slice_equals(const Slice* a, const Slice* b) {
-    return a->length == b->length && memcmp(a->ptr, b->ptr, a->length) == 0;
-}
-
-static inline bool slice_equals_str(const Slice* slice, const char* str) {
-    size_t str_len = strlen(str);
-    return slice->length == str_len && memcmp(slice->ptr, str, slice->length) == 0;
-}
-
-static inline uintptr_t align_up(uintptr_t ptr, size_t alignment) {
-    assert(is_power_of_two(alignment));
-    return (ptr + (alignment - 1)) & ~(alignment - 1);
-}
-
-static inline void* align_ptr(void* ptr, size_t alignment) {
-    return (void*)align_up((uintptr_t)ptr, alignment);
-}
-
-static inline void* ptr_offset(void* p, size_t offset) {
-    return (void*)((uintptr_t)p + offset);
-}
-
-static inline void swap(void* a, void* b, size_t size) {
-    char* pa = (char*)a;
-    char* pb = (char*)b;
-
-    for (size_t i = 0; i < size; ++i) {
-        char temp = pa[i];
-        pa[i]     = pb[i];
-        pb[i]     = temp;
-    }
-}
+uintptr_t align_up(uintptr_t ptr, size_t alignment);
+void*     align_ptr(void* ptr, size_t alignment);
+void*     ptr_offset(void* p, size_t offset);
+void      swap(void* a, void* b, size_t size);

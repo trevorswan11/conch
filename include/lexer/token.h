@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "util/mem.h"
 
@@ -73,5 +74,5 @@ typedef struct {
 } Token;
 
 static inline Token token_init(TokenType t, const char* l, size_t length) {
-    return (Token){.type = t, .slice = slice_from(l, length)};
+    return (Token){.type = t, .slice = slice_from_s(l, length)};
 }

@@ -90,7 +90,7 @@ static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t inde
     return ptr_offset(a->data, index * a->item_size);
 }
 
-bool array_list_push(ArrayList* a, void* item) {
+bool array_list_push(ArrayList* a, const void* item) {
     assert(a && a->data);
 
     if (a->length == a->capacity) {
@@ -102,6 +102,42 @@ bool array_list_push(ArrayList* a, void* item) {
     void* dest = _array_list_get_ptr_unsafe(a, a->length);
     memcpy(dest, item, a->item_size);
     a->length += 1;
+    return true;
+}
+
+bool array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
+    assert(a && a->data);
+    assert(index <= a->length);
+
+    if (a->length == a->capacity) {
+        if (!array_list_resize(a, max_size_t(2, a->capacity * 2, 4))) {
+            return false;
+        }
+    }
+
+    void* dest       = _array_list_get_ptr_unsafe(a, index);
+    void* shift_dest = _array_list_get_ptr_unsafe(a, index + 1);
+    memmove(shift_dest, dest, (a->length - index) * a->item_size);
+
+    memcpy(dest, item, a->item_size);
+    a->length += 1;
+    return true;
+}
+
+bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
+    assert(a && a->data);
+    assert(index <= a->length);
+
+    if (!array_list_push(a, item)) {
+        return false;
+    }
+
+    const size_t back = a->length - 1;
+    if (index != back) {
+        void* current = _array_list_get_ptr_unsafe(a, index);
+        void* new     = _array_list_get_ptr_unsafe(a, a->length - 1);
+        swap(current, new, a->item_size);
+    }
     return true;
 }
 
@@ -195,4 +231,52 @@ bool array_list_find(const ArrayList* a,
         }
     }
     return false;
+}
+
+bool array_list_bsearch(const ArrayList* a,
+                        size_t*          index,
+                        const void*      item,
+                        int (*compare)(const void*, const void*)) {
+    assert(a && a->data && item && compare);
+    size_t low = 0, high = a->length;
+
+    while (low < high) {
+        size_t      mid        = low + (high - low) / 2;
+        const void* elem       = _array_list_get_unsafe(a, mid);
+        const int   comparison = compare(elem, item);
+
+        if (comparison == 0) {
+            *index = mid;
+            return true;
+        } else if (comparison < 0) {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+
+    *index = low;
+    return false;
+}
+
+void array_list_sort(ArrayList* a, int (*compare)(const void*, const void*)) {
+    assert(a && a->data && compare);
+    qsort(a->data, a->length, a->item_size, compare);
+}
+
+bool array_list_is_sorted(const ArrayList* a, int (*compare)(const void*, const void*)) {
+    assert(a && a->data && compare);
+    if (a->length == 0) {
+        return true;
+    }
+
+    for (size_t i = 0; i < a->length - 1; i++) {
+        const void* curr = _array_list_get_unsafe(a, i);
+        const void* next = _array_list_get_unsafe(a, i + 1);
+        if (compare(curr, next) > 0) {
+            return false;
+        }
+    }
+
+    return true;
 }

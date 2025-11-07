@@ -34,7 +34,7 @@ TEST_CASE("Next Token - Symbols Only") {
         Token token = lexer_next_token(l);
 
         REQUIRE(t == token.type);
-        REQUIRE(slice_equals_str(&token.slice, s));
+        REQUIRE(slice_equals_str_z(&token.slice, s));
     }
 
     lexer_destroy(l);
@@ -81,7 +81,7 @@ TEST_CASE("Next Token - Basic Language Snippet") {
         Token token = lexer_next_token(l);
 
         REQUIRE(t == token.type);
-        REQUIRE(slice_equals_str(&token.slice, s));
+        REQUIRE(slice_equals_str_z(&token.slice, s));
     }
 
     lexer_destroy(l);

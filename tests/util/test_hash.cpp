@@ -1,34 +1,60 @@
 #include "catch_amalgamated.hpp"
 
 #include <stdint.h>
+#include <stdio.h>
 
 extern "C" {
 #include "util/hash.h"
 #include "util/mem.h"
 }
 
-TEST_CASE("compare_string_z") {
+TEST_CASE("Null terminated string comparison") {
     const char* s1 = "hello";
     const char* s2 = "hello";
     const char* s3 = "world";
 
-    REQUIRE(compare_string_z(s1, s2) != 0);
-    REQUIRE(compare_string_z(s1, s3) == 0);
+    REQUIRE(compare_string_z(s1, s2) == 0);
+    REQUIRE(compare_string_z(s1, s3) != 0);
 }
 
-TEST_CASE("compare_slices") {
-    Slice s1 = slice_from("foo", 3);
-    Slice s2 = slice_from("foo", 3);
-    Slice s3 = slice_from("bar", 3);
+TEST_CASE("Slice comparison") {
+    Slice s1 = slice_from_s("foo", 3);
+    Slice s2 = slice_from_s("foo", 3);
+    Slice s3 = slice_from_s("bar", 3);
 
-    REQUIRE(compare_slices(&s1, &s2) != 0);
-    REQUIRE(compare_slices(&s1, &s3) == 0);
+    REQUIRE(compare_slices(&s1, &s2) == 0);
+    REQUIRE(compare_slices(&s1, &s3) != 0);
 }
 
-TEST_CASE("hash_slice") {
-    Slice s1 = slice_from("hashme", 6);
-    Slice s2 = slice_from("hashme", 6);
-    Slice s3 = slice_from("different", 9);
+TEST_CASE("Mutable slice comparison") {
+    MutSlice m1 = (MutSlice){.ptr = (char*)"foo", .length = 3};
+    MutSlice m2 = (MutSlice){.ptr = (char*)"foo", .length = 3};
+    MutSlice m3 = (MutSlice){.ptr = (char*)"bar", .length = 3};
+
+    REQUIRE(compare_mut_slices(&m1, &m2) == 0);
+    REQUIRE(compare_mut_slices(&m1, &m3) != 0);
+
+    MutSlice m4 = (MutSlice){.ptr = (char*)"foobar", .length = 6};
+    REQUIRE(compare_mut_slices(&m1, &m4) != 0);
+}
+
+TEST_CASE("Null terminating string hashing") {
+    const char* str1 = "Catch2";
+    const char* str2 = "Catch2";
+    const char* str3 = "catch2";
+
+    uint64_t h1 = hash_string_z(str1);
+    uint64_t h2 = hash_string_z(str2);
+    uint64_t h3 = hash_string_z(str3);
+
+    REQUIRE(h1 == h2);
+    REQUIRE(h1 != h3);
+}
+
+TEST_CASE("Slice hashing") {
+    Slice s1 = slice_from_s("hashme", 6);
+    Slice s2 = slice_from_s("hashme", 6);
+    Slice s3 = slice_from_s("different", 9);
 
     uint64_t h1 = hash_slice(&s1);
     uint64_t h2 = hash_slice(&s2);
@@ -38,14 +64,14 @@ TEST_CASE("hash_slice") {
     REQUIRE(h1 != h3);
 }
 
-TEST_CASE("hash_string_z") {
-    const char* str1 = "Catch2";
-    const char* str2 = "Catch2";
-    const char* str3 = "catch2";
+TEST_CASE("Mutable slice hashing") {
+    MutSlice m1 = (MutSlice){.ptr = (char*)"hashme", .length = 6};
+    MutSlice m2 = (MutSlice){.ptr = (char*)"hashme", .length = 6};
+    MutSlice m3 = (MutSlice){.ptr = (char*)"different", .length = 9};
 
-    uint64_t h1 = hash_string_z(str1);
-    uint64_t h2 = hash_string_z(str2);
-    uint64_t h3 = hash_string_z(str3);
+    uint64_t h1 = hash_mut_slice(&m1);
+    uint64_t h2 = hash_mut_slice(&m2);
+    uint64_t h3 = hash_mut_slice(&m3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);

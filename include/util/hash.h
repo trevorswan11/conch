@@ -7,6 +7,7 @@
 // Assumes that the string is null terminated, without checking.
 int compare_string_z(const void* a, const void* b);
 int compare_slices(const void* a, const void* b);
+int compare_mut_slices(const void* a, const void* b);
 
 // Hashes a null terminated string.
 //
@@ -15,6 +16,7 @@ int compare_slices(const void* a, const void* b);
 // Assumes that the string is null terminated, without checking.
 uint64_t hash_string_z(const void* key);
 uint64_t hash_slice(const void* key);
+uint64_t hash_mut_slice(const void* key);
 
 #define HASH_CONCAT_2(a, b) a##b
 #define HASH_CONCAT_3(a, b, c) a##b##c

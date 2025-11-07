@@ -12,19 +12,49 @@ extern "C" {
 
 TEST_CASE("Slice creation and equality") {
     const char* text = "hello";
-    Slice       s1   = slice_from(text, 5);
+    Slice       s1   = slice_from_s(text, 5);
     Slice       s1_z = slice_from_z(text);
-    Slice       s2   = slice_from("hello", 5);
-    Slice       s3   = slice_from("hellx", 5);
-    Slice       s4   = slice_from("hello world", 5);
+    Slice       s2   = slice_from_s("hello", 5);
+    Slice       s3   = slice_from_s("hellx", 5);
+    Slice       s4   = slice_from_s("hello world", 5);
 
     REQUIRE(s1.length == 5);
     REQUIRE(slice_equals(&s1, &s1_z));
     REQUIRE(slice_equals(&s1, &s2));
     REQUIRE_FALSE(slice_equals(&s1, &s3));
-    REQUIRE(slice_equals_str(&s1, "hello"));
-    REQUIRE_FALSE(slice_equals_str(&s1, "hell"));
+    REQUIRE(slice_equals_str_z(&s1, "hello"));
+    REQUIRE_FALSE(slice_equals_str_z(&s1, "hell"));
+    REQUIRE(slice_equals_str_s(&s4, "hello world", 5));
     REQUIRE(slice_equals(&s1, &s4));
+}
+
+TEST_CASE("Mutable Slice creation and equality") {
+    char text[]   = "hello";
+    char s2_str[] = "hello";
+    char s3_str[] = "hellx";
+    char s4_str[] = "hello world";
+
+    MutSlice s1   = mut_slice_from_s(text, 5);
+    MutSlice s1_z = mut_slice_from_z(text);
+    MutSlice s2   = mut_slice_from_s(s2_str, 5);
+    MutSlice s3   = mut_slice_from_s(s3_str, 5);
+    MutSlice s4   = mut_slice_from_s(s4_str, 5);
+
+    REQUIRE(s1.length == 5);
+    REQUIRE(mut_slice_equals(&s1, &s1_z));
+    REQUIRE(mut_slice_equals(&s1, &s2));
+    REQUIRE_FALSE(mut_slice_equals(&s1, &s3));
+    REQUIRE(mut_slice_equals_str_z(&s1, "hello"));
+    REQUIRE_FALSE(mut_slice_equals_str_z(&s1, "hell"));
+    REQUIRE(mut_slice_equals_str_s(&s4, s4_str, 5));
+    REQUIRE(mut_slice_equals(&s1, &s4));
+
+    text[0] = 'y';
+    REQUIRE(mut_slice_equals_str_z(&s1, "yello"));
+
+    Slice const_slice1 = slice_from_s(text, 5);
+    REQUIRE(mut_slice_equals_slice(&s1, &const_slice1));
+    REQUIRE_FALSE(mut_slice_equals_slice(&s2, &const_slice1));
 }
 
 TEST_CASE("Align up integer pointer values") {

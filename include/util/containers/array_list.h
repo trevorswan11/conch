@@ -1,11 +1,12 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 // An 'owning' dynamic array, data is type erased.
 //
-// Push uses a memcpy, so non-primitive types, including pointers, require special attention.
+// Push uses a memcpy, so non-trivial types require special attention.
 typedef struct {
     void*  data;
     size_t item_size;
@@ -29,7 +30,17 @@ bool array_list_resize(ArrayList* a, size_t new_capacity);
 // If the array does not need to be resized, then true is returned.
 bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
 
-bool  array_list_push(ArrayList* a, void* item);
+// Inserts an item at the given position, maintaining relative order of the two regions.
+//
+// If the index given is at the end of the list, this is equivalent to push.
+bool array_list_insert_stable(ArrayList* a, size_t index, const void* item);
+
+// Inserts an item at the given position, invalidating relative order.
+//
+// If the index given is at the end of the list, this is equivalent to push.
+bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item);
+
+bool  array_list_push(ArrayList* a, const void* item);
 bool  array_list_pop(ArrayList* a, void* item);
 bool  array_list_remove(ArrayList* a, size_t index, void* item);
 bool  array_list_remove_item(ArrayList*  a,
@@ -49,3 +60,35 @@ bool array_list_find(const ArrayList* a,
                      size_t*          index,
                      const void*      item,
                      int (*compare)(const void*, const void*));
+
+// Performs binary search on the array, setting the index to the real position if found.
+// If the element is not found, then the index is set to its insertion position.
+//
+// The compare function should align with that used to sort the array:
+// - If the first element is of higher priority, return a positive integer
+// - If the second element is of higher priority, return a negative integer
+// - If the elements are equal, return 0
+//
+// Generally, calling find will be faster in this scenario
+bool array_list_bsearch(const ArrayList* a,
+                        size_t*          index,
+                        const void*      item,
+                        int (*compare)(const void*, const void*));
+
+// Performs an in-place sort using quicksort.
+// - If the first element is of higher priority, return a positive integer
+// - If the second element is of higher priority, return a negative integer
+// - If the elements are equal, return 0
+//
+// The array is sorted in ascending order with respect to the first parameter in the compare
+// function.
+void array_list_sort(ArrayList* a, int (*compare)(const void*, const void*));
+
+// Check if the array is sorted with respect to the compare function:
+// - If the first element is of higher priority, return a positive integer
+// - If the second element is of higher priority, return a negative integer
+// - If the elements are equal, return 0
+//
+// For the purposes of this function, an array is sorted if, for every element i, it is less than or
+// equal to all succeeding elements j.
+bool array_list_is_sorted(const ArrayList* a, int (*compare)(const void*, const void*));
