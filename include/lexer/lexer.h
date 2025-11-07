@@ -14,7 +14,9 @@ typedef struct {
     size_t      position;
     size_t      peek_position;
     char        current_byte;
-    HashMap     keywords;
+
+    HashMap keywords;
+    HashMap operators;
 } Lexer;
 
 Lexer* lexer_create(const char* input);
@@ -25,5 +27,7 @@ Token     lexer_next_token(Lexer* l);
 void      lexer_skip_whitespace(Lexer* l);
 TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal);
 
+// Tries to read an operator or EOF from the position, returning ILLEGAL otherwise.
+Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);
 Token lexer_read_number(Lexer* l);
