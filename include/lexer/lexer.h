@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "lexer/token.h"
+#include "util/containers/hash_map.h"
 #include "util/mem.h"
 
 // A lexer object which does not own the string input.
@@ -13,14 +14,16 @@ typedef struct {
     size_t      position;
     size_t      peek_position;
     char        current_byte;
+    HashMap     keywords;
 } Lexer;
 
 Lexer* lexer_create(const char* input);
 void   lexer_destroy(Lexer* l);
 
-void  lexer_read_char(Lexer* l);
-Token lexer_next_token(Lexer* l);
-void  lexer_skip_whitespace(Lexer* l);
+void      lexer_read_char(Lexer* l);
+Token     lexer_next_token(Lexer* l);
+void      lexer_skip_whitespace(Lexer* l);
+TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal);
 
 Slice lexer_read_identifier(Lexer* l);
 Token lexer_read_number(Lexer* l);

@@ -1,11 +1,16 @@
 #include <stdlib.h>
 
+#include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 
+#include "lexer/keywords.h"
 #include "lexer/lexer.h"
+#include "lexer/token.h"
 #include "util/alphanum.h"
+#include "util/containers/hash_map.h"
+#include "util/hash.h"
 #include "util/mem.h"
 
 Lexer* lexer_create(const char* input) {
@@ -14,12 +19,27 @@ Lexer* lexer_create(const char* input) {
         return NULL;
     }
 
+    HashMap keywords;
+    if (!hash_map_init(&keywords,
+                       32,
+                       sizeof(Slice),
+                       alignof(Slice),
+                       sizeof(TokenType),
+                       alignof(TokenType),
+                       hash_slice,
+                       compare_slices)) {
+        exit(1);
+    }
+    hash_map_put(&keywords, &KEYWORD_FN.slice, &KEYWORD_FN.type);
+    hash_map_put(&keywords, &KEYWORD_LET.slice, &KEYWORD_LET.type);
+
     *l = (Lexer){
         .input         = input,
         .input_length  = strlen(input),
         .position      = 0,
         .peek_position = 0,
         .current_byte  = 0,
+        .keywords      = keywords,
     };
 
     lexer_read_char(l);
@@ -27,6 +47,11 @@ Lexer* lexer_create(const char* input) {
 }
 
 void lexer_destroy(Lexer* l) {
+    if (!l) {
+        return;
+    }
+
+    hash_map_deinit(&l->keywords);
     free(l);
     l = NULL;
 }
@@ -55,8 +80,8 @@ Token lexer_next_token(Lexer* l) {
         token = token_init(type, &l->input[l->position], 1);
     } else {
         if (is_letter(l->current_byte)) {
-            token.type  = IDENT;
             token.slice = lexer_read_identifier(l);
+            token.type  = lexer_lookup_identifier(l, &token.slice);
             return token;
         } else if (is_digit(l->current_byte)) {
             return lexer_read_number(l);
@@ -74,6 +99,14 @@ void lexer_skip_whitespace(Lexer* l) {
     while (is_whitespace(l->current_byte)) {
         lexer_read_char(l);
     }
+}
+
+TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
+    TokenType value;
+    if (!hash_map_get_value(&l->keywords, literal, &value)) {
+        return IDENT;
+    }
+    return value;
 }
 
 Slice lexer_read_identifier(Lexer* l) {
