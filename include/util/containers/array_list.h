@@ -29,6 +29,8 @@ bool array_list_resize(ArrayList* a, size_t new_capacity);
 //
 // If the array does not need to be resized, then true is returned.
 bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
+void array_list_clear_retaining_capacity(ArrayList* a);
+bool array_list_shrink_to_fit(ArrayList* a);
 
 // Inserts an item at the given position, maintaining relative order of the two regions.
 //
@@ -41,6 +43,7 @@ bool array_list_insert_stable(ArrayList* a, size_t index, const void* item);
 bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item);
 
 bool  array_list_push(ArrayList* a, const void* item);
+void  array_list_push_assume_capacity(ArrayList* a, const void* item);
 bool  array_list_pop(ArrayList* a, void* item);
 bool  array_list_remove(ArrayList* a, size_t index, void* item);
 bool  array_list_remove_item(ArrayList*  a,

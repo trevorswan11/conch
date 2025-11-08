@@ -41,7 +41,7 @@ TEST_CASE("Push ops w/o resize") {
     // Push a handful of elements and check
     std::vector<uint8_t> expecteds = {4, 5, 7, 2, 6, 10, 22, 3};
     for (size_t i = 0; i < expecteds.size(); i++) {
-        array_list_push(&a, &expecteds[i]);
+        array_list_push_assume_capacity(&a, &expecteds[i]);
     }
 
     for (size_t i = 0; i < a.length; i++) {

@@ -3,6 +3,7 @@
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "lexer/keywords.h"
@@ -10,6 +11,7 @@
 #include "lexer/operators.h"
 #include "lexer/token.h"
 #include "util/alphanum.h"
+#include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/hash.h"
 #include "util/mem.h"
@@ -26,14 +28,11 @@ static inline bool _init_keywords(HashMap* keyword_map) {
         return false;
     }
 
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_FN.slice, &KEYWORD_FN.type);
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_LET.slice, &KEYWORD_LET.type);
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_STRUCT.slice, &KEYWORD_STRUCT.type);
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_TRUE.slice, &KEYWORD_TRUE.type);
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_FALSE.slice, &KEYWORD_FALSE.type);
-    hash_map_put_assume_capacity(
-        keyword_map, &KEYWORD_BOOLEAN_AND.slice, &KEYWORD_BOOLEAN_AND.type);
-    hash_map_put_assume_capacity(keyword_map, &KEYWORD_BOOLEAN_OR.slice, &KEYWORD_BOOLEAN_OR.type);
+    const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
+    for (size_t i = 0; i < num_keywords; i++) {
+        const Keyword keyword = ALL_KEYWORDS[i];
+        hash_map_put_assume_capacity(keyword_map, &keyword.slice, &keyword.type);
+    }
 
     return true;
 }
@@ -50,56 +49,20 @@ static inline bool _init_operators(HashMap* operator_map) {
         return false;
     }
 
-    // Arithmetic operators
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_ASSIGN.slice, &OPERATOR_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_PLUS.slice, &OPERATOR_PLUS.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_PLUS_ASSIGN.slice, &OPERATOR_PLUS_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_MINUS.slice, &OPERATOR_MINUS.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_MINUS_ASSIGN.slice, &OPERATOR_MINUS_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_ASTERISK.slice, &OPERATOR_ASTERISK.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_ASTERISK_ASSIGN.slice, &OPERATOR_ASTERISK_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_SLASH.slice, &OPERATOR_SLASH.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_SLASH_ASSIGN.slice, &OPERATOR_SLASH_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_BANG.slice, &OPERATOR_BANG.type);
-
-    // Bitwise operators
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_AND.slice, &OPERATOR_AND.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_AND_ASSIGN.slice, &OPERATOR_AND_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_OR.slice, &OPERATOR_OR.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_OR_ASSIGN.slice, &OPERATOR_OR_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_SHL.slice, &OPERATOR_SHL.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_SHL_ASSIGN.slice, &OPERATOR_SHL_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_SHR.slice, &OPERATOR_SHR.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_SHR_ASSIGN.slice, &OPERATOR_SHR_ASSIGN.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_NOT.slice, &OPERATOR_NOT.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_NOT_ASSIGN.slice, &OPERATOR_NOT_ASSIGN.type);
-
-    // Boolean operators
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_LT.slice, &OPERATOR_LT.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_LTEQ.slice, &OPERATOR_LTEQ.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_GT.slice, &OPERATOR_GT.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_GTEQ.slice, &OPERATOR_GTEQ.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_EQ.slice, &OPERATOR_EQ.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_NEQ.slice, &OPERATOR_NEQ.type);
-
-    // Other operators
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_DOT.slice, &OPERATOR_DOT.type);
-    hash_map_put_assume_capacity(operator_map, &OPERATOR_DOT_DOT.slice, &OPERATOR_DOT_DOT.type);
-    hash_map_put_assume_capacity(
-        operator_map, &OPERATOR_DOT_DOT_EQ.slice, &OPERATOR_DOT_DOT_EQ.type);
+    const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
+    for (size_t i = 0; i < num_operators; i++) {
+        const Operator operator = ALL_OPERATORS[i];
+        hash_map_put_assume_capacity(operator_map, &operator.slice, &operator.type);
+    }
 
     return true;
 }
 
 Lexer* lexer_create(const char* input) {
+    if (!input) {
+        return NULL;
+    }
+
     Lexer* l = (Lexer*)malloc(sizeof(Lexer));
     if (!l) {
         return NULL;
@@ -118,14 +81,23 @@ Lexer* lexer_create(const char* input) {
         return NULL;
     }
 
+    ArrayList accumulator;
+    if (!array_list_init(&accumulator, 32, sizeof(Token))) {
+        free(l);
+        hash_map_deinit(&keywords);
+        hash_map_deinit(&operators);
+        return NULL;
+    }
+
     *l = (Lexer){
-        .input         = input,
-        .input_length  = strlen(input),
-        .position      = 0,
-        .peek_position = 0,
-        .current_byte  = 0,
-        .keywords      = keywords,
-        .operators     = operators,
+        .input             = input,
+        .input_length      = strlen(input),
+        .position          = 0,
+        .peek_position     = 0,
+        .current_byte      = 0,
+        .token_accumulator = accumulator,
+        .keywords          = keywords,
+        .operators         = operators,
     };
 
     lexer_read_char(l);
@@ -139,8 +111,29 @@ void lexer_destroy(Lexer* l) {
 
     hash_map_deinit(&l->keywords);
     hash_map_deinit(&l->operators);
+    array_list_deinit(&l->token_accumulator);
     free(l);
     l = NULL;
+}
+
+bool lexer_consume(Lexer* l) {
+    // Reset the lexer and its token buffer
+    l->peek_position = 0;
+    lexer_read_char(l);
+    array_list_clear_retaining_capacity(&l->token_accumulator);
+
+    while (true) {
+        const Token token = lexer_next_token(l);
+        if (!array_list_push(&l->token_accumulator, &token)) {
+            return false;
+        }
+
+        if (token.type == END) {
+            break;
+        }
+    }
+
+    return array_list_shrink_to_fit(&l->token_accumulator);
 }
 
 void lexer_read_char(Lexer* l) {
@@ -184,6 +177,7 @@ Token lexer_next_token(Lexer* l) {
     }
 
     lexer_read_char(l);
+
     return token;
 }
 
@@ -199,6 +193,18 @@ TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
         return IDENT;
     }
     return value;
+}
+
+void lexer_print_tokens(Lexer* l) {
+    assert(l);
+    ArrayList*   list        = &l->token_accumulator;
+    const size_t accumulated = array_list_length(list);
+
+    Token out;
+    for (size_t i = 0; i < accumulated; i++) {
+        array_list_get(list, i, &out);
+        printf("%s(%.*s)\n", token_type_name(out.type), (int)out.slice.length, out.slice.ptr);
+    }
 }
 
 Token lexer_read_operator(Lexer* l) {
@@ -233,14 +239,52 @@ Slice lexer_read_identifier(Lexer* l) {
     return (Slice){.ptr = &l->input[start], .length = l->position - start};
 }
 
+static inline bool is_valid_digit(char c, bool is_hex, bool is_bin, bool is_oct) {
+    if (is_hex) {
+        return (is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+    } else if (is_bin) {
+        return (c == '0' || c == '1');
+    } else if (is_oct) {
+        return (c >= '0' && c <= '7');
+    }
+
+    return is_digit(c);
+}
+
 Token lexer_read_number(Lexer* l) {
+    assert(l->current_byte != '.');
+
     const size_t start          = l->position;
     bool         passed_decimal = false;
+    bool         is_hex = false, is_bin = false, is_oct = false;
 
-    while (is_digit(l->current_byte) || l->current_byte == '.') {
+    // Detect numeric prefix
+    if (l->current_byte == '0' && l->peek_position < l->input_length) {
+        char next = l->input[l->peek_position];
+        if (next == 'x' || next == 'X') {
+            is_hex = true;
+            lexer_read_char(l);
+            lexer_read_char(l);
+        } else if (next == 'b' || next == 'B') {
+            is_bin = true;
+            lexer_read_char(l);
+            lexer_read_char(l);
+        } else if (next == 'o' || next == 'O') {
+            is_oct = true;
+            lexer_read_char(l);
+            lexer_read_char(l);
+        }
+    }
+
+    // Consume digits and handle dot/range rules
+    while (is_valid_digit(l->current_byte, is_hex, is_bin, is_oct) ||
+           (!is_hex && !is_bin && !is_oct && l->current_byte == '.')) {
         if (l->current_byte == '.') {
-            if (passed_decimal) {
-                return token_init(ILLEGAL, &l->input[start], l->position - start);
+            // Stop consuming if we might be entering a dot dot adjacent operator
+            if (l->peek_position < l->input_length && l->input[l->peek_position] == '.') {
+                break;
+            } else if (passed_decimal) {
+                break;
             }
 
             passed_decimal = true;
@@ -249,11 +293,41 @@ Token lexer_read_number(Lexer* l) {
         lexer_read_char(l);
     }
 
-    // Prevent numbers starting and ending with '.'
-    if (l->input[start] == '.' || l->input[l->position - 1] == '.') {
-        return token_init(ILLEGAL, &l->input[start], l->position - start);
+    // Quick non-base-10 length validation
+    if (is_hex || is_bin || is_oct) {
+        if (l->position - start <= 2) {
+            return token_init(ILLEGAL, &l->input[start], l->position - start);
+        }
     }
 
-    const TokenType type = passed_decimal ? FLOAT : INT;
-    return token_init(type, &l->input[start], l->position - start);
+    // Total validation
+    const size_t length = l->position - start;
+    TokenType    type   = ILLEGAL;
+    if (length == 0)
+        return token_init(type, &l->input[start], 1);
+
+    if (l->input[l->position - 1] == '.') {
+        return token_init(type, &l->input[start], length);
+    }
+
+    if (passed_decimal && (is_hex || is_bin || is_oct)) {
+        return token_init(type, &l->input[start], length);
+    }
+
+    // Determine the input type
+    if (passed_decimal) {
+        type = FLOAT;
+    } else {
+        if (is_hex) {
+            type = INT_16;
+        } else if (is_bin) {
+            type = INT_2;
+        } else if (is_oct) {
+            type = INT_8;
+        } else {
+            type = INT_10;
+        }
+    }
+
+    return token_init(type, &l->input[start], length);
 }

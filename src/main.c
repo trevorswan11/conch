@@ -1,5 +1,5 @@
-#include <stdio.h>
+#include "evaluate/repl.h"
 
 int main(void) {
-    printf("Hello, World!\n");
+    repl_start();
 }

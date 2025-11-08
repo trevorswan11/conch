@@ -80,6 +80,19 @@ bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
     return true;
 }
 
+void array_list_clear_retaining_capacity(ArrayList* a) {
+    assert(a && a->data);
+    a->length = 0;
+}
+
+bool array_list_shrink_to_fit(ArrayList* a) {
+    assert(a && a->data);
+    if (a->length < a->capacity) {
+        return array_list_resize(a, a->length);
+    }
+    return true;
+}
+
 static inline void* _array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
     assert(a && a->data);
     return ptr_offset(a->data, index * a->item_size);
@@ -103,6 +116,13 @@ bool array_list_push(ArrayList* a, const void* item) {
     memcpy(dest, item, a->item_size);
     a->length += 1;
     return true;
+}
+
+void array_list_push_assume_capacity(ArrayList* a, const void* item) {
+    assert(a && a->data && a->length < a->capacity);
+    void* dest = _array_list_get_ptr_unsafe(a, a->length);
+    memcpy(dest, item, a->item_size);
+    a->length += 1;
 }
 
 bool array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
