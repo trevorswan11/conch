@@ -59,7 +59,7 @@ void repl_run(char* stream_buffer, ArrayList* stream_receiver) {
 
         // Now we can use buf_out freely
         const char* line = (const char*)stream_receiver->data;
-        if (strcmp(line, "exit")) {
+        if (strcmp(line, "exit") == 0) {
             break;
         }
 
