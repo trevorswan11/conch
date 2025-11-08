@@ -25,7 +25,8 @@ void repl_run(char* stream_buffer, ArrayList* stream_receiver) {
         return;
     }
 
-    Lexer* l = lexer_create("NULL");
+    Lexer*        l    = lexer_create("NULL");
+    const uint8_t null = 0;
 
     while (true) {
         // Refresh our input and print the prompt
@@ -42,9 +43,8 @@ void repl_run(char* stream_buffer, ArrayList* stream_receiver) {
                 return;
             }
 
-            size_t n = strlen(stream_buffer);
-
-            size_t required = stream_receiver->length + n;
+            const size_t n        = strlen(stream_buffer);
+            const size_t required = stream_receiver->length + n;
             array_list_ensure_total_capacity(stream_receiver, required);
 
             memcpy((uint8_t*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
@@ -54,14 +54,16 @@ void repl_run(char* stream_buffer, ArrayList* stream_receiver) {
                 break;
             }
         }
-
-        uint8_t null = 0;
         array_list_push(stream_receiver, &null);
 
         // Now we can use buf_out freely
         const char* line = (const char*)stream_receiver->data;
-        l->input         = line;
-        l->input_length  = strlen(line);
+        if (strcmp(line, "exit")) {
+            break;
+        }
+
+        l->input        = line;
+        l->input_length = strlen(line);
         lexer_consume(l);
         lexer_print_tokens(l);
     }

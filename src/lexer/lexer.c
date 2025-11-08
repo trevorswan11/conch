@@ -117,7 +117,6 @@ void lexer_destroy(Lexer* l) {
 }
 
 bool lexer_consume(Lexer* l) {
-    // Reset the lexer and its token buffer
     l->peek_position = 0;
     lexer_read_char(l);
     array_list_clear_retaining_capacity(&l->token_accumulator);
