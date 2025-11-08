@@ -34,7 +34,10 @@ void      lexer_skip_whitespace(Lexer* l);
 TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal);
 void      lexer_print_tokens(Lexer* l);
 
-// Tries to read an operator or EOF from the position, returning ILLEGAL otherwise.
 Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);
 Token lexer_read_number(Lexer* l);
+Token lexer_read_string(Lexer* l);
+Token lexer_read_character_literal(Lexer* l);
+Token lexer_read_comment(Lexer* l);
+Token lexer_read_multilinestring(Lexer* l);

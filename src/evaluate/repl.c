@@ -5,7 +5,9 @@
 #include <string.h>
 
 #include "evaluate/repl.h"
+
 #include "lexer/lexer.h"
+
 #include "util/containers/array_list.h"
 
 void repl_start(void) {

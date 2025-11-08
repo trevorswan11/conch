@@ -10,6 +10,7 @@
 #include "lexer/lexer.h"
 #include "lexer/operators.h"
 #include "lexer/token.h"
+
 #include "util/alphanum.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -160,7 +161,14 @@ Token lexer_next_token(Lexer* l) {
         for (size_t i = 0; i < maybe_operator.slice.length; ++i) {
             lexer_read_char(l);
         }
-        return maybe_operator;
+
+        if (maybe_operator.type == COMMENT) {
+            return lexer_read_comment(l);
+        } else if (maybe_operator.type == MULTILINE_STRING) {
+            return lexer_read_multilinestring(l);
+        } else {
+            return maybe_operator;
+        }
     } else {
         if (misc_token_type_from_char(l->current_byte, &token.type)) {
             token.slice = slice_from_s(&l->input[l->position], 1);
@@ -170,6 +178,10 @@ Token lexer_next_token(Lexer* l) {
             return token;
         } else if (is_digit(l->current_byte)) {
             return lexer_read_number(l);
+        } else if (l->current_byte == '"') {
+            return lexer_read_string(l);
+        } else if (l->current_byte == '\'') {
+            return lexer_read_character_literal(l);
         } else {
             token = token_init(ILLEGAL, &l->input[l->position], 1);
         }
@@ -206,6 +218,7 @@ void lexer_print_tokens(Lexer* l) {
     }
 }
 
+// Tries to read an operator or EOF from the position, returning ILLEGAL otherwise.
 Token lexer_read_operator(Lexer* l) {
     if (l->current_byte == '\0') {
         return token_init(END, &l->input[l->position], 0);
@@ -329,4 +342,138 @@ Token lexer_read_number(Lexer* l) {
     }
 
     return token_init(type, &l->input[start], length);
+}
+
+static inline char lexer_read_escape(Lexer* l) {
+    lexer_read_char(l);
+
+    switch (l->current_byte) {
+    case 'n':
+        return '\n';
+    case 'r':
+        return '\r';
+    case 't':
+        return '\t';
+    case '\\':
+        return '\\';
+    case '\'':
+        return '\'';
+    case '"':
+        return '"';
+    case '0':
+        return '\0';
+    default:
+        return l->current_byte;
+    }
+}
+
+Token lexer_read_string(Lexer* l) {
+    const size_t start = l->position;
+    lexer_read_char(l);
+
+    while (l->current_byte != '"' && l->current_byte != '\0') {
+        if (l->current_byte == '\\') {
+            lexer_read_escape(l);
+        }
+        lexer_read_char(l);
+    }
+
+    if (l->current_byte == '\0') {
+        return token_init(ILLEGAL, &l->input[start], l->position - start);
+    }
+    lexer_read_char(l);
+
+    return token_init(STRING, &l->input[start], l->position - start);
+}
+
+// Reads a character literal returning an illegal token for malformed literals.
+//
+// Assumes that the surrounding single quotes have not been consumed.
+Token lexer_read_character_literal(Lexer* l) {
+    const size_t start = l->position;
+    lexer_read_char(l);
+
+    // Consume one logical character
+    if (l->current_byte == '\\') {
+        lexer_read_escape(l);
+        lexer_read_char(l);
+    } else if (l->current_byte != '\'' && l->current_byte != '\n' && l->current_byte != '\r') {
+        lexer_read_char(l);
+    } else {
+        return token_init(ILLEGAL, &l->input[start], l->position - start);
+    }
+
+    // The next character MUST be closing ', otherwise illegally consume like a comment
+    if (l->current_byte != '\'') {
+        size_t illegal_end = l->position;
+        while (l->current_byte != '\'' && l->current_byte != '\n' && l->current_byte != '\r' &&
+               l->current_byte != '\0') {
+            lexer_read_char(l);
+            illegal_end = l->position;
+        }
+
+        if (l->current_byte == '\'') {
+            lexer_read_char(l);
+            illegal_end = l->position;
+        }
+
+        return token_init(ILLEGAL, &l->input[start], illegal_end - start);
+    }
+    lexer_read_char(l);
+
+    return token_init(CHARACTER, &l->input[start], l->position - start);
+}
+
+// Reads a multiline string from the token, assuming the '//' operator has been consumed
+Token lexer_read_comment(Lexer* l) {
+    const size_t start = l->position;
+    while (l->current_byte != '\n' && l->current_byte != '\0') {
+        lexer_read_char(l);
+    }
+    return token_init(COMMENT, &l->input[start], l->position - start);
+}
+
+// Reads a multiline string from the token, assuming the '\\' operator has been consumed
+Token lexer_read_multilinestring(Lexer* l) {
+    const size_t start = l->position;
+    size_t       end   = start;
+
+    while (true) {
+        // Consume characters until newline or EOF
+        while (l->current_byte != '\n' && l->current_byte != '\r' && l->current_byte != '\0') {
+            lexer_read_char(l);
+        }
+
+        // Peek positions
+        size_t peek_pos = l->peek_position;
+        if (l->current_byte == '\r' && peek_pos < l->input_length && l->input[peek_pos] == '\n') {
+            peek_pos += 1;
+        }
+
+        bool has_continuation = false;
+        if ((l->current_byte == '\n' || l->current_byte == '\r') &&
+            peek_pos + 1 < l->input_length && l->input[peek_pos] == '\\' &&
+            l->input[peek_pos + 1] == '\\') {
+            has_continuation = true;
+        }
+
+        // Don't include the newline if there is no continuation to prevent trailing whitespace
+        if (!has_continuation) {
+            end = l->position;
+            break;
+        }
+
+        // Include the CRLF/LF newline in the token
+        lexer_read_char(l);
+        if (l->current_byte == '\r' && l->peek_position < l->input_length &&
+            l->input[l->peek_position] == '\n') {
+            lexer_read_char(l);
+        }
+
+        // consume the next "\\" line continuation
+        lexer_read_char(l);
+        lexer_read_char(l);
+    }
+
+    return token_init(MULTILINE_STRING, &l->input[start], end - start);
 }

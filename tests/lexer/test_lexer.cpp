@@ -1,5 +1,6 @@
 #include "catch_amalgamated.hpp"
 
+#include <stdio.h>
 #include <string.h>
 
 #include <iostream>
@@ -301,5 +302,255 @@ TEST_CASE("Advanced next token") {
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
         lexer_destroy(l);
+    }
+}
+
+TEST_CASE("Advanced literals") {
+    SECTION("Comment literals") {
+        const char* input = "const five = 5;\n"
+                            "var ten = 10;\n\n"
+                            "// Comment on a new line\n"
+                            "var add = fn(x, y) {\n"
+                            "   x + y;\n"
+                            "};\n\n"
+                            "var result = add(five, ten); // This is an end of line comment\n"
+                            "var four_and_some = 4.2;";
+
+        std::vector<ExpectedToken> expecteds = {
+            {TokenType::CONST, "const"},
+            {TokenType::IDENT, "five"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::INT_10, "5"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "ten"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::INT_10, "10"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::COMMENT, " Comment on a new line"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "add"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::FUNCTION, "fn"},
+            {TokenType::LPAREN, "("},
+            {TokenType::IDENT, "x"},
+            {TokenType::COMMA, ","},
+            {TokenType::IDENT, "y"},
+            {TokenType::RPAREN, ")"},
+            {TokenType::LBRACE, "{"},
+            {TokenType::IDENT, "x"},
+            {TokenType::PLUS, "+"},
+            {TokenType::IDENT, "y"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::RBRACE, "}"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "result"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::IDENT, "add"},
+            {TokenType::LPAREN, "("},
+            {TokenType::IDENT, "five"},
+            {TokenType::COMMA, ","},
+            {TokenType::IDENT, "ten"},
+            {TokenType::RPAREN, ")"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::COMMENT, " This is an end of line comment"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "four_and_some"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::FLOAT, "4.2"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::END, ""},
+        };
+
+        Lexer* l = lexer_create(input);
+
+        for (size_t i = 0; i < expecteds.size(); i++) {
+            const auto& [t, s] = expecteds[i];
+            Token token        = lexer_next_token(l);
+            REQUIRE(slice_equals_str_z(&token.slice, s));
+        }
+
+        lexer_destroy(l);
+    }
+
+    SECTION("Character literals") {
+        const char* input = "if'e' else'\\'\nreturn'\\r' break'\\n'\n"
+                            "continue'\\0' for'\\'' while'\\\\' const''\n"
+                            "var'asd'";
+
+        std::vector<ExpectedToken> expecteds = {
+            {TokenType::IF, "if"},
+            {TokenType::CHARACTER, "'e'"},
+            {TokenType::ELSE, "else"},
+            {TokenType::ILLEGAL, "'\\'"},
+            {TokenType::RETURN, "return"},
+            {TokenType::CHARACTER, "'\\r'"},
+            {TokenType::BREAK, "break"},
+            {TokenType::CHARACTER, "'\\n'"},
+            {TokenType::CONTINUE, "continue"},
+            {TokenType::CHARACTER, "'\\0'"},
+            {TokenType::FOR, "for"},
+            {TokenType::CHARACTER, "'\\''"},
+            {TokenType::WHILE, "while"},
+            {TokenType::CHARACTER, "'\\\\'"},
+            {TokenType::CONST, "const"},
+            {TokenType::ILLEGAL, "'"},
+            {TokenType::ILLEGAL, "'"},
+            {TokenType::VAR, "var"},
+            {TokenType::ILLEGAL, "'asd'"},
+            {TokenType::END, ""},
+        };
+
+        Lexer* l = lexer_create(input);
+        for (const auto& [t, s] : expecteds) {
+            Token token = lexer_next_token(l);
+            REQUIRE(t == token.type);
+            REQUIRE(slice_equals_str_z(&token.slice, s));
+        }
+        lexer_destroy(l);
+    }
+
+    SECTION("String literals") {
+        const char* input = "const five = \"Hello, World!\";\n"
+                            "var ten = \"Hello\\n, World!\\0\";"
+                            "var one := \"Hello, World!;";
+
+        std::vector<ExpectedToken> expecteds = {
+            {TokenType::CONST, "const"},
+            {TokenType::IDENT, "five"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::STRING, "\"Hello, World!\""},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "ten"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::STRING, "\"Hello\\n, World!\\0\""},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "one"},
+            {TokenType::WALRUS, ":="},
+            {TokenType::ILLEGAL, "\"Hello, World!;"},
+            {TokenType::END, ""},
+        };
+
+        Lexer* l = lexer_create(input);
+
+        for (const auto& [t, s] : expecteds) {
+            Token token = lexer_next_token(l);
+            REQUIRE(t == token.type);
+            REQUIRE(slice_equals_str_z(&token.slice, s));
+        }
+
+        lexer_destroy(l);
+    }
+
+    SECTION("Multiline string literals") {
+        const char* input = "const five = \\\\Multiline stringing\n"
+                            ";\n"
+                            "var ten = \\\\Multiline stringing\n"
+                            "\\\\Continuation\n"
+                            ";\n"
+                            "const one = \\\\Nesting \" \' \\ [] const var\n"
+                            "\\\\\n"
+                            ";\n";
+
+        std::vector<ExpectedToken> expecteds = {
+            {TokenType::CONST, "const"},
+            {TokenType::IDENT, "five"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::MULTILINE_STRING, "Multiline stringing"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},
+            {TokenType::IDENT, "ten"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::MULTILINE_STRING, "Multiline stringing\n\\\\Continuation"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::CONST, "const"},
+            {TokenType::IDENT, "one"},
+            {TokenType::ASSIGN, "="},
+            {TokenType::MULTILINE_STRING, "Nesting \" \' \\ [] const var\n\\\\"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::END, ""},
+        };
+
+        Lexer* l = lexer_create(input);
+        for (const auto& [t, s] : expecteds) {
+            Token token = lexer_next_token(l);
+            REQUIRE(t == token.type);
+            REQUIRE(slice_equals_str_z(&token.slice, s));
+        }
+        lexer_destroy(l);
+    }
+
+    SECTION("Promotion of standard string literals") {
+        SECTION("Normal case") {
+            Token string_tok =
+                token_init(TokenType::STRING, "\"Hello, World!\"", strlen("\"Hello, World!\""));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "Hello, World!");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Escaped case") {
+            Token string_tok = token_init(
+                TokenType::STRING, "\"\"Hello, World!\"\"", strlen("\"\"Hello, World!\"\""));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "\"Hello, World!\"");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Empty case") {
+            Token    string_tok      = token_init(TokenType::STRING, "\"\"", strlen("\"\""));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE_FALSE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Malformed case") {
+            Token    string_tok      = token_init(TokenType::STRING, "\"", strlen("\""));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE_FALSE(promoted_string.ptr);
+        }
+    }
+
+    SECTION("Promotion of multistring literals") {
+        SECTION("Normal case no newline") {
+            Token    string_tok      = token_init(TokenType::MULTILINE_STRING,
+                                          "\\\\Hello,\"World!\"",
+                                          strlen("\\\\Hello,\"World!\""));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "Hello,\"World!\"");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Normal case newline") {
+            Token    string_tok      = token_init(TokenType::MULTILINE_STRING,
+                                          "\\\\Hello,\n\\\\World!\n\\\\",
+                                          strlen("\\\\Hello,\n\\\\World!\n\\\\"));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "Hello,\nWorld!\n");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Empty case") {
+            Token    string_tok = token_init(TokenType::MULTILINE_STRING, "\\\\", strlen("\\\\"));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE_FALSE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "");
+            free(promoted_string.ptr);
+        }
+
+        SECTION("Malformed case") {
+            Token    string_tok      = token_init(TokenType::MULTILINE_STRING, "\\", strlen("\\"));
+            MutSlice promoted_string = promote_token_string(string_tok);
+            REQUIRE(promoted_string.ptr);
+            free(promoted_string.ptr);
+        }
     }
 }

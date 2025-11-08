@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lexer/token.h"
+
 #include "util/mem.h"
 
 static const size_t MAX_OPERATOR_LEN = 3;

@@ -22,6 +22,12 @@ typedef struct {
     size_t      length;
 } Slice;
 
+// A stack allocated slice into arbitrary memory with a given length.
+typedef struct {
+    const void* ptr;
+    size_t      length;
+} AnySlice;
+
 // Creates a slice from a null terminated string.
 Slice slice_from_z(const char* start);
 Slice slice_from_s(const char* start, size_t size);
@@ -31,11 +37,17 @@ bool  slice_equals(const Slice* a, const Slice* b);
 bool slice_equals_str_z(const Slice* slice, const char* str);
 bool slice_equals_str_s(const Slice* slice, const char* str, size_t size);
 
-// A stack allocated slice into a string with a given length.
+// A stack allocated slice into a mutable string with a given length.
 typedef struct {
     char*  ptr;
     size_t length;
 } MutSlice;
+
+// A stack allocated slice into mutable arbitrary memory with a given length.
+typedef struct {
+    void*  ptr;
+    size_t length;
+} AnyMutSlice;
 
 // Creates a mutable slice from a null terminated string.
 MutSlice mut_slice_from_z(char* start);

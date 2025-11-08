@@ -16,6 +16,9 @@ typedef enum {
     INT_16,
     FLOAT,
 
+    STRING,
+    CHARACTER,
+
     // Operators
     ASSIGN,
     WALRUS,
@@ -60,6 +63,7 @@ typedef enum {
     DOT_DOT_EQ,
     ARROW,
     FAT_ARROW,
+
     COMMENT,
     MULTILINE_STRING,
 
@@ -119,6 +123,9 @@ static const char* const TOKEN_TYPE_NAMES[] = {
     "INT_16",
     "FLOAT",
 
+    "STRING",
+    "CHARACTER",
+
     // Operators
     "ASSIGN",
     "WALRUS",
@@ -163,6 +170,7 @@ static const char* const TOKEN_TYPE_NAMES[] = {
     "DOT_DOT_EQ",
     "ARROW",
     "FAT_ARROW",
+
     "COMMENT",
     "MULTILINE_STRING",
 
@@ -218,45 +226,7 @@ static inline const char* token_type_name(TokenType type) {
 // Converts the provided char into its token type representation.
 //
 // If the character is not a valid delimiter, t is not modified.
-static inline bool misc_token_type_from_char(char c, TokenType* t) {
-    switch (c) {
-    case ',':
-        *t = COMMA;
-        return true;
-    case ':':
-        *t = COLON;
-        return true;
-    case ';':
-        *t = SEMICOLON;
-        return true;
-    case '(':
-        *t = LPAREN;
-        return true;
-    case ')':
-        *t = RPAREN;
-        return true;
-    case '{':
-        *t = LBRACE;
-        return true;
-    case '}':
-        *t = RBRACE;
-        return true;
-    case '[':
-        *t = LBRACKET;
-        return true;
-    case ']':
-        *t = RBRACKET;
-        return true;
-    case '\'':
-        *t = SINGLE_QUOTE;
-        return true;
-    case '\"':
-        *t = DOUBLE_QUOTE;
-        return true;
-    default:
-        return false;
-    }
-}
+bool misc_token_type_from_char(char c, TokenType* t);
 
 // A stack allocated Token that does not own its string literal.
 //
@@ -266,6 +236,15 @@ typedef struct {
     Slice     slice;
 } Token;
 
-static inline Token token_init(TokenType t, const char* l, size_t length) {
-    return (Token){.type = t, .slice = slice_from_s(l, length)};
+static inline Token token_init(TokenType t, const char* str, size_t length) {
+    return (Token){.type = t, .slice = slice_from_s(str, length)};
 }
+
+// Takes a parsed multiline string-based token and promotes it into a heap allocated string.
+// The governing slice is stack allocated but its data is not.
+//
+// - Standard strings are stripped of their leading and trailing quotes.
+// - Multiline strings are stripped of their internal '\\' line prefixes.
+//
+// The returned memory is owned by the caller and must be freed.
+MutSlice promote_token_string(Token token);
