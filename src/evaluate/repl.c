@@ -13,6 +13,7 @@ void repl_start(void) {
     ArrayList buf_out;
     array_list_init(&buf_out, 1024, sizeof(uint8_t));
 
+    printf("Welcome to Conch REPL! Type 'exit' to quit.\n");
     repl_run(buf_in, &buf_out);
 
     array_list_deinit(&buf_out);

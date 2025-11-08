@@ -51,8 +51,8 @@ static inline bool _init_operators(HashMap* operator_map) {
 
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     for (size_t i = 0; i < num_operators; i++) {
-        const Operator operator = ALL_OPERATORS[i];
-        hash_map_put_assume_capacity(operator_map, &operator.slice, &operator.type);
+        const Operator op = ALL_OPERATORS[i];
+        hash_map_put_assume_capacity(operator_map, &op.slice, &op.type);
     }
 
     return true;
