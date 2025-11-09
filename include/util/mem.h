@@ -66,3 +66,6 @@ uintptr_t align_up(uintptr_t ptr, size_t alignment);
 void*     align_ptr(void* ptr, size_t alignment);
 void*     ptr_offset(void* p, size_t offset);
 void      swap(void* a, void* b, size_t size);
+
+char* strdup_z(const char* str);
+char* strdup_s(const char* str, size_t size);

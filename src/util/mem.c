@@ -92,3 +92,25 @@ void swap(void* a, void* b, size_t size) {
         pb[i]        = temp;
     }
 }
+
+char* strdup_z(const char* str) {
+    if (!str) {
+        return NULL;
+    }
+    return strdup_s(str, strlen(str));
+}
+
+char* strdup_s(const char* str, size_t size) {
+    if (!str) {
+        return NULL;
+    }
+
+    char* copy = malloc(size + 1);
+    if (!copy) {
+        return NULL;
+    }
+
+    memcpy(copy, str, size);
+    copy[size] = '\0';
+    return copy;
+}

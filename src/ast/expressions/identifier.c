@@ -11,8 +11,8 @@ IdentifierExpression* identifier_expression_new(const char* name) {
         return NULL;
     }
 
-    char* mut_name = strdup(name);
-    if (!name) {
+    char* mut_name = strdup_z(name);
+    if (!mut_name) {
         free(ident);
         return NULL;
     }

@@ -10,6 +10,14 @@ extern "C" {
 #include "util/mem.h"
 }
 
+TEST_CASE("Word size determined correctly") {
+#ifdef WORD_SIZE_64
+    REQUIRE(sizeof(size_t) == 8);
+#elif defined(WORD_SIZE_32)
+    REQUIRE(sizeof(size_t) == 4);
+#endif
+}
+
 TEST_CASE("Slice creation and equality") {
     const char* text = "hello";
     Slice       s1   = slice_from_s(text, 5);
@@ -107,10 +115,46 @@ TEST_CASE("Swap swaps memory content correctly") {
     REQUIRE(strcmp(str2, "abc") == 0);
 }
 
-TEST_CASE("Word size determined correctly") {
-#ifdef WORD_SIZE_64
-    REQUIRE(sizeof(size_t) == 8);
-#elif defined(WORD_SIZE_32)
-    REQUIRE(sizeof(size_t) == 4);
-#endif
+TEST_CASE("String duplication") {
+    const char* original = "hello world";
+
+    SECTION("Null terminated strings") {
+        char* copy_z = strdup_z(original);
+        REQUIRE(copy_z);
+        REQUIRE(strcmp(copy_z, original) == 0);
+
+        copy_z[0] = 'H';
+        REQUIRE(strcmp(copy_z, "Hello world") == 0);
+        REQUIRE(strcmp(original, "hello world") == 0);
+        free(copy_z);
+    }
+
+    SECTION("Less than full size dupe") {
+        char* copy_s = strdup_s(original, 5);
+        REQUIRE(copy_s);
+        REQUIRE(strncmp(copy_s, original, 5) == 0);
+        REQUIRE(copy_s[5] == '\0');
+        free(copy_s);
+    }
+
+    SECTION("Full size dupe") {
+        size_t len    = strlen(original);
+        char*  copy_s = strdup_s(original, len);
+        REQUIRE(copy_s);
+        REQUIRE(strcmp(copy_s, original) == 0);
+        free(copy_s);
+    }
+
+    SECTION("Empty string") {
+        const char* empty  = "";
+        char*       copy_z = strdup_z(empty);
+        REQUIRE(copy_z);
+        REQUIRE(strcmp(copy_z, "") == 0);
+        free(copy_z);
+
+        char* copy_s = strdup_s(empty, 0);
+        REQUIRE(copy_s);
+        REQUIRE(strcmp(copy_s, "") == 0);
+        free(copy_s);
+    }
 }
