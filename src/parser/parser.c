@@ -51,16 +51,21 @@ void parser_deinit(Parser* p) {
     array_list_deinit(&p->errors);
 }
 
-bool parser_consume(Parser* p, AST* ast, FileIO* io) {
+bool parser_consume(Parser* p, AST* ast) {
     if (!p || !p->lexer || !ast) {
         return false;
     }
 
-    // Reset the lexer and parser to its initial state for potential reuse
-    if (!parser_init(p, p->lexer, io)) {
+    p->lexer_index   = 0;
+    p->current_token = token_init(END, "", 0);
+    p->peek_token    = token_init(END, "", 0);
+
+    if (!parser_next_token(p) || !parser_next_token(p)) {
         return false;
     }
+
     array_list_clear_retaining_capacity(&ast->statements);
+    array_list_clear_retaining_capacity(&p->errors);
 
     // Traverse the tokens and append until exhausted
     while (!parser_current_token_is(p, END)) {

@@ -72,7 +72,7 @@ TEST_CASE("Declarations") {
 
         Parser p;
         REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast, &stdio));
+        REQUIRE(parser_consume(&p, &ast));
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -104,7 +104,7 @@ TEST_CASE("Declarations") {
 
         Parser p;
         REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast, &stdio));
+        REQUIRE(parser_consume(&p, &ast));
 
         std::vector<std::string> expected_errors = {
             "Expected token WALRUS, found INT_10.",

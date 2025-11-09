@@ -28,7 +28,7 @@ bool parser_init(Parser* p, Lexer* l, FileIO* io);
 void parser_deinit(Parser* p);
 
 // Consumes all tokens and parses them into an Abstract Syntax Tree.
-bool parser_consume(Parser* p, AST* ast, FileIO* io);
+bool parser_consume(Parser* p, AST* ast);
 bool parser_next_token(Parser* p);
 
 bool parser_current_token_is(const Parser* p, TokenType t);
