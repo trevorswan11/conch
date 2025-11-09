@@ -86,6 +86,7 @@ TEST_CASE("Declarations") {
             test_var_statement(stmt, expected_identifiers[i]);
         }
 
+        parser_deinit(&p);
         ast_deinit(&ast);
         lexer_deinit(&l);
     }
@@ -112,6 +113,7 @@ TEST_CASE("Declarations") {
         };
         check_parse_errors(&p, expected_errors);
 
+        parser_deinit(&p);
         ast_deinit(&ast);
         lexer_deinit(&l);
     }

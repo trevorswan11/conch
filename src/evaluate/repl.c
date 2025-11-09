@@ -48,7 +48,7 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
         }
 
         const char* line = (const char*)stream_receiver->data;
-        if (strncasecmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
+        if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
             break;
         }
 

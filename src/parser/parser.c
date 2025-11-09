@@ -44,8 +44,7 @@ bool parser_init(Parser* p, Lexer* l, FileIO* io) {
 void parser_deinit(Parser* p) {
     MutSlice allocated;
     for (size_t i = 0; i < p->errors.length; i++) {
-        const bool retrieved = array_list_get(&p->errors, i, &allocated);
-        assert(retrieved);
+        array_list_get(&p->errors, i, &allocated);
         free(allocated.ptr);
     }
 
