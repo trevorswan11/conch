@@ -60,40 +60,44 @@ static inline bool _init_operators(HashMap* operator_map) {
     return true;
 }
 
-Lexer* lexer_create(const char* input) {
-    if (!input) {
-        return NULL;
+bool lexer_init(Lexer* l, const char* input) {
+    if (!input || !lexer_null_init(l)) {
+        return false;
     }
 
-    Lexer* l = (Lexer*)malloc(sizeof(Lexer));
+    l->input        = input;
+    l->input_length = strlen(input);
+
+    lexer_read_char(l);
+    return true;
+}
+
+bool lexer_null_init(Lexer* l) {
     if (!l) {
-        return NULL;
+        return false;
     }
 
     HashMap keywords;
     if (!_init_keywords(&keywords)) {
-        free(l);
-        return NULL;
+        return false;
     }
 
     HashMap operators;
     if (!_init_operators(&operators)) {
-        free(l);
         hash_map_deinit(&keywords);
-        return NULL;
+        return false;
     }
 
     ArrayList accumulator;
     if (!array_list_init(&accumulator, 32, sizeof(Token))) {
-        free(l);
         hash_map_deinit(&keywords);
         hash_map_deinit(&operators);
-        return NULL;
+        return false;
     }
 
     *l = (Lexer){
-        .input             = input,
-        .input_length      = strlen(input),
+        .input             = NULL,
+        .input_length      = 0,
         .position          = 0,
         .peek_position     = 0,
         .current_byte      = 0,
@@ -102,11 +106,10 @@ Lexer* lexer_create(const char* input) {
         .operators         = operators,
     };
 
-    lexer_read_char(l);
-    return l;
+    return true;
 }
 
-void lexer_destroy(Lexer* l) {
+void lexer_deinit(Lexer* l) {
     if (!l) {
         return;
     }
@@ -114,8 +117,6 @@ void lexer_destroy(Lexer* l) {
     hash_map_deinit(&l->keywords);
     hash_map_deinit(&l->operators);
     array_list_deinit(&l->token_accumulator);
-    free(l);
-    l = NULL;
 }
 
 bool lexer_consume(Lexer* l) {

@@ -3,5 +3,8 @@
 #include "util/containers/array_list.h"
 
 typedef struct {
-    ArrayList* statements;
+    ArrayList statements;
 } AST;
+
+bool ast_init(AST* ast);
+void ast_deinit(AST* ast);

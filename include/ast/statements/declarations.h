@@ -9,18 +9,31 @@
 #include "util/mem.h"
 
 typedef struct {
-    Statement                   base;
-    const IdentifierExpression* ident;
-    Expression                  value;
+    Statement             base;
+    IdentifierExpression* ident;
+    Expression*           value;
 } VarStatement;
 
-static const char* var_token_literal(Node* node) {
+static const char* var_statement_token_literal(Node* node) {
     MAYBE_UNUSED(node);
     return token_type_name(VAR);
 }
 
-static void var_destroy(Node* node) {
+static void var_statement_destroy(Node* node) {
     VarStatement* variable = (VarStatement*)node;
+
+    if (variable->ident) {
+        Node* n_ident = (Node*)variable->ident;
+        n_ident->vtable->destroy(n_ident);
+        variable->ident = NULL;
+    }
+
+    if (variable->value) {
+        Node* n_value = (Node*)variable->value;
+        n_value->vtable->destroy(n_value);
+        variable->value = NULL;
+    }
+
     free(variable);
 }
 
@@ -32,10 +45,10 @@ static void var_statement_node(Statement* stat) {
 static const StatementVTable VAR_VTABLE = {
     .base =
         {
-            .token_literal = var_token_literal,
-            .destroy       = var_destroy,
+            .token_literal = var_statement_token_literal,
+            .destroy       = var_statement_destroy,
         },
     .statement_node = var_statement_node,
 };
 
-VarStatement* var_statement_new(const IdentifierExpression* ident, Expression value);
+VarStatement* var_statement_create(IdentifierExpression* ident, Expression* value);

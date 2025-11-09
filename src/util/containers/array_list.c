@@ -135,13 +135,20 @@ bool array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
         }
     }
 
+    array_list_insert_stable_assume_capacity(a, index, item);
+    return true;
+}
+
+void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const void* item) {
+    assert(a && a->data);
+    assert(index <= a->length);
+
     void* dest       = _array_list_get_ptr_unsafe(a, index);
     void* shift_dest = _array_list_get_ptr_unsafe(a, index + 1);
     memmove(shift_dest, dest, (a->length - index) * a->item_size);
 
     memcpy(dest, item, a->item_size);
     a->length += 1;
-    return true;
 }
 
 bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
@@ -159,6 +166,20 @@ bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
         swap(current, new, a->item_size);
     }
     return true;
+}
+
+void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item) {
+    assert(a && a->data);
+    assert(index <= a->length);
+
+    array_list_push_assume_capacity(a, item);
+    const size_t back = a->length - 1;
+
+    if (index != back) {
+        void* current = _array_list_get_ptr_unsafe(a, index);
+        void* new     = _array_list_get_ptr_unsafe(a, a->length - 1);
+        swap(current, new, a->item_size);
+    }
 }
 
 bool array_list_pop(ArrayList* a, void* item) {

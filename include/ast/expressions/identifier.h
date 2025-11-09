@@ -12,12 +12,12 @@ typedef struct {
     MutSlice   name;
 } IdentifierExpression;
 
-static const char* identifier_token_literal(Node* node) {
+static const char* identifier_expression_token_literal(Node* node) {
     MAYBE_UNUSED(node);
     return token_type_name(IDENT);
 }
 
-static void identifier_destroy(Node* node) {
+static void identifier_expression_destroy(Node* node) {
     IdentifierExpression* ident = (IdentifierExpression*)node;
     free(ident->name.ptr);
     free(ident);
@@ -31,10 +31,10 @@ static void identifier_expression_node(Expression* expr) {
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =
         {
-            .token_literal = identifier_token_literal,
-            .destroy       = identifier_destroy,
+            .token_literal = identifier_expression_token_literal,
+            .destroy       = identifier_expression_destroy,
         },
     .expression_node = identifier_expression_node,
 };
 
-IdentifierExpression* identifier_expression_new(const char* name);
+IdentifierExpression* identifier_expression_create(Slice name);

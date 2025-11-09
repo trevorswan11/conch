@@ -159,14 +159,12 @@ TEST_CASE("Remove ops") {
 }
 
 TEST_CASE("Stable insertion") {
-    ArrayList a, b;
+    ArrayList a;
     REQUIRE(array_list_init(&a, 4, sizeof(uint32_t)));
-    REQUIRE(array_list_init(&b, 4, sizeof(uint32_t)));
 
     std::vector<uint32_t> initial = {10, 20, 30, 40};
     for (auto v : initial) {
         REQUIRE(array_list_push(&a, &v));
-        REQUIRE(array_list_push(&b, &v));
     }
 
     uint32_t new_val = 25;
@@ -188,15 +186,17 @@ TEST_CASE("Stable insertion") {
         REQUIRE(out == expected_begin[i]);
     }
 
+    REQUIRE(array_list_ensure_total_capacity(&a, 10));
+
     uint32_t end_val = 99;
-    REQUIRE(array_list_insert_stable(&a, a.length, &end_val));
+    array_list_insert_stable_assume_capacity(&a, a.length, &end_val);
     REQUIRE(a.length == expected_begin.size() + 1);
     uint32_t last;
     REQUIRE(array_list_get(&a, a.length - 1, &last));
     REQUIRE(last == 99);
+    REQUIRE(array_list_is_sorted(&a, compare_uint32_t));
 
     array_list_deinit(&a);
-    array_list_deinit(&b);
 }
 
 TEST_CASE("Unstable insertion") {
@@ -229,10 +229,12 @@ TEST_CASE("Unstable insertion") {
     std::sort(expected_contents.begin(), expected_contents.end());
     REQUIRE(observed == expected_contents);
 
+    REQUIRE(array_list_ensure_total_capacity(&b, 10));
+
     uint32_t front = 1;
-    REQUIRE(array_list_insert_unstable(&b, 0, &front));
+    array_list_insert_unstable_assume_capacity(&b, 0, &front);
     uint32_t back = 99;
-    REQUIRE(array_list_insert_unstable(&b, b.length, &back));
+    array_list_insert_unstable_assume_capacity(&b, b.length, &back);
     REQUIRE(b.length == initial.size() + 3);
 
     uint32_t first, last_u;

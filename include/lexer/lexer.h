@@ -23,8 +23,9 @@ typedef struct {
     HashMap operators;
 } Lexer;
 
-Lexer* lexer_create(const char* input);
-void   lexer_destroy(Lexer* l);
+bool lexer_init(Lexer* l, const char* input);
+bool lexer_null_init(Lexer* l);
+void lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.
 //

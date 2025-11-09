@@ -32,11 +32,15 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
 
     fprintf(io->out, WELCOME_MESSAGE);
     fprintf(io->out, "\n");
-    Lexer* l = lexer_create("NULL");
+    Lexer l;
+    if (!lexer_null_init(&l)) {
+        fprintf(io->err, "Failed to default initialize lexer\n");
+        return;
+    }
 
     while (true) {
         if (!repl_read_chunked(io, stream_buffer, stream_receiver)) {
-            lexer_destroy(l);
+            lexer_deinit(&l);
             return;
         }
 
@@ -45,13 +49,13 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
             break;
         }
 
-        l->input        = line;
-        l->input_length = strlen(line);
-        lexer_consume(l);
-        lexer_print_tokens(io, l);
+        l.input        = line;
+        l.input_length = strlen(line);
+        lexer_consume(&l);
+        lexer_print_tokens(io, &l);
     }
 
-    lexer_destroy(l);
+    lexer_deinit(&l);
 }
 
 bool repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {

@@ -40,16 +40,17 @@ TEST_CASE("Basic next token and lexer consuming") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
 
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
 
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
 
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Basic Language Snippet") {
@@ -85,15 +86,17 @@ TEST_CASE("Basic next token and lexer consuming") {
             {TokenType::SEMICOLON, ";"}, {TokenType::END, ""},
         };
 
-        Lexer* l_accumulator = lexer_create(input);
-        REQUIRE(lexer_consume(l_accumulator));
-        ArrayList* accumulated_tokens = &l_accumulator->token_accumulator;
+        Lexer l_accumulator;
+        REQUIRE(lexer_init(&l_accumulator, input));
+        REQUIRE(lexer_consume(&l_accumulator));
+        ArrayList* accumulated_tokens = &l_accumulator.token_accumulator;
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(l);
+            Token token        = lexer_next_token(&l);
             Token accumulated_token;
             REQUIRE(array_list_get(accumulated_tokens, i, &accumulated_token));
 
@@ -103,13 +106,14 @@ TEST_CASE("Basic next token and lexer consuming") {
             REQUIRE(slice_equals_str_z(&accumulated_token.slice, s));
         }
 
-        lexer_destroy(l);
-        lexer_destroy(l_accumulator);
+        lexer_deinit(&l);
+        lexer_deinit(&l_accumulator);
     }
 }
 
 TEST_CASE("Numbers and lexer consumer resets") {
-    Lexer* reseting_lexer = lexer_create("NULL");
+    Lexer reseting_lexer;
+    REQUIRE(lexer_null_init(&reseting_lexer));
 
     SECTION("Correct base-10 ints and floats") {
         const char* input = "0 123 3.14 42.0";
@@ -122,23 +126,25 @@ TEST_CASE("Numbers and lexer consumer resets") {
             {TokenType::END, ""},
         };
 
-        reseting_lexer->input        = input;
-        reseting_lexer->input_length = strlen(input);
-        REQUIRE(lexer_consume(reseting_lexer));
+        reseting_lexer.input        = input;
+        reseting_lexer.input_length = strlen(input);
+        REQUIRE(lexer_consume(&reseting_lexer));
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(l);
+            Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer->token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
             REQUIRE(slice_equals_str_z(&accumulated_token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Integer variants") {
@@ -155,23 +161,25 @@ TEST_CASE("Numbers and lexer consumer resets") {
             {TokenType::END, ""},
         };
 
-        reseting_lexer->input        = input;
-        reseting_lexer->input_length = strlen(input);
-        REQUIRE(lexer_consume(reseting_lexer));
+        reseting_lexer.input        = input;
+        reseting_lexer.input_length = strlen(input);
+        REQUIRE(lexer_consume(&reseting_lexer));
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(l);
+            Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer->token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
             REQUIRE(slice_equals_str_z(&accumulated_token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Illegal Floats") {
@@ -189,26 +197,28 @@ TEST_CASE("Numbers and lexer consumer resets") {
             {TokenType::END, ""},
         };
 
-        reseting_lexer->input        = input;
-        reseting_lexer->input_length = strlen(input);
-        REQUIRE(lexer_consume(reseting_lexer));
+        reseting_lexer.input        = input;
+        reseting_lexer.input_length = strlen(input);
+        REQUIRE(lexer_consume(&reseting_lexer));
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(l);
+            Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer->token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
             REQUIRE(slice_equals_str_z(&accumulated_token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
-    lexer_destroy(reseting_lexer);
+    lexer_deinit(&reseting_lexer);
 }
 
 TEST_CASE("Advanced next token") {
@@ -227,13 +237,15 @@ TEST_CASE("Advanced next token") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("General operators") {
@@ -253,13 +265,15 @@ TEST_CASE("Advanced next token") {
             {TokenType::PERCENT_ASSIGN, "%="}, {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Dot operators") {
@@ -272,13 +286,15 @@ TEST_CASE("Advanced next token") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Control flow keywords") {
@@ -298,13 +314,15 @@ TEST_CASE("Advanced next token") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 }
 
@@ -379,15 +397,16 @@ TEST_CASE("Advanced literals") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(l);
+            Token token        = lexer_next_token(&l);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
 
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Character literals") {
@@ -418,13 +437,15 @@ TEST_CASE("Advanced literals") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
+
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("String literals") {
@@ -450,15 +471,16 @@ TEST_CASE("Advanced literals") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
 
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
 
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Multiline string literals") {
@@ -490,13 +512,14 @@ TEST_CASE("Advanced literals") {
             {TokenType::END, ""},
         };
 
-        Lexer* l = lexer_create(input);
+        Lexer l;
+        REQUIRE(lexer_init(&l, input));
         for (const auto& [t, s] : expecteds) {
-            Token token = lexer_next_token(l);
+            Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
-        lexer_destroy(l);
+        lexer_deinit(&l);
     }
 
     SECTION("Promotion of invalid tokens") {

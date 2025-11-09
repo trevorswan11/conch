@@ -5,13 +5,13 @@
 
 #include "util/mem.h"
 
-IdentifierExpression* identifier_expression_new(const char* name) {
+IdentifierExpression* identifier_expression_create(Slice name) {
     IdentifierExpression* ident = malloc(sizeof(IdentifierExpression));
     if (!ident) {
         return NULL;
     }
 
-    char* mut_name = strdup_z(name);
+    char* mut_name = strdup_s(name.ptr, name.length);
     if (!mut_name) {
         free(ident);
         return NULL;

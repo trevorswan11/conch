@@ -36,11 +36,13 @@ bool array_list_shrink_to_fit(ArrayList* a);
 //
 // If the index given is at the end of the list, this is equivalent to push.
 bool array_list_insert_stable(ArrayList* a, size_t index, const void* item);
+void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const void* item);
 
 // Inserts an item at the given position, invalidating relative order.
 //
 // If the index given is at the end of the list, this is equivalent to push.
 bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item);
+void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item);
 
 bool  array_list_push(ArrayList* a, const void* item);
 void  array_list_push_assume_capacity(ArrayList* a, const void* item);
