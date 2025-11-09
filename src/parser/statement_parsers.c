@@ -12,15 +12,10 @@
 VarStatement* var_statement_parse(Parser* p) {
     VarStatement* stmt = var_statement_create(NULL, NULL);
     if (!stmt) {
-        fprintf(p->io->err, "Failed to allocate new variable statement.\n");
         return NULL;
     }
 
     if (!parser_expect_peek(p, IDENT)) {
-        fprintf(p->io->err,
-                "Variable declaration expected %s, found %s.\n",
-                token_type_name(IDENT),
-                token_type_name(p->peek_token.type));
         var_statement_destroy((Node*)stmt);
         return NULL;
     }

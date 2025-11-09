@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -14,7 +13,7 @@
 void repl_start(void) {
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    array_list_init(&buf_out, 1024, sizeof(uint8_t));
+    array_list_init(&buf_out, 1024, sizeof(char));
 
     FileIO io;
     file_io_init(&io, stdin, stdout, stderr);
@@ -25,7 +24,7 @@ void repl_start(void) {
 
 void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     assert(stream_buffer && stream_receiver);
-    if (stream_receiver->item_size != sizeof(uint8_t)) {
+    if (stream_receiver->item_size != sizeof(char)) {
         fprintf(io->err, "ArrayList must be initialized for bytes\n");
         return;
     }
@@ -39,13 +38,17 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     }
 
     while (true) {
+        array_list_clear_retaining_capacity(stream_receiver);
+        fprintf(io->out, PROMPT);
+        fflush(io->out);
+
         if (!repl_read_chunked(io, stream_buffer, stream_receiver)) {
             lexer_deinit(&l);
             return;
         }
 
         const char* line = (const char*)stream_receiver->data;
-        if (strcmp(line, "exit") == 0) {
+        if (strncasecmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
             break;
         }
 
@@ -59,12 +62,7 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
 }
 
 bool repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
-    array_list_clear_retaining_capacity(stream_receiver);
-    fprintf(io->out, PROMPT);
-    fflush(io->out);
-
-    // Read the line in chunks
-    const uint8_t null = 0;
+    const char null = 0;
     while (true) {
         char* result = fgets(stream_buffer, BUF_SIZE, io->in);
         if (!result) {
@@ -77,14 +75,13 @@ bool repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiv
         const size_t required = stream_receiver->length + n;
         array_list_ensure_total_capacity(stream_receiver, required);
 
-        memcpy((uint8_t*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
+        memcpy((char*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
         stream_receiver->length += n;
 
         if (stream_buffer[n - 1] == '\n' || feof(io->in)) {
             break;
         }
     }
-    array_list_push(stream_receiver, &null);
 
-    return true;
+    return array_list_push(stream_receiver, &null);
 }

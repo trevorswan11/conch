@@ -6,6 +6,7 @@
 #define PROMPT ">> "
 #define BUF_SIZE 4096
 #define WELCOME_MESSAGE "Welcome to Conch REPL! Type 'exit' to quit."
+#define EXIT_TOKEN "exit"
 
 void repl_start(void);
 void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);

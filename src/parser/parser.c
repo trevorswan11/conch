@@ -12,9 +12,16 @@
 #include "ast/statements/statement.h"
 
 #include "util/containers/array_list.h"
+#include "util/containers/string_builder.h"
+#include "util/mem.h"
 
 bool parser_init(Parser* p, Lexer* l, FileIO* io) {
     if (!p || !l) {
+        return false;
+    }
+
+    ArrayList errors;
+    if (!array_list_init(&errors, 10, sizeof(MutSlice))) {
         return false;
     }
 
@@ -23,6 +30,7 @@ bool parser_init(Parser* p, Lexer* l, FileIO* io) {
         .lexer_index   = 0,
         .current_token = token_init(END, "", 0),
         .peek_token    = token_init(END, "", 0),
+        .errors        = errors,
         .io            = io,
     };
 
@@ -31,6 +39,17 @@ bool parser_init(Parser* p, Lexer* l, FileIO* io) {
         return false;
     }
     return true;
+}
+
+void parser_deinit(Parser* p) {
+    MutSlice allocated;
+    for (size_t i = 0; i < p->errors.length; i++) {
+        const bool retrieved = array_list_get(&p->errors, i, &allocated);
+        assert(retrieved);
+        free(allocated.ptr);
+    }
+
+    array_list_deinit(&p->errors);
 }
 
 bool parser_consume(Parser* p, AST* ast, FileIO* io) {
@@ -45,7 +64,7 @@ bool parser_consume(Parser* p, AST* ast, FileIO* io) {
     array_list_clear_retaining_capacity(&ast->statements);
 
     // Traverse the tokens and append until exhausted
-    while (p->current_token.type != END) {
+    while (!parser_current_token_is(p, END)) {
         Statement* stmt = parser_parse_statement(p);
         if (stmt) {
             if (!array_list_push(&ast->statements, &stmt)) {
@@ -78,8 +97,53 @@ bool parser_expect_peek(Parser* p, TokenType t) {
     if (parser_peek_token_is(p, t)) {
         return parser_next_token(p);
     } else {
+        parser_peek_error(p, t);
         return false;
     }
+}
+
+bool parser_peek_error(Parser* p, TokenType t) {
+    assert(p);
+
+    StringBuilder builder;
+    string_builder_init(&builder, 60);
+
+    const char start[] = "Expected token ";
+    const char mid[]   = ", found ";
+
+    if (!string_builder_append_many(&builder, start, sizeof(start) - 1)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    const char* expected = token_type_name(t);
+    if (!string_builder_append_many(&builder, expected, strlen(expected))) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append_many(&builder, mid, sizeof(mid) - 1)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    const char* actual = token_type_name(p->peek_token.type);
+    if (!string_builder_append_many(&builder, actual, strlen(actual))) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append(&builder, '.')) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    MutSlice slice = string_builder_to_string(&builder);
+    if (!array_list_push(&p->errors, &slice)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+    return true;
 }
 
 Statement* parser_parse_statement(Parser* p) {
