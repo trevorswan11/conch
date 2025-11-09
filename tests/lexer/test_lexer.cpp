@@ -506,7 +506,7 @@ TEST_CASE("Advanced literals") {
             Token    string_tok      = token_init(TokenType::STRING, "\"\"", strlen("\"\""));
             MutSlice promoted_string = promote_token_string(string_tok);
             REQUIRE_FALSE(promoted_string.ptr);
-            mut_slice_equals_str_z(&promoted_string, "");
+            mut_slice_equals_str_z(&promoted_string, NULL);
             free(promoted_string.ptr);
         }
 
@@ -542,7 +542,7 @@ TEST_CASE("Advanced literals") {
             Token    string_tok = token_init(TokenType::MULTILINE_STRING, "\\\\", strlen("\\\\"));
             MutSlice promoted_string = promote_token_string(string_tok);
             REQUIRE_FALSE(promoted_string.ptr);
-            mut_slice_equals_str_z(&promoted_string, "");
+            mut_slice_equals_str_z(&promoted_string, NULL);
             free(promoted_string.ptr);
         }
 

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdint.h>
 
 #include "util/mem.h"
@@ -11,14 +12,25 @@ Slice slice_from_s(const char* start, size_t size) {
 }
 
 bool slice_equals(const Slice* a, const Slice* b) {
+    assert(a && b);
     return a->length == b->length && (memcmp(a->ptr, b->ptr, a->length) == 0);
 }
 
 bool slice_equals_str_z(const Slice* slice, const char* str) {
+    assert(slice);
+    if (!slice->ptr && !str) {
+        return true;
+    }
+
     return slice_equals_str_s(slice, str, strlen(str));
 }
 
 bool slice_equals_str_s(const Slice* slice, const char* str, size_t size) {
+    assert(slice);
+    if (!slice->ptr && !str) {
+        return true;
+    }
+
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
@@ -31,14 +43,25 @@ MutSlice mut_slice_from_s(char* start, size_t size) {
 }
 
 bool mut_slice_equals(const MutSlice* a, const MutSlice* b) {
+    assert(a && b);
     return a->length == b->length && (memcmp(a->ptr, b->ptr, a->length) == 0);
 }
 
 bool mut_slice_equals_str_z(const MutSlice* slice, const char* str) {
+    assert(slice);
+    if (!slice->ptr && !str) {
+        return true;
+    }
+
     return mut_slice_equals_str_s(slice, str, strlen(str));
 }
 
 bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size) {
+    assert(slice);
+    if (!slice->ptr && !str) {
+        return true;
+    }
+
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
@@ -56,6 +79,10 @@ void* ptr_offset(void* p, size_t offset) {
 }
 
 void swap(void* a, void* b, size_t size) {
+    if (!a || !b) {
+        return;
+    }
+
     uint8_t* pa = (uint8_t*)a;
     uint8_t* pb = (uint8_t*)b;
 
