@@ -219,9 +219,7 @@ static const char* const TOKEN_TYPE_NAMES[] = {
     "ILLEGAL",
 };
 
-static inline const char* token_type_name(TokenType type) {
-    return TOKEN_TYPE_NAMES[type];
-}
+const char* token_type_name(TokenType type);
 
 // Converts the provided char into its token type representation.
 //
@@ -236,9 +234,7 @@ typedef struct {
     Slice     slice;
 } Token;
 
-static inline Token token_init(TokenType t, const char* str, size_t length) {
-    return (Token){.type = t, .slice = slice_from_s(str, length)};
-}
+Token token_init(TokenType t, const char* str, size_t length);
 
 // Takes a parsed multiline string-based token and promotes it into a heap allocated string.
 // The governing slice is stack allocated but its data is not.

@@ -3,6 +3,10 @@
 #include "util/containers/array_list.h"
 #include "util/mem.h"
 
+const char* token_type_name(TokenType type) {
+    return TOKEN_TYPE_NAMES[type];
+}
+
 bool misc_token_type_from_char(char c, TokenType* t) {
     switch (c) {
     case ',':
@@ -35,6 +39,10 @@ bool misc_token_type_from_char(char c, TokenType* t) {
     default:
         return false;
     }
+}
+
+Token token_init(TokenType t, const char* str, size_t length) {
+    return (Token){.type = t, .slice = slice_from_s(str, length)};
 }
 
 MutSlice promote_token_string(Token token) {

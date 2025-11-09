@@ -17,7 +17,7 @@ using ExpectedToken = std::pair<TokenType, const char*>;
 
 TEST_CASE("Basic next token and lexer consuming") {
     SECTION("Symbols Only") {
-        const char* input = "=+(){},; !-/*<>";
+        const char* input = "=+(){}[],;: !-/*<>";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::ASSIGN, "="},
@@ -26,8 +26,11 @@ TEST_CASE("Basic next token and lexer consuming") {
             {TokenType::RPAREN, ")"},
             {TokenType::LBRACE, "{"},
             {TokenType::RBRACE, "}"},
+            {TokenType::LBRACKET, "["},
+            {TokenType::RBRACKET, "]"},
             {TokenType::COMMA, ","},
             {TokenType::SEMICOLON, ";"},
+            {TokenType::COLON, ":"},
             {TokenType::BANG, "!"},
             {TokenType::MINUS, "-"},
             {TokenType::SLASH, "/"},
@@ -305,6 +308,19 @@ TEST_CASE("Advanced next token") {
     }
 }
 
+TEST_CASE("TokenType regression guard") {
+    REQUIRE(TokenType::END == 0);
+
+    const size_t illegal_index   = (size_t)ILLEGAL;
+    const size_t name_array_size = sizeof(TOKEN_TYPE_NAMES) / sizeof(TOKEN_TYPE_NAMES[0]);
+    REQUIRE(illegal_index == (name_array_size - 1));
+
+    for (size_t i = 0; i < name_array_size; i++) {
+        const char* name = token_type_name((TokenType)i);
+        REQUIRE(strcmp(TOKEN_TYPE_NAMES[i], name) == 0);
+    }
+}
+
 TEST_CASE("Advanced literals") {
     SECTION("Comment literals") {
         const char* input = "const five = 5;\n"
@@ -481,6 +497,13 @@ TEST_CASE("Advanced literals") {
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
         lexer_destroy(l);
+    }
+
+    SECTION("Promotion of invalid tokens") {
+        Token    string_tok      = token_init(TokenType::INT_10, "1", strlen("1"));
+        MutSlice promoted_string = promote_token_string(string_tok);
+        REQUIRE_FALSE(promoted_string.ptr);
+        free(promoted_string.ptr);
     }
 
     SECTION("Promotion of standard string literals") {

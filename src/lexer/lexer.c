@@ -15,6 +15,7 @@
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/hash.h"
+#include "util/io.h"
 #include "util/mem.h"
 
 static inline bool _init_keywords(HashMap* keyword_map) {
@@ -206,7 +207,7 @@ TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     return value;
 }
 
-void lexer_print_tokens(Lexer* l) {
+void lexer_print_tokens(FileIO* io, Lexer* l) {
     assert(l);
     ArrayList*   list        = &l->token_accumulator;
     const size_t accumulated = array_list_length(list);
@@ -214,7 +215,8 @@ void lexer_print_tokens(Lexer* l) {
     Token out;
     for (size_t i = 0; i < accumulated; i++) {
         array_list_get(list, i, &out);
-        printf("%s(%.*s)\n", token_type_name(out.type), (int)out.slice.length, out.slice.ptr);
+        fprintf(
+            io->out, "%s(%.*s)\n", token_type_name(out.type), (int)out.slice.length, out.slice.ptr);
     }
 }
 

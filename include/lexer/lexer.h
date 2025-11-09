@@ -4,8 +4,10 @@
 #include <stdint.h>
 
 #include "lexer/token.h"
+
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
+#include "util/io.h"
 #include "util/mem.h"
 
 // A lexer object which does not own the string input.
@@ -32,7 +34,7 @@ void      lexer_read_char(Lexer* l);
 Token     lexer_next_token(Lexer* l);
 void      lexer_skip_whitespace(Lexer* l);
 TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal);
-void      lexer_print_tokens(Lexer* l);
+void      lexer_print_tokens(FileIO* io, Lexer* l);
 
 Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);
