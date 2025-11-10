@@ -14,6 +14,7 @@ bool string_builder_init(StringBuilder* sb, size_t initial_length);
 void string_builder_deinit(StringBuilder* sb);
 bool string_builder_append(StringBuilder* sb, char byte);
 bool string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length);
+bool string_builder_append_size(StringBuilder* sb, size_t value);
 
 // Converts the buffer into a null terminated string.
 //

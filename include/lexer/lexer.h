@@ -19,6 +19,9 @@ typedef struct {
     char        current_byte;
     ArrayList   token_accumulator;
 
+    size_t line_no;
+    size_t col_no;
+
     HashMap keywords;
     HashMap operators;
 } Lexer;

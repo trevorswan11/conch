@@ -107,9 +107,9 @@ TEST_CASE("Declarations") {
         REQUIRE(parser_consume(&p, &ast));
 
         std::vector<std::string> expected_errors = {
-            "Expected token WALRUS, found INT_10.",
-            "Expected token IDENT, found ASSIGN.",
-            "Expected token IDENT, found INT_10.",
+            "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
+            "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
+            "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
         };
         check_parse_errors(&p, expected_errors);
 

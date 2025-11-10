@@ -42,6 +42,40 @@ bool string_builder_append_many(StringBuilder* sb, const char* bytes, size_t len
     return true;
 }
 
+bool string_builder_append_size(StringBuilder* sb, size_t value) {
+    assert(sb);
+
+    // Use a copy to determine the total number of digits to reserve
+    size_t temp   = value;
+    size_t digits = 0;
+    if (temp == 0) {
+        digits = 1;
+    } else {
+        while (temp > 0) {
+            temp /= 10;
+            digits++;
+        }
+    }
+
+    if (!array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + digits)) {
+        return false;
+    }
+
+    // Now we can push in reverse order without further allocations
+    size_t div = 1;
+    for (size_t i = 1; i < digits; i++) {
+        div *= 10;
+    }
+
+    for (size_t i = 0; i < digits; i++) {
+        char digit = '0' + (value / div % 10);
+        array_list_push_assume_capacity(&sb->buffer, &digit);
+        div /= 10;
+    }
+
+    return true;
+}
+
 MutSlice string_builder_to_string(StringBuilder* sb) {
     assert(sb);
     const char null_byte = '\0';

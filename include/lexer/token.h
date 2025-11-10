@@ -10,9 +10,9 @@ typedef enum {
 
     // Identifiers and literals
     IDENT,
-    INT_10,
     INT_2,
     INT_8,
+    INT_10,
     INT_16,
     FLOAT,
 
@@ -117,9 +117,9 @@ static const char* const TOKEN_TYPE_NAMES[] = {
 
     // Identifiers and literals
     "IDENT",
-    "INT_10",
     "INT_2",
     "INT_8",
+    "INT_10",
     "INT_16",
     "FLOAT",
 
@@ -225,6 +225,7 @@ const char* token_type_name(TokenType type);
 //
 // If the character is not a valid delimiter, t is not modified.
 bool misc_token_type_from_char(char c, TokenType* t);
+bool token_is_integer(TokenType t);
 
 // A stack allocated Token that does not own its string literal.
 //
@@ -232,9 +233,11 @@ bool misc_token_type_from_char(char c, TokenType* t);
 typedef struct {
     TokenType type;
     Slice     slice;
+    size_t    line;
+    size_t    column;
 } Token;
 
-Token token_init(TokenType t, const char* str, size_t length);
+Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col);
 
 // Takes a parsed multiline string-based token and promotes it into a heap allocated string.
 // The governing slice is stack allocated but its data is not.

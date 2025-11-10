@@ -28,8 +28,8 @@ bool parser_init(Parser* p, Lexer* l, FileIO* io) {
     *p = (Parser){
         .lexer         = l,
         .lexer_index   = 0,
-        .current_token = token_init(END, "", 0),
-        .peek_token    = token_init(END, "", 0),
+        .current_token = token_init(END, "", 0, 0, 0),
+        .peek_token    = token_init(END, "", 0, 0, 0),
         .errors        = errors,
         .io            = io,
     };
@@ -57,8 +57,8 @@ bool parser_consume(Parser* p, AST* ast) {
     }
 
     p->lexer_index   = 0;
-    p->current_token = token_init(END, "", 0);
-    p->peek_token    = token_init(END, "", 0);
+    p->current_token = token_init(END, "", 0, 0, 0);
+    p->peek_token    = token_init(END, "", 0, 0, 0);
 
     if (!parser_next_token(p) || !parser_next_token(p)) {
         return false;
@@ -112,6 +112,7 @@ bool parser_peek_error(Parser* p, TokenType t) {
     StringBuilder builder;
     string_builder_init(&builder, 60);
 
+    // Genreal token information
     const char start[] = "Expected token ";
     const char mid[]   = ", found ";
 
@@ -137,7 +138,31 @@ bool parser_peek_error(Parser* p, TokenType t) {
         return false;
     }
 
-    if (!string_builder_append(&builder, '.')) {
+    // Append line/col information for debugging
+    const char line_no[] = " [Ln ";
+    const char col_no[]  = ", Col ";
+
+    if (!string_builder_append_many(&builder, line_no, sizeof(line_no) - 1)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append_size(&builder, p->peek_token.line)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append_many(&builder, col_no, sizeof(col_no) - 1)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append_size(&builder, p->peek_token.column)) {
+        string_builder_deinit(&builder);
+        return false;
+    }
+
+    if (!string_builder_append(&builder, ']')) {
         string_builder_deinit(&builder);
         return false;
     }

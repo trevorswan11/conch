@@ -41,8 +41,17 @@ bool misc_token_type_from_char(char c, TokenType* t) {
     }
 }
 
-Token token_init(TokenType t, const char* str, size_t length) {
-    return (Token){.type = t, .slice = slice_from_s(str, length)};
+bool token_is_integer(TokenType t) {
+    return INT_2 <= t && t <= INT_16;
+}
+
+Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col) {
+    return (Token){
+        .type   = t,
+        .slice  = slice_from_s(str, length),
+        .line   = line,
+        .column = col,
+    };
 }
 
 MutSlice promote_token_string(Token token) {

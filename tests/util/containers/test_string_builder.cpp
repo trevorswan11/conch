@@ -55,6 +55,22 @@ TEST_CASE("StringBuilder multiple appends") {
     free(slice.ptr);
 }
 
+TEST_CASE("StringBuilder number appends") {
+    StringBuilder sb;
+    REQUIRE(string_builder_init(&sb, 2));
+
+    REQUIRE(string_builder_append(&sb, 'A'));
+    REQUIRE(string_builder_append_many(&sb, (char*)"BC", 2));
+    REQUIRE(string_builder_append(&sb, 'D'));
+    REQUIRE(string_builder_append_size(&sb, 12032));
+
+    MutSlice slice = string_builder_to_string(&sb);
+    REQUIRE(slice.ptr);
+    REQUIRE(strcmp(slice.ptr, "ABCD12032") == 0);
+
+    free(slice.ptr);
+}
+
 TEST_CASE("StringBuilder empty initialization") {
     StringBuilder sb;
     REQUIRE(string_builder_init(&sb, 1));

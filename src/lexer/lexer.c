@@ -102,6 +102,8 @@ bool lexer_null_init(Lexer* l) {
         .peek_position     = 0,
         .current_byte      = 0,
         .token_accumulator = accumulator,
+        .line_no           = 1,
+        .col_no            = 0,
         .keywords          = keywords,
         .operators         = operators,
     };
@@ -121,6 +123,9 @@ void lexer_deinit(Lexer* l) {
 
 bool lexer_consume(Lexer* l) {
     l->peek_position = 0;
+    l->line_no       = 1;
+    l->col_no        = 0;
+
     lexer_read_char(l);
     array_list_clear_retaining_capacity(&l->token_accumulator);
 
@@ -145,6 +150,13 @@ void lexer_read_char(Lexer* l) {
         l->current_byte = l->input[l->peek_position];
     }
 
+    if (l->current_byte == '\n') {
+        l->line_no += 1;
+        l->col_no = 0;
+    } else {
+        l->col_no += 1;
+    }
+
     l->position = l->peek_position;
     l->peek_position += 1;
 }
@@ -152,7 +164,12 @@ void lexer_read_char(Lexer* l) {
 Token lexer_next_token(Lexer* l) {
     lexer_skip_whitespace(l);
 
-    Token       token;
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
+
+    Token token;
+    token.line                 = start_line;
+    token.column               = start_col;
     const Token maybe_operator = lexer_read_operator(l);
 
     if (maybe_operator.type != ILLEGAL) {
@@ -185,7 +202,7 @@ Token lexer_next_token(Lexer* l) {
         } else if (l->current_byte == '\'') {
             return lexer_read_character_literal(l);
         } else {
-            token = token_init(ILLEGAL, &l->input[l->position], 1);
+            token = token_init(ILLEGAL, &l->input[l->position], 1, start_line, start_col);
         }
     }
 
@@ -216,15 +233,23 @@ void lexer_print_tokens(FileIO* io, Lexer* l) {
     Token out;
     for (size_t i = 0; i < accumulated; i++) {
         array_list_get(list, i, &out);
-        fprintf(
-            io->out, "%s(%.*s)\n", token_type_name(out.type), (int)out.slice.length, out.slice.ptr);
+        fprintf(io->out,
+                "%s(%.*s) [%zu, %zu]\n",
+                token_type_name(out.type),
+                (int)out.slice.length,
+                out.slice.ptr,
+                out.line,
+                out.column);
     }
 }
 
 // Tries to read an operator or EOF from the position, returning ILLEGAL otherwise.
 Token lexer_read_operator(Lexer* l) {
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
+
     if (l->current_byte == '\0') {
-        return token_init(END, &l->input[l->position], 0);
+        return token_init(END, &l->input[l->position], 0, start_line, start_col);
     }
 
     size_t    max_len      = 0;
@@ -240,9 +265,9 @@ Token lexer_read_operator(Lexer* l) {
 
     // We cannot greedily consume the lexer here since the next token instruction handles that
     if (max_len == 0) {
-        return token_init(ILLEGAL, &l->input[l->position], 1);
+        return token_init(ILLEGAL, &l->input[l->position], 1, start_line, start_col);
     }
-    return token_init(matched_type, &l->input[l->position], max_len);
+    return token_init(matched_type, &l->input[l->position], max_len, start_line, start_col);
 }
 
 Slice lexer_read_identifier(Lexer* l) {
@@ -270,6 +295,8 @@ Token lexer_read_number(Lexer* l) {
     assert(l->current_byte != '.');
 
     const size_t start          = l->position;
+    const size_t start_line     = l->line_no;
+    const size_t start_col      = l->col_no;
     bool         passed_decimal = false;
     bool         is_hex = false, is_bin = false, is_oct = false;
 
@@ -311,7 +338,8 @@ Token lexer_read_number(Lexer* l) {
     // Quick non-base-10 length validation
     if (is_hex || is_bin || is_oct) {
         if (l->position - start <= 2) {
-            return token_init(ILLEGAL, &l->input[start], l->position - start);
+            return token_init(
+                ILLEGAL, &l->input[start], l->position - start, start_line, start_col);
         }
     }
 
@@ -319,14 +347,14 @@ Token lexer_read_number(Lexer* l) {
     const size_t length = l->position - start;
     TokenType    type   = ILLEGAL;
     if (length == 0)
-        return token_init(type, &l->input[start], 1);
+        return token_init(type, &l->input[start], 1, start_line, start_col);
 
     if (l->input[l->position - 1] == '.') {
-        return token_init(type, &l->input[start], length);
+        return token_init(type, &l->input[start], length, start_line, start_col);
     }
 
     if (passed_decimal && (is_hex || is_bin || is_oct)) {
-        return token_init(type, &l->input[start], length);
+        return token_init(type, &l->input[start], length, start_line, start_col);
     }
 
     // Determine the input type
@@ -344,7 +372,7 @@ Token lexer_read_number(Lexer* l) {
         }
     }
 
-    return token_init(type, &l->input[start], length);
+    return token_init(type, &l->input[start], length, start_line, start_col);
 }
 
 static inline char lexer_read_escape(Lexer* l) {
@@ -371,7 +399,9 @@ static inline char lexer_read_escape(Lexer* l) {
 }
 
 Token lexer_read_string(Lexer* l) {
-    const size_t start = l->position;
+    const size_t start      = l->position;
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
     lexer_read_char(l);
 
     while (l->current_byte != '"' && l->current_byte != '\0') {
@@ -382,18 +412,20 @@ Token lexer_read_string(Lexer* l) {
     }
 
     if (l->current_byte == '\0') {
-        return token_init(ILLEGAL, &l->input[start], l->position - start);
+        return token_init(ILLEGAL, &l->input[start], l->position - start, start_line, start_col);
     }
     lexer_read_char(l);
 
-    return token_init(STRING, &l->input[start], l->position - start);
+    return token_init(STRING, &l->input[start], l->position - start, start_line, start_col);
 }
 
 // Reads a character literal returning an illegal token for malformed literals.
 //
 // Assumes that the surrounding single quotes have not been consumed.
 Token lexer_read_character_literal(Lexer* l) {
-    const size_t start = l->position;
+    const size_t start      = l->position;
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
     lexer_read_char(l);
 
     // Consume one logical character
@@ -403,7 +435,7 @@ Token lexer_read_character_literal(Lexer* l) {
     } else if (l->current_byte != '\'' && l->current_byte != '\n' && l->current_byte != '\r') {
         lexer_read_char(l);
     } else {
-        return token_init(ILLEGAL, &l->input[start], l->position - start);
+        return token_init(ILLEGAL, &l->input[start], l->position - start, start_line, start_col);
     }
 
     // The next character MUST be closing ', otherwise illegally consume like a comment
@@ -420,26 +452,30 @@ Token lexer_read_character_literal(Lexer* l) {
             illegal_end = l->position;
         }
 
-        return token_init(ILLEGAL, &l->input[start], illegal_end - start);
+        return token_init(ILLEGAL, &l->input[start], illegal_end - start, start_line, start_col);
     }
     lexer_read_char(l);
 
-    return token_init(CHARACTER, &l->input[start], l->position - start);
+    return token_init(CHARACTER, &l->input[start], l->position - start, start_line, start_col);
 }
 
 // Reads a multiline string from the token, assuming the '//' operator has been consumed
 Token lexer_read_comment(Lexer* l) {
-    const size_t start = l->position;
+    const size_t start      = l->position;
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
     while (l->current_byte != '\n' && l->current_byte != '\0') {
         lexer_read_char(l);
     }
-    return token_init(COMMENT, &l->input[start], l->position - start);
+    return token_init(COMMENT, &l->input[start], l->position - start, start_line, start_col);
 }
 
 // Reads a multiline string from the token, assuming the '\\' operator has been consumed
 Token lexer_read_multilinestring(Lexer* l) {
-    const size_t start = l->position;
-    size_t       end   = start;
+    const size_t start      = l->position;
+    const size_t start_line = l->line_no;
+    const size_t start_col  = l->col_no;
+    size_t       end        = start;
 
     while (true) {
         // Consume characters until newline or EOF
@@ -478,5 +514,5 @@ Token lexer_read_multilinestring(Lexer* l) {
         lexer_read_char(l);
     }
 
-    return token_init(MULTILINE_STRING, &l->input[start], end - start);
+    return token_init(MULTILINE_STRING, &l->input[start], end - start, start_line, start_col);
 }
