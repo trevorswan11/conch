@@ -12,43 +12,43 @@ typedef struct {
     Statement             base;
     IdentifierExpression* ident;
     Expression*           value;
-} VarStatement;
+    bool                  constant;
+} DeclStatement;
 
-static const char* var_statement_token_literal(Node* node) {
-    MAYBE_UNUSED(node);
-    return token_type_name(VAR);
+static const char* decl_statement_token_literal(Node* node) {
+    DeclStatement* d = (DeclStatement*)node;
+    return d->constant ? token_type_name(CONST) : token_type_name(VAR);
 }
 
-static void var_statement_destroy(Node* node) {
-    VarStatement* variable = (VarStatement*)node;
+static void decl_statement_destroy(Node* node) {
+    DeclStatement* d = (DeclStatement*)node;
 
-    if (variable->ident) {
-        Node* n_ident = (Node*)variable->ident;
+    if (d->ident) {
+        Node* n_ident = (Node*)d->ident;
         n_ident->vtable->destroy(n_ident);
-        variable->ident = NULL;
+        d->ident = NULL;
     }
 
-    if (variable->value) {
-        Node* n_value = (Node*)variable->value;
+    if (d->value) {
+        Node* n_value = (Node*)d->value;
         n_value->vtable->destroy(n_value);
-        variable->value = NULL;
+        d->value = NULL;
     }
 
-    free(variable);
+    free(d);
 }
 
-static void var_statement_node(Statement* stat) {
-    VarStatement* ident = (VarStatement*)stat;
-    MAYBE_UNUSED(ident);
+static void decl_statement_node(Statement* stat) {
+    MAYBE_UNUSED(stat);
 }
 
-static const StatementVTable VAR_VTABLE = {
+static const StatementVTable DECL_VTABLE = {
     .base =
         {
-            .token_literal = var_statement_token_literal,
-            .destroy       = var_statement_destroy,
+            .token_literal = decl_statement_token_literal,
+            .destroy       = decl_statement_destroy,
         },
-    .statement_node = var_statement_node,
+    .statement_node = decl_statement_node,
 };
 
-VarStatement* var_statement_create(IdentifierExpression* ident, Expression* value);
+DeclStatement* decl_statement_create(IdentifierExpression* ident, Expression* value, bool constant);

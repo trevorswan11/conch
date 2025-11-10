@@ -177,10 +177,12 @@ bool parser_peek_error(Parser* p, TokenType t) {
 
 Statement* parser_parse_statement(Parser* p) {
     switch (p->current_token.type) {
-    case VAR: {
-        VarStatement* var_stmt = var_statement_parse(p);
-        return (Statement*)var_stmt;
-    }
+    case VAR:
+        return (Statement*)decl_statement_parse(p, false);
+    case CONST:
+        return (Statement*)decl_statement_parse(p, true);
+    case RETURN:
+        return (Statement*)return_statement_parse(p);
     default:
         return NULL;
     }

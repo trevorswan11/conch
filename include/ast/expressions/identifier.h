@@ -24,8 +24,7 @@ static void identifier_expression_destroy(Node* node) {
 }
 
 static void identifier_expression_node(Expression* expr) {
-    IdentifierExpression* ident = (IdentifierExpression*)expr;
-    MAYBE_UNUSED(ident);
+    MAYBE_UNUSED(expr);
 }
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {

@@ -18,19 +18,6 @@ extern "C" {
 #include "util/containers/array_list.h"
 }
 
-static void test_var_statement(Statement* stmt, const char* expected_ident) {
-    const char* literal = stmt->base.vtable->token_literal((Node*)stmt);
-    REQUIRE(strcmp(literal, token_type_name(TokenType::VAR)) == 0);
-
-    VarStatement*         var_stmt = (VarStatement*)stmt;
-    IdentifierExpression* ident    = var_stmt->ident;
-    Node*                 node     = (Node*)ident;
-    literal                        = node->vtable->token_literal(node);
-    REQUIRE(strcmp(literal, token_type_name(TokenType::IDENT)) == 0);
-
-    REQUIRE(mut_slice_equals_str_z(&var_stmt->ident->name, expected_ident));
-}
-
 static void check_parse_errors(Parser*                  p,
                                std::vector<std::string> expected_errors,
                                bool                     print_anyways = false) {
@@ -53,6 +40,21 @@ static void check_parse_errors(Parser*                  p,
         std::string expected = expected_errors[i];
         REQUIRE(mut_slice_equals_str_z(&error, expected.c_str()));
     }
+}
+
+static void test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ident) {
+    const char* literal = stmt->base.vtable->token_literal((Node*)stmt);
+    REQUIRE(strcmp(literal,
+                   expect_const ? token_type_name(TokenType::CONST)
+                                : token_type_name(TokenType::VAR)) == 0);
+
+    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
+    IdentifierExpression* ident     = decl_stmt->ident;
+    Node*                 node      = (Node*)ident;
+    literal                         = node->vtable->token_literal(node);
+    REQUIRE(strcmp(literal, token_type_name(TokenType::IDENT)) == 0);
+
+    REQUIRE(mut_slice_equals_str_z(&decl_stmt->ident->name, expected_ident));
 }
 
 TEST_CASE("Declarations") {
@@ -83,7 +85,7 @@ TEST_CASE("Declarations") {
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
             REQUIRE(array_list_get(&ast.statements, i, &stmt));
-            test_var_statement(stmt, expected_identifiers[i]);
+            test_decl_statement(stmt, false, expected_identifiers[i]);
         }
 
         parser_deinit(&p);
@@ -94,7 +96,8 @@ TEST_CASE("Declarations") {
     SECTION("Var statements with errors") {
         const char* input = "var x 5;\n"
                             "var = 10;\n"
-                            "var 838383;";
+                            "var 838383;\n"
+                            "var z := 6";
         Lexer       l;
         REQUIRE(lexer_init(&l, input));
         REQUIRE(lexer_consume(&l));
@@ -111,7 +114,102 @@ TEST_CASE("Declarations") {
             "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
         };
+
         check_parse_errors(&p, expected_errors);
+        REQUIRE(ast.statements.length == 0);
+
+        parser_deinit(&p);
+        ast_deinit(&ast);
+        lexer_deinit(&l);
+    }
+
+    SECTION("Var and const statements") {
+        const char* input = "var x := 5;\n"
+                            "const y := 10;\n"
+                            "var foobar := 838383;";
+        Lexer       l;
+        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_consume(&l));
+
+        AST ast;
+        REQUIRE(ast_init(&ast));
+
+        Parser p;
+        REQUIRE(parser_init(&p, &l, &stdio));
+        REQUIRE(parser_consume(&p, &ast));
+
+        std::vector<std::string> expected_errors = {};
+        check_parse_errors(&p, expected_errors, true);
+
+        std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
+        std::vector<bool>        is_const             = {false, true, false};
+        REQUIRE(ast.statements.length == expected_identifiers.size());
+
+        Statement* stmt;
+        for (size_t i = 0; i < expected_identifiers.size(); i++) {
+            REQUIRE(array_list_get(&ast.statements, i, &stmt));
+            test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
+        }
+
+        parser_deinit(&p);
+        ast_deinit(&ast);
+        lexer_deinit(&l);
+    }
+}
+
+TEST_CASE("Return statements") {
+    FileIO stdio;
+    file_io_init(&stdio, stdin, stdout, stderr);
+
+    SECTION("Happy returns") {
+        const char* input = "return 5;\n"
+                            "return 10;\n"
+                            "return 993322;";
+        Lexer       l;
+        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_consume(&l));
+
+        AST ast;
+        REQUIRE(ast_init(&ast));
+
+        Parser p;
+        REQUIRE(parser_init(&p, &l, &stdio));
+        REQUIRE(parser_consume(&p, &ast));
+
+        std::vector<std::string> expected_errors = {};
+        check_parse_errors(&p, expected_errors, true);
+
+        REQUIRE(ast.statements.length == 3);
+
+        Statement* stmt;
+        for (size_t i = 0; i < ast.statements.length; i++) {
+            REQUIRE(array_list_get(&ast.statements, i, &stmt));
+            const char* literal = stmt->base.vtable->token_literal((Node*)stmt);
+            REQUIRE(strcmp(literal, token_type_name(TokenType::RETURN)) == 0);
+        }
+
+        parser_deinit(&p);
+        ast_deinit(&ast);
+        lexer_deinit(&l);
+    }
+
+    SECTION("Returns w/o sentinel semicolon") {
+        const char* input = "return 5";
+        Lexer       l;
+        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_consume(&l));
+
+        AST ast;
+        REQUIRE(ast_init(&ast));
+
+        Parser p;
+        REQUIRE(parser_init(&p, &l, &stdio));
+        REQUIRE(parser_consume(&p, &ast));
+
+        std::vector<std::string> expected_errors = {};
+        check_parse_errors(&p, expected_errors, true);
+
+        REQUIRE(ast.statements.length == 0);
 
         parser_deinit(&p);
         ast_deinit(&ast);

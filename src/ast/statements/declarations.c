@@ -1,26 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "lexer/token.h"
-
 #include "ast/expressions/identifier.h"
 #include "ast/statements/declarations.h"
 
-VarStatement* var_statement_create(IdentifierExpression* ident, Expression* value) {
-    VarStatement* var = malloc(sizeof(VarStatement));
-    if (!var) {
+DeclStatement*
+decl_statement_create(IdentifierExpression* ident, Expression* value, bool constant) {
+    DeclStatement* declaration = malloc(sizeof(DeclStatement));
+    if (!declaration) {
         return NULL;
     }
 
-    *var = (VarStatement){
+    *declaration = (DeclStatement){
         .base =
             (Statement){
-                .base.vtable = &VAR_VTABLE.base,
-                .vtable      = &VAR_VTABLE,
+                .base.vtable = &DECL_VTABLE.base,
+                .vtable      = &DECL_VTABLE,
             },
-        .ident = ident,
-        .value = value,
+        .ident    = ident,
+        .value    = value,
+        .constant = constant,
     };
 
-    return var;
+    return declaration;
 }
