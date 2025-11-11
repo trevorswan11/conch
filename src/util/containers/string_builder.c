@@ -3,11 +3,14 @@
 
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
+#include "util/error.h"
 #include "util/mem.h"
 
-bool string_builder_init(StringBuilder* sb, size_t initial_length) {
-    if (!sb || initial_length == 0) {
-        return false;
+AnyError string_builder_init(StringBuilder* sb, size_t initial_length) {
+    if (!sb) {
+        return NULL_PARAMETER;
+    } else if (initial_length == 0) {
+        return EMPTY;
     }
 
     return array_list_init(&sb->buffer, initial_length, sizeof(char));
@@ -21,28 +24,27 @@ void string_builder_deinit(StringBuilder* sb) {
     array_list_deinit(&sb->buffer);
 }
 
-bool string_builder_append(StringBuilder* sb, char byte) {
+AnyError string_builder_append(StringBuilder* sb, char byte) {
     assert(sb);
     return array_list_push(&sb->buffer, &byte);
 }
 
-bool string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
+AnyError string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
     assert(sb);
 
     if (!bytes) {
-        return false;
+        return NULL_PARAMETER;
     }
-    if (!array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + length)) {
-        return false;
-    }
+
+    PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + length));
 
     for (size_t i = 0; i < length; i++) {
         array_list_push_assume_capacity(&sb->buffer, &bytes[i]);
     }
-    return true;
+    return SUCCESS;
 }
 
-bool string_builder_append_size(StringBuilder* sb, size_t value) {
+AnyError string_builder_append_size(StringBuilder* sb, size_t value) {
     assert(sb);
 
     // Use a copy to determine the total number of digits to reserve
@@ -57,9 +59,7 @@ bool string_builder_append_size(StringBuilder* sb, size_t value) {
         }
     }
 
-    if (!array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + digits)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + digits));
 
     // Now we can push in reverse order without further allocations
     size_t div = 1;
@@ -73,21 +73,19 @@ bool string_builder_append_size(StringBuilder* sb, size_t value) {
         div /= 10;
     }
 
-    return true;
+    return SUCCESS;
 }
 
-MutSlice string_builder_to_string(StringBuilder* sb) {
-    assert(sb);
-    const char null_byte = '\0';
-    if (!array_list_push(&sb->buffer, &null_byte) || !array_list_shrink_to_fit(&sb->buffer)) {
-        return (MutSlice){
-            .ptr    = NULL,
-            .length = 0,
-        };
-    }
+AnyError string_builder_to_string(StringBuilder* sb, MutSlice* slice) {
+    assert(sb && slice);
 
-    return (MutSlice){
+    const char null_byte = '\0';
+    PROPAGATE_IF_ERROR(array_list_push(&sb->buffer, &null_byte));
+    PROPAGATE_IF_ERROR(array_list_shrink_to_fit(&sb->buffer));
+
+    *slice = (MutSlice){
         .ptr    = sb->buffer.data,
         .length = sb->buffer.length - 1,
     };
+    return SUCCESS;
 }

@@ -4,11 +4,15 @@
 #include "ast/expressions/identifier.h"
 #include "ast/statements/declarations.h"
 
-DeclStatement*
-decl_statement_create(IdentifierExpression* ident, Expression* value, bool constant) {
+#include "util/error.h"
+
+AnyError decl_statement_create(IdentifierExpression* ident,
+                               Expression*           value,
+                               bool                  constant,
+                               DeclStatement**       decl_stmt) {
     DeclStatement* declaration = malloc(sizeof(DeclStatement));
     if (!declaration) {
-        return NULL;
+        return ALLOCATION_FAILED;
     }
 
     *declaration = (DeclStatement){
@@ -22,5 +26,6 @@ decl_statement_create(IdentifierExpression* ident, Expression* value, bool const
         .constant = constant,
     };
 
-    return declaration;
+    *decl_stmt = declaration;
+    return SUCCESS;
 }

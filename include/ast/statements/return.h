@@ -6,6 +6,7 @@
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
+#include "util/error.h"
 #include "util/mem.h"
 
 typedef struct {
@@ -43,4 +44,4 @@ static const StatementVTable RET_VTABLE = {
     .statement_node = return_statement_node,
 };
 
-ReturnStatement* return_statement_create(Expression* value);
+AnyError return_statement_create(Expression* value, ReturnStatement** ret_stmt);

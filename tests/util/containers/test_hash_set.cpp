@@ -7,6 +7,7 @@
 
 extern "C" {
 #include "util/containers/hash_set.h"
+#include "util/error.h"
 #include "util/hash.h"
 #include "util/mem.h"
 }
@@ -20,29 +21,29 @@ TEST_CASE("Malformed set usage") {
     HashSet hs;
 
     // Null pointers should not allow initialization
-    REQUIRE_FALSE(
-        hash_set_init(NULL, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t));
-    REQUIRE_FALSE(hash_set_init(&hs, 10, sizeof(K), alignof(K), NULL, compare_uint16_t));
-    REQUIRE_FALSE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, NULL));
+    REQUIRE(hash_set_init(NULL, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::NULL_PARAMETER);
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), NULL, compare_uint16_t) ==
+            AnyError::NULL_PARAMETER);
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, NULL) ==
+            AnyError::NULL_PARAMETER);
 
     // Zero size/alignment is illegal
-    REQUIRE_FALSE(hash_set_init(&hs, 10, 0, alignof(K), hash_uint16_t_u, compare_uint16_t));
-    REQUIRE_FALSE(hash_set_init(&hs, 10, sizeof(K), 0, hash_uint16_t_u, compare_uint16_t));
+    REQUIRE(hash_set_init(&hs, 10, 0, alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::ZERO_ITEM_SIZE);
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), 0, hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::ZERO_ITEM_SIZE);
 
     // Check capacity overflow safety guard
-    REQUIRE_FALSE(
-        hash_set_init(&hs, SIZE_MAX / 2, 3, alignof(K), hash_uint16_t_u, compare_uint16_t));
+    REQUIRE(hash_set_init(&hs, SIZE_MAX / 2, 3, alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::INTEGER_OVERFLOW);
 
     // Helpers that check self and buffer initialization
-    REQUIRE_FALSE(hash_set_capacity(NULL));
-    REQUIRE_FALSE(hash_set_count(NULL));
-    REQUIRE_FALSE(hash_set_ensure_total_capacity(NULL, 10));
+    REQUIRE(hash_set_ensure_total_capacity(NULL, 10) == AnyError::NULL_PARAMETER);
     hash_set_deinit(NULL);
 
     hs.buffer = NULL;
-    REQUIRE_FALSE(hash_set_capacity(&hs));
-    REQUIRE_FALSE(hash_set_count(&hs));
-    REQUIRE_FALSE(hash_set_ensure_total_capacity(&hs, 10));
+    REQUIRE(hash_set_ensure_total_capacity(&hs, 10) == AnyError::NULL_PARAMETER);
     hash_set_deinit(&hs);
 }
 
@@ -50,7 +51,8 @@ TEST_CASE("Set init") {
     using K = uint16_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t));
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::SUCCESS);
     REQUIRE(hs.size == 0);
     REQUIRE(hs.available == 16);
 
@@ -61,7 +63,8 @@ TEST_CASE("Set init") {
 
     hash_set_deinit(&hs);
 
-    REQUIRE(hash_set_init(&hs, 1, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t));
+    REQUIRE(hash_set_init(&hs, 1, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+            AnyError::SUCCESS);
     REQUIRE(hash_set_capacity(&hs) == HASH_SET_MINIMUM_CAPACITY);
     hash_set_deinit(&hs);
 }
@@ -73,12 +76,13 @@ TEST_CASE("Basic set usage") {
     using K = uint32_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t));
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t) ==
+            AnyError::SUCCESS);
     const size_t count = 5;
 
     K load_total = 0;
     for (K i = 0; i < count; i++) {
-        REQUIRE(hash_set_put(&hs, &i));
+        REQUIRE(hash_set_put(&hs, &i) == AnyError::SUCCESS);
         load_total += i;
     }
     REQUIRE(hash_set_count(&hs) == 5);
@@ -101,15 +105,16 @@ TEST_CASE("Ensure total set capacity") {
     using K = int32_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t) ==
+            AnyError::SUCCESS);
 
-    REQUIRE(hash_set_ensure_total_capacity(&hs, 20));
+    REQUIRE(hash_set_ensure_total_capacity(&hs, 20) == AnyError::SUCCESS);
     const size_t initial_capacity = hash_set_capacity(&hs);
     REQUIRE(initial_capacity >= 20);
 
     for (K i = 0; i < 20; i++) {
         SetGetOrPutResult result;
-        REQUIRE(hash_set_get_or_put(&hs, &i, &result));
+        REQUIRE(hash_set_get_or_put(&hs, &i, &result) == AnyError::SUCCESS);
         REQUIRE_FALSE(result.found_existing);
     }
     REQUIRE(initial_capacity == hash_set_capacity(&hs));
@@ -124,11 +129,12 @@ TEST_CASE("Ensure unused set capacity") {
     using K = int64_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint64_t_u, compare_uint64_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint64_t_u, compare_uint64_t) ==
+            AnyError::SUCCESS);
 
-    hash_set_ensure_unused_capacity(&hs, 32);
+    REQUIRE(hash_set_ensure_unused_capacity(&hs, 32) == AnyError::SUCCESS);
     const size_t capacity = hash_set_capacity(&hs);
-    hash_set_ensure_unused_capacity(&hs, 32);
+    REQUIRE(hash_set_ensure_unused_capacity(&hs, 32) == AnyError::SUCCESS);
     REQUIRE(capacity == hash_set_capacity(&hs));
 
     hash_set_deinit(&hs);
@@ -138,12 +144,13 @@ TEST_CASE("Ensure unused set capacity with tombstones") {
     using K = int32_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t) ==
+            AnyError::SUCCESS);
 
     for (K i = 0; i < 100; i++) {
-        REQUIRE(hash_set_ensure_unused_capacity(&hs, 1));
+        REQUIRE(hash_set_ensure_unused_capacity(&hs, 1) == AnyError::SUCCESS);
         hash_set_put_assume_capacity(&hs, &i);
-        REQUIRE(hash_set_remove(&hs, &i));
+        REQUIRE(hash_set_remove(&hs, &i) == AnyError::SUCCESS);
     }
 
     hash_set_deinit(&hs);
@@ -153,12 +160,13 @@ TEST_CASE("Clear retaining set capacity") {
     using K = Slice;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_slice, compare_int32_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_slice, compare_int32_t) ==
+            AnyError::SUCCESS);
     hash_set_clear_retaining_capacity(&hs);
 
     const char* str1 = "Hello";
     K           key1 = slice_from_z(str1);
-    REQUIRE(hash_set_put(&hs, &key1));
+    REQUIRE(hash_set_put(&hs, &key1) == AnyError::SUCCESS);
     REQUIRE(hash_set_count(&hs) == 1);
 
     hash_set_clear_retaining_capacity(&hs);
@@ -182,12 +190,13 @@ TEST_CASE("Grow set") {
     using K = uint32_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t) ==
+            AnyError::SUCCESS);
 
     const size_t grow_to = 12456;
 
     for (size_t i = 0; i < grow_to; i++) {
-        hash_set_put(&hs, &i);
+        REQUIRE(hash_set_put(&hs, &i) == AnyError::SUCCESS);
     }
     REQUIRE(hash_set_count(&hs) == grow_to);
 
@@ -211,9 +220,9 @@ TEST_CASE("Rehash set") {
     // Add some elements and remove every third to simulate a fragmented map
     const size_t total_count = 6 * 1637;
     for (size_t i = 0; i < total_count; i++) {
-        hash_set_put(&hs, &i);
+        REQUIRE(hash_set_put(&hs, &i) == AnyError::SUCCESS);
         if (i % 3 == 0) {
-            REQUIRE(hash_set_remove(&hs, &i));
+            REQUIRE(hash_set_remove(&hs, &i) == AnyError::SUCCESS);
         }
     }
 
@@ -223,9 +232,9 @@ TEST_CASE("Rehash set") {
     for (size_t i = 0; i < total_count; i++) {
         size_t out_index;
         if (i % 3 == 0) {
-            REQUIRE_FALSE(hash_set_get_index(&hs, &i, &out_index));
+            REQUIRE(hash_set_get_index(&hs, &i, &out_index) == AnyError::ELEMENT_MISSING);
         } else {
-            REQUIRE(hash_set_get_index(&hs, &i, &out_index));
+            REQUIRE(hash_set_get_index(&hs, &i, &out_index) == AnyError::SUCCESS);
         }
     }
 
@@ -236,15 +245,16 @@ TEST_CASE("Remove set") {
     using K = uint32_t;
 
     HashSet hs;
-    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t));
+    REQUIRE(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t) ==
+            AnyError::SUCCESS);
 
     for (K i = 0; i < 16; i++) {
-        REQUIRE(hash_set_put(&hs, &i));
+        REQUIRE(hash_set_put(&hs, &i) == AnyError::SUCCESS);
     }
 
     for (K i = 0; i < 16; i++) {
         if (i % 3 == 0) {
-            REQUIRE(hash_set_remove(&hs, &i));
+            REQUIRE(hash_set_remove(&hs, &i) == AnyError::SUCCESS);
         }
     }
     REQUIRE(hash_set_count(&hs) == 10);
@@ -261,7 +271,7 @@ TEST_CASE("Remove set") {
             REQUIRE_FALSE(hash_set_contains(&hs, &i));
         } else {
             size_t out_index;
-            REQUIRE(hash_set_get_index(&hs, &i, &out_index));
+            REQUIRE(hash_set_get_index(&hs, &i, &out_index) == AnyError::SUCCESS);
         }
     }
 

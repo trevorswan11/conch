@@ -6,6 +6,7 @@
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
+#include "util/error.h"
 #include "util/mem.h"
 
 typedef struct {
@@ -51,4 +52,7 @@ static const StatementVTable DECL_VTABLE = {
     .statement_node = decl_statement_node,
 };
 
-DeclStatement* decl_statement_create(IdentifierExpression* ident, Expression* value, bool constant);
+AnyError decl_statement_create(IdentifierExpression* ident,
+                               Expression*           value,
+                               bool                  constant,
+                               DeclStatement**       decl_stmt);

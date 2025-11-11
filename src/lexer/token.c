@@ -1,6 +1,6 @@
 #include "lexer/token.h"
 
-#include "util/containers/array_list.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 
 const char* token_type_name(TokenType type) {
@@ -54,29 +54,27 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
     };
 }
 
-MutSlice promote_token_string(Token token) {
+AnyError promote_token_string(Token token, MutSlice* slice) {
     if (token.type != STRING && token.type != MULTILINE_STRING) {
-        return (MutSlice){.ptr = NULL, .length = 0};
+        return TYPE_MISMATCH;
     }
 
-    ArrayList buffer;
-    if (!array_list_init(&buffer, token.slice.length, sizeof(char))) {
-        return (MutSlice){.ptr = NULL, .length = 0};
-    }
+    StringBuilder builder;
+    PROPAGATE_IF_ERROR(string_builder_init(&builder, token.slice.length));
 
     if (token.type == STRING) {
         if (token.slice.length <= 2) {
-            array_list_deinit(&buffer);
-            return (MutSlice){.ptr = NULL, .length = 0};
+            string_builder_deinit(&builder);
+            return EMPTY;
         }
 
-        for (size_t i = 1; i < token.slice.length - 1; i++) {
-            array_list_push_assume_capacity(&buffer, &token.slice.ptr[i]);
-        }
+        PROPAGATE_IF_ERROR_DO(
+            string_builder_append_many(&builder, token.slice.ptr, token.slice.length),
+            string_builder_deinit(&builder));
     } else if (token.type == MULTILINE_STRING) {
         if (token.slice.length == 0) {
-            array_list_deinit(&buffer);
-            return (MutSlice){.ptr = NULL, .length = 0};
+            string_builder_deinit(&builder);
+            return EMPTY;
         }
 
         bool at_line_start = true;
@@ -92,17 +90,15 @@ MutSlice promote_token_string(Token token) {
                 at_line_start = false;
             }
 
-            array_list_push_assume_capacity(&buffer, &c);
+            PROPAGATE_IF_ERROR_DO(string_builder_append(&builder, c),
+                                  string_builder_deinit(&builder));
             if (c == '\n') {
                 at_line_start = true;
             }
         }
     }
 
-    if (!array_list_shrink_to_fit(&buffer)) {
-        array_list_deinit(&buffer);
-        return (MutSlice){.ptr = NULL, .length = 0};
-    }
-
-    return (MutSlice){.ptr = buffer.data, .length = buffer.length};
+    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, slice),
+                          string_builder_deinit(&builder));
+    return SUCCESS;
 }

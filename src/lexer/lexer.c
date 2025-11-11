@@ -14,21 +14,20 @@
 #include "util/alphanum.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
+#include "util/error.h"
 #include "util/hash.h"
 #include "util/io.h"
 #include "util/mem.h"
 
-static inline bool _init_keywords(HashMap* keyword_map) {
-    if (!keyword_map || !hash_map_init(keyword_map,
-                                       32,
-                                       sizeof(Slice),
-                                       alignof(Slice),
-                                       sizeof(TokenType),
-                                       alignof(TokenType),
-                                       hash_slice,
-                                       compare_slices)) {
-        return false;
-    }
+static inline AnyError _init_keywords(HashMap* keyword_map) {
+    PROPAGATE_IF_ERROR(hash_map_init(keyword_map,
+                                     32,
+                                     sizeof(Slice),
+                                     alignof(Slice),
+                                     sizeof(TokenType),
+                                     alignof(TokenType),
+                                     hash_slice,
+                                     compare_slices));
 
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     for (size_t i = 0; i < num_keywords; i++) {
@@ -36,20 +35,18 @@ static inline bool _init_keywords(HashMap* keyword_map) {
         hash_map_put_assume_capacity(keyword_map, &keyword.slice, &keyword.type);
     }
 
-    return true;
+    return SUCCESS;
 }
 
-static inline bool _init_operators(HashMap* operator_map) {
-    if (!operator_map || !hash_map_init(operator_map,
-                                        64,
-                                        sizeof(Slice),
-                                        alignof(Slice),
-                                        sizeof(TokenType),
-                                        alignof(TokenType),
-                                        hash_slice,
-                                        compare_slices)) {
-        return false;
-    }
+static inline AnyError _init_operators(HashMap* operator_map) {
+    PROPAGATE_IF_ERROR(hash_map_init(operator_map,
+                                     64,
+                                     sizeof(Slice),
+                                     alignof(Slice),
+                                     sizeof(TokenType),
+                                     alignof(TokenType),
+                                     hash_slice,
+                                     compare_slices));
 
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     for (size_t i = 0; i < num_operators; i++) {
@@ -57,43 +54,38 @@ static inline bool _init_operators(HashMap* operator_map) {
         hash_map_put_assume_capacity(operator_map, &op.slice, &op.type);
     }
 
-    return true;
+    return SUCCESS;
 }
 
-bool lexer_init(Lexer* l, const char* input) {
-    if (!input || !lexer_null_init(l)) {
-        return false;
+AnyError lexer_init(Lexer* l, const char* input) {
+    if (!input) {
+        return NULL_PARAMETER;
     }
+    PROPAGATE_IF_ERROR(lexer_null_init(l));
 
     l->input        = input;
     l->input_length = strlen(input);
 
     lexer_read_char(l);
-    return true;
+    return SUCCESS;
 }
 
-bool lexer_null_init(Lexer* l) {
+AnyError lexer_null_init(Lexer* l) {
     if (!l) {
-        return false;
+        return NULL_PARAMETER;
     }
 
     HashMap keywords;
-    if (!_init_keywords(&keywords)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(_init_keywords(&keywords));
 
     HashMap operators;
-    if (!_init_operators(&operators)) {
-        hash_map_deinit(&keywords);
-        return false;
-    }
+    PROPAGATE_IF_ERROR_DO(_init_operators(&operators), hash_map_deinit(&keywords));
 
     ArrayList accumulator;
-    if (!array_list_init(&accumulator, 32, sizeof(Token))) {
+    PROPAGATE_IF_ERROR_DO(array_list_init(&accumulator, 32, sizeof(Token)), {
         hash_map_deinit(&keywords);
         hash_map_deinit(&operators);
-        return false;
-    }
+    });
 
     *l = (Lexer){
         .input             = NULL,
@@ -108,7 +100,7 @@ bool lexer_null_init(Lexer* l) {
         .operators         = operators,
     };
 
-    return true;
+    return SUCCESS;
 }
 
 void lexer_deinit(Lexer* l) {
@@ -121,7 +113,7 @@ void lexer_deinit(Lexer* l) {
     array_list_deinit(&l->token_accumulator);
 }
 
-bool lexer_consume(Lexer* l) {
+AnyError lexer_consume(Lexer* l) {
     l->peek_position = 0;
     l->line_no       = 1;
     l->col_no        = 0;
@@ -131,9 +123,7 @@ bool lexer_consume(Lexer* l) {
 
     while (true) {
         const Token token = lexer_next_token(l);
-        if (!array_list_push(&l->token_accumulator, &token)) {
-            return false;
-        }
+        PROPAGATE_IF_ERROR(array_list_push(&l->token_accumulator, &token));
 
         if (token.type == END) {
             break;
@@ -219,7 +209,7 @@ void lexer_skip_whitespace(Lexer* l) {
 
 TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     TokenType value;
-    if (!hash_map_get_value(&l->keywords, literal, &value)) {
+    if (hash_map_get_value(&l->keywords, literal, &value) != SUCCESS) {
         return IDENT;
     }
     return value;
@@ -258,7 +248,7 @@ Token lexer_read_operator(Lexer* l) {
     // Try extending from length 1 up to the max operator size
     for (size_t len = 1; len <= MAX_OPERATOR_LEN && l->position + len <= l->input_length; len++) {
         Slice query = slice_from_s(&l->input[l->position], len);
-        if (hash_map_get_value(&l->operators, &query, &matched_type)) {
+        if (hash_map_get_value(&l->operators, &query, &matched_type) == SUCCESS) {
             max_len = len;
         }
     }

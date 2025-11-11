@@ -10,52 +10,40 @@
 
 #include "parser/parser.h"
 
-DeclStatement* decl_statement_parse(Parser* p, bool constant) {
-    DeclStatement* stmt = decl_statement_create(NULL, NULL, constant);
-    if (!stmt) {
-        return NULL;
-    }
+#include "util/error.h"
 
-    if (!parser_expect_peek(p, IDENT)) {
-        decl_statement_destroy((Node*)stmt);
-        return NULL;
-    }
-    stmt->ident = identifier_expression_create(p->current_token.slice);
+AnyError decl_statement_parse(Parser* p, bool constant, DeclStatement** stmt) {
+    DeclStatement* decl_stmt;
+    PROPAGATE_IF_ERROR(decl_statement_create(NULL, NULL, constant, &decl_stmt));
 
-    if (!parser_expect_peek(p, WALRUS)) {
-        decl_statement_destroy((Node*)stmt);
-        return NULL;
-    }
+    PROPAGATE_IF_ERROR_DO_IS(
+        parser_expect_peek(p, IDENT), decl_statement_destroy((Node*)decl_stmt), UNEXPECTED_TOKEN);
+    PROPAGATE_IF_ERROR_DO(identifier_expression_create(p->current_token.slice, &decl_stmt->ident),
+                          decl_statement_destroy((Node*)decl_stmt));
+
+    PROPAGATE_IF_ERROR_DO_IS(
+        parser_expect_peek(p, WALRUS), decl_statement_destroy((Node*)decl_stmt), UNEXPECTED_TOKEN);
 
     // TODO: handle skipped expressions to generate value
     while (!parser_current_token_is(p, SEMICOLON)) {
-        if (!parser_next_token(p)) {
-            decl_statement_destroy((Node*)stmt);
-            return NULL;
-        }
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), decl_statement_destroy((Node*)decl_stmt););
     }
 
-    return stmt;
+    *stmt = decl_stmt;
+    return SUCCESS;
 }
 
-ReturnStatement* return_statement_parse(Parser* p) {
-    ReturnStatement* stmt = return_statement_create(NULL);
-    if (!stmt) {
-        return NULL;
-    }
+AnyError return_statement_parse(Parser* p, ReturnStatement** stmt) {
+    ReturnStatement* ret_stmt;
+    PROPAGATE_IF_ERROR(return_statement_create(NULL, &ret_stmt));
 
-    if (!parser_next_token(p)) {
-        return_statement_destroy((Node*)stmt);
-        return NULL;
-    }
+    PROPAGATE_IF_ERROR_DO(parser_next_token(p), return_statement_destroy((Node*)ret_stmt));
 
     // TODO: handle skipped expressions to generate value
     while (!parser_current_token_is(p, SEMICOLON)) {
-        if (!parser_next_token(p)) {
-            return_statement_destroy((Node*)stmt);
-            return NULL;
-        }
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), return_statement_destroy((Node*)ret_stmt));
     }
 
-    return stmt;
+    *stmt = ret_stmt;
+    return SUCCESS;
 }

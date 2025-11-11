@@ -3,18 +3,19 @@
 
 #include "ast/expressions/identifier.h"
 
+#include "util/error.h"
 #include "util/mem.h"
 
-IdentifierExpression* identifier_expression_create(Slice name) {
+AnyError identifier_expression_create(Slice name, IdentifierExpression** ident_expr) {
     IdentifierExpression* ident = malloc(sizeof(IdentifierExpression));
     if (!ident) {
-        return NULL;
+        return ALLOCATION_FAILED;
     }
 
     char* mut_name = strdup_s(name.ptr, name.length);
     if (!mut_name) {
         free(ident);
-        return NULL;
+        return ALLOCATION_FAILED;
     }
 
     *ident = (IdentifierExpression){
@@ -30,5 +31,6 @@ IdentifierExpression* identifier_expression_create(Slice name) {
             },
     };
 
-    return ident;
+    *ident_expr = ident;
+    return SUCCESS;
 }

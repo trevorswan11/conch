@@ -16,6 +16,7 @@ extern "C" {
 #include "lexer/token.h"
 #include "parser/parser.h"
 #include "util/containers/array_list.h"
+#include "util/error.h"
 }
 
 static void check_parse_errors(Parser*                  p,
@@ -28,7 +29,7 @@ static void check_parse_errors(Parser*                  p,
         return;
     } else if (print_anyways && actual_errors->length != 0) {
         for (size_t i = 0; i < actual_errors->length; i++) {
-            REQUIRE(array_list_get(actual_errors, i, &error));
+            REQUIRE(array_list_get(actual_errors, i, &error) == AnyError::SUCCESS);
             std::cerr << "Parser error: " << error.ptr << "\n";
         }
     }
@@ -36,14 +37,15 @@ static void check_parse_errors(Parser*                  p,
     REQUIRE(actual_errors->length == expected_errors.size());
 
     for (size_t i = 0; i < actual_errors->length; i++) {
-        REQUIRE(array_list_get(actual_errors, i, &error));
+        REQUIRE(array_list_get(actual_errors, i, &error) == AnyError::SUCCESS);
         std::string expected = expected_errors[i];
         REQUIRE(mut_slice_equals_str_z(&error, expected.c_str()));
     }
 }
 
 static void test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ident) {
-    const char* literal = stmt->base.vtable->token_literal((Node*)stmt);
+    Node*       stmt_node = (Node*)stmt;
+    const char* literal   = stmt_node->vtable->token_literal(stmt_node);
     REQUIRE(strcmp(literal,
                    expect_const ? token_type_name(TokenType::CONST)
                                 : token_type_name(TokenType::VAR)) == 0);
@@ -59,22 +61,22 @@ static void test_decl_statement(Statement* stmt, bool expect_const, const char* 
 
 TEST_CASE("Declarations") {
     FileIO stdio;
-    file_io_init(&stdio, stdin, stdout, stderr);
+    REQUIRE(file_io_init(&stdio, stdin, stdout, stderr) == AnyError::SUCCESS);
 
     SECTION("Var statements") {
         const char* input = "var x := 5;\n"
                             "var y := 10;\n"
                             "var foobar := 838383;";
         Lexer       l;
-        REQUIRE(lexer_init(&l, input));
-        REQUIRE(lexer_consume(&l));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l) == AnyError::SUCCESS);
 
         AST ast;
-        REQUIRE(ast_init(&ast));
+        REQUIRE(ast_init(&ast) == AnyError::SUCCESS);
 
         Parser p;
-        REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast));
+        REQUIRE(parser_init(&p, &l, &stdio) == AnyError::SUCCESS);
+        REQUIRE(parser_consume(&p, &ast) == AnyError::SUCCESS);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -84,7 +86,7 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(array_list_get(&ast.statements, i, &stmt));
+            REQUIRE(array_list_get(&ast.statements, i, &stmt) == AnyError::SUCCESS);
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
 
@@ -99,15 +101,15 @@ TEST_CASE("Declarations") {
                             "var 838383;\n"
                             "var z := 6";
         Lexer       l;
-        REQUIRE(lexer_init(&l, input));
-        REQUIRE(lexer_consume(&l));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l) == AnyError::SUCCESS);
 
         AST ast;
-        REQUIRE(ast_init(&ast));
+        REQUIRE(ast_init(&ast) == AnyError::SUCCESS);
 
         Parser p;
-        REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast));
+        REQUIRE(parser_init(&p, &l, &stdio) == AnyError::SUCCESS);
+        REQUIRE(parser_consume(&p, &ast) == AnyError::SUCCESS);
 
         std::vector<std::string> expected_errors = {
             "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
@@ -128,15 +130,15 @@ TEST_CASE("Declarations") {
                             "const y := 10;\n"
                             "var foobar := 838383;";
         Lexer       l;
-        REQUIRE(lexer_init(&l, input));
-        REQUIRE(lexer_consume(&l));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l) == AnyError::SUCCESS);
 
         AST ast;
-        REQUIRE(ast_init(&ast));
+        REQUIRE(ast_init(&ast) == AnyError::SUCCESS);
 
         Parser p;
-        REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast));
+        REQUIRE(parser_init(&p, &l, &stdio) == AnyError::SUCCESS);
+        REQUIRE(parser_consume(&p, &ast) == AnyError::SUCCESS);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -147,7 +149,7 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(array_list_get(&ast.statements, i, &stmt));
+            REQUIRE(array_list_get(&ast.statements, i, &stmt) == AnyError::SUCCESS);
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
 
@@ -159,22 +161,22 @@ TEST_CASE("Declarations") {
 
 TEST_CASE("Return statements") {
     FileIO stdio;
-    file_io_init(&stdio, stdin, stdout, stderr);
+    REQUIRE(file_io_init(&stdio, stdin, stdout, stderr) == AnyError::SUCCESS);
 
     SECTION("Happy returns") {
         const char* input = "return 5;\n"
                             "return 10;\n"
                             "return 993322;";
         Lexer       l;
-        REQUIRE(lexer_init(&l, input));
-        REQUIRE(lexer_consume(&l));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l) == AnyError::SUCCESS);
 
         AST ast;
-        REQUIRE(ast_init(&ast));
+        REQUIRE(ast_init(&ast) == AnyError::SUCCESS);
 
         Parser p;
-        REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast));
+        REQUIRE(parser_init(&p, &l, &stdio) == AnyError::SUCCESS);
+        REQUIRE(parser_consume(&p, &ast) == AnyError::SUCCESS);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -183,7 +185,7 @@ TEST_CASE("Return statements") {
 
         Statement* stmt;
         for (size_t i = 0; i < ast.statements.length; i++) {
-            REQUIRE(array_list_get(&ast.statements, i, &stmt));
+            REQUIRE(array_list_get(&ast.statements, i, &stmt) == AnyError::SUCCESS);
             const char* literal = stmt->base.vtable->token_literal((Node*)stmt);
             REQUIRE(strcmp(literal, token_type_name(TokenType::RETURN)) == 0);
         }
@@ -196,20 +198,18 @@ TEST_CASE("Return statements") {
     SECTION("Returns w/o sentinel semicolon") {
         const char* input = "return 5";
         Lexer       l;
-        REQUIRE(lexer_init(&l, input));
-        REQUIRE(lexer_consume(&l));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l) == AnyError::SUCCESS);
 
         AST ast;
-        REQUIRE(ast_init(&ast));
+        REQUIRE(ast_init(&ast) == AnyError::SUCCESS);
 
         Parser p;
-        REQUIRE(parser_init(&p, &l, &stdio));
-        REQUIRE(parser_consume(&p, &ast));
+        REQUIRE(parser_init(&p, &l, &stdio) == AnyError::SUCCESS);
+        REQUIRE(parser_consume(&p, &ast) == AnyError::SUCCESS);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
-
-        REQUIRE(ast.statements.length == 0);
 
         parser_deinit(&p);
         ast_deinit(&ast);

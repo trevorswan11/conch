@@ -7,6 +7,7 @@
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
+#include "util/error.h"
 #include "util/io.h"
 #include "util/mem.h"
 
@@ -26,14 +27,14 @@ typedef struct {
     HashMap operators;
 } Lexer;
 
-bool lexer_init(Lexer* l, const char* input);
-bool lexer_null_init(Lexer* l);
-void lexer_deinit(Lexer* l);
+AnyError lexer_init(Lexer* l, const char* input);
+AnyError lexer_null_init(Lexer* l);
+void     lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.
 //
 // Will always refresh the internal list and start position when called.
-bool      lexer_consume(Lexer* l);
+AnyError  lexer_consume(Lexer* l);
 void      lexer_read_char(Lexer* l);
 Token     lexer_next_token(Lexer* l);
 void      lexer_skip_whitespace(Lexer* l);

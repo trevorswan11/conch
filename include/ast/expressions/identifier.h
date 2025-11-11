@@ -5,6 +5,7 @@
 #include "ast/expressions/expression.h"
 #include "ast/node.h"
 
+#include "util/error.h"
 #include "util/mem.h"
 
 typedef struct {
@@ -36,4 +37,4 @@ static const ExpressionVTable IDENTIFIER_VTABLE = {
     .expression_node = identifier_expression_node,
 };
 
-IdentifierExpression* identifier_expression_create(Slice name);
+AnyError identifier_expression_create(Slice name, IdentifierExpression** ident_expr);

@@ -48,13 +48,13 @@ TEST_CASE("REPL with custom IO") {
     FILE* err = temp_err.open("wb");
 
     FileIO io;
-    REQUIRE(file_io_init(&io, in, out, err));
+    REQUIRE(file_io_init(&io, in, out, err) == AnyError::SUCCESS);
 
     char      buf[BUF_SIZE];
     ArrayList output;
-    array_list_init(&output, 1024, sizeof(uint8_t));
+    REQUIRE(array_list_init(&output, 1024, sizeof(uint8_t)) == AnyError::SUCCESS);
 
-    repl_run(&io, buf, &output);
+    REQUIRE(repl_run(&io, buf, &output) == AnyError::SUCCESS);
 
     std::ifstream out_fs(temp_out.m_Path, std::ios::binary);
     std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),

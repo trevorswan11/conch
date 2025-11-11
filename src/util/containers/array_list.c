@@ -5,15 +5,19 @@
 #include <string.h>
 
 #include "util/containers/array_list.h"
+#include "util/error.h"
 #include "util/math.h"
 #include "util/mem.h"
 
 MAX_FN(size_t, size_t)
 
-bool array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+AnyError array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+    if (item_size == 0) {
+        return ZERO_ITEM_SIZE;
+    }
     void* data = malloc(capacity * item_size);
     if (!data && capacity > 0) {
-        return false;
+        return ALLOCATION_FAILED;
     }
 
     *a = (ArrayList){
@@ -22,7 +26,7 @@ bool array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
         .capacity  = capacity,
         .length    = 0,
     };
-    return true;
+    return SUCCESS;
 }
 
 void array_list_deinit(ArrayList* a) {
@@ -37,30 +41,26 @@ void array_list_deinit(ArrayList* a) {
 }
 
 size_t array_list_capacity(const ArrayList* a) {
-    if (!a || !a->data) {
-        return 0;
-    }
+    assert(a && a->data);
     return a->capacity;
 }
 
 size_t array_list_length(const ArrayList* a) {
-    if (!a || !a->data) {
-        return 0;
-    }
+    assert(a && a->data);
     return a->length;
 }
 
-bool array_list_resize(ArrayList* a, size_t new_capacity) {
+AnyError array_list_resize(ArrayList* a, size_t new_capacity) {
     if (!a) {
-        return false;
+        return NULL_PARAMETER;
     } else if (new_capacity == 0) {
         array_list_deinit(a);
-        return true;
+        return SUCCESS;
     }
 
     void* new_data = realloc(a->data, new_capacity * a->item_size);
     if (!new_data) {
-        return false;
+        return REALLOCATION_FAILED;
     }
 
     a->data     = new_data;
@@ -69,15 +69,15 @@ bool array_list_resize(ArrayList* a, size_t new_capacity) {
     if (a->length > new_capacity) {
         a->length = new_capacity;
     }
-    return true;
+    return SUCCESS;
 }
 
-bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
+AnyError array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
     assert(a && a->data && new_capacity > 0);
     if (a->capacity < new_capacity) {
         return array_list_resize(a, new_capacity);
     }
-    return true;
+    return SUCCESS;
 }
 
 void array_list_clear_retaining_capacity(ArrayList* a) {
@@ -85,12 +85,12 @@ void array_list_clear_retaining_capacity(ArrayList* a) {
     a->length = 0;
 }
 
-bool array_list_shrink_to_fit(ArrayList* a) {
+AnyError array_list_shrink_to_fit(ArrayList* a) {
     assert(a && a->data);
     if (a->length < a->capacity) {
         return array_list_resize(a, a->length);
     }
-    return true;
+    return SUCCESS;
 }
 
 static inline void* _array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
@@ -103,19 +103,17 @@ static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t inde
     return ptr_offset(a->data, index * a->item_size);
 }
 
-bool array_list_push(ArrayList* a, const void* item) {
+AnyError array_list_push(ArrayList* a, const void* item) {
     assert(a && a->data);
 
     if (a->length == a->capacity) {
-        if (!array_list_resize(a, max_size_t(2, a->capacity * 2, 4))) {
-            return false;
-        }
+        PROPAGATE_IF_ERROR(array_list_resize(a, max_size_t(2, a->capacity * 2, 4)));
     }
 
     void* dest = _array_list_get_ptr_unsafe(a, a->length);
     memcpy(dest, item, a->item_size);
     a->length += 1;
-    return true;
+    return SUCCESS;
 }
 
 void array_list_push_assume_capacity(ArrayList* a, const void* item) {
@@ -125,18 +123,16 @@ void array_list_push_assume_capacity(ArrayList* a, const void* item) {
     a->length += 1;
 }
 
-bool array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
+AnyError array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
     if (a->length == a->capacity) {
-        if (!array_list_resize(a, max_size_t(2, a->capacity * 2, 4))) {
-            return false;
-        }
+        PROPAGATE_IF_ERROR(array_list_resize(a, max_size_t(2, a->capacity * 2, 4)));
     }
 
     array_list_insert_stable_assume_capacity(a, index, item);
-    return true;
+    return SUCCESS;
 }
 
 void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const void* item) {
@@ -151,13 +147,11 @@ void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const 
     a->length += 1;
 }
 
-bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
+AnyError array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
-    if (!array_list_push(a, item)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(array_list_push(a, item));
 
     const size_t back = a->length - 1;
     if (index != back) {
@@ -165,7 +159,7 @@ bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
         void* new     = _array_list_get_ptr_unsafe(a, a->length - 1);
         swap(current, new, a->item_size);
     }
-    return true;
+    return SUCCESS;
 }
 
 void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item) {
@@ -182,22 +176,22 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
     }
 }
 
-bool array_list_pop(ArrayList* a, void* item) {
+AnyError array_list_pop(ArrayList* a, void* item) {
     assert(a && a->data);
     if (a->length == 0) {
-        return false;
+        return EMPTY;
     }
 
     void* last = _array_list_get_ptr_unsafe(a, a->length - 1);
     memcpy(item, last, a->item_size);
     a->length -= 1;
-    return true;
+    return SUCCESS;
 }
 
-bool array_list_remove(ArrayList* a, size_t index, void* item) {
+AnyError array_list_remove(ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) {
-        return false;
+        return INDEX_OUT_OF_BOUNDS;
     }
 
     const void* at = _array_list_get_ptr_unsafe(a, index);
@@ -212,66 +206,63 @@ bool array_list_remove(ArrayList* a, size_t index, void* item) {
     }
 
     a->length -= 1;
-    return true;
+    return SUCCESS;
 }
 
-bool array_list_remove_item(ArrayList*  a,
-                            const void* item,
-                            int (*compare)(const void*, const void*)) {
+AnyError
+array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*)) {
     size_t index;
-    if (array_list_find(a, &index, item, compare)) {
-        return array_list_remove(a, index, NULL);
-    } else {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(array_list_find(a, &index, item, compare));
+    return array_list_remove(a, index, NULL);
 }
 
-bool array_list_get(const ArrayList* a, size_t index, void* item) {
+AnyError array_list_get(const ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) {
-        return false;
+        return INDEX_OUT_OF_BOUNDS;
     }
 
     memcpy(item, _array_list_get_unsafe(a, index), a->item_size);
-    return true;
+    return SUCCESS;
 }
 
-void* array_list_get_ptr(ArrayList* a, size_t index) {
+AnyError array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     assert(a && a->data);
     if (index >= a->length) {
-        return NULL;
+        return INDEX_OUT_OF_BOUNDS;
     }
 
-    return _array_list_get_ptr_unsafe(a, index);
+    *item = _array_list_get_ptr_unsafe(a, index);
+    return SUCCESS;
 }
 
-bool array_list_set(ArrayList* a, size_t index, const void* item) {
+AnyError array_list_set(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     if (index >= a->length) {
-        return false;
+        return INDEX_OUT_OF_BOUNDS;
     }
 
     void* dest = _array_list_get_ptr_unsafe(a, index);
     memcpy(dest, item, a->item_size);
-    return true;
+    return SUCCESS;
 }
 
-bool array_list_find(const ArrayList* a,
-                     size_t*          index,
-                     const void*      item,
-                     int (*compare)(const void*, const void*)) {
+AnyError array_list_find(const ArrayList* a,
+                         size_t*          index,
+                         const void*      item,
+                         int (*compare)(const void*, const void*)) {
     assert(a && a->data);
     if (!index || !item || !compare) {
-        return false;
+        return NULL_PARAMETER;
     }
 
     for (size_t i = 0; i < a->length; i++) {
         if (compare(item, _array_list_get_unsafe(a, i)) == 0) {
             *index = i;
-            return true;
+            return SUCCESS;
         }
     }
-    return false;
+    return ELEMENT_MISSING;
 }
 
 bool array_list_bsearch(const ArrayList* a,

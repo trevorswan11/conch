@@ -7,5 +7,7 @@
 
 #include "parser/parser.h"
 
-DeclStatement*   decl_statement_parse(Parser* p, bool constant);
-ReturnStatement* return_statement_parse(Parser* p);
+#include "util/error.h"
+
+AnyError decl_statement_parse(Parser* p, bool constant, DeclStatement** stmt);
+AnyError return_statement_parse(Parser* p, ReturnStatement** stmt);

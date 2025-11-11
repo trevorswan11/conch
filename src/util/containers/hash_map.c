@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "util/containers/hash_map.h"
+#include "util/error.h"
 #include "util/math.h"
 #include "util/mem.h"
 
@@ -21,29 +22,22 @@ static inline size_t _hash_map_capacity_for_size(size_t size) {
     return ceil_power_of_two_size(new_cap);
 }
 
-typedef enum {
-    FAILED = -1,
-    NOT_NEEDED,
-    SUCCESS,
-} GrowIfNeededResult;
-
 // Grows the map to the new capacity, rehashing along the way.
-static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
+static inline AnyError _hash_map_grow(HashMap* hm, size_t new_capacity) {
+    assert(hm);
     new_capacity = max_size_t(2, new_capacity, HASH_MAP_MINIMUM_CAPACITY);
     assert(new_capacity > hm->header->capacity);
     assert(is_power_of_two(new_capacity));
 
     HashMap map;
-    if (!hash_map_init(&map,
-                       new_capacity,
-                       hm->header->key_size,
-                       hm->header->key_align,
-                       hm->header->value_size,
-                       hm->header->value_align,
-                       hm->hash,
-                       hm->compare)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(hash_map_init(&map,
+                                     new_capacity,
+                                     hm->header->key_size,
+                                     hm->header->key_align,
+                                     hm->header->value_size,
+                                     hm->header->value_align,
+                                     hm->hash,
+                                     hm->compare));
 
     // Append all data to the map without checking sizes
     if (hm->size != 0) {
@@ -66,41 +60,45 @@ static inline bool _hash_map_grow(HashMap* hm, size_t new_capacity) {
 
     hash_map_deinit(hm);
     *hm = map;
-    return true;
+    return SUCCESS;
 }
 
 // Only grows if the requested count exceeds the current number of available slots.
-static inline GrowIfNeededResult _hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
+static inline AnyError _hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
+    assert(hm);
     const size_t max_load = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
     if (hm->size + new_count <= max_load) {
-        return NOT_NEEDED;
+        return SUCCESS;
     }
 
     const size_t desired = _hash_map_capacity_for_size(hm->size + new_count);
     if (!_hash_map_grow(hm, desired)) {
-        return FAILED;
+        return ALLOCATION_FAILED;
     }
     return SUCCESS;
 }
 
 static inline void _hash_map_init_metadatas(HashMap* hm) {
+    assert(hm);
     assert(METADATA_SLOT_OPEN.fingerprint == 0);
     assert(METADATA_SLOT_OPEN.used == 0);
     memset(hm->metadata, 0, sizeof(Metadata) * hm->header->capacity);
 }
 
-bool hash_map_init(HashMap* hm,
-                   size_t   capacity,
-                   size_t   key_size,
-                   size_t   key_align,
-                   size_t   value_size,
-                   size_t   value_align,
-                   Hash (*hash)(const void*),
-                   int (*compare)(const void*, const void*)) {
+AnyError hash_map_init(HashMap* hm,
+                       size_t   capacity,
+                       size_t   key_size,
+                       size_t   key_align,
+                       size_t   value_size,
+                       size_t   value_align,
+                       Hash (*hash)(const void*),
+                       int (*compare)(const void*, const void*)) {
     if (!hm || !hash || !compare) {
-        return false;
-    } else if (key_size == 0 || value_size == 0 || key_align == 0 || value_align == 0) {
-        return false;
+        return NULL_PARAMETER;
+    } else if (key_size == 0 || value_size == 0) {
+        return ZERO_ITEM_SIZE;
+    } else if (key_align == 0 || value_align == 0) {
+        return ZERO_ITEM_ALIGN;
     }
 
     capacity = capacity < HASH_MAP_MINIMUM_CAPACITY ? HASH_MAP_MINIMUM_CAPACITY : capacity;
@@ -115,18 +113,18 @@ bool hash_map_init(HashMap* hm,
 
     // Safety checks before allocating for overflow guard
     if (capacity > SIZE_MAX / key_size) {
-        return false;
+        return INTEGER_OVERFLOW;
     } else if (capacity > SIZE_MAX / value_size) {
-        return false;
+        return INTEGER_OVERFLOW;
     } else if (metadata_size > SIZE_MAX - header_size) {
-        return false;
+        return INTEGER_OVERFLOW;
     }
 
     const size_t total_size =
         header_size + metadata_size + (keys_size + key_align - 1) + (values_size + value_align - 1);
     void* buffer = calloc(1, total_size);
     if (!buffer) {
-        return false;
+        return ALLOCATION_FAILED;
     }
 
     // Unpack the allocated block of memory
@@ -170,7 +168,7 @@ bool hash_map_init(HashMap* hm,
     };
 
     _hash_map_init_metadatas(hm);
-    return true;
+    return SUCCESS;
 }
 
 void hash_map_deinit(HashMap* hm) {
@@ -187,18 +185,12 @@ void hash_map_deinit(HashMap* hm) {
 }
 
 size_t hash_map_capacity(const HashMap* hm) {
-    if (!hm || !hm->buffer) {
-        return 0;
-    }
-
+    assert(hm && hm->buffer);
     return hm->header->capacity;
 }
 
 size_t hash_map_count(const HashMap* hm) {
-    if (!hm || !hm->buffer) {
-        return 0;
-    }
-
+    assert(hm && hm->buffer);
     return hm->size;
 }
 
@@ -208,21 +200,18 @@ void hash_map_clear_retaining_capacity(HashMap* hm) {
     hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
 }
 
-bool hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
+AnyError hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
     if (!hm || !hm->buffer) {
-        return false;
+        return NULL_PARAMETER;
     }
 
     if (new_size > hm->size) {
-        const GrowIfNeededResult result = _hash_map_grow_if_needed(hm, new_size - hm->size);
-        if (result == FAILED) {
-            return false;
-        }
+        PROPAGATE_IF_ERROR_IS(_hash_map_grow_if_needed(hm, new_size - hm->size), ALLOCATION_FAILED);
     }
-    return true;
+    return SUCCESS;
 }
 
-bool hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size) {
+AnyError hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size) {
     return hash_map_ensure_total_capacity(hm, hm->size + additional_size);
 }
 
@@ -357,14 +346,11 @@ void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const
     hm->size += 1;
 }
 
-bool hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
-    GrowIfNeededResult result = _hash_map_grow_if_needed(hm, 1);
-    if (result == FAILED) {
-        return false;
-    }
+AnyError hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
+    PROPAGATE_IF_ERROR_IS(_hash_map_grow_if_needed(hm, 1), ALLOCATION_FAILED);
 
     hash_map_put_assume_capacity_no_clobber(hm, key, value);
-    return true;
+    return SUCCESS;
 }
 
 // The data in the returned result is garbage if an existing key was not found.
@@ -418,32 +404,29 @@ MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* k
     };
 }
 
-bool hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result) {
+AnyError hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result) {
     assert(hm && hm->buffer && key);
-    const GrowIfNeededResult grow_res = _hash_map_grow_if_needed(hm, 1);
 
     // If we fail to grow, still try to find the key
-    if (grow_res == FAILED) {
+    if (_hash_map_grow_if_needed(hm, 1) == ALLOCATION_FAILED) {
         if (hm->available > 0) {
             *result = hash_map_get_or_put_assume_capacity(hm, key);
-            return true;
+            return SUCCESS;
         }
 
         size_t index;
-        if (!hash_map_get_index(hm, key, &index)) {
-            return false;
-        }
+        PROPAGATE_IF_ERROR(hash_map_get_index(hm, key, &index));
 
         *result = (MapGetOrPutResult){
             .key_ptr        = ptr_offset(hm->header->keys, index * hm->header->key_size),
             .value_ptr      = ptr_offset(hm->header->values, index * hm->header->value_size),
             .found_existing = true,
         };
-        return true;
+        return SUCCESS;
     }
 
     *result = hash_map_get_or_put_assume_capacity(hm, key);
-    return true;
+    return SUCCESS;
 }
 
 void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value) {
@@ -454,27 +437,25 @@ void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* valu
     memcpy(gop.value_ptr, value, hm->header->value_size);
 }
 
-bool hash_map_put(HashMap* hm, const void* key, const void* value) {
+AnyError hash_map_put(HashMap* hm, const void* key, const void* value) {
     assert(hm && hm->buffer && key && value);
     MapGetOrPutResult gop;
-    if (!hash_map_get_or_put(hm, key, &gop)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(hash_map_get_or_put(hm, key, &gop));
 
     memcpy(gop.key_ptr, key, hm->header->key_size);
     memcpy(gop.value_ptr, value, hm->header->value_size);
-    return true;
+    return SUCCESS;
 }
 
 bool hash_map_contains(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
-    return hash_map_get_index(hm, key, NULL);
+    return hash_map_get_index(hm, key, NULL) == SUCCESS;
 }
 
-bool hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
+AnyError hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
     assert(hm && hm->buffer && key);
     if (hm->size == 0) {
-        return false;
+        return EMPTY;
     }
 
     const Hash    hash        = hm->hash(key);
@@ -495,7 +476,7 @@ bool hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
                 if (index) {
                     *index = probe;
                 }
-                return true;
+                return SUCCESS;
             }
         }
 
@@ -504,65 +485,60 @@ bool hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
         m     = metadata[probe];
     }
 
-    return false;
+    return ELEMENT_MISSING;
 }
 
 static inline const void* _hash_map_get_value_ptr(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (!hash_map_get_index(hm, key, &index)) {
+    if (hash_map_get_index(hm, key, &index) != SUCCESS) {
         return NULL;
     }
 
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }
 
-bool hash_map_get_value(const HashMap* hm, const void* key, void* value) {
+AnyError hash_map_get_value(const HashMap* hm, const void* key, void* value) {
     assert(hm && hm->buffer && key && value);
     const void* stored = _hash_map_get_value_ptr(hm, key);
     if (stored) {
         memcpy(value, stored, hm->header->value_size);
-        return true;
+        return SUCCESS;
     } else {
-        return false;
+        return ELEMENT_MISSING;
     }
 }
 
-void* hash_map_get_value_ptr(HashMap* hm, const void* key) {
+AnyError hash_map_get_value_ptr(HashMap* hm, const void* key, void** item) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (!hash_map_get_index(hm, key, &index)) {
-        return NULL;
-    }
+    PROPAGATE_IF_ERROR(hash_map_get_index(hm, key, &index));
 
-    return ptr_offset(hm->header->values, index * hm->header->value_size);
+    *item = ptr_offset(hm->header->values, index * hm->header->value_size);
+    return SUCCESS;
 }
 
-bool hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
+AnyError hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (!hash_map_get_index(hm, key, &index)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(hash_map_get_index(hm, key, &index));
 
     *e = (MapEntry){
         .key_ptr   = ptr_offset(hm->header->keys, index * hm->header->key_size),
         .value_ptr = ptr_offset(hm->header->values, index * hm->header->value_size),
     };
-    return true;
+    return SUCCESS;
 }
 
-bool hash_map_remove(HashMap* hm, const void* key) {
+AnyError hash_map_remove(HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (!hash_map_get_index(hm, key, &index)) {
-        return false;
-    }
+    PROPAGATE_IF_ERROR(hash_map_get_index(hm, key, &index));
 
     metadata_remove(&hm->metadata[index]);
     hm->size -= 1;
     hm->available += 1;
-    return true;
+    return SUCCESS;
 }
 
 HashMapIterator hash_map_iterator_init(HashMap* hm) {

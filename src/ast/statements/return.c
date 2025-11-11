@@ -5,10 +5,12 @@
 
 #include "ast/statements/return.h"
 
-ReturnStatement* return_statement_create(Expression* value) {
+#include "util/error.h"
+
+AnyError return_statement_create(Expression* value, ReturnStatement** ret_stmt) {
     ReturnStatement* ret = malloc(sizeof(ReturnStatement));
     if (!ret) {
-        return NULL;
+        return ALLOCATION_FAILED;
     }
 
     *ret = (ReturnStatement){
@@ -20,5 +22,6 @@ ReturnStatement* return_statement_create(Expression* value) {
         .value = value,
     };
 
-    return ret;
+    *ret_stmt = ret;
+    return SUCCESS;
 }

@@ -2,10 +2,11 @@
 #include "ast/statements/statement.h"
 
 #include "util/containers/array_list.h"
+#include "util/error.h"
 
-bool ast_init(AST* ast) {
+AnyError ast_init(AST* ast) {
     if (!ast) {
-        return false;
+        return NULL_PARAMETER;
     }
 
     return array_list_init(&ast->statements, 64, sizeof(Statement*));

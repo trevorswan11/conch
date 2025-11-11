@@ -10,6 +10,7 @@
 #include "ast/statements/statement.h"
 
 #include "util/containers/array_list.h"
+#include "util/error.h"
 #include "util/io.h"
 
 typedef struct Parser {
@@ -22,18 +23,18 @@ typedef struct Parser {
     FileIO*   io;
 } Parser;
 
-bool parser_init(Parser* p, Lexer* l, FileIO* io);
+AnyError parser_init(Parser* p, Lexer* l, FileIO* io);
 
 // Deinitializes the parser, freeing only its personally allocated data.
 void parser_deinit(Parser* p);
 
 // Consumes all tokens and parses them into an Abstract Syntax Tree.
-bool parser_consume(Parser* p, AST* ast);
-bool parser_next_token(Parser* p);
+AnyError parser_consume(Parser* p, AST* ast);
+AnyError parser_next_token(Parser* p);
 
-bool parser_current_token_is(const Parser* p, TokenType t);
-bool parser_peek_token_is(const Parser* p, TokenType t);
-bool parser_expect_peek(Parser* p, TokenType t);
-bool parser_peek_error(Parser* p, TokenType t);
+bool     parser_current_token_is(const Parser* p, TokenType t);
+bool     parser_peek_token_is(const Parser* p, TokenType t);
+AnyError parser_expect_peek(Parser* p, TokenType t);
+AnyError parser_peek_error(Parser* p, TokenType t);
 
-Statement* parser_parse_statement(Parser* p);
+AnyError parser_parse_statement(Parser* p, Statement** stmt);

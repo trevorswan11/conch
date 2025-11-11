@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "util/error.h"
 #include "util/mem.h"
 
 typedef enum {
@@ -240,10 +241,9 @@ typedef struct {
 Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col);
 
 // Takes a parsed multiline string-based token and promotes it into a heap allocated string.
-// The governing slice is stack allocated but its data is not.
 //
 // - Standard strings are stripped of their leading and trailing quotes.
 // - Multiline strings are stripped of their internal '\\' line prefixes.
 //
 // The returned memory is owned by the caller and must be freed.
-MutSlice promote_token_string(Token token);
+AnyError promote_token_string(Token token, MutSlice* slice);

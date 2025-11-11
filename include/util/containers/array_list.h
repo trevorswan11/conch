@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "util/error.h"
+
 // An 'owning' dynamic array, data is type erased.
 //
 // Push uses a memcpy, so non-trivial types require special attention.
@@ -14,8 +16,8 @@ typedef struct {
     size_t length;
 } ArrayList;
 
-bool array_list_init(ArrayList* a, size_t capacity, size_t item_size);
-void array_list_deinit(ArrayList* a);
+AnyError array_list_init(ArrayList* a, size_t capacity, size_t item_size);
+void     array_list_deinit(ArrayList* a);
 
 size_t array_list_capacity(const ArrayList* a);
 size_t array_list_length(const ArrayList* a);
@@ -23,37 +25,36 @@ size_t array_list_length(const ArrayList* a);
 // Resizes the array, growing/shrinking based on the new capacity.
 //
 // If the new capacity is 0, this is equivalent to a deinit call.
-bool array_list_resize(ArrayList* a, size_t new_capacity);
+AnyError array_list_resize(ArrayList* a, size_t new_capacity);
 
 // Resizes the array if and only if the new capacity exceeds the current capacity.
 //
 // If the array does not need to be resized, then true is returned.
-bool array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
-void array_list_clear_retaining_capacity(ArrayList* a);
-bool array_list_shrink_to_fit(ArrayList* a);
+AnyError array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
+void     array_list_clear_retaining_capacity(ArrayList* a);
+AnyError array_list_shrink_to_fit(ArrayList* a);
 
 // Inserts an item at the given position, maintaining relative order of the two regions.
 //
 // If the index given is at the end of the list, this is equivalent to push.
-bool array_list_insert_stable(ArrayList* a, size_t index, const void* item);
-void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const void* item);
+AnyError array_list_insert_stable(ArrayList* a, size_t index, const void* item);
+void     array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const void* item);
 
 // Inserts an item at the given position, invalidating relative order.
 //
 // If the index given is at the end of the list, this is equivalent to push.
-bool array_list_insert_unstable(ArrayList* a, size_t index, const void* item);
-void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item);
+AnyError array_list_insert_unstable(ArrayList* a, size_t index, const void* item);
+void     array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item);
 
-bool  array_list_push(ArrayList* a, const void* item);
-void  array_list_push_assume_capacity(ArrayList* a, const void* item);
-bool  array_list_pop(ArrayList* a, void* item);
-bool  array_list_remove(ArrayList* a, size_t index, void* item);
-bool  array_list_remove_item(ArrayList*  a,
-                             const void* item,
-                             int (*compare)(const void*, const void*));
-bool  array_list_get(const ArrayList* a, size_t index, void* item);
-void* array_list_get_ptr(ArrayList* a, size_t index);
-bool  array_list_set(ArrayList* a, size_t index, const void* item);
+AnyError array_list_push(ArrayList* a, const void* item);
+void     array_list_push_assume_capacity(ArrayList* a, const void* item);
+AnyError array_list_pop(ArrayList* a, void* item);
+AnyError array_list_remove(ArrayList* a, size_t index, void* item);
+AnyError
+array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*));
+AnyError array_list_get(const ArrayList* a, size_t index, void* item);
+AnyError array_list_get_ptr(ArrayList* a, size_t index, void** item);
+AnyError array_list_set(ArrayList* a, size_t index, const void* item);
 
 // Finds the element in the array based on the compare function with the following properties:
 // - If the first element is larger, return a positive integer
@@ -61,10 +62,10 @@ bool  array_list_set(ArrayList* a, size_t index, const void* item);
 // - If the elements are equal, return 0
 //
 // The input index variable index of the first found element, and false is returned if not found.
-bool array_list_find(const ArrayList* a,
-                     size_t*          index,
-                     const void*      item,
-                     int (*compare)(const void*, const void*));
+AnyError array_list_find(const ArrayList* a,
+                         size_t*          index,
+                         const void*      item,
+                         int (*compare)(const void*, const void*));
 
 // Performs binary search on the array, setting the index to the real position if found.
 // If the element is not found, then the index is set to its insertion position.

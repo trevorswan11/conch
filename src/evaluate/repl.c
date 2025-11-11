@@ -8,6 +8,7 @@
 #include "lexer/lexer.h"
 
 #include "util/containers/array_list.h"
+#include "util/error.h"
 #include "util/io.h"
 
 void repl_start(void) {
@@ -22,30 +23,26 @@ void repl_start(void) {
     array_list_deinit(&buf_out);
 }
 
-void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+AnyError repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     assert(stream_buffer && stream_receiver);
     if (stream_receiver->item_size != sizeof(char)) {
         fprintf(io->err, "ArrayList must be initialized for bytes\n");
-        return;
+        return TYPE_MISMATCH;
     }
 
     fprintf(io->out, WELCOME_MESSAGE);
     fprintf(io->out, "\n");
     Lexer l;
-    if (!lexer_null_init(&l)) {
-        fprintf(io->err, "Failed to default initialize lexer\n");
-        return;
-    }
+    PROPAGATE_IF_ERROR_DO(lexer_null_init(&l),
+                          fprintf(io->err, "Failed to default initialize lexer\n"));
 
     while (true) {
         array_list_clear_retaining_capacity(stream_receiver);
         fprintf(io->out, PROMPT);
         fflush(io->out);
 
-        if (!repl_read_chunked(io, stream_buffer, stream_receiver)) {
-            lexer_deinit(&l);
-            return;
-        }
+        PROPAGATE_IF_ERROR_DO(repl_read_chunked(io, stream_buffer, stream_receiver),
+                              lexer_deinit(&l));
 
         const char* line = (const char*)stream_receiver->data;
         if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
@@ -59,16 +56,17 @@ void repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     }
 
     lexer_deinit(&l);
+    return SUCCESS;
 }
 
-bool repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+AnyError repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     const char null = 0;
     while (true) {
         char* result = fgets(stream_buffer, BUF_SIZE, io->in);
         if (!result) {
             fprintf(io->err, "Failed to read from input stream.\n");
             fprintf(io->out, "\n");
-            return false;
+            return READ_ERROR;
         }
 
         const size_t n        = strlen(stream_buffer);

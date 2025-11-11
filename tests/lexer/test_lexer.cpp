@@ -10,6 +10,7 @@
 extern "C" {
 #include "lexer/lexer.h"
 #include "lexer/token.h"
+#include "util/error.h"
 #include "util/mem.h"
 }
 
@@ -41,7 +42,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -87,18 +88,18 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l_accumulator;
-        REQUIRE(lexer_init(&l_accumulator, input));
-        REQUIRE(lexer_consume(&l_accumulator));
+        REQUIRE(lexer_init(&l_accumulator, input) == AnyError::SUCCESS);
+        REQUIRE(lexer_consume(&l_accumulator) == AnyError::SUCCESS);
         ArrayList* accumulated_tokens = &l_accumulator.token_accumulator;
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
             Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(accumulated_tokens, i, &accumulated_token));
+            REQUIRE(array_list_get(accumulated_tokens, i, &accumulated_token) == AnyError::SUCCESS);
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
@@ -113,7 +114,10 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Numbers and lexer consumer resets") {
     Lexer reseting_lexer;
-    REQUIRE(lexer_null_init(&reseting_lexer));
+    REQUIRE(lexer_null_init(&reseting_lexer) == AnyError::SUCCESS);
+
+    FileIO dbgio;
+    file_io_init(&dbgio, stdin, stdout, stderr);
 
     SECTION("Correct base-10 ints and floats") {
         const char* input = "0 123 3.14 42.0";
@@ -128,7 +132,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
         reseting_lexer.input        = input;
         reseting_lexer.input_length = strlen(input);
-        REQUIRE(lexer_consume(&reseting_lexer));
+        REQUIRE(lexer_consume(&reseting_lexer) == AnyError::SUCCESS);
 
         Lexer l;
         REQUIRE(lexer_init(&l, input));
@@ -137,7 +141,8 @@ TEST_CASE("Numbers and lexer consumer resets") {
             const auto& [t, s] = expecteds[i];
             Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token) ==
+                    AnyError::SUCCESS);
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
@@ -163,16 +168,17 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
         reseting_lexer.input        = input;
         reseting_lexer.input_length = strlen(input);
-        REQUIRE(lexer_consume(&reseting_lexer));
+        REQUIRE(lexer_consume(&reseting_lexer) == AnyError::SUCCESS);
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
             Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token) ==
+                    AnyError::SUCCESS);
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
@@ -199,16 +205,17 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
         reseting_lexer.input        = input;
         reseting_lexer.input_length = strlen(input);
-        REQUIRE(lexer_consume(&reseting_lexer));
+        REQUIRE(lexer_consume(&reseting_lexer) == AnyError::SUCCESS);
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
             Token token        = lexer_next_token(&l);
             Token accumulated_token;
-            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token));
+            REQUIRE(array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token) ==
+                    AnyError::SUCCESS);
 
             REQUIRE(t == token.type);
             REQUIRE(t == accumulated_token.type);
@@ -238,7 +245,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -266,7 +273,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -287,7 +294,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -315,7 +322,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -398,7 +405,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -438,7 +445,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -472,7 +479,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -513,7 +520,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(lexer_init(&l, input));
+        REQUIRE(lexer_init(&l, input) == AnyError::SUCCESS);
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
@@ -523,17 +530,17 @@ TEST_CASE("Advanced literals") {
     }
 
     SECTION("Promotion of invalid tokens") {
-        Token    string_tok      = token_init(TokenType::INT_10, "1", strlen("1"), 0, 0);
-        MutSlice promoted_string = promote_token_string(string_tok);
-        REQUIRE_FALSE(promoted_string.ptr);
-        free(promoted_string.ptr);
+        Token    string_tok = token_init(TokenType::INT_10, "1", strlen("1"), 0, 0);
+        MutSlice promoted_string;
+        REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::TYPE_MISMATCH);
     }
 
     SECTION("Promotion of standard string literals") {
         SECTION("Normal case") {
             Token string_tok = token_init(
                 TokenType::STRING, "\"Hello, World!\"", strlen("\"Hello, World!\""), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::SUCCESS);
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello, World!");
             free(promoted_string.ptr);
@@ -542,64 +549,63 @@ TEST_CASE("Advanced literals") {
         SECTION("Escaped case") {
             Token string_tok = token_init(
                 TokenType::STRING, "\"\"Hello, World!\"\"", strlen("\"\"Hello, World!\"\""), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::SUCCESS);
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "\"Hello, World!\"");
             free(promoted_string.ptr);
         }
 
         SECTION("Empty case") {
-            Token    string_tok      = token_init(TokenType::STRING, "\"\"", strlen("\"\""), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
-            REQUIRE_FALSE(promoted_string.ptr);
-            mut_slice_equals_str_z(&promoted_string, NULL);
-            free(promoted_string.ptr);
+            Token    string_tok = token_init(TokenType::STRING, "\"\"", strlen("\"\""), 0, 0);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::EMPTY);
         }
 
         SECTION("Malformed case") {
-            Token    string_tok      = token_init(TokenType::STRING, "\"", strlen("\""), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
-            REQUIRE_FALSE(promoted_string.ptr);
+            Token    string_tok = token_init(TokenType::STRING, "\"", strlen("\""), 0, 0);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::EMPTY);
         }
     }
 
     SECTION("Promotion of multistring literals") {
         SECTION("Normal case no newline") {
-            Token    string_tok      = token_init(TokenType::MULTILINE_STRING,
+            Token    string_tok = token_init(TokenType::MULTILINE_STRING,
                                           "\\\\Hello,\"World!\"",
                                           strlen("\\\\Hello,\"World!\""),
                                           0,
                                           0);
-            MutSlice promoted_string = promote_token_string(string_tok);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::SUCCESS);
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello,\"World!\"");
             free(promoted_string.ptr);
         }
 
         SECTION("Normal case newline") {
-            Token    string_tok      = token_init(TokenType::MULTILINE_STRING,
+            Token    string_tok = token_init(TokenType::MULTILINE_STRING,
                                           "\\\\Hello,\n\\\\World!\n\\\\",
                                           strlen("\\\\Hello,\n\\\\World!\n\\\\"),
                                           0,
                                           0);
-            MutSlice promoted_string = promote_token_string(string_tok);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::SUCCESS);
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello,\nWorld!\n");
             free(promoted_string.ptr);
         }
 
         SECTION("Empty case") {
-            Token string_tok =
-                token_init(TokenType::MULTILINE_STRING, "\\\\", strlen("\\\\"), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
-            REQUIRE_FALSE(promoted_string.ptr);
-            mut_slice_equals_str_z(&promoted_string, NULL);
-            free(promoted_string.ptr);
+            Token    string_tok = token_init(TokenType::MULTILINE_STRING, "", strlen(""), 0, 0);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::EMPTY);
         }
 
         SECTION("Malformed case") {
             Token    string_tok = token_init(TokenType::MULTILINE_STRING, "\\", strlen("\\"), 0, 0);
-            MutSlice promoted_string = promote_token_string(string_tok);
+            MutSlice promoted_string;
+            REQUIRE(promote_token_string(string_tok, &promoted_string) == AnyError::SUCCESS);
             REQUIRE(promoted_string.ptr);
             free(promoted_string.ptr);
         }

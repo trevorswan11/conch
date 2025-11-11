@@ -1,11 +1,20 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "util/error.h"
 #include "util/io.h"
 
-bool file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
+FileIO file_io_std() {
+    return (FileIO){
+        .in  = stdin,
+        .out = stdout,
+        .err = stderr,
+    };
+}
+
+AnyError file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
     if (!io || !in || !out || !err) {
-        return false;
+        return NULL_PARAMETER;
     }
 
     *io = (FileIO){
@@ -13,7 +22,7 @@ bool file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
         .out = out,
         .err = err,
     };
-    return true;
+    return SUCCESS;
 }
 
 void file_io_deinit(FileIO* io) {
