@@ -11,7 +11,7 @@ typedef struct {
     FILE* err;
 } FileIO;
 
-FileIO file_io_std();
+FileIO file_io_std(void);
 
 // Fills the io object, returning false if any arguments are NULL.
 AnyError file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err);

@@ -4,7 +4,7 @@
 #include "util/error.h"
 #include "util/io.h"
 
-FileIO file_io_std() {
+FileIO file_io_std(void) {
     return (FileIO){
         .in  = stdin,
         .out = stdout,
