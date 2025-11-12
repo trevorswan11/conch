@@ -41,7 +41,9 @@ TEST_CASE("AST Manual Reconstruction") {
 
     MutSlice reconstructed;
     REQUIRE(STATUS_OK(string_builder_to_string(&sb, &reconstructed)));
+    REQUIRE(reconstructed.ptr);
     REQUIRE(mut_slice_equals_str_z(&reconstructed, "var my_var = another_var;"));
+    free(reconstructed.ptr);
 
     ast_deinit(&ast);
 }
