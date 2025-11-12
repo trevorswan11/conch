@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "util/error.h"
 #include "util/io.h"
+#include "util/status.h"
 
 FileIO file_io_std(void) {
     return (FileIO){
@@ -12,7 +12,7 @@ FileIO file_io_std(void) {
     };
 }
 
-AnyError file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
+TRY_STATUS file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
     if (!io || !in || !out || !err) {
         return NULL_PARAMETER;
     }

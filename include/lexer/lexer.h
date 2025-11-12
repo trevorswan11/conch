@@ -7,9 +7,9 @@
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
-#include "util/error.h"
 #include "util/io.h"
 #include "util/mem.h"
+#include "util/status.h"
 
 // A lexer object which does not own the string input.
 typedef struct {
@@ -27,19 +27,19 @@ typedef struct {
     HashMap operators;
 } Lexer;
 
-AnyError lexer_init(Lexer* l, const char* input);
-AnyError lexer_null_init(Lexer* l);
-void     lexer_deinit(Lexer* l);
+TRY_STATUS lexer_init(Lexer* l, const char* input);
+TRY_STATUS lexer_null_init(Lexer* l);
+void       lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.
 //
 // Will always refresh the internal list and start position when called.
-AnyError  lexer_consume(Lexer* l);
-void      lexer_read_char(Lexer* l);
-Token     lexer_next_token(Lexer* l);
-void      lexer_skip_whitespace(Lexer* l);
-TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal);
-void      lexer_print_tokens(FileIO* io, Lexer* l);
+TRY_STATUS lexer_consume(Lexer* l);
+void       lexer_read_char(Lexer* l);
+Token      lexer_next_token(Lexer* l);
+void       lexer_skip_whitespace(Lexer* l);
+TokenType  lexer_lookup_identifier(Lexer* l, const Slice* literal);
+TRY_STATUS lexer_print_tokens(FileIO* io, Lexer* l);
 
 Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);

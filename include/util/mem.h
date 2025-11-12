@@ -29,8 +29,8 @@ typedef struct {
 } AnySlice;
 
 // Creates a slice from a null terminated string.
-Slice slice_from_z(const char* start);
-Slice slice_from_s(const char* start, size_t size);
+Slice slice_from_str_z(const char* start);
+Slice slice_from_str_s(const char* start, size_t size);
 bool  slice_equals(const Slice* a, const Slice* b);
 
 // Compares a slice to a null terminated string.
@@ -50,8 +50,8 @@ typedef struct {
 } AnyMutSlice;
 
 // Creates a mutable slice from a null terminated string.
-MutSlice mut_slice_from_z(char* start);
-MutSlice mut_slice_from_s(char* start, size_t size);
+MutSlice mut_slice_from_str_z(char* start);
+MutSlice mut_slice_from_str_s(char* start, size_t size);
 bool     mut_slice_equals(const MutSlice* a, const MutSlice* b);
 
 // Compares a mutable slice to a null terminated string.

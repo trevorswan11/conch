@@ -7,7 +7,7 @@
 
 #include "parser/parser.h"
 
-#include "util/error.h"
+#include "util/status.h"
 
-AnyError decl_statement_parse(Parser* p, bool constant, DeclStatement** stmt);
-AnyError return_statement_parse(Parser* p, ReturnStatement** stmt);
+TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt);
+TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt);

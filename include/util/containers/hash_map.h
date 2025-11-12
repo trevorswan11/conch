@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/error.h"
+#include "util/status.h"
 
 typedef uint64_t Hash;
 
@@ -126,22 +126,22 @@ typedef struct {
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Heavily inspired by Zig's unmanaged HashMap.
-AnyError hash_map_init(HashMap* hm,
-                       size_t   capacity,
-                       size_t   key_size,
-                       size_t   key_align,
-                       size_t   value_size,
-                       size_t   value_align,
-                       Hash (*hash)(const void*),
-                       int (*compare)(const void*, const void*));
-void     hash_map_deinit(HashMap* hm);
+TRY_STATUS hash_map_init(HashMap* hm,
+                         size_t   capacity,
+                         size_t   key_size,
+                         size_t   key_align,
+                         size_t   value_size,
+                         size_t   value_align,
+                         Hash (*hash)(const void*),
+                         int (*compare)(const void*, const void*));
+void       hash_map_deinit(HashMap* hm);
 
 size_t hash_map_capacity(const HashMap* hm);
 size_t hash_map_count(const HashMap* hm);
 
-void     hash_map_clear_retaining_capacity(HashMap* hm);
-AnyError hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
-AnyError hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
+void       hash_map_clear_retaining_capacity(HashMap* hm);
+TRY_STATUS hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
+TRY_STATUS hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 
 // Rehash the map, in-place.
 //
@@ -157,23 +157,23 @@ AnyError hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 void hash_map_rehash(HashMap* hm);
 
 // Inserts an entry into the map, assuming it is not present and no growth is needed.
-void     hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
-AnyError hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
+void       hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
+TRY_STATUS hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
 
 MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
-AnyError          hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
+TRY_STATUS        hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
 void              hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
-AnyError          hash_map_put(HashMap* hm, const void* key, const void* value);
+TRY_STATUS        hash_map_put(HashMap* hm, const void* key, const void* value);
 
-bool     hash_map_contains(const HashMap* hm, const void* key);
-AnyError hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
-AnyError hash_map_get_value(const HashMap* hm, const void* key, void* value);
-AnyError hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
+bool       hash_map_contains(const HashMap* hm, const void* key);
+TRY_STATUS hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
+TRY_STATUS hash_map_get_value(const HashMap* hm, const void* key, void* value);
+TRY_STATUS hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-AnyError hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
+TRY_STATUS hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
 
-AnyError hash_map_remove(HashMap* hm, const void* key);
+TRY_STATUS hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
 bool            hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next);

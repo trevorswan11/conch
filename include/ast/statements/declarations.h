@@ -6,53 +6,33 @@
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
-#include "util/error.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
+#include "util/status.h"
 
 typedef struct {
     Statement             base;
+    Token                 token;
     IdentifierExpression* ident;
     Expression*           value;
-    bool                  constant;
 } DeclStatement;
 
-static const char* decl_statement_token_literal(Node* node) {
-    DeclStatement* d = (DeclStatement*)node;
-    return d->constant ? token_type_name(CONST) : token_type_name(VAR);
-}
+TRY_STATUS decl_statement_create(Token                 token,
+                                 IdentifierExpression* ident,
+                                 Expression*           value,
+                                 DeclStatement**       decl_stmt);
 
-static void decl_statement_destroy(Node* node) {
-    DeclStatement* d = (DeclStatement*)node;
-
-    if (d->ident) {
-        Node* n_ident = (Node*)d->ident;
-        n_ident->vtable->destroy(n_ident);
-        d->ident = NULL;
-    }
-
-    if (d->value) {
-        Node* n_value = (Node*)d->value;
-        n_value->vtable->destroy(n_value);
-        d->value = NULL;
-    }
-
-    free(d);
-}
-
-static void decl_statement_node(Statement* stat) {
-    MAYBE_UNUSED(stat);
-}
+void       decl_statement_destroy(Node* node);
+Slice      decl_statement_token_literal(Node* node);
+TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS decl_statement_node(Statement* stmt);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
         {
-            .token_literal = decl_statement_token_literal,
             .destroy       = decl_statement_destroy,
+            .token_literal = decl_statement_token_literal,
+            .reconstruct   = decl_statement_reconstruct,
         },
     .statement_node = decl_statement_node,
 };
-
-AnyError decl_statement_create(IdentifierExpression* ident,
-                               Expression*           value,
-                               bool                  constant,
-                               DeclStatement**       decl_stmt);

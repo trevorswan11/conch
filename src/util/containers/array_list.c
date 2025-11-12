@@ -5,13 +5,13 @@
 #include <string.h>
 
 #include "util/containers/array_list.h"
-#include "util/error.h"
 #include "util/math.h"
 #include "util/mem.h"
+#include "util/status.h"
 
 MAX_FN(size_t, size_t)
 
-AnyError array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+TRY_STATUS array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
     if (item_size == 0) {
         return ZERO_ITEM_SIZE;
     }
@@ -50,7 +50,7 @@ size_t array_list_length(const ArrayList* a) {
     return a->length;
 }
 
-AnyError array_list_resize(ArrayList* a, size_t new_capacity) {
+TRY_STATUS array_list_resize(ArrayList* a, size_t new_capacity) {
     if (!a) {
         return NULL_PARAMETER;
     } else if (new_capacity == 0) {
@@ -72,7 +72,7 @@ AnyError array_list_resize(ArrayList* a, size_t new_capacity) {
     return SUCCESS;
 }
 
-AnyError array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
+TRY_STATUS array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
     assert(a && a->data && new_capacity > 0);
     if (a->capacity < new_capacity) {
         return array_list_resize(a, new_capacity);
@@ -85,7 +85,7 @@ void array_list_clear_retaining_capacity(ArrayList* a) {
     a->length = 0;
 }
 
-AnyError array_list_shrink_to_fit(ArrayList* a) {
+TRY_STATUS array_list_shrink_to_fit(ArrayList* a) {
     assert(a && a->data);
     if (a->length < a->capacity) {
         return array_list_resize(a, a->length);
@@ -103,7 +103,7 @@ static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t inde
     return ptr_offset(a->data, index * a->item_size);
 }
 
-AnyError array_list_push(ArrayList* a, const void* item) {
+TRY_STATUS array_list_push(ArrayList* a, const void* item) {
     assert(a && a->data);
 
     if (a->length == a->capacity) {
@@ -123,7 +123,7 @@ void array_list_push_assume_capacity(ArrayList* a, const void* item) {
     a->length += 1;
 }
 
-AnyError array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
+TRY_STATUS array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
@@ -147,7 +147,7 @@ void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const 
     a->length += 1;
 }
 
-AnyError array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
+TRY_STATUS array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
@@ -176,7 +176,7 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
     }
 }
 
-AnyError array_list_pop(ArrayList* a, void* item) {
+TRY_STATUS array_list_pop(ArrayList* a, void* item) {
     assert(a && a->data);
     if (a->length == 0) {
         return EMPTY;
@@ -188,7 +188,7 @@ AnyError array_list_pop(ArrayList* a, void* item) {
     return SUCCESS;
 }
 
-AnyError array_list_remove(ArrayList* a, size_t index, void* item) {
+TRY_STATUS array_list_remove(ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) {
         return INDEX_OUT_OF_BOUNDS;
@@ -209,14 +209,14 @@ AnyError array_list_remove(ArrayList* a, size_t index, void* item) {
     return SUCCESS;
 }
 
-AnyError
+TRY_STATUS
 array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*)) {
     size_t index;
     PROPAGATE_IF_ERROR(array_list_find(a, &index, item, compare));
     return array_list_remove(a, index, NULL);
 }
 
-AnyError array_list_get(const ArrayList* a, size_t index, void* item) {
+TRY_STATUS array_list_get(const ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) {
         return INDEX_OUT_OF_BOUNDS;
@@ -226,7 +226,7 @@ AnyError array_list_get(const ArrayList* a, size_t index, void* item) {
     return SUCCESS;
 }
 
-AnyError array_list_get_ptr(ArrayList* a, size_t index, void** item) {
+TRY_STATUS array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     assert(a && a->data);
     if (index >= a->length) {
         return INDEX_OUT_OF_BOUNDS;
@@ -236,7 +236,7 @@ AnyError array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     return SUCCESS;
 }
 
-AnyError array_list_set(ArrayList* a, size_t index, const void* item) {
+TRY_STATUS array_list_set(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     if (index >= a->length) {
         return INDEX_OUT_OF_BOUNDS;
@@ -247,10 +247,10 @@ AnyError array_list_set(ArrayList* a, size_t index, const void* item) {
     return SUCCESS;
 }
 
-AnyError array_list_find(const ArrayList* a,
-                         size_t*          index,
-                         const void*      item,
-                         int (*compare)(const void*, const void*)) {
+TRY_STATUS array_list_find(const ArrayList* a,
+                           size_t*          index,
+                           const void*      item,
+                           int (*compare)(const void*, const void*)) {
     assert(a && a->data);
     if (!index || !item || !compare) {
         return NULL_PARAMETER;

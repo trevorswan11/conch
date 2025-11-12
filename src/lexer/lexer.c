@@ -14,12 +14,12 @@
 #include "util/alphanum.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
-#include "util/error.h"
 #include "util/hash.h"
 #include "util/io.h"
 #include "util/mem.h"
+#include "util/status.h"
 
-static inline AnyError _init_keywords(HashMap* keyword_map) {
+static inline TRY_STATUS _init_keywords(HashMap* keyword_map) {
     PROPAGATE_IF_ERROR(hash_map_init(keyword_map,
                                      32,
                                      sizeof(Slice),
@@ -38,7 +38,7 @@ static inline AnyError _init_keywords(HashMap* keyword_map) {
     return SUCCESS;
 }
 
-static inline AnyError _init_operators(HashMap* operator_map) {
+static inline TRY_STATUS _init_operators(HashMap* operator_map) {
     PROPAGATE_IF_ERROR(hash_map_init(operator_map,
                                      64,
                                      sizeof(Slice),
@@ -57,7 +57,7 @@ static inline AnyError _init_operators(HashMap* operator_map) {
     return SUCCESS;
 }
 
-AnyError lexer_init(Lexer* l, const char* input) {
+TRY_STATUS lexer_init(Lexer* l, const char* input) {
     if (!input) {
         return NULL_PARAMETER;
     }
@@ -70,7 +70,7 @@ AnyError lexer_init(Lexer* l, const char* input) {
     return SUCCESS;
 }
 
-AnyError lexer_null_init(Lexer* l) {
+TRY_STATUS lexer_null_init(Lexer* l) {
     if (!l) {
         return NULL_PARAMETER;
     }
@@ -113,7 +113,7 @@ void lexer_deinit(Lexer* l) {
     array_list_deinit(&l->token_accumulator);
 }
 
-AnyError lexer_consume(Lexer* l) {
+TRY_STATUS lexer_consume(Lexer* l) {
     l->peek_position = 0;
     l->line_no       = 1;
     l->col_no        = 0;
@@ -180,7 +180,7 @@ Token lexer_next_token(Lexer* l) {
         }
     } else {
         if (misc_token_type_from_char(l->current_byte, &token.type)) {
-            token.slice = slice_from_s(&l->input[l->position], 1);
+            token.slice = slice_from_str_s(&l->input[l->position], 1);
         } else if (is_letter(l->current_byte)) {
             token.slice = lexer_read_identifier(l);
             token.type  = lexer_lookup_identifier(l, &token.slice);
@@ -209,28 +209,31 @@ void lexer_skip_whitespace(Lexer* l) {
 
 TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     TokenType value;
-    if (hash_map_get_value(&l->keywords, literal, &value) != SUCCESS) {
+    if (STATUS_ERR(hash_map_get_value(&l->keywords, literal, &value))) {
         return IDENT;
     }
     return value;
 }
 
-void lexer_print_tokens(FileIO* io, Lexer* l) {
+TRY_STATUS lexer_print_tokens(FileIO* io, Lexer* l) {
     assert(l);
     ArrayList*   list        = &l->token_accumulator;
     const size_t accumulated = array_list_length(list);
 
     Token out;
     for (size_t i = 0; i < accumulated; i++) {
-        array_list_get(list, i, &out);
-        fprintf(io->out,
-                "%s(%.*s) [%zu, %zu]\n",
-                token_type_name(out.type),
-                (int)out.slice.length,
-                out.slice.ptr,
-                out.line,
-                out.column);
+        PROPAGATE_IF_ERROR(array_list_get(list, i, &out));
+        if (fprintf(io->out,
+                    "%s(%.*s) [%zu, %zu]\n",
+                    token_type_name(out.type),
+                    (int)out.slice.length,
+                    out.slice.ptr,
+                    out.line,
+                    out.column) < 0) {
+            return WRITE_ERROR;
+        }
     }
+    return SUCCESS;
 }
 
 // Tries to read an operator or EOF from the position, returning ILLEGAL otherwise.
@@ -247,8 +250,8 @@ Token lexer_read_operator(Lexer* l) {
 
     // Try extending from length 1 up to the max operator size
     for (size_t len = 1; len <= MAX_OPERATOR_LEN && l->position + len <= l->input_length; len++) {
-        Slice query = slice_from_s(&l->input[l->position], len);
-        if (hash_map_get_value(&l->operators, &query, &matched_type) == SUCCESS) {
+        Slice query = slice_from_str_s(&l->input[l->position], len);
+        if (STATUS_OK(hash_map_get_value(&l->operators, &query, &matched_type))) {
             max_len = len;
         }
     }

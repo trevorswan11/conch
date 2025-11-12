@@ -48,13 +48,13 @@ bool token_is_integer(TokenType t) {
 Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col) {
     return (Token){
         .type   = t,
-        .slice  = slice_from_s(str, length),
+        .slice  = slice_from_str_s(str, length),
         .line   = line,
         .column = col,
     };
 }
 
-AnyError promote_token_string(Token token, MutSlice* slice) {
+TRY_STATUS promote_token_string(Token token, MutSlice* slice) {
     if (token.type != STRING && token.type != MULTILINE_STRING) {
         return TYPE_MISMATCH;
     }

@@ -18,9 +18,9 @@ TEST_CASE("Null terminated string comparison") {
 }
 
 TEST_CASE("Slice comparison") {
-    Slice s1 = slice_from_s("foo", 3);
-    Slice s2 = slice_from_s("foo", 3);
-    Slice s3 = slice_from_s("bar", 3);
+    Slice s1 = slice_from_str_s("foo", 3);
+    Slice s2 = slice_from_str_s("foo", 3);
+    Slice s3 = slice_from_str_s("bar", 3);
 
     REQUIRE(compare_slices(&s1, &s2) == 0);
     REQUIRE(compare_slices(&s1, &s3) != 0);
@@ -52,9 +52,9 @@ TEST_CASE("Null terminating string hashing") {
 }
 
 TEST_CASE("Slice hashing") {
-    Slice s1 = slice_from_s("hashme", 6);
-    Slice s2 = slice_from_s("hashme", 6);
-    Slice s3 = slice_from_s("different", 9);
+    Slice s1 = slice_from_str_s("hashme", 6);
+    Slice s2 = slice_from_str_s("hashme", 6);
+    Slice s3 = slice_from_str_s("different", 9);
 
     uint64_t h1 = hash_slice(&s1);
     uint64_t h2 = hash_slice(&s2);

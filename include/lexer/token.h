@@ -3,221 +3,51 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "util/error.h"
 #include "util/mem.h"
+#include "util/status.h"
 
-typedef enum {
-    END = 0,
+#define FOREACH_TOKEN(PROCESS)                                                                     \
+    PROCESS(END),                                                                                  \
+                                                                                                   \
+        PROCESS(IDENT), PROCESS(INT_2), PROCESS(INT_8), PROCESS(INT_10), PROCESS(INT_16),          \
+        PROCESS(FLOAT), PROCESS(STRING), PROCESS(CHARACTER),                                       \
+                                                                                                   \
+        PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(PLUS_ASSIGN), PROCESS(PLUS_PLUS), \
+        PROCESS(MINUS), PROCESS(MINUS_ASSIGN), PROCESS(MINUS_MINUS), PROCESS(STAR),                \
+        PROCESS(STAR_ASSIGN), PROCESS(STAR_STAR), PROCESS(SLASH), PROCESS(SLASH_ASSIGN),           \
+        PROCESS(PERCENT), PROCESS(PERCENT_ASSIGN), PROCESS(BANG), PROCESS(WHAT),                   \
+                                                                                                   \
+        PROCESS(AND), PROCESS(AND_ASSIGN), PROCESS(OR), PROCESS(OR_ASSIGN), PROCESS(SHL),          \
+        PROCESS(SHL_ASSIGN), PROCESS(SHR), PROCESS(SHR_ASSIGN), PROCESS(NOT), PROCESS(NOT_ASSIGN), \
+        PROCESS(XOR), PROCESS(XOR_ASSIGN),                                                         \
+                                                                                                   \
+        PROCESS(LT), PROCESS(LTEQ), PROCESS(GT), PROCESS(GTEQ), PROCESS(EQ), PROCESS(NEQ),         \
+                                                                                                   \
+        PROCESS(DOT), PROCESS(DOT_DOT), PROCESS(DOT_DOT_EQ), PROCESS(ARROW), PROCESS(FAT_ARROW),   \
+                                                                                                   \
+        PROCESS(COMMENT), PROCESS(MULTILINE_STRING),                                               \
+                                                                                                   \
+        PROCESS(COMMA), PROCESS(COLON), PROCESS(SEMICOLON),                                        \
+                                                                                                   \
+        PROCESS(LPAREN), PROCESS(RPAREN), PROCESS(LBRACE), PROCESS(RBRACE), PROCESS(LBRACKET),     \
+        PROCESS(RBRACKET),                                                                         \
+                                                                                                   \
+        PROCESS(SINGLE_QUOTE), PROCESS(DOUBLE_QUOTE),                                              \
+                                                                                                   \
+        PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STATIC), PROCESS(STRUCT),         \
+        PROCESS(ENUM), PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR),   \
+        PROCESS(IS), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(CASE), PROCESS(RETURN),   \
+        PROCESS(FOR), PROCESS(WHILE), PROCESS(DO), PROCESS(CONTINUE), PROCESS(BREAK),              \
+        PROCESS(NIL), PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM),                             \
+                                                                                                   \
+        PROCESS(ILLEGAL)
 
-    // Identifiers and literals
-    IDENT,
-    INT_2,
-    INT_8,
-    INT_10,
-    INT_16,
-    FLOAT,
-
-    STRING,
-    CHARACTER,
-
-    // Operators
-    ASSIGN,
-    WALRUS,
-    PLUS,
-    PLUS_ASSIGN,
-    PLUS_PLUS,
-    MINUS,
-    MINUS_ASSIGN,
-    MINUS_MINUS,
-    STAR,
-    STAR_ASSIGN,
-    STAR_STAR,
-    SLASH,
-    SLASH_ASSIGN,
-    PERCENT,
-    PERCENT_ASSIGN,
-    BANG,
-    WHAT,
-
-    AND,
-    AND_ASSIGN,
-    OR,
-    OR_ASSIGN,
-    SHL,
-    SHL_ASSIGN,
-    SHR,
-    SHR_ASSIGN,
-    NOT,
-    NOT_ASSIGN,
-    XOR,
-    XOR_ASSIGN,
-
-    LT,
-    LTEQ,
-    GT,
-    GTEQ,
-    EQ,
-    NEQ,
-
-    DOT,
-    DOT_DOT,
-    DOT_DOT_EQ,
-    ARROW,
-    FAT_ARROW,
-
-    COMMENT,
-    MULTILINE_STRING,
-
-    // DELIMITERS
-    COMMA,
-    COLON,
-    SEMICOLON,
-
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    LBRACKET,
-    RBRACKET,
-
-    SINGLE_QUOTE,
-    DOUBLE_QUOTE,
-
-    // Keywords
-    FUNCTION,
-    VAR,
-    CONST,
-    STATIC,
-    STRUCT,
-    ENUM,
-    TRUE,
-    FALSE,
-    BOOLEAN_AND,
-    BOOLEAN_OR,
-    IS,
-    IF,
-    ELSE,
-    MATCH,
-    CASE,
-    RETURN,
-    FOR,
-    WHILE,
-    DO,
-    CONTINUE,
-    BREAK,
-    NIL,
-    TYPEOF,
-    IMPORT,
-    FROM,
-
-    ILLEGAL,
+typedef enum TokenType {
+    FOREACH_TOKEN(GENERATE_ENUM),
 } TokenType;
 
 static const char* const TOKEN_TYPE_NAMES[] = {
-    "END",
-
-    // Identifiers and literals
-    "IDENT",
-    "INT_2",
-    "INT_8",
-    "INT_10",
-    "INT_16",
-    "FLOAT",
-
-    "STRING",
-    "CHARACTER",
-
-    // Operators
-    "ASSIGN",
-    "WALRUS",
-    "PLUS",
-    "PLUS_ASSIGN",
-    "PLUS_PLUS",
-    "MINUS",
-    "MINUS_ASSIGN",
-    "MINUS_MINUS",
-    "STAR",
-    "STAR_ASSIGN",
-    "STAR_STAR",
-    "SLASH",
-    "SLASH_ASSIGN",
-    "PERCENT",
-    "PERCENT_ASSIGN",
-    "BANG",
-    "WHAT",
-
-    "AND",
-    "AND_ASSIGN",
-    "OR",
-    "OR_ASSIGN",
-    "SHL",
-    "SHL_ASSIGN",
-    "SHR",
-    "SHR_ASSIGN",
-    "NOT",
-    "NOT_ASSIGN",
-    "XOR",
-    "XOR_ASSIGN",
-
-    "LT",
-    "LTEQ",
-    "GT",
-    "GTEQ",
-    "EQ",
-    "NEQ",
-
-    "DOT",
-    "DOT_DOT",
-    "DOT_DOT_EQ",
-    "ARROW",
-    "FAT_ARROW",
-
-    "COMMENT",
-    "MULTILINE_STRING",
-
-    // Delimiters
-    "COMMA",
-    "COLON",
-    "SEMICOLON",
-
-    "LPAREN",
-    "RPAREN",
-    "LBRACE",
-    "RBRACE",
-    "LBRACKET",
-    "RBRACKET",
-
-    "SINGLE_QUOTE",
-    "DOUBLE_QUOTE",
-
-    // Keywords
-    "FUNCTION",
-    "VAR",
-    "CONST",
-    "STATIC",
-    "STRUCT",
-    "ENUM",
-    "TRUE",
-    "FALSE",
-    "BOOLEAN_AND",
-    "BOOLEAN_OR",
-    "IS",
-    "IF",
-    "ELSE",
-    "MATCH",
-    "CASE",
-    "RETURN",
-    "FOR",
-    "WHILE",
-    "DO",
-    "CONTINUE",
-    "BREAK",
-    "NIL",
-    "TYPEOF",
-    "IMPORT",
-    "FROM",
-
-    "ILLEGAL",
+    FOREACH_TOKEN(GENERATE_STRING),
 };
 
 const char* token_type_name(TokenType type);
@@ -246,4 +76,4 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 // - Multiline strings are stripped of their internal '\\' line prefixes.
 //
 // The returned memory is owned by the caller and must be freed.
-AnyError promote_token_string(Token token, MutSlice* slice);
+TRY_STATUS promote_token_string(Token token, MutSlice* slice);

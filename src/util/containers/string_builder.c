@@ -3,10 +3,10 @@
 
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
-#include "util/error.h"
 #include "util/mem.h"
+#include "util/status.h"
 
-AnyError string_builder_init(StringBuilder* sb, size_t initial_length) {
+TRY_STATUS string_builder_init(StringBuilder* sb, size_t initial_length) {
     if (!sb) {
         return NULL_PARAMETER;
     } else if (initial_length == 0) {
@@ -20,16 +20,15 @@ void string_builder_deinit(StringBuilder* sb) {
     if (!sb) {
         return;
     }
-
     array_list_deinit(&sb->buffer);
 }
 
-AnyError string_builder_append(StringBuilder* sb, char byte) {
+TRY_STATUS string_builder_append(StringBuilder* sb, char byte) {
     assert(sb);
     return array_list_push(&sb->buffer, &byte);
 }
 
-AnyError string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
+TRY_STATUS string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
     assert(sb);
 
     if (!bytes) {
@@ -44,7 +43,17 @@ AnyError string_builder_append_many(StringBuilder* sb, const char* bytes, size_t
     return SUCCESS;
 }
 
-AnyError string_builder_append_size(StringBuilder* sb, size_t value) {
+TRY_STATUS string_builder_append_slice(StringBuilder* sb, Slice slice) {
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, slice.ptr, slice.length));
+    return SUCCESS;
+}
+
+TRY_STATUS string_builder_append_mut_slice(StringBuilder* sb, MutSlice slice) {
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, slice.ptr, slice.length));
+    return SUCCESS;
+}
+
+TRY_STATUS string_builder_append_size(StringBuilder* sb, size_t value) {
     assert(sb);
 
     // Use a copy to determine the total number of digits to reserve
@@ -76,7 +85,7 @@ AnyError string_builder_append_size(StringBuilder* sb, size_t value) {
     return SUCCESS;
 }
 
-AnyError string_builder_to_string(StringBuilder* sb, MutSlice* slice) {
+TRY_STATUS string_builder_to_string(StringBuilder* sb, MutSlice* slice) {
     assert(sb && slice);
 
     const char null_byte = '\0';

@@ -2,14 +2,19 @@
 
 #include "lexer/token.h"
 
-#define MAYBE_UNUSED(x) ((void)(x))
+#include "util/containers/string_builder.h"
+#include "util/mem.h"
+#include "util/status.h"
+
+#define ASSERT_NODE(node) assert(node->vtable);
 
 typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;
 
 struct NodeVTable {
-    const char* (*token_literal)(Node*);
     void (*destroy)(Node*);
+    Slice (*token_literal)(Node*);
+    TRY_STATUS (*reconstruct)(Node*, StringBuilder*);
 };
 
 struct Node {

@@ -8,17 +8,17 @@
 
 extern "C" {
 #include "util/containers/string_builder.h"
-#include "util/error.h"
+#include "util/status.h"
 }
 
 TEST_CASE("StringBuilder basic append") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(&sb, 4) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 4)));
 
-    REQUIRE(string_builder_append(&sb, 'h') == AnyError::SUCCESS);
-    REQUIRE(string_builder_append(&sb, 'i') == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'h')));
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'i')));
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "hi") == 0);
 
@@ -27,13 +27,13 @@ TEST_CASE("StringBuilder basic append") {
 
 TEST_CASE("StringBuilder append many") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(&sb, 2) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
 
     const char* text = "hello";
-    REQUIRE(string_builder_append_many(&sb, text, 5) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_append_many(&sb, text, 5)));
 
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "hello") == 0);
 
@@ -43,16 +43,34 @@ TEST_CASE("StringBuilder append many") {
     free(slice.ptr);
 }
 
-TEST_CASE("StringBuilder multiple appends") {
+TEST_CASE("StringBuilder append slices") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(&sb, 2) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
 
-    REQUIRE(string_builder_append(&sb, 'A') == AnyError::SUCCESS);
-    REQUIRE(string_builder_append_many(&sb, "BC", 2) == AnyError::SUCCESS);
-    REQUIRE(string_builder_append(&sb, 'D') == AnyError::SUCCESS);
+    Slice text = slice_from_str_z("hello");
+    REQUIRE(STATUS_OK(string_builder_append_slice(&sb, text)));
+
+    MutSlice mut_text = mut_slice_from_str_z((char*)", world!");
+    REQUIRE(STATUS_OK(string_builder_append_mut_slice(&sb, mut_text)));
 
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(slice.ptr);
+    REQUIRE(strcmp(slice.ptr, "hello, world!") == 0);
+
+    free(slice.ptr);
+}
+
+TEST_CASE("StringBuilder multiple appends") {
+    StringBuilder sb;
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'A')));
+    REQUIRE(STATUS_OK(string_builder_append_many(&sb, "BC", 2)));
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'D')));
+
+    MutSlice slice;
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "ABCD") == 0);
 
@@ -61,15 +79,15 @@ TEST_CASE("StringBuilder multiple appends") {
 
 TEST_CASE("StringBuilder number appends") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(&sb, 2) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
 
-    REQUIRE(string_builder_append(&sb, 'A') == AnyError::SUCCESS);
-    REQUIRE(string_builder_append_many(&sb, "BC", 2) == AnyError::SUCCESS);
-    REQUIRE(string_builder_append(&sb, 'D') == AnyError::SUCCESS);
-    REQUIRE(string_builder_append_size(&sb, 12032) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'A')));
+    REQUIRE(STATUS_OK(string_builder_append_many(&sb, "BC", 2)));
+    REQUIRE(STATUS_OK(string_builder_append(&sb, 'D')));
+    REQUIRE(STATUS_OK(string_builder_append_size(&sb, 12032)));
 
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "ABCD12032") == 0);
 
@@ -78,10 +96,10 @@ TEST_CASE("StringBuilder number appends") {
 
 TEST_CASE("StringBuilder empty initialization") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(&sb, 1) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 1)));
 
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "") == 0);
 
@@ -90,13 +108,13 @@ TEST_CASE("StringBuilder empty initialization") {
 
 TEST_CASE("StringBuilder handles null inputs") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(NULL, 10) == AnyError::NULL_PARAMETER);
-    REQUIRE(string_builder_init(&sb, 0) == AnyError::EMPTY);
+    REQUIRE(string_builder_init(NULL, 10) == Status::NULL_PARAMETER);
+    REQUIRE(string_builder_init(&sb, 0) == Status::EMPTY);
 
-    REQUIRE(string_builder_init(&sb, 2) == AnyError::SUCCESS);
-    REQUIRE(string_builder_append_many(&sb, NULL, 5) == AnyError::NULL_PARAMETER);
+    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+    REQUIRE(string_builder_append_many(&sb, NULL, 5) == Status::NULL_PARAMETER);
     MutSlice slice;
-    REQUIRE(string_builder_to_string(&sb, &slice) == AnyError::SUCCESS);
+    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
     REQUIRE(strcmp(slice.ptr, "") == 0);
 

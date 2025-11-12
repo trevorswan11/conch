@@ -3,11 +3,11 @@
 
 #include "util/mem.h"
 
-Slice slice_from_z(const char* start) {
-    return slice_from_s(start, strlen(start));
+Slice slice_from_str_z(const char* start) {
+    return slice_from_str_s(start, strlen(start));
 }
 
-Slice slice_from_s(const char* start, size_t size) {
+Slice slice_from_str_s(const char* start, size_t size) {
     return (Slice){.ptr = start, .length = size};
 }
 
@@ -34,11 +34,11 @@ bool slice_equals_str_s(const Slice* slice, const char* str, size_t size) {
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
-MutSlice mut_slice_from_z(char* start) {
-    return mut_slice_from_s(start, strlen(start));
+MutSlice mut_slice_from_str_z(char* start) {
+    return mut_slice_from_str_s(start, strlen(start));
 }
 
-MutSlice mut_slice_from_s(char* start, size_t size) {
+MutSlice mut_slice_from_str_s(char* start, size_t size) {
     return (MutSlice){.ptr = start, .length = size};
 }
 

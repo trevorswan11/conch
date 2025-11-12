@@ -8,22 +8,23 @@
 #include "lexer/lexer.h"
 
 #include "util/containers/array_list.h"
-#include "util/error.h"
 #include "util/io.h"
+#include "util/status.h"
 
-void repl_start(void) {
+TRY_STATUS repl_start(void) {
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    array_list_init(&buf_out, 1024, sizeof(char));
+    PROPAGATE_IF_ERROR(array_list_init(&buf_out, 1024, sizeof(char)));
 
     FileIO io;
-    file_io_init(&io, stdin, stdout, stderr);
-    repl_run(&io, buf_in, &buf_out);
+    PROPAGATE_IF_ERROR(file_io_init(&io, stdin, stdout, stderr));
+    PROPAGATE_IF_ERROR(repl_run(&io, buf_in, &buf_out));
 
     array_list_deinit(&buf_out);
+    return SUCCESS;
 }
 
-AnyError repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+TRY_STATUS repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     assert(stream_buffer && stream_receiver);
     if (stream_receiver->item_size != sizeof(char)) {
         fprintf(io->err, "ArrayList must be initialized for bytes\n");
@@ -51,15 +52,15 @@ AnyError repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
 
         l.input        = line;
         l.input_length = strlen(line);
-        lexer_consume(&l);
-        lexer_print_tokens(io, &l);
+        PROPAGATE_IF_ERROR(lexer_consume(&l));
+        PROPAGATE_IF_ERROR(lexer_print_tokens(io, &l));
     }
 
     lexer_deinit(&l);
     return SUCCESS;
 }
 
-AnyError repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+TRY_STATUS repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     const char null = 0;
     while (true) {
         char* result = fgets(stream_buffer, BUF_SIZE, io->in);
@@ -71,7 +72,7 @@ AnyError repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_re
 
         const size_t n        = strlen(stream_buffer);
         const size_t required = stream_receiver->length + n;
-        array_list_ensure_total_capacity(stream_receiver, required);
+        PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(stream_receiver, required));
 
         memcpy((char*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
         stream_receiver->length += n;

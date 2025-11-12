@@ -10,11 +10,11 @@
 
 #include "parser/parser.h"
 
-#include "util/error.h"
+#include "util/status.h"
 
-AnyError decl_statement_parse(Parser* p, bool constant, DeclStatement** stmt) {
+TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     DeclStatement* decl_stmt;
-    PROPAGATE_IF_ERROR(decl_statement_create(NULL, NULL, constant, &decl_stmt));
+    PROPAGATE_IF_ERROR(decl_statement_create(p->current_token, NULL, NULL, &decl_stmt));
 
     PROPAGATE_IF_ERROR_DO_IS(
         parser_expect_peek(p, IDENT), decl_statement_destroy((Node*)decl_stmt), UNEXPECTED_TOKEN);
@@ -33,7 +33,7 @@ AnyError decl_statement_parse(Parser* p, bool constant, DeclStatement** stmt) {
     return SUCCESS;
 }
 
-AnyError return_statement_parse(Parser* p, ReturnStatement** stmt) {
+TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
     ReturnStatement* ret_stmt;
     PROPAGATE_IF_ERROR(return_statement_create(NULL, &ret_stmt));
 

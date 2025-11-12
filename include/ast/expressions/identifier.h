@@ -5,36 +5,27 @@
 #include "ast/expressions/expression.h"
 #include "ast/node.h"
 
-#include "util/error.h"
 #include "util/mem.h"
+#include "util/status.h"
 
 typedef struct {
     Expression base;
     MutSlice   name;
 } IdentifierExpression;
 
-static const char* identifier_expression_token_literal(Node* node) {
-    MAYBE_UNUSED(node);
-    return token_type_name(IDENT);
-}
+TRY_STATUS identifier_expression_create(Slice name, IdentifierExpression** ident_expr);
 
-static void identifier_expression_destroy(Node* node) {
-    IdentifierExpression* ident = (IdentifierExpression*)node;
-    free(ident->name.ptr);
-    free(ident);
-}
-
-static void identifier_expression_node(Expression* expr) {
-    MAYBE_UNUSED(expr);
-}
+void       identifier_expression_destroy(Node* node);
+Slice      identifier_expression_token_literal(Node* node);
+TRY_STATUS identifier_expression_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS identifier_expression_node(Expression* expr);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =
         {
-            .token_literal = identifier_expression_token_literal,
             .destroy       = identifier_expression_destroy,
+            .token_literal = identifier_expression_token_literal,
+            .reconstruct   = identifier_expression_reconstruct,
         },
     .expression_node = identifier_expression_node,
 };
-
-AnyError identifier_expression_create(Slice name, IdentifierExpression** ident_expr);

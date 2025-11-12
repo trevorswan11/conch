@@ -14,10 +14,10 @@
 
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
-#include "util/error.h"
 #include "util/mem.h"
+#include "util/status.h"
 
-AnyError parser_init(Parser* p, Lexer* l, FileIO* io) {
+TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io) {
     if (!p || !l || !io) {
         return NULL_PARAMETER;
     }
@@ -43,14 +43,14 @@ AnyError parser_init(Parser* p, Lexer* l, FileIO* io) {
 void parser_deinit(Parser* p) {
     MutSlice allocated;
     for (size_t i = 0; i < p->errors.length; i++) {
-        array_list_get(&p->errors, i, &allocated);
+        UNREACHABLE_ERROR(array_list_get(&p->errors, i, &allocated));
         free(allocated.ptr);
     }
 
     array_list_deinit(&p->errors);
 }
 
-AnyError parser_consume(Parser* p, AST* ast) {
+TRY_STATUS parser_consume(Parser* p, AST* ast) {
     if (!p || !p->lexer || !p->io || !ast) {
         return NULL_PARAMETER;
     }
@@ -72,7 +72,7 @@ AnyError parser_consume(Parser* p, AST* ast) {
         if (stmt) {
             PROPAGATE_IF_ERROR(array_list_push(&ast->statements, &stmt));
         }
-        parser_next_token(p);
+        IGNORE_STATUS(parser_next_token(p));
     }
 
     // If we encountered any errors, invalidate the tree for now
@@ -83,7 +83,7 @@ AnyError parser_consume(Parser* p, AST* ast) {
     return SUCCESS;
 }
 
-AnyError parser_next_token(Parser* p) {
+TRY_STATUS parser_next_token(Parser* p) {
     p->current_token = p->peek_token;
     return array_list_get(&p->lexer->token_accumulator, p->lexer_index++, &p->peek_token);
 }
@@ -98,7 +98,7 @@ bool parser_peek_token_is(const Parser* p, TokenType t) {
     return p->peek_token.type == t;
 }
 
-AnyError parser_expect_peek(Parser* p, TokenType t) {
+TRY_STATUS parser_expect_peek(Parser* p, TokenType t) {
     assert(p);
     if (parser_peek_token_is(p, t)) {
         return parser_next_token(p);
@@ -110,11 +110,11 @@ AnyError parser_expect_peek(Parser* p, TokenType t) {
 
 #define PPE_CLEANUP string_builder_deinit(&builder)
 
-AnyError parser_peek_error(Parser* p, TokenType t) {
+TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     assert(p);
 
     StringBuilder builder;
-    string_builder_init(&builder, 60);
+    PROPAGATE_IF_ERROR(string_builder_init(&builder, 60));
 
     // Genreal token information
     const char start[] = "Expected token ";
@@ -155,13 +155,11 @@ AnyError parser_peek_error(Parser* p, TokenType t) {
     return SUCCESS;
 }
 
-AnyError parser_parse_statement(Parser* p, Statement** stmt) {
+TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
     switch (p->current_token.type) {
     case VAR:
-        PROPAGATE_IF_ERROR(decl_statement_parse(p, false, (DeclStatement**)stmt));
-        break;
     case CONST:
-        PROPAGATE_IF_ERROR(decl_statement_parse(p, true, (DeclStatement**)stmt));
+        PROPAGATE_IF_ERROR(decl_statement_parse(p, (DeclStatement**)stmt));
         break;
     case RETURN:
         PROPAGATE_IF_ERROR(return_statement_parse(p, (ReturnStatement**)stmt));
