@@ -71,12 +71,14 @@ static inline void _hash_set_init_metadatas(HashSet* hs) {
     memset(hs->metadata, 0, sizeof(Metadata) * hs->header->capacity);
 }
 
-TRY_STATUS hash_set_init(HashSet* hs,
-                         size_t   capacity,
-                         size_t   key_size,
-                         size_t   key_align,
-                         Hash (*hash)(const void*),
-                         int (*compare)(const void*, const void*)) {
+TRY_STATUS hash_set_init_allocator(HashSet* hs,
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*),
+                                   Allocator allocator) {
+    ASSERT_ALLOCATOR(allocator);
     if (!hs || !hash || !compare) {
         return NULL_PARAMETER;
     } else if (key_size == 0 || key_align == 0) {
@@ -100,7 +102,7 @@ TRY_STATUS hash_set_init(HashSet* hs,
     }
 
     const size_t total_size = header_size + metadata_size + (keys_size + key_align - 1);
-    void*        buffer     = calloc(1, total_size);
+    void*        buffer     = allocator.continuous_alloc(1, total_size);
     if (!buffer) {
         return ALLOCATION_FAILED;
     }
@@ -136,18 +138,30 @@ TRY_STATUS hash_set_init(HashSet* hs,
         .available = capacity,
         .hash      = hash,
         .compare   = compare,
+        .allocator = allocator,
     };
 
     _hash_set_init_metadatas(hs);
     return SUCCESS;
 }
 
+TRY_STATUS hash_set_init(HashSet* hs,
+                         size_t   capacity,
+                         size_t   key_size,
+                         size_t   key_align,
+                         Hash (*hash)(const void*),
+                         int (*compare)(const void*, const void*)) {
+    return hash_set_init_allocator(
+        hs, capacity, key_size, key_align, hash, compare, standard_allocator);
+}
+
 void hash_set_deinit(HashSet* hs) {
     if (!hs || !hs->buffer) {
         return;
     }
+    ASSERT_ALLOCATOR(hs->allocator);
 
-    free(hs->buffer);
+    hs->allocator.free_alloc(hs->buffer);
     hs->buffer    = NULL;
     hs->header    = NULL;
     hs->metadata  = NULL;

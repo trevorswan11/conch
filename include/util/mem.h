@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "util/allocator.h"
 #include "util/math.h"
 
 #if INTPTR_MAX == INT64_MAX
@@ -67,5 +68,7 @@ void*     align_ptr(void* ptr, size_t alignment);
 void*     ptr_offset(void* p, size_t offset);
 void      swap(void* a, void* b, size_t size);
 
+char* strdup_z_allocator(const char* str, memory_alloc_fn alloc);
 char* strdup_z(const char* str);
+char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc);
 char* strdup_s(const char* str, size_t size);

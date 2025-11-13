@@ -4,12 +4,16 @@
 #include "util/status.h"
 
 void debug_print(const char* format, ...) {
+#ifdef NDEBUG
+    MAYBE_UNUSED(format);
+#else
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
 
     fflush(stderr);
+#endif
 }
 
 const char* status_name(Status status) {

@@ -2,6 +2,7 @@
 
 #include "lexer/token.h"
 
+#include "util/allocator.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -12,7 +13,7 @@ typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;
 
 struct NodeVTable {
-    void (*destroy)(Node*);
+    void (*destroy)(Node*, free_alloc_fn);
     Slice (*token_literal)(Node*);
     TRY_STATUS (*reconstruct)(Node*, StringBuilder*);
 };

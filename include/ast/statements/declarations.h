@@ -6,6 +6,7 @@
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
+#include "util/allocator.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -20,9 +21,10 @@ typedef struct {
 TRY_STATUS decl_statement_create(Token                 token,
                                  IdentifierExpression* ident,
                                  Expression*           value,
-                                 DeclStatement**       decl_stmt);
+                                 DeclStatement**       decl_stmt,
+                                 memory_alloc_fn       memory_alloc);
 
-void       decl_statement_destroy(Node* node);
+void       decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      decl_statement_token_literal(Node* node);
 TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb);
 TRY_STATUS decl_statement_node(Statement* stmt);

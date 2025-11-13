@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,14 +6,17 @@
 
 #include "ast/node.h"
 #include "ast/statements/expression.h"
-#include "util/containers/string_builder.h"
 
+#include "util/allocator.h"
+#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 TRY_STATUS expression_statement_create(Token                 first_expression_token,
                                        Expression*           expression,
-                                       ExpressionStatement** expr_stmt) {
-    ExpressionStatement* expr = malloc(sizeof(ExpressionStatement));
+                                       ExpressionStatement** expr_stmt,
+                                       memory_alloc_fn       memory_alloc) {
+    assert(memory_alloc);
+    ExpressionStatement* expr = memory_alloc(sizeof(ExpressionStatement));
     if (!expr) {
         return ALLOCATION_FAILED;
     }
@@ -34,17 +38,18 @@ TRY_STATUS expression_statement_create(Token                 first_expression_to
     return SUCCESS;
 }
 
-void expression_statement_destroy(Node* node) {
+void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
+    assert(free_alloc);
     ExpressionStatement* e = (ExpressionStatement*)node;
 
     if (e->expression) {
         Node* n_value = (Node*)e->expression;
-        n_value->vtable->destroy(n_value);
+        n_value->vtable->destroy(n_value, free_alloc);
         e->expression = NULL;
     }
 
-    free(e);
+    free_alloc(e);
 }
 
 Slice expression_statement_token_literal(Node* node) {

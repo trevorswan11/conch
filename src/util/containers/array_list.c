@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/math.h"
 #include "util/mem.h"
@@ -11,11 +12,13 @@
 
 MAX_FN(size_t, size_t)
 
-TRY_STATUS array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+TRY_STATUS
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator) {
+    ASSERT_ALLOCATOR(allocator);
     if (item_size == 0) {
         return ZERO_ITEM_SIZE;
     }
-    void* data = malloc(capacity * item_size);
+    void* data = allocator.memory_alloc(capacity * item_size);
     if (!data && capacity > 0) {
         return ALLOCATION_FAILED;
     }
@@ -25,16 +28,22 @@ TRY_STATUS array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
         .item_size = item_size,
         .capacity  = capacity,
         .length    = 0,
+        .allocator = allocator,
     };
     return SUCCESS;
+}
+
+TRY_STATUS array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+    return array_list_init_allocator(a, capacity, item_size, standard_allocator);
 }
 
 void array_list_deinit(ArrayList* a) {
     if (!a || !a->data) {
         return;
     }
+    ASSERT_ALLOCATOR(a->allocator);
 
-    free(a->data);
+    a->allocator.free_alloc(a->data);
     a->data     = NULL;
     a->length   = 0;
     a->capacity = 0;
@@ -57,8 +66,9 @@ TRY_STATUS array_list_resize(ArrayList* a, size_t new_capacity) {
         array_list_deinit(a);
         return SUCCESS;
     }
+    ASSERT_ALLOCATOR(a->allocator);
 
-    void* new_data = realloc(a->data, new_capacity * a->item_size);
+    void* new_data = a->allocator.re_alloc(a->data, new_capacity * a->item_size);
     if (!new_data) {
         return REALLOCATION_FAILED;
     }

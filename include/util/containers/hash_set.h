@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "util/allocator.h"
 #include "util/status.h"
 
 typedef uint64_t Hash;
@@ -49,6 +50,8 @@ typedef struct {
 
     Hash (*hash)(const void*);
     int (*compare)(const void*, const void*);
+
+    Allocator allocator;
 } HashSet;
 
 // A non-owning iterator. Invalid if the underlying map is freed.
@@ -59,6 +62,24 @@ typedef struct {
     HashSet* hs;
     size_t   index;
 } HashSetIterator;
+
+// Creates a HashSet with the given properties.
+//
+// `compare` must be a function pointer for keys such that:
+// - If the first element is larger, return a positive integer
+// - If the second element is larger, return a negative integer
+// - If the elements are equal, return 0
+//
+// `hash` is a user defined function pointer for hashing keys.
+//
+// Stripped implementation of a map.
+TRY_STATUS hash_set_init_allocator(HashSet* hs,
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*),
+                                   Allocator allocator);
 
 // Creates a HashSet with the given properties.
 //

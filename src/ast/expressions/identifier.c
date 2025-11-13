@@ -1,21 +1,27 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "ast/expressions/identifier.h"
 
+#include "util/allocator.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS identifier_expression_create(Slice name, IdentifierExpression** ident_expr) {
-    IdentifierExpression* ident = malloc(sizeof(IdentifierExpression));
+TRY_STATUS identifier_expression_create(Slice                  name,
+                                        IdentifierExpression** ident_expr,
+                                        memory_alloc_fn        memory_alloc,
+                                        free_alloc_fn          free_alloc) {
+    assert(memory_alloc && free_alloc);
+    IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
     if (!ident) {
         return ALLOCATION_FAILED;
     }
 
-    char* mut_name = strdup_s(name.ptr, name.length);
+    char* mut_name = strdup_s_allocator(name.ptr, name.length, memory_alloc);
     if (!mut_name) {
-        free(ident);
+        free_alloc(ident);
         return ALLOCATION_FAILED;
     }
 
@@ -39,11 +45,12 @@ TRY_STATUS identifier_expression_create(Slice name, IdentifierExpression** ident
     return SUCCESS;
 }
 
-void identifier_expression_destroy(Node* node) {
+void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
+    assert(free_alloc);
     IdentifierExpression* ident = (IdentifierExpression*)node;
-    free(ident->name.ptr);
-    free(ident);
+    free_alloc(ident->name.ptr);
+    free_alloc(ident);
 }
 
 Slice identifier_expression_token_literal(Node* node) {

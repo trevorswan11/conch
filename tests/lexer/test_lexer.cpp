@@ -10,6 +10,7 @@
 extern "C" {
 #include "lexer/lexer.h"
 #include "lexer/token.h"
+#include "util/allocator.h"
 #include "util/mem.h"
 #include "util/status.h"
 }
@@ -42,7 +43,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -88,12 +89,12 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l_accumulator;
-        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l_accumulator)));
         ArrayList* accumulated_tokens = &l_accumulator.token_accumulator;
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -114,7 +115,7 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Numbers and lexer consumer resets") {
     Lexer reseting_lexer;
-    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer)));
+    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer, standard_allocator)));
 
     FileIO dbgio;
     REQUIRE(STATUS_OK(file_io_init(&dbgio, stdin, stdout, stderr)));
@@ -135,7 +136,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -171,7 +172,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -208,7 +209,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -245,7 +246,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -273,7 +274,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -294,7 +295,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -322,7 +323,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -405,7 +406,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -445,7 +446,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -479,7 +480,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -520,7 +521,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);

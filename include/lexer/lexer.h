@@ -5,6 +5,7 @@
 
 #include "lexer/token.h"
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/io.h"
@@ -25,10 +26,12 @@ typedef struct {
 
     HashMap keywords;
     HashMap operators;
+
+    Allocator allocator;
 } Lexer;
 
-TRY_STATUS lexer_init(Lexer* l, const char* input);
-TRY_STATUS lexer_null_init(Lexer* l);
+TRY_STATUS lexer_init(Lexer* l, const char* input, Allocator allocator);
+TRY_STATUS lexer_null_init(Lexer* l, Allocator allocator);
 void       lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.

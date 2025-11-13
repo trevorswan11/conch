@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "util/allocator.h"
 #include "util/mem.h"
 
 Slice slice_from_str_z(const char* start) {
@@ -93,19 +94,24 @@ void swap(void* a, void* b, size_t size) {
     }
 }
 
-char* strdup_z(const char* str) {
+char* strdup_z_allocator(const char* str, memory_alloc_fn alloc) {
     if (!str) {
         return NULL;
     }
-    return strdup_s(str, strlen(str));
+    return strdup_s_allocator(str, strlen(str), alloc);
 }
 
-char* strdup_s(const char* str, size_t size) {
+char* strdup_z(const char* str) {
+    return strdup_z_allocator(str, standard_allocator.memory_alloc);
+}
+
+char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc) {
     if (!str) {
         return NULL;
     }
+    assert(alloc);
 
-    char* copy = malloc(size + 1);
+    char* copy = alloc(size + 1);
     if (!copy) {
         return NULL;
     }
@@ -113,4 +119,8 @@ char* strdup_s(const char* str, size_t size) {
     memcpy(copy, str, size);
     copy[size] = '\0';
     return copy;
+}
+
+char* strdup_s(const char* str, size_t size) {
+    return strdup_s_allocator(str, size, standard_allocator.memory_alloc);
 }

@@ -19,15 +19,16 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-static inline TRY_STATUS _init_keywords(HashMap* keyword_map) {
-    PROPAGATE_IF_ERROR(hash_map_init(keyword_map,
-                                     32,
-                                     sizeof(Slice),
-                                     alignof(Slice),
-                                     sizeof(TokenType),
-                                     alignof(TokenType),
-                                     hash_slice,
-                                     compare_slices));
+static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(keyword_map,
+                                               32,
+                                               sizeof(Slice),
+                                               alignof(Slice),
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               hash_slice,
+                                               compare_slices,
+                                               allocator));
 
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     for (size_t i = 0; i < num_keywords; i++) {
@@ -38,15 +39,16 @@ static inline TRY_STATUS _init_keywords(HashMap* keyword_map) {
     return SUCCESS;
 }
 
-static inline TRY_STATUS _init_operators(HashMap* operator_map) {
-    PROPAGATE_IF_ERROR(hash_map_init(operator_map,
-                                     64,
-                                     sizeof(Slice),
-                                     alignof(Slice),
-                                     sizeof(TokenType),
-                                     alignof(TokenType),
-                                     hash_slice,
-                                     compare_slices));
+static inline TRY_STATUS _init_operators(HashMap* operator_map, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(operator_map,
+                                               64,
+                                               sizeof(Slice),
+                                               alignof(Slice),
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               hash_slice,
+                                               compare_slices,
+                                               allocator));
 
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     for (size_t i = 0; i < num_operators; i++) {
@@ -57,11 +59,11 @@ static inline TRY_STATUS _init_operators(HashMap* operator_map) {
     return SUCCESS;
 }
 
-TRY_STATUS lexer_init(Lexer* l, const char* input) {
+TRY_STATUS lexer_init(Lexer* l, const char* input, Allocator allocator) {
     if (!input) {
         return NULL_PARAMETER;
     }
-    PROPAGATE_IF_ERROR(lexer_null_init(l));
+    PROPAGATE_IF_ERROR(lexer_null_init(l, allocator));
 
     l->input        = input;
     l->input_length = strlen(input);
@@ -70,16 +72,17 @@ TRY_STATUS lexer_init(Lexer* l, const char* input) {
     return SUCCESS;
 }
 
-TRY_STATUS lexer_null_init(Lexer* l) {
+TRY_STATUS lexer_null_init(Lexer* l, Allocator allocator) {
     if (!l) {
         return NULL_PARAMETER;
     }
+    ASSERT_ALLOCATOR(allocator);
 
     HashMap keywords;
-    PROPAGATE_IF_ERROR(_init_keywords(&keywords));
+    PROPAGATE_IF_ERROR(_init_keywords(&keywords, allocator));
 
     HashMap operators;
-    PROPAGATE_IF_ERROR_DO(_init_operators(&operators), hash_map_deinit(&keywords));
+    PROPAGATE_IF_ERROR_DO(_init_operators(&operators, allocator), hash_map_deinit(&keywords));
 
     ArrayList accumulator;
     PROPAGATE_IF_ERROR_DO(array_list_init(&accumulator, 32, sizeof(Token)), {
@@ -98,6 +101,7 @@ TRY_STATUS lexer_null_init(Lexer* l) {
         .col_no            = 0,
         .keywords          = keywords,
         .operators         = operators,
+        .allocator         = allocator,
     };
 
     return SUCCESS;
@@ -223,15 +227,13 @@ TRY_STATUS lexer_print_tokens(FileIO* io, Lexer* l) {
     Token out;
     for (size_t i = 0; i < accumulated; i++) {
         PROPAGATE_IF_ERROR(array_list_get(list, i, &out));
-        if (fprintf(io->out,
-                    "%s(%.*s) [%zu, %zu]\n",
-                    token_type_name(out.type),
-                    (int)out.slice.length,
-                    out.slice.ptr,
-                    out.line,
-                    out.column) < 0) {
-            return WRITE_ERROR;
-        }
+        PROPAGATE_IF_IO_ERROR(fprintf(io->out,
+                                      "%s(%.*s) [%zu, %zu]\n",
+                                      token_type_name(out.type),
+                                      (int)out.slice.length,
+                                      out.slice.ptr,
+                                      out.line,
+                                      out.column));
     }
     return SUCCESS;
 }

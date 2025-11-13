@@ -15,6 +15,7 @@ extern "C" {
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "parser/parser.h"
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/status.h"
 }
@@ -66,14 +67,14 @@ TEST_CASE("Declarations") {
                             "var y := 10;\n"
                             "var foobar := 838383;";
         Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l)));
 
         AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast)));
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
         Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio)));
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
         REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
 
         std::vector<std::string> expected_errors = {};
@@ -99,14 +100,14 @@ TEST_CASE("Declarations") {
                             "var 838383;\n"
                             "var z := 6";
         Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l)));
 
         AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast)));
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
         Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio)));
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
         REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
 
         std::vector<std::string> expected_errors = {
@@ -128,14 +129,14 @@ TEST_CASE("Declarations") {
                             "const y := 10;\n"
                             "var foobar := 838383;";
         Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l)));
 
         AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast)));
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
         Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio)));
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
         REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
 
         std::vector<std::string> expected_errors = {};
@@ -166,14 +167,14 @@ TEST_CASE("Return statements") {
                             "return 10;\n"
                             "return 993322;";
         Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l)));
 
         AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast)));
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
         Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio)));
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
         REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
 
         std::vector<std::string> expected_errors = {};
@@ -196,14 +197,14 @@ TEST_CASE("Return statements") {
     SECTION("Returns w/o sentinel semicolon") {
         const char* input = "return 5";
         Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         REQUIRE(STATUS_OK(lexer_consume(&l)));
 
         AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast)));
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
         Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio)));
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
         REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
 
         std::vector<std::string> expected_errors = {};

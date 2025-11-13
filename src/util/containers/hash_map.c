@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util/allocator.h"
 #include "util/containers/hash_map.h"
 #include "util/math.h"
 #include "util/mem.h"
@@ -83,14 +84,16 @@ static inline void _hash_map_init_metadatas(HashMap* hm) {
     memset(hm->metadata, 0, sizeof(Metadata) * hm->header->capacity);
 }
 
-TRY_STATUS hash_map_init(HashMap* hm,
-                         size_t   capacity,
-                         size_t   key_size,
-                         size_t   key_align,
-                         size_t   value_size,
-                         size_t   value_align,
-                         Hash (*hash)(const void*),
-                         int (*compare)(const void*, const void*)) {
+TRY_STATUS hash_map_init_allocator(HashMap* hm,
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   size_t   value_size,
+                                   size_t   value_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*),
+                                   Allocator allocator) {
+    ASSERT_ALLOCATOR(allocator);
     if (!hm || !hash || !compare) {
         return NULL_PARAMETER;
     } else if (key_size == 0 || value_size == 0) {
@@ -120,7 +123,7 @@ TRY_STATUS hash_map_init(HashMap* hm,
 
     const size_t total_size =
         header_size + metadata_size + (keys_size + key_align - 1) + (values_size + value_align - 1);
-    void* buffer = calloc(1, total_size);
+    void* buffer = allocator.continuous_alloc(1, total_size);
     if (!buffer) {
         return ALLOCATION_FAILED;
     }
@@ -163,18 +166,39 @@ TRY_STATUS hash_map_init(HashMap* hm,
         .available = capacity,
         .hash      = hash,
         .compare   = compare,
+        .allocator = allocator,
     };
 
     _hash_map_init_metadatas(hm);
     return SUCCESS;
 }
 
+TRY_STATUS hash_map_init(HashMap* hm,
+                         size_t   capacity,
+                         size_t   key_size,
+                         size_t   key_align,
+                         size_t   value_size,
+                         size_t   value_align,
+                         Hash (*hash)(const void*),
+                         int (*compare)(const void*, const void*)) {
+    return hash_map_init_allocator(hm,
+                                   capacity,
+                                   key_size,
+                                   key_align,
+                                   value_size,
+                                   value_align,
+                                   hash,
+                                   compare,
+                                   standard_allocator);
+}
+
 void hash_map_deinit(HashMap* hm) {
     if (!hm || !hm->buffer) {
         return;
     }
+    ASSERT_ALLOCATOR(hm->allocator);
 
-    free(hm->buffer);
+    hm->allocator.free_alloc(hm->buffer);
     hm->buffer    = NULL;
     hm->header    = NULL;
     hm->metadata  = NULL;

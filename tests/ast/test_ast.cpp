@@ -1,5 +1,7 @@
 #include "catch_amalgamated.hpp"
 
+#include <stdlib.h>
+
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/expression.h"
@@ -17,20 +19,23 @@ extern "C" {
 
 TEST_CASE("AST Manual Reconstruction") {
     AST ast;
-    REQUIRE(STATUS_OK(ast_init(&ast)));
+    REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
     IdentifierExpression* ident_lhs;
-    REQUIRE(STATUS_OK(identifier_expression_create(slice_from_str_z("my_var"), &ident_lhs)));
+    REQUIRE(STATUS_OK(
+        identifier_expression_create(slice_from_str_z("my_var"), &ident_lhs, malloc, free)));
 
     IdentifierExpression* ident_rhs;
-    REQUIRE(STATUS_OK(identifier_expression_create(slice_from_str_z("another_var"), &ident_rhs)));
+    REQUIRE(STATUS_OK(
+        identifier_expression_create(slice_from_str_z("another_var"), &ident_rhs, malloc, free)));
 
     DeclStatement* decl;
     REQUIRE(STATUS_OK(decl_statement_create(
         token_init(TokenType::VAR, KEYWORD_VAR.slice.ptr, KEYWORD_VAR.slice.length, 0, 0),
         ident_lhs,
         (Expression*)ident_rhs,
-        &decl)));
+        &decl,
+        malloc)));
 
     Statement* stmt = (Statement*)decl;
     array_list_push_assume_capacity(&ast.statements, &stmt);

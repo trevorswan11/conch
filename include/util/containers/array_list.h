@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "util/allocator.h"
 #include "util/status.h"
 
 // An 'owning' dynamic array, data is type erased.
@@ -14,8 +15,12 @@ typedef struct {
     size_t item_size;
     size_t capacity;
     size_t length;
+
+    Allocator allocator;
 } ArrayList;
 
+TRY_STATUS
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator);
 TRY_STATUS array_list_init(ArrayList* a, size_t capacity, size_t item_size);
 void       array_list_deinit(ArrayList* a);
 

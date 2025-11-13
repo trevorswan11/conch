@@ -1,6 +1,8 @@
 #pragma once
 
+#include <assert.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define GENERATE_ENUM(ENUM) ENUM
 #define GENERATE_STRING(STRING) #STRING
@@ -52,24 +54,56 @@
         }                                     \
     } while (0)
 
+// Propagates the `GENERAL_IO` status code if the io expression evaluates to a negative int.
+#define PROPAGATE_IF_IO_ERROR(io_expr) \
+    do {                               \
+        if (io_expr < 0) {             \
+            return GENERAL_IO_ERROR;   \
+        }                              \
+    } while (0)
+
 // Allows a variable to be left unused.
 //
 // For unused error codes, see `UNREACHABLE_ERROR` or `IGNORE_STATUS`.
 #define MAYBE_UNUSED(x) ((void)(x))
 
+// Prints to stderr without considering the chance of IO failure.
+void debug_print(const char* format, ...);
+
 #if defined(__GNUC__) || defined(__clang__)
-#define UNREACHABLE_IMPL __builtin_unreachable()
+#define UNREACHABLE_IMPL         \
+    do {                         \
+        assert(0);               \
+        __builtin_unreachable(); \
+    } while (0)
+#elif defined(_MSC_VER)
+#define UNREACHABLE_IMPL \
+    do {                 \
+        assert(0);       \
+        __assume(0);     \
+    } while (0)
 #else
 #define UNREACHABLE_IMPL abort()
 #endif
 
-// Prints to stderr without considering the chance of IO failure.
-void debug_print(const char* format, ...);
-
-#define UNREACHABLE_ERROR(expr)                                                           \
+// This raises an assertion when possible, only if the passed expression is not Status::SUCCESS.
+//
+// A debug message is also emitted with the file and approximate line number.
+#define UNREACHABLE_IF_ERROR(expr)                                                        \
     do {                                                                                  \
         const Status _stat_obfuscated = expr;                                             \
         if (_stat_obfuscated != SUCCESS) {                                                \
+            debug_print("Panic: reached unreachable code (%s:%d)\n", __FILE__, __LINE__); \
+            UNREACHABLE_IMPL;                                                             \
+        }                                                                                 \
+    } while (0)
+
+// This raises an assertion when possible, only if the passed expression is true.
+//
+// A debug message is also emitted with the file and approximate line number.
+#define UNREACHABLE_IF(expr)                                                              \
+    do {                                                                                  \
+        if (expr) {                                                                       \
             debug_print("Panic: reached unreachable code (%s:%d)\n", __FILE__, __LINE__); \
             UNREACHABLE_IMPL;                                                             \
         }                                                                                 \
@@ -80,7 +114,7 @@ void debug_print(const char* format, ...);
         PROCESS(NULL_PARAMETER), PROCESS(VIOLATED_INVARIANT), PROCESS(INDEX_OUT_OF_BOUNDS),   \
         PROCESS(ELEMENT_MISSING), PROCESS(ZERO_ITEM_SIZE), PROCESS(ZERO_ITEM_ALIGN),          \
         PROCESS(EMPTY), PROCESS(INTEGER_OVERFLOW), PROCESS(READ_ERROR), PROCESS(WRITE_ERROR), \
-        PROCESS(TYPE_MISMATCH), PROCESS(UNEXPECTED_TOKEN)
+        PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH), PROCESS(UNEXPECTED_TOKEN)
 
 typedef enum Status {
     FOREACH_STATUS(GENERATE_ENUM),
@@ -100,6 +134,8 @@ void status_ignore(Status status);
 
 #if defined(__GNUC__) || defined(__clang__)
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define WARN_UNUSED_RESULT _Check_return_
 #else
 #define WARN_UNUSED_RESULT
 #endif
@@ -107,6 +143,8 @@ void status_ignore(Status status);
 // Custom function return type.
 //
 // Forces function to return a status code, which the caller must contend with.
+// - On GCC/Clang, this is a compile error with '-Wall -Werror'
+// - On MSVC, this is only detected through static analysis
 #define TRY_STATUS WARN_UNUSED_RESULT Status
 
 #define IGNORE_STATUS(expr)                   \

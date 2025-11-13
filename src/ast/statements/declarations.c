@@ -1,17 +1,21 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "ast/expressions/identifier.h"
 #include "ast/statements/declarations.h"
 
+#include "util/allocator.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
 TRY_STATUS decl_statement_create(Token                 token,
                                  IdentifierExpression* ident,
                                  Expression*           value,
-                                 DeclStatement**       decl_stmt) {
-    DeclStatement* declaration = malloc(sizeof(DeclStatement));
+                                 DeclStatement**       decl_stmt,
+                                 memory_alloc_fn       memory_alloc) {
+    assert(memory_alloc);
+    DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));
     if (!declaration) {
         return ALLOCATION_FAILED;
     }
@@ -34,23 +38,24 @@ TRY_STATUS decl_statement_create(Token                 token,
     return SUCCESS;
 }
 
-void decl_statement_destroy(Node* node) {
+void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
+    assert(free_alloc);
     DeclStatement* d = (DeclStatement*)node;
 
     if (d->ident) {
         Node* n_ident = (Node*)d->ident;
-        n_ident->vtable->destroy(n_ident);
+        n_ident->vtable->destroy(n_ident, free_alloc);
         d->ident = NULL;
     }
 
     if (d->value) {
         Node* n_value = (Node*)d->value;
-        n_value->vtable->destroy(n_value);
+        n_value->vtable->destroy(n_value, free_alloc);
         d->value = NULL;
     }
 
-    free(d);
+    free_alloc(d);
 }
 
 Slice decl_statement_token_literal(Node* node) {

@@ -7,11 +7,17 @@
 #include "lexer/token.h"
 
 #include "ast/ast.h"
+#include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
 #include "util/io.h"
 #include "util/status.h"
+
+typedef TRY_STATUS (*prefix_parse_fn)(Expression**);
+typedef TRY_STATUS (*infix_parse_fn)(Expression*, Expression**);
 
 typedef struct Parser {
     Lexer* lexer;
@@ -19,11 +25,16 @@ typedef struct Parser {
     Token  current_token;
     Token  peek_token;
 
+    HashMap prefix_parse_fns;
+    HashMap infix_parse_fns;
+
     ArrayList errors;
     FileIO*   io;
+
+    Allocator allocator;
 } Parser;
 
-TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io);
+TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator);
 
 // Deinitializes the parser, freeing only its personally allocated data.
 void parser_deinit(Parser* p);

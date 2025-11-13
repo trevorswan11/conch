@@ -1,19 +1,25 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS string_builder_init(StringBuilder* sb, size_t initial_length) {
+TRY_STATUS
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator) {
     if (!sb) {
         return NULL_PARAMETER;
     } else if (initial_length == 0) {
         return EMPTY;
     }
 
-    return array_list_init(&sb->buffer, initial_length, sizeof(char));
+    return array_list_init_allocator(&sb->buffer, initial_length, sizeof(char), allocator);
+}
+
+TRY_STATUS string_builder_init(StringBuilder* sb, size_t initial_length) {
+    return string_builder_init_allocator(sb, initial_length, standard_allocator);
 }
 
 void string_builder_deinit(StringBuilder* sb) {

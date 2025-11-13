@@ -1,14 +1,16 @@
 #pragma once
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct {
     ArrayList statements;
+    Allocator allocator;
 } AST;
 
-TRY_STATUS ast_init(AST* ast);
+TRY_STATUS ast_init(AST* ast, Allocator allocator);
 void       ast_deinit(AST* ast);
 
 // Reconstructs the original source code from the AST.

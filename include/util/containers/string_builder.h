@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -11,6 +12,8 @@ typedef struct {
     ArrayList buffer;
 } StringBuilder;
 
+TRY_STATUS
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator);
 TRY_STATUS string_builder_init(StringBuilder* sb, size_t initial_length);
 void       string_builder_deinit(StringBuilder* sb);
 TRY_STATUS string_builder_append(StringBuilder* sb, char byte);

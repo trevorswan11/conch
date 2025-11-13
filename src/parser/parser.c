@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <stdalign.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "parser/parser.h"
@@ -12,26 +14,60 @@
 #include "ast/statements/declarations.h"
 #include "ast/statements/statement.h"
 
+#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
+#include "util/hash.h"
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io) {
+HASH_INTEGER_FN(uint32_t)
+COMPARE_INTEGER_FN(int32_t)
+
+TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     if (!p || !l || !io) {
         return NULL_PARAMETER;
     }
 
+    HashMap prefix_functions;
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(&prefix_functions,
+                                               64,
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               sizeof(prefix_parse_fn),
+                                               alignof(prefix_parse_fn),
+                                               hash_uint32_t_s,
+                                               compare_int32_t,
+                                               allocator));
+
+    HashMap infix_functions;
+    PROPAGATE_IF_ERROR_DO(hash_map_init_allocator(&infix_functions,
+                                                  64,
+                                                  sizeof(TokenType),
+                                                  alignof(TokenType),
+                                                  sizeof(infix_parse_fn),
+                                                  alignof(infix_parse_fn),
+                                                  hash_uint32_t_s,
+                                                  compare_int32_t,
+                                                  allocator),
+                          hash_map_deinit(&prefix_functions));
+
     ArrayList errors;
-    PROPAGATE_IF_ERROR(array_list_init(&errors, 10, sizeof(MutSlice)));
+    PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator), {
+        hash_map_deinit(&prefix_functions);
+        hash_map_deinit(&infix_functions);
+    });
 
     *p = (Parser){
-        .lexer         = l,
-        .lexer_index   = 0,
-        .current_token = token_init(END, "", 0, 0, 0),
-        .peek_token    = token_init(END, "", 0, 0, 0),
-        .errors        = errors,
-        .io            = io,
+        .lexer            = l,
+        .lexer_index      = 0,
+        .current_token    = token_init(END, "", 0, 0, 0),
+        .peek_token       = token_init(END, "", 0, 0, 0),
+        .prefix_parse_fns = prefix_functions,
+        .infix_parse_fns  = infix_functions,
+        .errors           = errors,
+        .io               = io,
+        .allocator        = allocator,
     };
 
     // Read twice to set current and peek
@@ -41,19 +77,24 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io) {
 }
 
 void parser_deinit(Parser* p) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
     MutSlice allocated;
     for (size_t i = 0; i < p->errors.length; i++) {
-        UNREACHABLE_ERROR(array_list_get(&p->errors, i, &allocated));
-        free(allocated.ptr);
+        UNREACHABLE_IF_ERROR(array_list_get(&p->errors, i, &allocated));
+        p->allocator.free_alloc(allocated.ptr);
     }
 
     array_list_deinit(&p->errors);
+    hash_map_deinit(&p->prefix_parse_fns);
+    hash_map_deinit(&p->infix_parse_fns);
 }
 
 TRY_STATUS parser_consume(Parser* p, AST* ast) {
     if (!p || !p->lexer || !p->io || !ast) {
         return NULL_PARAMETER;
     }
+    ASSERT_ALLOCATOR(ast->allocator);
 
     p->lexer_index   = 0;
     p->current_token = token_init(END, "", 0, 0, 0);
@@ -70,7 +111,8 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
     while (!parser_current_token_is(p, END)) {
         PROPAGATE_IF_ERROR_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
         if (stmt) {
-            PROPAGATE_IF_ERROR(array_list_push(&ast->statements, &stmt));
+            PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt),
+                                  ast->allocator.free_alloc(stmt));
         }
         IGNORE_STATUS(parser_next_token(p));
     }
@@ -112,9 +154,10 @@ TRY_STATUS parser_expect_peek(Parser* p, TokenType t) {
 
 TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
 
     StringBuilder builder;
-    PROPAGATE_IF_ERROR(string_builder_init(&builder, 60));
+    PROPAGATE_IF_ERROR(string_builder_init_allocator(&builder, 60, p->allocator));
 
     // Genreal token information
     const char start[] = "Expected token ";
