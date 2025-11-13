@@ -16,9 +16,6 @@
 #include "util/io.h"
 #include "util/status.h"
 
-typedef TRY_STATUS (*prefix_parse_fn)(Expression**);
-typedef TRY_STATUS (*infix_parse_fn)(Expression*, Expression**);
-
 typedef struct Parser {
     Lexer* lexer;
     size_t lexer_index;

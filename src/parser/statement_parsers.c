@@ -24,7 +24,7 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     PROPAGATE_IF_ERROR_DO_IS(parser_expect_peek(p, IDENT),
                              decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc),
                              UNEXPECTED_TOKEN);
-    PROPAGATE_IF_ERROR_DO(identifier_expression_create(p->current_token.slice,
+    PROPAGATE_IF_ERROR_DO(identifier_expression_create(p->current_token,
                                                        &decl_stmt->ident,
                                                        p->allocator.memory_alloc,
                                                        p->allocator.free_alloc),

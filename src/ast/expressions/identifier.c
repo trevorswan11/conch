@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "lexer/token.h"
+
 #include "ast/expressions/identifier.h"
 
 #include "util/allocator.h"
@@ -9,7 +11,7 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS identifier_expression_create(Slice                  name,
+TRY_STATUS identifier_expression_create(Token                  token,
                                         IdentifierExpression** ident_expr,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc) {
@@ -19,7 +21,7 @@ TRY_STATUS identifier_expression_create(Slice                  name,
         return ALLOCATION_FAILED;
     }
 
-    char* mut_name = strdup_s_allocator(name.ptr, name.length, memory_alloc);
+    char* mut_name = strdup_s_allocator(token.slice.ptr, token.slice.length, memory_alloc);
     if (!mut_name) {
         free_alloc(ident);
         return ALLOCATION_FAILED;
@@ -39,6 +41,7 @@ TRY_STATUS identifier_expression_create(Slice                  name,
                 .ptr    = mut_name,
                 .length = strlen(mut_name),
             },
+        .token_type = token.type,
     };
 
     *ident_expr = ident;
@@ -57,7 +60,8 @@ Slice identifier_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
     MAYBE_UNUSED(node);
 
-    const char* str = token_type_name(IDENT);
+    IdentifierExpression* ident = (IdentifierExpression*)node;
+    const char*           str   = token_type_name(ident->token_type);
     return (Slice){
         .ptr    = str,
         .length = strlen(str),

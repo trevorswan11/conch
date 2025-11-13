@@ -46,6 +46,10 @@ typedef enum TokenType {
     FOREACH_TOKEN(GENERATE_ENUM),
 } TokenType;
 
+static const TokenType TOKEN_TYPES[] = {
+    FOREACH_TOKEN(GENERATE_ENUM),
+};
+
 static const char* const TOKEN_TYPE_NAMES[] = {
     FOREACH_TOKEN(GENERATE_STRING),
 };

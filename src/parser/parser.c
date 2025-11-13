@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "parser/expression_parsers.h"
 #include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
@@ -24,13 +25,10 @@
 HASH_INTEGER_FN(uint32_t)
 COMPARE_INTEGER_FN(int32_t)
 
-TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
-    if (!p || !l || !io) {
-        return NULL_PARAMETER;
-    }
+#define CAST_FN (const void*)(uintptr_t)
 
-    HashMap prefix_functions;
-    PROPAGATE_IF_ERROR(hash_map_init_allocator(&prefix_functions,
+static inline TRY_STATUS _init_prefix(HashMap* prefix_map, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(prefix_map,
                                                64,
                                                sizeof(TokenType),
                                                alignof(TokenType),
@@ -40,16 +38,36 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
                                                compare_int32_t,
                                                allocator));
 
+    hash_map_put_assume_capacity(
+        prefix_map, &TOKEN_TYPES[IDENT], CAST_FN identifier_expression_parse);
+
+    return SUCCESS;
+}
+
+static inline TRY_STATUS _init_infix(HashMap* infix_map, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(infix_map,
+                                               64,
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               sizeof(infix_parse_fn),
+                                               alignof(infix_parse_fn),
+                                               hash_uint32_t_s,
+                                               compare_int32_t,
+                                               allocator));
+    return SUCCESS;
+}
+
+TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
+    if (!p || !l || !io) {
+        return NULL_PARAMETER;
+    }
+    ASSERT_ALLOCATOR(allocator);
+
+    HashMap prefix_functions;
+    PROPAGATE_IF_ERROR(_init_prefix(&prefix_functions, allocator));
+
     HashMap infix_functions;
-    PROPAGATE_IF_ERROR_DO(hash_map_init_allocator(&infix_functions,
-                                                  64,
-                                                  sizeof(TokenType),
-                                                  alignof(TokenType),
-                                                  sizeof(infix_parse_fn),
-                                                  alignof(infix_parse_fn),
-                                                  hash_uint32_t_s,
-                                                  compare_int32_t,
-                                                  allocator),
+    PROPAGATE_IF_ERROR_DO(_init_infix(&infix_functions, allocator),
                           hash_map_deinit(&prefix_functions));
 
     ArrayList errors;

@@ -22,12 +22,20 @@ TEST_CASE("AST Manual Reconstruction") {
     REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
 
     IdentifierExpression* ident_lhs;
-    REQUIRE(STATUS_OK(
-        identifier_expression_create(slice_from_str_z("my_var"), &ident_lhs, malloc, free)));
+    Slice                 my_literal = slice_from_str_z("my_var");
+    REQUIRE(STATUS_OK(identifier_expression_create(
+        token_init(TokenType::IDENT, my_literal.ptr, my_literal.length, 0, 0),
+        &ident_lhs,
+        malloc,
+        free)));
 
     IdentifierExpression* ident_rhs;
-    REQUIRE(STATUS_OK(
-        identifier_expression_create(slice_from_str_z("another_var"), &ident_rhs, malloc, free)));
+    Slice                 another_literal = slice_from_str_z("another_var");
+    REQUIRE(STATUS_OK(identifier_expression_create(
+        token_init(TokenType::IDENT, another_literal.ptr, another_literal.length, 0, 0),
+        &ident_rhs,
+        malloc,
+        free)));
 
     DeclStatement* decl;
     REQUIRE(STATUS_OK(decl_statement_create(
