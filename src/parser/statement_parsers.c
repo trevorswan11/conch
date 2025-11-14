@@ -6,10 +6,13 @@
 #include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/expression.h"
 #include "ast/statements/return.h"
 #include "ast/statements/statement.h"
 
+#include "parser/expression_parsers.h"
 #include "parser/parser.h"
+#include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
 #include "util/status.h"
@@ -60,5 +63,30 @@ TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
     }
 
     *stmt = ret_stmt;
+    return SUCCESS;
+}
+
+TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+
+    Expression* lhs;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &lhs));
+
+    ExpressionStatement* expr_stmt;
+    PROPAGATE_IF_ERROR_DO(
+        expression_statement_create(p->current_token, lhs, &expr_stmt, p->allocator.memory_alloc), {
+            Node* lhs_node = (Node*)lhs;
+            lhs_node->vtable->destroy(lhs_node, p->allocator.free_alloc);
+        });
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+            Node* lhs_node = (Node*)lhs;
+            lhs_node->vtable->destroy(lhs_node, p->allocator.free_alloc);
+        });
+    }
+
+    *stmt = expr_stmt;
     return SUCCESS;
 }

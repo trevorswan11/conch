@@ -1,4 +1,6 @@
 #include "util/hash.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/hash_set.h"
 #include "util/mem.h"
 
 int compare_string_z(const void* a, const void* b) {
@@ -33,8 +35,8 @@ int compare_mut_slices(const void* a, const void* b) {
     return (int)(sa->length - sb->length);
 }
 
-static inline uint64_t _hash_string_s(const char* str, size_t size) {
-    uint64_t hash = 5381;
+static inline Hash _hash_string_s(const char* str, size_t size) {
+    Hash hash = 5381;
     for (size_t i = 0; i < size; i++) {
         char c = str[i];
         hash   = ((hash << 5) + hash) + c;
@@ -42,17 +44,17 @@ static inline uint64_t _hash_string_s(const char* str, size_t size) {
     return hash;
 }
 
-uint64_t hash_string_z(const void* key) {
+Hash hash_string_z(const void* key) {
     const char* str = (const char*)key;
     return _hash_string_s(str, strlen(str));
 }
 
-uint64_t hash_slice(const void* key) {
+Hash hash_slice(const void* key) {
     const Slice* slice = (const Slice*)key;
     return _hash_string_s(slice->ptr, slice->length);
 }
 
-uint64_t hash_mut_slice(const void* key) {
+Hash hash_mut_slice(const void* key) {
     const MutSlice* slice = (const MutSlice*)key;
     return _hash_string_s(slice->ptr, slice->length);
 }

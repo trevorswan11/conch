@@ -12,7 +12,7 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
+#include "util/containers/hash_set.h"
 #include "util/io.h"
 #include "util/status.h"
 
@@ -22,8 +22,8 @@ typedef struct Parser {
     Token  current_token;
     Token  peek_token;
 
-    HashMap prefix_parse_fns;
-    HashMap infix_parse_fns;
+    HashSet prefix_parse_fns;
+    HashSet infix_parse_fns;
 
     ArrayList errors;
     FileIO*   io;

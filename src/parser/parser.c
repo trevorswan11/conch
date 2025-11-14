@@ -13,10 +13,12 @@
 
 #include "ast/ast.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 #include "util/hash.h"
 #include "util/mem.h"
@@ -27,33 +29,34 @@ COMPARE_INTEGER_FN(int32_t)
 
 #define CAST_FN (const void*)(uintptr_t)
 
-static inline TRY_STATUS _init_prefix(HashMap* prefix_map, Allocator allocator) {
-    PROPAGATE_IF_ERROR(hash_map_init_allocator(prefix_map,
+static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_set_init_allocator(prefix_set,
                                                64,
-                                               sizeof(TokenType),
-                                               alignof(TokenType),
-                                               sizeof(prefix_parse_fn),
-                                               alignof(prefix_parse_fn),
-                                               hash_uint32_t_s,
-                                               compare_int32_t,
+                                               sizeof(PrefixFn),
+                                               alignof(PrefixFn),
+                                               hash_prefix,
+                                               compare_prefix,
                                                allocator));
-
-    hash_map_put_assume_capacity(
-        prefix_map, &TOKEN_TYPES[IDENT], CAST_FN identifier_expression_parse);
+    const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
+    for (size_t i = 0; i < num_prefix; i++) {
+        const PrefixFn fn = PREFIX_FUNCTIONS[i];
+        hash_set_put_assume_capacity(prefix_set, &fn);
+    }
 
     return SUCCESS;
 }
 
-static inline TRY_STATUS _init_infix(HashMap* infix_map, Allocator allocator) {
-    PROPAGATE_IF_ERROR(hash_map_init_allocator(infix_map,
-                                               64,
-                                               sizeof(TokenType),
-                                               alignof(TokenType),
-                                               sizeof(infix_parse_fn),
-                                               alignof(infix_parse_fn),
-                                               hash_uint32_t_s,
-                                               compare_int32_t,
-                                               allocator));
+static inline TRY_STATUS _init_infix(HashSet* infix_set, Allocator allocator) {
+    PROPAGATE_IF_ERROR(hash_set_init_allocator(
+        infix_set, 64, sizeof(InfixFn), alignof(InfixFn), hash_infix, compare_infix, allocator));
+
+    // TODO
+    // const size_t num_infix = sizeof(INFIX_FUNCTIONS) / sizeof(INFIX_FUNCTIONS[0]);
+    // for (size_t i = 0; i < num_infix; i++) {
+    //     const InfixFn fn = INFIX_FUNCTIONS[i];
+    //     hash_set_put_assume_capacity(infix_set, &fn);
+    // }
+
     return SUCCESS;
 }
 
@@ -63,17 +66,17 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     }
     ASSERT_ALLOCATOR(allocator);
 
-    HashMap prefix_functions;
+    HashSet prefix_functions;
     PROPAGATE_IF_ERROR(_init_prefix(&prefix_functions, allocator));
 
-    HashMap infix_functions;
+    HashSet infix_functions;
     PROPAGATE_IF_ERROR_DO(_init_infix(&infix_functions, allocator),
-                          hash_map_deinit(&prefix_functions));
+                          hash_set_deinit(&prefix_functions));
 
     ArrayList errors;
     PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator), {
-        hash_map_deinit(&prefix_functions);
-        hash_map_deinit(&infix_functions);
+        hash_set_deinit(&prefix_functions);
+        hash_set_deinit(&infix_functions);
     });
 
     *p = (Parser){
@@ -104,8 +107,8 @@ void parser_deinit(Parser* p) {
     }
 
     array_list_deinit(&p->errors);
-    hash_map_deinit(&p->prefix_parse_fns);
-    hash_map_deinit(&p->infix_parse_fns);
+    hash_set_deinit(&p->prefix_parse_fns);
+    hash_set_deinit(&p->infix_parse_fns);
 }
 
 TRY_STATUS parser_consume(Parser* p, AST* ast) {
@@ -129,8 +132,10 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
     while (!parser_current_token_is(p, END)) {
         PROPAGATE_IF_ERROR_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
         if (stmt) {
-            PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt),
-                                  ast->allocator.free_alloc(stmt));
+            PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt), {
+                Node* node = (Node*)stmt;
+                node->vtable->destroy(node, p->allocator.free_alloc);
+            });
         }
         IGNORE_STATUS(parser_next_token(p));
     }
@@ -226,7 +231,8 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
         PROPAGATE_IF_ERROR(return_statement_parse(p, (ReturnStatement**)stmt));
         break;
     default:
-        return UNEXPECTED_TOKEN;
+        PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));
+        break;
     }
 
     return SUCCESS;

@@ -11,6 +11,7 @@
 extern "C" {
 #include "ast/ast.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
 #include "lexer/lexer.h"
 #include "lexer/token.h"
@@ -19,6 +20,25 @@ extern "C" {
 #include "util/containers/array_list.h"
 #include "util/status.h"
 }
+
+FileIO stdio = file_io_std();
+
+#define INIT_PARSE_OBJS(input_text)                                      \
+    Lexer l;                                                             \
+    REQUIRE(STATUS_OK(lexer_init(&l, input_text, standard_allocator)));  \
+    REQUIRE(STATUS_OK(lexer_consume(&l)));                               \
+                                                                         \
+    AST ast;                                                             \
+    REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));              \
+                                                                         \
+    Parser p;                                                            \
+    REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator))); \
+    REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+
+#define DEINIT_PARSE_OBJS \
+    parser_deinit(&p);    \
+    ast_deinit(&ast);     \
+    lexer_deinit(&l);
 
 static void check_parse_errors(Parser*                  p,
                                std::vector<std::string> expected_errors,
@@ -59,23 +79,11 @@ static void test_decl_statement(Statement* stmt, bool expect_const, const char* 
 }
 
 TEST_CASE("Declarations") {
-    FileIO stdio;
-    REQUIRE(STATUS_OK(file_io_init(&stdio, stdin, stdout, stderr)));
-
     SECTION("Var statements") {
         const char* input = "var x := 5;\n"
                             "var y := 10;\n"
                             "var foobar := 838383;";
-        Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
-        REQUIRE(STATUS_OK(lexer_consume(&l)));
-
-        AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
-
-        Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+        INIT_PARSE_OBJS(input);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -89,9 +97,7 @@ TEST_CASE("Declarations") {
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
 
-        parser_deinit(&p);
-        ast_deinit(&ast);
-        lexer_deinit(&l);
+        DEINIT_PARSE_OBJS
     }
 
     SECTION("Var statements with errors") {
@@ -99,16 +105,7 @@ TEST_CASE("Declarations") {
                             "var = 10;\n"
                             "var 838383;\n"
                             "var z := 6";
-        Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
-        REQUIRE(STATUS_OK(lexer_consume(&l)));
-
-        AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
-
-        Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+        INIT_PARSE_OBJS(input);
 
         std::vector<std::string> expected_errors = {
             "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
@@ -119,25 +116,14 @@ TEST_CASE("Declarations") {
         check_parse_errors(&p, expected_errors);
         REQUIRE(ast.statements.length == 0);
 
-        parser_deinit(&p);
-        ast_deinit(&ast);
-        lexer_deinit(&l);
+        DEINIT_PARSE_OBJS
     }
 
     SECTION("Var and const statements") {
         const char* input = "var x := 5;\n"
                             "const y := 10;\n"
                             "var foobar := 838383;";
-        Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
-        REQUIRE(STATUS_OK(lexer_consume(&l)));
-
-        AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
-
-        Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+        INIT_PARSE_OBJS(input);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -152,30 +138,16 @@ TEST_CASE("Declarations") {
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
 
-        parser_deinit(&p);
-        ast_deinit(&ast);
-        lexer_deinit(&l);
+        DEINIT_PARSE_OBJS
     }
 }
 
 TEST_CASE("Return statements") {
-    FileIO stdio;
-    REQUIRE(STATUS_OK(file_io_init(&stdio, stdin, stdout, stderr)));
-
     SECTION("Happy returns") {
         const char* input = "return 5;\n"
                             "return 10;\n"
                             "return 993322;";
-        Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
-        REQUIRE(STATUS_OK(lexer_consume(&l)));
-
-        AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
-
-        Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+        INIT_PARSE_OBJS(input);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
@@ -189,29 +161,42 @@ TEST_CASE("Return statements") {
             REQUIRE(slice_equals_str_z(&literal, "return"));
         }
 
-        parser_deinit(&p);
-        ast_deinit(&ast);
-        lexer_deinit(&l);
+        DEINIT_PARSE_OBJS
     }
 
     SECTION("Returns w/o sentinel semicolon") {
         const char* input = "return 5";
-        Lexer       l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
-        REQUIRE(STATUS_OK(lexer_consume(&l)));
-
-        AST ast;
-        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
-
-        Parser p;
-        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+        INIT_PARSE_OBJS(input);
 
         std::vector<std::string> expected_errors = {};
         check_parse_errors(&p, expected_errors, true);
 
-        parser_deinit(&p);
-        ast_deinit(&ast);
-        lexer_deinit(&l);
+        DEINIT_PARSE_OBJS
+    }
+}
+
+TEST_CASE("Identifier Expressions") {
+    SECTION("Single arbitrary identifier") {
+        const char* input = "foobar;";
+        INIT_PARSE_OBJS(input);
+
+        std::vector<std::string> expected_errors = {};
+        check_parse_errors(&p, expected_errors, true);
+
+        REQUIRE(ast.statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast.statements, 0, &stmt)));
+
+        Node* node    = (Node*)stmt;
+        Slice literal = node->vtable->token_literal(node);
+        REQUIRE(slice_equals_str_z(&literal, "foobar"));
+
+        ExpressionStatement*  expr_stmt = (ExpressionStatement*)stmt;
+        IdentifierExpression* ident     = (IdentifierExpression*)expr_stmt->expression;
+        REQUIRE(ident->token_type == TokenType::IDENT);
+        REQUIRE(mut_slice_equals_str_z(&ident->name, "foobar"));
+
+        DEINIT_PARSE_OBJS
     }
 }

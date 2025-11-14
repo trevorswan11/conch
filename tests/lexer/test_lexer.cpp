@@ -356,7 +356,8 @@ TEST_CASE("Advanced literals") {
                             "   x + y;\n"
                             "};\n\n"
                             "var result = add(five, ten); // This is an end of line comment\n"
-                            "var four_and_some = 4.2;";
+                            "var four_and_some = 4.2;\n"
+                            "work;";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::CONST, "const"},
@@ -401,6 +402,8 @@ TEST_CASE("Advanced literals") {
             {TokenType::IDENT, "four_and_some"},
             {TokenType::ASSIGN, "="},
             {TokenType::FLOAT, "4.2"},
+            {TokenType::SEMICOLON, ";"},
+            {TokenType::IDENT, "work"},
             {TokenType::SEMICOLON, ";"},
             {TokenType::END, ""},
         };

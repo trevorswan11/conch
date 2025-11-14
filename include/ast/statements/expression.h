@@ -19,7 +19,7 @@ typedef struct {
 
 TRY_STATUS expression_statement_create(Token                 first_expression_token,
                                        Expression*           expression,
-                                       ExpressionStatement** ret_stmt,
+                                       ExpressionStatement** expr_stmt,
                                        memory_alloc_fn       memory_alloc);
 
 void       expression_statement_destroy(Node* node, free_alloc_fn free_alloc);
