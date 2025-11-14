@@ -24,12 +24,11 @@ const char* precedence_name(Precedence precedence) {
 
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
     assert(p);
-    ASSERT_ALLOCATOR(p->allocator);
 
-    PrefixFn prefix_probe = {p->current_token.type, NULL};
-    SetEntry e;
-    PROPAGATE_IF_ERROR(hash_set_get_entry(&p->prefix_parse_fns, &prefix_probe, &e));
-    PrefixFn prefix = *(PrefixFn*)e.key_ptr;
+    PrefixFn prefix;
+    if (!poll_prefix(p, p->current_token.type, &prefix)) {
+        return ELEMENT_MISSING;
+    }
 
     MAYBE_UNUSED(precedence);
     PROPAGATE_IF_ERROR(prefix.prefix_parse(p, lhs_expression));

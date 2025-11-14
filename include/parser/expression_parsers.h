@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <stdbool.h>
 
 #include "lexer/token.h"
 
@@ -57,6 +58,19 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {IDENT, &identifier_expression_parse},
 };
 
+static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
+    assert(p && prefix);
+
+    SetEntry e;
+    PrefixFn prefix_probe = {type, NULL};
+    if (STATUS_ERR(hash_set_get_entry(&p->prefix_parse_fns, &prefix_probe, &e))) {
+        return false;
+    }
+
+    *prefix = *(PrefixFn*)e.key_ptr;
+    return true;
+}
+
 typedef struct InfixFn {
     TokenType      token_key;
     infix_parse_fn infix_parse;
@@ -77,6 +91,19 @@ static inline int compare_infix(const void* a, const void* b) {
     const InfixFn fn_a = *(const InfixFn*)a;
     const InfixFn fn_b = *(const InfixFn*)b;
     return (int)fn_a.token_key - (int)fn_b.token_key;
+}
+
+static inline bool poll_infix(Parser* p, TokenType type, InfixFn* infix) {
+    assert(p && infix);
+
+    SetEntry e;
+    InfixFn  infix_probe = {type, NULL};
+    if (STATUS_ERR(hash_set_get_entry(&p->infix_parse_fns, &infix_probe, &e))) {
+        return false;
+    }
+
+    *infix = *(InfixFn*)e.key_ptr;
+    return true;
 }
 
 // static const InfixFn INFIX_FUNCTIONS[] = {};

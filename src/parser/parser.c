@@ -24,11 +24,6 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-HASH_INTEGER_FN(uint32_t)
-COMPARE_INTEGER_FN(int32_t)
-
-#define CAST_FN (const void*)(uintptr_t)
-
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
     PROPAGATE_IF_ERROR(hash_set_init_allocator(prefix_set,
                                                64,
