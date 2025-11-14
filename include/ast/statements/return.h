@@ -23,7 +23,6 @@ TRY_STATUS return_statement_create(Expression*       value,
 void       return_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      return_statement_token_literal(Node* node);
 TRY_STATUS return_statement_reconstruct(Node* node, StringBuilder* sb);
-TRY_STATUS return_statement_node(Statement* stmt);
 
 static const StatementVTable RET_VTABLE = {
     .base =
@@ -32,5 +31,4 @@ static const StatementVTable RET_VTABLE = {
             .token_literal = return_statement_token_literal,
             .reconstruct   = return_statement_reconstruct,
         },
-    .statement_node = return_statement_node,
 };

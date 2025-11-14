@@ -92,9 +92,3 @@ TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb) {
     PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
     return SUCCESS;
 }
-
-TRY_STATUS decl_statement_node(Statement* stmt) {
-    ASSERT_STATEMENT(stmt);
-    MAYBE_UNUSED(stmt);
-    return SUCCESS;
-}

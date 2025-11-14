@@ -6,6 +6,7 @@
 #include "ast/ast.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/integer.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/return.h"
 #include "ast/statements/statement.h"
@@ -41,4 +42,11 @@ TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression) {
         p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
     *expression = (Expression*)ident;
     return SUCCESS;
+}
+
+TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) {
+    // TODO: Manual str->int parsing
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
 }

@@ -23,7 +23,6 @@ TRY_STATUS identifier_expression_create(Token                  token,
 void       identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      identifier_expression_token_literal(Node* node);
 TRY_STATUS identifier_expression_reconstruct(Node* node, StringBuilder* sb);
-TRY_STATUS identifier_expression_node(Expression* expr);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =
@@ -32,5 +31,4 @@ static const ExpressionVTable IDENTIFIER_VTABLE = {
             .token_literal = identifier_expression_token_literal,
             .reconstruct   = identifier_expression_reconstruct,
         },
-    .expression_node = identifier_expression_node,
 };

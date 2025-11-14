@@ -54,8 +54,6 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice expression_statement_token_literal(Node* node) {
     ASSERT_NODE(node);
-    MAYBE_UNUSED(node);
-
     ExpressionStatement* e = (ExpressionStatement*)node;
     return e->first_expression_token.slice;
 }
@@ -72,11 +70,5 @@ TRY_STATUS expression_statement_reconstruct(Node* node, StringBuilder* sb) {
         PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, sb));
     }
 
-    return SUCCESS;
-}
-
-TRY_STATUS expression_statement_node(Statement* stmt) {
-    ASSERT_STATEMENT(stmt);
-    MAYBE_UNUSED(stmt);
     return SUCCESS;
 }

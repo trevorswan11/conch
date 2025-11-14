@@ -13,7 +13,6 @@ typedef struct StatementVTable StatementVTable;
 
 struct StatementVTable {
     NodeVTable base;
-    TRY_STATUS (*statement_node)(Statement*);
 };
 
 struct Statement {

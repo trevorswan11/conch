@@ -31,6 +31,7 @@ const char* precedence_name(Precedence precedence);
 
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
 
 typedef struct PrefixFn {
     TokenType       token_key;
@@ -56,6 +57,10 @@ static inline int compare_prefix(const void* a, const void* b) {
 
 static const PrefixFn PREFIX_FUNCTIONS[] = {
     {IDENT, &identifier_expression_parse},
+    {INT_2, &integer_literal_expression_parse},
+    {INT_8, &integer_literal_expression_parse},
+    {INT_10, &integer_literal_expression_parse},
+    {INT_16, &integer_literal_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {

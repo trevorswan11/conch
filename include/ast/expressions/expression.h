@@ -13,7 +13,6 @@ typedef struct ExpressionVTable ExpressionVTable;
 
 struct ExpressionVTable {
     NodeVTable base;
-    TRY_STATUS (*expression_node)(Expression*);
 };
 
 struct Expression {

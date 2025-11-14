@@ -58,7 +58,6 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice identifier_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    MAYBE_UNUSED(node);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
     const char*           str   = token_type_name(ident->token_type);
@@ -76,11 +75,5 @@ TRY_STATUS identifier_expression_reconstruct(Node* node, StringBuilder* sb) {
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_mut_slice(sb, ident->name));
-    return SUCCESS;
-}
-
-TRY_STATUS identifier_expression_node(Expression* expr) {
-    ASSERT_EXPRESSION(expr);
-    MAYBE_UNUSED(expr);
     return SUCCESS;
 }

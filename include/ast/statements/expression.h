@@ -25,7 +25,6 @@ TRY_STATUS expression_statement_create(Token                 first_expression_to
 void       expression_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      expression_statement_token_literal(Node* node);
 TRY_STATUS expression_statement_reconstruct(Node* node, StringBuilder* sb);
-TRY_STATUS expression_statement_node(Statement* stmt);
 
 static const StatementVTable EXPR_VTABLE = {
     .base =
@@ -34,5 +33,4 @@ static const StatementVTable EXPR_VTABLE = {
             .token_literal = expression_statement_token_literal,
             .reconstruct   = expression_statement_reconstruct,
         },
-    .statement_node = expression_statement_node,
 };

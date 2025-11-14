@@ -27,7 +27,6 @@ TRY_STATUS decl_statement_create(Token                 token,
 void       decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      decl_statement_token_literal(Node* node);
 TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb);
-TRY_STATUS decl_statement_node(Statement* stmt);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
@@ -36,5 +35,4 @@ static const StatementVTable DECL_VTABLE = {
             .token_literal = decl_statement_token_literal,
             .reconstruct   = decl_statement_reconstruct,
         },
-    .statement_node = decl_statement_node,
 };
