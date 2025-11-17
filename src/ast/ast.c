@@ -25,6 +25,11 @@ void ast_deinit(AST* ast) {
     }
     ASSERT_ALLOCATOR(ast->allocator);
 
+    ast_free_statements(ast);
+    array_list_deinit(&ast->statements);
+}
+
+void ast_free_statements(AST* ast) {
     Statement* stmt;
     for (size_t i = 0; i < ast->statements.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&ast->statements, i, &stmt));
@@ -33,8 +38,6 @@ void ast_deinit(AST* ast) {
         ASSERT_NODE(node);
         node->vtable->destroy(node, ast->allocator.free_alloc);
     }
-
-    array_list_deinit(&ast->statements);
 }
 
 TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb) {

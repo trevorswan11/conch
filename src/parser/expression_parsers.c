@@ -77,6 +77,7 @@ TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) 
         if (STATUS_ERR(parse_status)) {
             PROPAGATE_IF_ERROR(
                 parser_put_status_error(p, parse_status, current.line, current.column));
+            return parse_status;
         }
 
         IntegerLiteralExpression* integer;
@@ -91,6 +92,7 @@ TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) 
         if (STATUS_ERR(parse_status)) {
             PROPAGATE_IF_ERROR(
                 parser_put_status_error(p, parse_status, current.line, current.column));
+            return parse_status;
         }
 
         UnsignedIntegerLiteralExpression* integer;

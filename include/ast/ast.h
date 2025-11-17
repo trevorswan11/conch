@@ -13,6 +13,8 @@ typedef struct {
 TRY_STATUS ast_init(AST* ast, Allocator allocator);
 void       ast_deinit(AST* ast);
 
+void ast_free_statements(AST* ast);
+
 // Reconstructs the original source code from the AST.
 //
 // The builder is cleared on entry, and freed on error.

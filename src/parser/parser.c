@@ -123,8 +123,8 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
     array_list_clear_retaining_capacity(&p->errors);
 
     // Traverse the tokens and append until exhausted
-    Statement* stmt = NULL;
     while (!parser_current_token_is(p, END)) {
+        Statement* stmt = NULL;
         PROPAGATE_IF_ERROR_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
         if (stmt) {
             PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt), {
@@ -137,6 +137,7 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
 
     // If we encountered any errors, invalidate the tree for now
     if (p->errors.length > 0) {
+        ast_free_statements(ast);
         array_list_clear_retaining_capacity(&ast->statements);
     }
 

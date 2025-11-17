@@ -28,22 +28,27 @@ extern "C" {
 
 FileIO stdio = file_io_std();
 
-#define INIT_PARSE_OBJS(input_text)                                      \
-    Lexer l;                                                             \
-    REQUIRE(STATUS_OK(lexer_init(&l, input_text, standard_allocator)));  \
-    REQUIRE(STATUS_OK(lexer_consume(&l)));                               \
-                                                                         \
-    AST ast;                                                             \
-    REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));              \
-                                                                         \
-    Parser p;                                                            \
-    REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator))); \
-    REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+struct ParserFixture {
+    ParserFixture(const char* input) {
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_consume(&l)));
 
-#define DEINIT_PARSE_OBJS \
-    parser_deinit(&p);    \
-    ast_deinit(&ast);     \
-    lexer_deinit(&l);
+        REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
+
+        REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
+        REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+    }
+
+    ~ParserFixture() {
+        parser_deinit(&p);
+        ast_deinit(&ast);
+        lexer_deinit(&l);
+    }
+
+    Parser p;
+    AST    ast;
+    Lexer  l;
+};
 
 static inline void check_parse_errors(Parser*                  p,
                                       std::vector<std::string> expected_errors,
@@ -86,31 +91,29 @@ test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ide
 
 TEST_CASE("Declarations") {
     SECTION("Var statements") {
-        const char* input = "var x := 5;\n"
-                            "var y := 10;\n"
-                            "var foobar := 838383;";
-        INIT_PARSE_OBJS(input);
+        const char*   input = "var x := 5;\n"
+                              "var y := 10;\n"
+                              "var foobar := 838383;";
+        ParserFixture pf(input);
 
-        check_parse_errors(&p, {}, true);
+        check_parse_errors(&pf.p, {}, true);
 
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
-        REQUIRE(ast.statements.length == expected_identifiers.size());
+        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
-
-        DEINIT_PARSE_OBJS
     }
 
     SECTION("Var statements with errors") {
-        const char* input = "var x 5;\n"
-                            "var = 10;\n"
-                            "var 838383;\n"
-                            "var z := 6";
-        INIT_PARSE_OBJS(input);
+        const char*   input = "var x 5;\n"
+                              "var = 10;\n"
+                              "var 838383;\n"
+                              "var z := 6";
+        ParserFixture pf(input);
 
         std::vector<std::string> expected_errors = {
             "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
@@ -118,74 +121,65 @@ TEST_CASE("Declarations") {
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
         };
 
-        check_parse_errors(&p, expected_errors);
-        REQUIRE(ast.statements.length == 0);
-
-        DEINIT_PARSE_OBJS
+        check_parse_errors(&pf.p, expected_errors);
+        REQUIRE(pf.ast.statements.length == 0);
     }
 
     SECTION("Var and const statements") {
-        const char* input = "var x := 5;\n"
-                            "const y := 10;\n"
-                            "var foobar := 838383;";
-        INIT_PARSE_OBJS(input);
+        const char*   input = "var x := 5;\n"
+                              "const y := 10;\n"
+                              "var foobar := 838383;";
+        ParserFixture pf(input);
 
-        check_parse_errors(&p, {}, true);
+        check_parse_errors(&pf.p, {}, true);
 
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
         std::vector<bool>        is_const             = {false, true, false};
-        REQUIRE(ast.statements.length == expected_identifiers.size());
+        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
-
-        DEINIT_PARSE_OBJS
     }
 }
 
 TEST_CASE("Return statements") {
     SECTION("Happy returns") {
-        const char* input = "return 5;\n"
-                            "return 10;\n"
-                            "return 993322;";
-        INIT_PARSE_OBJS(input);
+        const char*   input = "return 5;\n"
+                              "return 10;\n"
+                              "return 993322;";
+        ParserFixture pf(input);
 
-        check_parse_errors(&p, {}, true);
-        REQUIRE(ast.statements.length == 3);
+        check_parse_errors(&pf.p, {}, true);
+        REQUIRE(pf.ast.statements.length == 3);
 
         Statement* stmt;
-        for (size_t i = 0; i < ast.statements.length; i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast.statements, i, &stmt)));
+        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
             Slice literal = stmt->base.vtable->token_literal((Node*)stmt);
             REQUIRE(slice_equals_str_z(&literal, "return"));
         }
-
-        DEINIT_PARSE_OBJS
     }
 
     SECTION("Returns w/o sentinel semicolon") {
-        const char* input = "return 5";
-        INIT_PARSE_OBJS(input);
-
-        check_parse_errors(&p, {}, true);
-
-        DEINIT_PARSE_OBJS
+        const char*   input = "return 5";
+        ParserFixture pf(input);
+        check_parse_errors(&pf.p, {}, true);
     }
 }
 
 TEST_CASE("Identifier Expressions") {
     SECTION("Single arbitrary identifier") {
-        const char* input = "foobar;";
-        INIT_PARSE_OBJS(input);
+        const char*   input = "foobar;";
+        ParserFixture pf(input);
 
-        check_parse_errors(&p, {}, true);
-        REQUIRE(ast.statements.length == 1);
+        check_parse_errors(&pf.p, {}, true);
+        REQUIRE(pf.ast.statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast.statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
 
         Node* node    = (Node*)stmt;
         Slice literal = node->vtable->token_literal(node);
@@ -195,21 +189,19 @@ TEST_CASE("Identifier Expressions") {
         IdentifierExpression* ident     = (IdentifierExpression*)expr_stmt->expression;
         REQUIRE(ident->token_type == TokenType::IDENT);
         REQUIRE(mut_slice_equals_str_z(&ident->name, "foobar"));
-
-        DEINIT_PARSE_OBJS
     }
 }
 
 template <typename T>
 static inline void
 test_number_expression(const char* input, const char* expected_literal, T expected_value) {
-    INIT_PARSE_OBJS(input)
+    ParserFixture pf(input);
 
-    check_parse_errors(&p, {}, true);
-    REQUIRE(ast.statements.length == 1);
+    check_parse_errors(&pf.p, {}, true);
+    REQUIRE(pf.ast.statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast.statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
 
     ExpressionStatement* expr = (ExpressionStatement*)stmt;
 
@@ -234,8 +226,6 @@ test_number_expression(const char* input, const char* expected_literal, T expect
     } else {
         REQUIRE(false);
     }
-
-    DEINIT_PARSE_OBJS
 }
 
 TEST_CASE("Number-based expressions") {
@@ -247,13 +237,9 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Signed integer overflow") {
-        const char* input = "0xFFFFFFFFFFFFFFFF";
-        INIT_PARSE_OBJS(input)
-
-        check_parse_errors(&p, {"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
-        REQUIRE(1 == 1);
-
-        DEINIT_PARSE_OBJS
+        const char*   input = "0xFFFFFFFFFFFFFFFF";
+        ParserFixture pf(input);
+        check_parse_errors(&pf.p, {"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
     }
 
     SECTION("Unsigned integer bases") {
@@ -267,13 +253,9 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Unsigned integer overflow") {
-        const char* input = "0x10000000000000000u";
-        INIT_PARSE_OBJS(input)
-
-        check_parse_errors(&p, {"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
-        REQUIRE(1 == 1);
-
-        DEINIT_PARSE_OBJS
+        const char*   input = "0x10000000000000000u";
+        ParserFixture pf(input);
+        check_parse_errors(&pf.p, {"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
     }
 
     SECTION("Floating points") {
