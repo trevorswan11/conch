@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <errno.h>
+#include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -58,6 +60,8 @@ TRY_STATUS strntod(const char*     str,
                    double*         value,
                    memory_alloc_fn memory_alloc,
                    free_alloc_fn   free_alloc) {
+    setlocale(LC_NUMERIC, "C");
+
     assert(memory_alloc && free_alloc);
     char* buf = memory_alloc(n + 1);
     if (!buf) {
@@ -71,8 +75,10 @@ TRY_STATUS strntod(const char*     str,
     errno         = 0;
     double result = strtod(buf, &endptr);
 
+    char end = *endptr;
     free_alloc(buf);
-    if (*endptr != '\0') {
+
+    if (end != '\0') {
         return MALFORMED_FLOAT_STR;
     } else if (errno == ERANGE) {
         return FLOAT_OVERFLOW;
