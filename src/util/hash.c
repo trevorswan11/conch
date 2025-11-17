@@ -1,6 +1,4 @@
 #include "util/hash.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/hash_set.h"
 #include "util/mem.h"
 
 int compare_string_z(const void* a, const void* b) {

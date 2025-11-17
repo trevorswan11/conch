@@ -5,9 +5,9 @@
 #include <stdint.h>
 
 #include "util/allocator.h"
+#include "util/hash.h"
 #include "util/status.h"
 
-typedef uint64_t Hash;
 struct Metadata;
 
 static const size_t HASH_SET_MAX_LOAD_PERCENTAGE = 80;

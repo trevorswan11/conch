@@ -8,6 +8,7 @@
 
 #include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
+#include "util/hash.h"
 #include "util/math.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -96,9 +97,9 @@ TRY_STATUS hash_set_init_allocator(HashSet* hs,
 
     // Safety checks before allocating for overflow guard
     if (capacity > SIZE_MAX / key_size) {
-        return INTEGER_OVERFLOW;
+        return SIZE_OVERFLOW;
     } else if (metadata_size > SIZE_MAX - header_size) {
-        return INTEGER_OVERFLOW;
+        return SIZE_OVERFLOW;
     }
 
     const size_t total_size = header_size + metadata_size + (keys_size + key_align - 1);

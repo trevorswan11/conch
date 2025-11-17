@@ -1,9 +1,9 @@
-#include <stdlib.h>
-
+#include <assert.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lexer/keywords.h"
@@ -16,12 +16,14 @@
 #include "util/containers/hash_map.h"
 #include "util/hash.h"
 #include "util/io.h"
+#include "util/math.h"
 #include "util/mem.h"
 #include "util/status.h"
 
 static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocator) {
+    const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     PROPAGATE_IF_ERROR(hash_map_init_allocator(keyword_map,
-                                               32,
+                                               num_keywords,
                                                sizeof(Slice),
                                                alignof(Slice),
                                                sizeof(TokenType),
@@ -30,7 +32,6 @@ static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocato
                                                compare_slices,
                                                allocator));
 
-    const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     for (size_t i = 0; i < num_keywords; i++) {
         const Keyword keyword = ALL_KEYWORDS[i];
         hash_map_put_assume_capacity(keyword_map, &keyword.slice, &keyword.type);
@@ -40,8 +41,9 @@ static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocato
 }
 
 static inline TRY_STATUS _init_operators(HashMap* operator_map, Allocator allocator) {
+    const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     PROPAGATE_IF_ERROR(hash_map_init_allocator(operator_map,
-                                               64,
+                                               num_operators,
                                                sizeof(Slice),
                                                alignof(Slice),
                                                sizeof(TokenType),
@@ -50,7 +52,6 @@ static inline TRY_STATUS _init_operators(HashMap* operator_map, Allocator alloca
                                                compare_slices,
                                                allocator));
 
-    const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     for (size_t i = 0; i < num_operators; i++) {
         const Operator op = ALL_OPERATORS[i];
         hash_map_put_assume_capacity(operator_map, &op.slice, &op.type);
@@ -276,11 +277,11 @@ Slice lexer_read_identifier(Lexer* l) {
 
 static inline bool is_valid_digit(char c, bool is_hex, bool is_bin, bool is_oct) {
     if (is_hex) {
-        return (is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+        return is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     } else if (is_bin) {
-        return (c == '0' || c == '1');
+        return c == '0' || c == '1';
     } else if (is_oct) {
-        return (c >= '0' && c <= '7');
+        return c >= '0' && c <= '7';
     }
 
     return is_digit(c);
@@ -289,10 +290,11 @@ static inline bool is_valid_digit(char c, bool is_hex, bool is_bin, bool is_oct)
 Token lexer_read_number(Lexer* l) {
     assert(l->current_byte != '.');
 
-    const size_t start          = l->position;
-    const size_t start_line     = l->line_no;
-    const size_t start_col      = l->col_no;
-    bool         passed_decimal = false;
+    const size_t start           = l->position;
+    const size_t start_line      = l->line_no;
+    const size_t start_col       = l->col_no;
+    bool         passed_decimal  = false;
+    bool         passed_exponent = false;
     bool         is_hex = false, is_bin = false, is_oct = false;
 
     // Detect numeric prefix
@@ -314,20 +316,60 @@ Token lexer_read_number(Lexer* l) {
     }
 
     // Consume digits and handle dot/range rules
-    while (is_valid_digit(l->current_byte, is_hex, is_bin, is_oct) ||
-           (!is_hex && !is_bin && !is_oct && l->current_byte == '.')) {
-        if (l->current_byte == '.') {
-            // Stop consuming if we might be entering a dot dot adjacent operator
-            if (l->peek_position < l->input_length && l->input[l->peek_position] == '.') {
+    while (true) {
+        char c = l->current_byte;
+
+        // Exponent handling defaults to floats for simplicity
+        if (!is_hex && !is_bin && !is_oct && !passed_exponent && (c == 'e' || c == 'E')) {
+            size_t p = l->peek_position;
+            if (p >= l->input_length)
                 break;
-            } else if (passed_decimal) {
+
+            char next = l->input[p];
+            if (next == '+' || next == '-') {
+                p++;
+                if (p >= l->input_length)
+                    break;
+                next = l->input[p];
+            }
+
+            if (!is_digit(next)) {
                 break;
             }
 
-            passed_decimal = true;
+            passed_exponent = true;
+            lexer_read_char(l);
+
+            if (l->current_byte == '+' || l->current_byte == '-') {
+                lexer_read_char(l);
+            }
+
+            while (is_digit(l->current_byte)) {
+                lexer_read_char(l);
+            }
+
+            continue;
         }
 
-        lexer_read_char(l);
+        // Fractional part
+        if (!is_hex && !is_bin && !is_oct && c == '.') {
+            if (l->peek_position < l->input_length && l->input[l->peek_position] == '.') {
+                break;
+            }
+            if (passed_decimal)
+                break;
+            passed_decimal = true;
+            lexer_read_char(l);
+            continue;
+        }
+
+        // Normal digit
+        if (is_valid_digit(c, is_hex, is_bin, is_oct)) {
+            lexer_read_char(l);
+            continue;
+        }
+
+        break;
     }
 
     // Quick non-base-10 length validation
@@ -335,6 +377,15 @@ Token lexer_read_number(Lexer* l) {
         if (l->position - start <= 2) {
             return token_init(
                 ILLEGAL, &l->input[start], l->position - start, start_line, start_col);
+        }
+    }
+
+    bool has_unsigned_suffix = false;
+    if (!(passed_decimal || passed_exponent) && l->position < l->input_length) {
+        char c = l->current_byte;
+        if (c == 'u' || c == 'U') {
+            has_unsigned_suffix = true;
+            lexer_read_char(l);
         }
     }
 
@@ -353,17 +404,17 @@ Token lexer_read_number(Lexer* l) {
     }
 
     // Determine the input type
-    if (passed_decimal) {
+    if (passed_decimal || passed_exponent) {
         type = FLOAT;
     } else {
         if (is_hex) {
-            type = INT_16;
+            type = has_unsigned_suffix ? UINT_16 : INT_16;
         } else if (is_bin) {
-            type = INT_2;
+            type = has_unsigned_suffix ? UINT_2 : INT_2;
         } else if (is_oct) {
-            type = INT_8;
+            type = has_unsigned_suffix ? UINT_8 : INT_8;
         } else {
-            type = INT_10;
+            type = has_unsigned_suffix ? UINT_10 : INT_10;
         }
     }
 

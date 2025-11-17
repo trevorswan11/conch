@@ -36,7 +36,7 @@ TEST_CASE("Malformed set usage") {
 
     // Check capacity overflow safety guard
     REQUIRE(hash_set_init(&hs, SIZE_MAX / 2, 3, alignof(K), hash_uint16_t_u, compare_uint16_t) ==
-            Status::INTEGER_OVERFLOW);
+            Status::SIZE_OVERFLOW);
 
     // Helpers that check self and buffer initialization
     REQUIRE(hash_set_ensure_total_capacity(NULL, 10) == Status::NULL_PARAMETER);

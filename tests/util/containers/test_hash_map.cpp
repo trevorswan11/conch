@@ -79,7 +79,7 @@ TEST_CASE("Malformed map usage") {
                           sizeof(V),
                           alignof(V),
                           hash_uint16_t_u,
-                          compare_uint16_t) == Status::INTEGER_OVERFLOW);
+                          compare_uint16_t) == Status::SIZE_OVERFLOW);
     REQUIRE(hash_map_init(&hm,
                           SIZE_MAX / 8,
                           sizeof(K),
@@ -87,7 +87,7 @@ TEST_CASE("Malformed map usage") {
                           9,
                           alignof(V),
                           hash_uint16_t_u,
-                          compare_uint16_t) == Status::INTEGER_OVERFLOW);
+                          compare_uint16_t) == Status::SIZE_OVERFLOW);
 
     REQUIRE(hash_map_ensure_total_capacity(NULL, 10) == Status::NULL_PARAMETER);
     hash_map_deinit(NULL);

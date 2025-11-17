@@ -121,13 +121,19 @@ TEST_CASE("Numbers and lexer consumer resets") {
     REQUIRE(STATUS_OK(file_io_init(&dbgio, stdin, stdout, stderr)));
 
     SECTION("Correct base-10 ints and floats") {
-        const char* input = "0 123 3.14 42.0";
+        const char* input = "0 123 3.14 42.0 1e20 1.e-3 2.3901E4 1e.";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::INT_10, "0"},
             {TokenType::INT_10, "123"},
             {TokenType::FLOAT, "3.14"},
             {TokenType::FLOAT, "42.0"},
+            {TokenType::FLOAT, "1e20"},
+            {TokenType::FLOAT, "1.e-3"},
+            {TokenType::FLOAT, "2.3901E4"},
+            {TokenType::INT_10, "1"},
+            {TokenType::IDENT, "e"},
+            {TokenType::DOT, "."},
             {TokenType::END, ""},
         };
 
@@ -153,14 +159,16 @@ TEST_CASE("Numbers and lexer consumer resets") {
         lexer_deinit(&l);
     }
 
-    SECTION("Integer variants") {
-        const char* input = "0b1010 0O17 42 0x2A 0b 0x 0o";
+    SECTION("Signed integer variants") {
+        const char* input = "0b1010 0o17 0O17 42 0x2A 0X2A 0b 0x 0o";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::INT_2, "0b1010"},
+            {TokenType::INT_8, "0o17"},
             {TokenType::INT_8, "0O17"},
             {TokenType::INT_10, "42"},
             {TokenType::INT_16, "0x2A"},
+            {TokenType::INT_16, "0X2A"},
             {TokenType::ILLEGAL, "0b"},
             {TokenType::ILLEGAL, "0x"},
             {TokenType::ILLEGAL, "0o"},
@@ -189,8 +197,51 @@ TEST_CASE("Numbers and lexer consumer resets") {
         lexer_deinit(&l);
     }
 
+    SECTION("Unsigned integer variants") {
+        const char* input = "0b1010u 0o17u 0O17u 42u 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou";
+
+        std::vector<ExpectedToken> expecteds = {
+            {TokenType::UINT_2, "0b1010u"},
+            {TokenType::UINT_8, "0o17u"},
+            {TokenType::UINT_8, "0O17u"},
+            {TokenType::UINT_10, "42u"},
+            {TokenType::UINT_16, "0x2AU"},
+            {TokenType::UINT_16, "0X2Au"},
+            {TokenType::UINT_10, "123u"},
+            {TokenType::IDENT, "foo"},
+            {TokenType::ILLEGAL, "0b"},
+            {TokenType::IDENT, "u"},
+            {TokenType::ILLEGAL, "0x"},
+            {TokenType::IDENT, "u"},
+            {TokenType::ILLEGAL, "0o"},
+            {TokenType::IDENT, "u"},
+            {TokenType::END, ""},
+        };
+
+        reseting_lexer.input        = input;
+        reseting_lexer.input_length = strlen(input);
+        REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
+
+        Lexer l;
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+
+        for (size_t i = 0; i < expecteds.size(); i++) {
+            const auto& [t, s] = expecteds[i];
+            Token token        = lexer_next_token(&l);
+            Token accumulated_token;
+            REQUIRE(STATUS_OK(
+                array_list_get(&reseting_lexer.token_accumulator, i, &accumulated_token)));
+
+            REQUIRE(t == token.type);
+            REQUIRE(t == accumulated_token.type);
+            REQUIRE(slice_equals_str_z(&token.slice, s));
+            REQUIRE(slice_equals_str_z(&accumulated_token.slice, s));
+        }
+        lexer_deinit(&l);
+    }
+
     SECTION("Illegal Floats") {
-        const char* input = ".0 1..2 3.4.5";
+        const char* input = ".0 1..2 3.4.5 3.4u";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::DOT, "."},
@@ -201,6 +252,8 @@ TEST_CASE("Numbers and lexer consumer resets") {
             {TokenType::FLOAT, "3.4"},
             {TokenType::DOT, "."},
             {TokenType::INT_10, "5"},
+            {TokenType::FLOAT, "3.4"},
+            {TokenType::IDENT, "u"},
             {TokenType::END, ""},
         };
 
@@ -231,7 +284,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
 TEST_CASE("Advanced next token") {
     SECTION("Keywords") {
-        const char* input = "struct true false and or enum nil is";
+        const char* input = "struct true false and or enum nil is int uint float";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::STRUCT, "struct"},
@@ -242,6 +295,9 @@ TEST_CASE("Advanced next token") {
             {TokenType::ENUM, "enum"},
             {TokenType::NIL, "nil"},
             {TokenType::IS, "is"},
+            {TokenType::INT_TYPE, "int"},
+            {TokenType::UINT_TYPE, "uint"},
+            {TokenType::FLOAT_TYPE, "float"},
             {TokenType::END, ""},
         };
 

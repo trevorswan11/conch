@@ -8,6 +8,7 @@
 
 #include "util/allocator.h"
 #include "util/containers/hash_map.h"
+#include "util/hash.h"
 #include "util/math.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -114,11 +115,11 @@ TRY_STATUS hash_map_init_allocator(HashMap* hm,
 
     // Safety checks before allocating for overflow guard
     if (capacity > SIZE_MAX / key_size) {
-        return INTEGER_OVERFLOW;
+        return SIZE_OVERFLOW;
     } else if (capacity > SIZE_MAX / value_size) {
-        return INTEGER_OVERFLOW;
+        return SIZE_OVERFLOW;
     } else if (metadata_size > SIZE_MAX - header_size) {
-        return INTEGER_OVERFLOW;
+        return SIZE_OVERFLOW;
     }
 
     const size_t total_size =

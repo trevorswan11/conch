@@ -14,6 +14,7 @@
 #include "util/containers/array_list.h"
 #include "util/containers/hash_set.h"
 #include "util/io.h"
+#include "util/mem.h"
 #include "util/status.h"
 
 typedef struct Parser {
@@ -46,3 +47,6 @@ TRY_STATUS parser_expect_peek(Parser* p, TokenType t);
 TRY_STATUS parser_peek_error(Parser* p, TokenType t);
 
 TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt);
+
+// Adds an error message to the parser detailing an error from a status code.
+TRY_STATUS parser_put_status_error(Parser* p, Status status, size_t line, size_t col);

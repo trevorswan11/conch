@@ -61,3 +61,55 @@ TRY_STATUS integer_literal_expression_reconstruct(Node* node, StringBuilder* sb)
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));
     return SUCCESS;
 }
+
+TRY_STATUS uinteger_literal_expression_create(Token                              token,
+                                              uint64_t                           value,
+                                              UnsignedIntegerLiteralExpression** int_expr,
+                                              memory_alloc_fn                    memory_alloc) {
+    assert(memory_alloc);
+    UnsignedIntegerLiteralExpression* integer =
+        memory_alloc(sizeof(UnsignedIntegerLiteralExpression));
+    if (!integer) {
+        return ALLOCATION_FAILED;
+    }
+
+    *integer = (UnsignedIntegerLiteralExpression){
+        .base =
+            (Expression){
+                .base =
+                    (Node){
+                        .vtable = &UNSIGNED_INTEGER_VTABLE.base,
+                    },
+                .vtable = &UNSIGNED_INTEGER_VTABLE,
+            },
+        .token = token,
+        .value = value,
+    };
+
+    *int_expr = integer;
+    return SUCCESS;
+}
+
+void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+    ASSERT_NODE(node);
+    assert(free_alloc);
+    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
+    free_alloc(integer);
+}
+
+Slice uinteger_literal_expression_token_literal(Node* node) {
+    ASSERT_NODE(node);
+    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
+    return integer->token.slice;
+}
+
+TRY_STATUS uinteger_literal_expression_reconstruct(Node* node, StringBuilder* sb) {
+    ASSERT_NODE(node);
+    if (!sb) {
+        return NULL_PARAMETER;
+    }
+
+    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));
+    return SUCCESS;
+}

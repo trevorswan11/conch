@@ -109,12 +109,14 @@ void debug_print(const char* format, ...);
         }                                                                                 \
     } while (0)
 
-#define FOREACH_STATUS(PROCESS)                                                               \
-    PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),               \
-        PROCESS(NULL_PARAMETER), PROCESS(VIOLATED_INVARIANT), PROCESS(INDEX_OUT_OF_BOUNDS),   \
-        PROCESS(ELEMENT_MISSING), PROCESS(ZERO_ITEM_SIZE), PROCESS(ZERO_ITEM_ALIGN),          \
-        PROCESS(EMPTY), PROCESS(INTEGER_OVERFLOW), PROCESS(READ_ERROR), PROCESS(WRITE_ERROR), \
-        PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH), PROCESS(UNEXPECTED_TOKEN),         \
+#define FOREACH_STATUS(PROCESS)                                                                  \
+    PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),                  \
+        PROCESS(NULL_PARAMETER), PROCESS(VIOLATED_INVARIANT), PROCESS(INDEX_OUT_OF_BOUNDS),      \
+        PROCESS(ELEMENT_MISSING), PROCESS(ZERO_ITEM_SIZE), PROCESS(ZERO_ITEM_ALIGN),             \
+        PROCESS(EMPTY), PROCESS(SIZE_OVERFLOW), PROCESS(SIGNED_INTEGER_OVERFLOW),                \
+        PROCESS(UNSIGNED_INTEGER_OVERFLOW), PROCESS(FLOAT_OVERFLOW), PROCESS(READ_ERROR),        \
+        PROCESS(WRITE_ERROR), PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH),                 \
+        PROCESS(UNEXPECTED_TOKEN), PROCESS(MALFORMED_INTEGER_STR), PROCESS(MALFORMED_FLOAT_STR), \
         PROCESS(NOT_IMPLEMENTED)
 
 typedef enum Status {
@@ -139,6 +141,12 @@ void status_ignore(Status status);
 #define WARN_UNUSED_RESULT _Check_return_
 #else
 #define WARN_UNUSED_RESULT
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define ALLOW_UNUSED_FN __attribute__((unused))
+#else
+#define ALLOW_UNUSED_FN
 #endif
 
 // Custom function return type.

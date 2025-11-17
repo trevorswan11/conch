@@ -44,6 +44,8 @@ size_t ceil_power_of_two_size(size_t size);
 // A number is a power of two if it has only one bit set.
 bool is_power_of_two(size_t n);
 
+#define EPSILON 1e-6
+
 bool approx_eq_float(float x, float y, float tolerance);
 bool approx_eq_double(double x, double y, double tolerance);
 

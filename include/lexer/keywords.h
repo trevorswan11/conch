@@ -34,6 +34,9 @@ static const Keyword KEYWORD_NIL         = {{"nil", 3}, NIL};
 static const Keyword KEYWORD_TYPEOF      = {{"typeof", 3}, TYPEOF};
 static const Keyword KEYWORD_IMPORT      = {{"import", 3}, IMPORT};
 static const Keyword KEYWORD_FROM        = {{"from", 3}, FROM};
+static const Keyword KEYWORD_INT         = {{"int", 3}, INT_TYPE};
+static const Keyword KEYWORD_UINT        = {{"uint", 4}, UINT_TYPE};
+static const Keyword KEYWORD_FLOAT       = {{"float", 5}, FLOAT_TYPE};
 
 static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_FN,     KEYWORD_VAR,  KEYWORD_CONST,  KEYWORD_STATIC,      KEYWORD_STRUCT,
@@ -41,4 +44,5 @@ static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_IS,     KEYWORD_IF,   KEYWORD_ELSE,   KEYWORD_MATCH,       KEYWORD_CASE,
     KEYWORD_RETURN, KEYWORD_FOR,  KEYWORD_WHILE,  KEYWORD_DO,          KEYWORD_CONTINUE,
     KEYWORD_BREAK,  KEYWORD_NIL,  KEYWORD_TYPEOF, KEYWORD_IMPORT,      KEYWORD_FROM,
+    KEYWORD_INT,    KEYWORD_UINT, KEYWORD_FLOAT,
 };

@@ -22,8 +22,8 @@ TEST_CASE("max_int") {
 }
 
 TEST_CASE("max_double and approx_eq") {
-    REQUIRE(approx_eq_double(max_double(2, 1.5, 2.5), 2.5, 1e-6));
-    REQUIRE(approx_eq_double(max_double(3, -1.0, -2.0, -0.5), -0.5, 1e-6));
+    REQUIRE(approx_eq_double(max_double(2, 1.5, 2.5), 2.5, EPSILON));
+    REQUIRE(approx_eq_double(max_double(3, -1.0, -2.0, -0.5), -0.5, EPSILON));
 
     REQUIRE(approx_eq_double(-0.49, -0.5, 0.1));
     REQUIRE_FALSE(approx_eq_double(-0.49, -0.5, 0.001));

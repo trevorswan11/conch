@@ -5,19 +5,24 @@
 
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 extern "C" {
 #include "ast/ast.h"
+#include "ast/expressions/float.h"
+#include "ast/expressions/integer.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
+
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "parser/parser.h"
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/math.h"
 #include "util/status.h"
 }
 
@@ -40,9 +45,9 @@ FileIO stdio = file_io_std();
     ast_deinit(&ast);     \
     lexer_deinit(&l);
 
-static void check_parse_errors(Parser*                  p,
-                               std::vector<std::string> expected_errors,
-                               bool                     print_anyways = false) {
+static inline void check_parse_errors(Parser*                  p,
+                                      std::vector<std::string> expected_errors,
+                                      bool                     print_anyways = false) {
     const ArrayList* actual_errors = &p->errors;
     MutSlice         error;
 
@@ -64,7 +69,8 @@ static void check_parse_errors(Parser*                  p,
     }
 }
 
-static void test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ident) {
+static inline void
+test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ident) {
     Node* stmt_node = (Node*)stmt;
     Slice literal   = stmt_node->vtable->token_literal(stmt_node);
     REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
@@ -85,8 +91,7 @@ TEST_CASE("Declarations") {
                             "var foobar := 838383;";
         INIT_PARSE_OBJS(input);
 
-        std::vector<std::string> expected_errors = {};
-        check_parse_errors(&p, expected_errors, true);
+        check_parse_errors(&p, {}, true);
 
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
         REQUIRE(ast.statements.length == expected_identifiers.size());
@@ -125,8 +130,7 @@ TEST_CASE("Declarations") {
                             "var foobar := 838383;";
         INIT_PARSE_OBJS(input);
 
-        std::vector<std::string> expected_errors = {};
-        check_parse_errors(&p, expected_errors, true);
+        check_parse_errors(&p, {}, true);
 
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
         std::vector<bool>        is_const             = {false, true, false};
@@ -149,9 +153,7 @@ TEST_CASE("Return statements") {
                             "return 993322;";
         INIT_PARSE_OBJS(input);
 
-        std::vector<std::string> expected_errors = {};
-        check_parse_errors(&p, expected_errors, true);
-
+        check_parse_errors(&p, {}, true);
         REQUIRE(ast.statements.length == 3);
 
         Statement* stmt;
@@ -168,8 +170,7 @@ TEST_CASE("Return statements") {
         const char* input = "return 5";
         INIT_PARSE_OBJS(input);
 
-        std::vector<std::string> expected_errors = {};
-        check_parse_errors(&p, expected_errors, true);
+        check_parse_errors(&p, {}, true);
 
         DEINIT_PARSE_OBJS
     }
@@ -180,9 +181,7 @@ TEST_CASE("Identifier Expressions") {
         const char* input = "foobar;";
         INIT_PARSE_OBJS(input);
 
-        std::vector<std::string> expected_errors = {};
-        check_parse_errors(&p, expected_errors, true);
-
+        check_parse_errors(&p, {}, true);
         REQUIRE(ast.statements.length == 1);
 
         Statement* stmt;
@@ -198,5 +197,88 @@ TEST_CASE("Identifier Expressions") {
         REQUIRE(mut_slice_equals_str_z(&ident->name, "foobar"));
 
         DEINIT_PARSE_OBJS
+    }
+}
+
+template <typename T>
+static inline void
+test_number_expression(const char* input, const char* expected_literal, T expected_value) {
+    INIT_PARSE_OBJS(input)
+
+    check_parse_errors(&p, {}, true);
+    REQUIRE(ast.statements.length == 1);
+
+    Statement* stmt;
+    REQUIRE(STATUS_OK(array_list_get(&ast.statements, 0, &stmt)));
+
+    ExpressionStatement* expr = (ExpressionStatement*)stmt;
+
+    if constexpr (std::is_same_v<T, double>) {
+        FloatLiteralExpression* f = (FloatLiteralExpression*)expr->expression;
+        REQUIRE(f->value == expected_value);
+        Node* f_node  = (Node*)f;
+        Slice literal = f_node->vtable->token_literal(f_node);
+        REQUIRE(slice_equals_str_z(&literal, expected_literal));
+    } else if constexpr (std::is_same_v<T, int64_t>) {
+        IntegerLiteralExpression* i = (IntegerLiteralExpression*)expr->expression;
+        REQUIRE(i->value == expected_value);
+        Node* i_node  = (Node*)i;
+        Slice literal = i_node->vtable->token_literal(i_node);
+        REQUIRE(slice_equals_str_z(&literal, expected_literal));
+    } else if constexpr (std::is_same_v<T, uint64_t>) {
+        UnsignedIntegerLiteralExpression* i = (UnsignedIntegerLiteralExpression*)expr->expression;
+        REQUIRE(i->value == expected_value);
+        Node* i_node  = (Node*)i;
+        Slice literal = i_node->vtable->token_literal(i_node);
+        REQUIRE(slice_equals_str_z(&literal, expected_literal));
+    } else {
+        REQUIRE(false);
+    }
+
+    DEINIT_PARSE_OBJS
+}
+
+TEST_CASE("Number-based expressions") {
+    SECTION("Signed integer bases") {
+        test_number_expression<int64_t>("5;", "5", 5);
+        test_number_expression<int64_t>("0b10011101101;", "0b10011101101", 0b10011101101);
+        test_number_expression<int64_t>("0o1234567;", "0o1234567", 342391);
+        test_number_expression<int64_t>("0xFF8a91d;", "0xFF8a91d", 0xFF8a91d);
+    }
+
+    SECTION("Signed integer overflow") {
+        const char* input = "0xFFFFFFFFFFFFFFFF";
+        INIT_PARSE_OBJS(input)
+
+        check_parse_errors(&p, {"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        REQUIRE(1 == 1);
+
+        DEINIT_PARSE_OBJS
+    }
+
+    SECTION("Unsigned integer bases") {
+        test_number_expression<uint64_t>("5u;", "5u", 5);
+        test_number_expression<uint64_t>("0b10011101101u;", "0b10011101101u", 0b10011101101);
+        test_number_expression<uint64_t>("0o1234567U;", "0o1234567U", 342391);
+        test_number_expression<uint64_t>("0xFF8a91du;", "0xFF8a91du", 0xFF8a91d);
+
+        test_number_expression<uint64_t>(
+            "0xFFFFFFFFFFFFFFFFu;", "0xFFFFFFFFFFFFFFFFu", 0xFFFFFFFFFFFFFFFF);
+    }
+
+    SECTION("Unsigned integer overflow") {
+        const char* input = "0x10000000000000000u";
+        INIT_PARSE_OBJS(input)
+
+        check_parse_errors(&p, {"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        REQUIRE(1 == 1);
+
+        DEINIT_PARSE_OBJS
+    }
+
+    SECTION("Floating points") {
+        test_number_expression<double>("1023.0;", "1023.0", 1023.0);
+        test_number_expression<double>("1023.234612;", "1023.234612", 1023.234612);
+        test_number_expression<double>("1023.234612e234;", "1023.234612e234", 1023.234612e234);
     }
 }

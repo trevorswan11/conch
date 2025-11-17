@@ -10,7 +10,8 @@
     PROCESS(END),                                                                                  \
                                                                                                    \
         PROCESS(IDENT), PROCESS(INT_2), PROCESS(INT_8), PROCESS(INT_10), PROCESS(INT_16),          \
-        PROCESS(FLOAT), PROCESS(STRING), PROCESS(CHARACTER),                                       \
+        PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(FLOAT),      \
+        PROCESS(STRING), PROCESS(CHARACTER),                                                       \
                                                                                                    \
         PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(PLUS_ASSIGN), PROCESS(PLUS_PLUS), \
         PROCESS(MINUS), PROCESS(MINUS_ASSIGN), PROCESS(MINUS_MINUS), PROCESS(STAR),                \
@@ -38,7 +39,8 @@
         PROCESS(ENUM), PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR),   \
         PROCESS(IS), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(CASE), PROCESS(RETURN),   \
         PROCESS(FOR), PROCESS(WHILE), PROCESS(DO), PROCESS(CONTINUE), PROCESS(BREAK),              \
-        PROCESS(NIL), PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM),                             \
+        PROCESS(NIL), PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM), PROCESS(INT_TYPE),          \
+        PROCESS(UINT_TYPE), PROCESS(FLOAT_TYPE),                                                   \
                                                                                                    \
         PROCESS(ILLEGAL)
 
@@ -61,6 +63,8 @@ const char* token_type_name(TokenType type);
 // If the character is not a valid delimiter, t is not modified.
 bool misc_token_type_from_char(char c, TokenType* t);
 bool token_is_integer(TokenType t);
+bool token_is_signed_integer(TokenType t);
+bool token_is_unsigned_integer(TokenType t);
 
 // A stack allocated Token that does not own its string literal.
 //

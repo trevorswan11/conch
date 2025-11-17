@@ -168,7 +168,22 @@ TRY_STATUS parser_expect_peek(Parser* p, TokenType t) {
     }
 }
 
-#define PPE_CLEANUP string_builder_deinit(&builder)
+#define BUILDER_CLEANUP string_builder_deinit(&builder)
+
+// Appends " [Ln <>, Col <>]" to the given builder.
+static inline TRY_STATUS error_append_ln_col(size_t line, size_t col, StringBuilder* sb) {
+    assert(sb);
+    const char line_no[] = " [Ln ";
+    const char col_no[]  = ", Col ";
+
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, line_no, sizeof(line_no) - 1));
+    PROPAGATE_IF_ERROR(string_builder_append_size(sb, line));
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, col_no, sizeof(col_no) - 1));
+    PROPAGATE_IF_ERROR(string_builder_append_size(sb, col));
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ']'));
+
+    return SUCCESS;
+}
 
 TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     assert(p);
@@ -182,37 +197,26 @@ TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     const char mid[]   = ", found ";
 
     PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, start, sizeof(start) - 1),
-                          PPE_CLEANUP);
+                          BUILDER_CLEANUP);
 
     const char* expected = token_type_name(t);
     PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, expected, strlen(expected)),
-                          PPE_CLEANUP);
+                          BUILDER_CLEANUP);
 
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, mid, sizeof(mid) - 1), PPE_CLEANUP);
+    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, mid, sizeof(mid) - 1),
+                          BUILDER_CLEANUP);
 
     const char* actual = token_type_name(p->peek_token.type);
     PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, actual, strlen(actual)),
-                          PPE_CLEANUP);
+                          BUILDER_CLEANUP);
 
     // Append line/col information for debugging
-    const char line_no[] = " [Ln ";
-    const char col_no[]  = ", Col ";
-
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, line_no, sizeof(line_no) - 1),
-                          PPE_CLEANUP);
-
-    PROPAGATE_IF_ERROR_DO(string_builder_append_size(&builder, p->peek_token.line), PPE_CLEANUP);
-
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, col_no, sizeof(col_no) - 1),
-                          PPE_CLEANUP);
-
-    PROPAGATE_IF_ERROR_DO(string_builder_append_size(&builder, p->peek_token.column), PPE_CLEANUP);
-
-    PROPAGATE_IF_ERROR_DO(string_builder_append(&builder, ']'), PPE_CLEANUP);
+    PROPAGATE_IF_ERROR_DO(error_append_ln_col(p->peek_token.line, p->peek_token.column, &builder),
+                          BUILDER_CLEANUP);
 
     MutSlice slice;
-    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, &slice), PPE_CLEANUP);
-    PROPAGATE_IF_ERROR_DO(array_list_push(&p->errors, &slice), PPE_CLEANUP);
+    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, &slice), BUILDER_CLEANUP);
+    PROPAGATE_IF_ERROR_DO(array_list_push(&p->errors, &slice), BUILDER_CLEANUP);
     return SUCCESS;
 }
 
@@ -230,5 +234,26 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
         break;
     }
 
+    return SUCCESS;
+}
+
+TRY_STATUS parser_put_status_error(Parser* p, Status status, size_t line, size_t col) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+    assert(STATUS_ERR(status));
+
+    StringBuilder builder;
+    PROPAGATE_IF_ERROR(string_builder_init_allocator(&builder, 30, p->allocator));
+
+    const char* status_literal = status_name(status);
+    PROPAGATE_IF_ERROR_DO(
+        string_builder_append_many(&builder, status_literal, strlen(status_literal)),
+        BUILDER_CLEANUP);
+
+    PROPAGATE_IF_ERROR_DO(error_append_ln_col(line, col, &builder), BUILDER_CLEANUP);
+
+    MutSlice slice;
+    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, &slice), BUILDER_CLEANUP);
+    PROPAGATE_IF_ERROR_DO(array_list_push(&p->errors, &slice), BUILDER_CLEANUP);
     return SUCCESS;
 }

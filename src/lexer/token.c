@@ -42,7 +42,15 @@ bool misc_token_type_from_char(char c, TokenType* t) {
 }
 
 bool token_is_integer(TokenType t) {
+    return token_is_signed_integer(t) || token_is_unsigned_integer(t);
+}
+
+bool token_is_signed_integer(TokenType t) {
     return INT_2 <= t && t <= INT_16;
+}
+
+bool token_is_unsigned_integer(TokenType t) {
+    return UINT_2 <= t && t <= UINT_16;
 }
 
 Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col) {
