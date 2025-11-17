@@ -15,10 +15,8 @@ static const Operator OPERATOR_ASSIGN         = {{"=", 1}, ASSIGN};
 static const Operator OPERATOR_WALRUS         = {{":=", 2}, WALRUS};
 static const Operator OPERATOR_PLUS           = {{"+", 1}, PLUS};
 static const Operator OPERATOR_PLUS_ASSIGN    = {{"+=", 2}, PLUS_ASSIGN};
-static const Operator OPERATOR_PLUS_PLUS      = {{"++", 2}, PLUS_PLUS};
 static const Operator OPERATOR_MINUS          = {{"-", 1}, MINUS};
 static const Operator OPERATOR_MINUS_ASSIGN   = {{"-=", 2}, MINUS_ASSIGN};
-static const Operator OPERATOR_MINUS_MINUS    = {{"--", 2}, MINUS_MINUS};
 static const Operator OPERATOR_STAR           = {{"*", 1}, STAR};
 static const Operator OPERATOR_STAR_ASSIGN    = {{"*=", 2}, STAR_ASSIGN};
 static const Operator OPERATOR_STAR_STAR      = {{"**", 2}, STAR_STAR};
@@ -62,10 +60,8 @@ static const Operator ALL_OPERATORS[] = {
     OPERATOR_WALRUS,
     OPERATOR_PLUS,
     OPERATOR_PLUS_ASSIGN,
-    OPERATOR_PLUS_PLUS,
     OPERATOR_MINUS,
     OPERATOR_MINUS_ASSIGN,
-    OPERATOR_MINUS_MINUS,
     OPERATOR_STAR,
     OPERATOR_STAR_ASSIGN,
     OPERATOR_STAR_STAR,

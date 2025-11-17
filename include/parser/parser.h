@@ -50,3 +50,6 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt);
 
 // Adds an error message to the parser detailing an error from a status code.
 TRY_STATUS parser_put_status_error(Parser* p, Status status, size_t line, size_t col);
+
+// Appends " [Ln <>, Col <>]" to the given builder.
+TRY_STATUS error_append_ln_col(size_t line, size_t col, StringBuilder* sb);

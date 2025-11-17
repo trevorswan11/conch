@@ -16,20 +16,14 @@ TRY_STATUS integer_literal_expression_create(Token                      token,
                                              IntegerLiteralExpression** int_expr,
                                              memory_alloc_fn            memory_alloc) {
     assert(memory_alloc);
+    assert(token.slice.ptr);
     IntegerLiteralExpression* integer = memory_alloc(sizeof(IntegerLiteralExpression));
     if (!integer) {
         return ALLOCATION_FAILED;
     }
 
     *integer = (IntegerLiteralExpression){
-        .base =
-            (Expression){
-                .base =
-                    (Node){
-                        .vtable = &INTEGER_VTABLE.base,
-                    },
-                .vtable = &INTEGER_VTABLE,
-            },
+        .base  = EXPRESSION_INIT(INTEGER_VTABLE),
         .token = token,
         .value = value,
     };

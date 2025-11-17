@@ -16,20 +16,14 @@ TRY_STATUS float_literal_expression_create(Token                    token,
                                            FloatLiteralExpression** float_expr,
                                            memory_alloc_fn          memory_alloc) {
     assert(memory_alloc);
+    assert(token.slice.ptr);
     FloatLiteralExpression* float_local = memory_alloc(sizeof(FloatLiteralExpression));
     if (!float_local) {
         return ALLOCATION_FAILED;
     }
 
     *float_local = (FloatLiteralExpression){
-        .base =
-            (Expression){
-                .base =
-                    (Node){
-                        .vtable = &FLOAT_VTABLE.base,
-                    },
-                .vtable = &FLOAT_VTABLE,
-            },
+        .base  = EXPRESSION_INIT(FLOAT_VTABLE),
         .token = token,
         .value = value,
     };

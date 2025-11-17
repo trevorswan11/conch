@@ -21,14 +21,7 @@ TRY_STATUS return_statement_create(Expression*       value,
     }
 
     *ret = (ReturnStatement){
-        .base =
-            (Statement){
-                .base =
-                    (Node){
-                        .vtable = &RET_VTABLE.base,
-                    },
-                .vtable = &RET_VTABLE,
-            },
+        .base  = STATEMENT_INIT(RET_VTABLE),
         .value = value,
     };
 

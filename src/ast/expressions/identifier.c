@@ -16,6 +16,7 @@ TRY_STATUS identifier_expression_create(Token                  token,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc) {
     assert(memory_alloc && free_alloc);
+    assert(token.slice.ptr);
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
     if (!ident) {
         return ALLOCATION_FAILED;
@@ -28,19 +29,8 @@ TRY_STATUS identifier_expression_create(Token                  token,
     }
 
     *ident = (IdentifierExpression){
-        .base =
-            (Expression){
-                .base =
-                    (Node){
-                        .vtable = &IDENTIFIER_VTABLE.base,
-                    },
-                .vtable = &IDENTIFIER_VTABLE,
-            },
-        .name =
-            (MutSlice){
-                .ptr    = mut_name,
-                .length = strlen(mut_name),
-            },
+        .base       = EXPRESSION_INIT(IDENTIFIER_VTABLE),
+        .name       = mut_slice_from_str_z(mut_name),
         .token_type = token.type,
     };
 

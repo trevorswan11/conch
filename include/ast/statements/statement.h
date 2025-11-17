@@ -8,6 +8,15 @@
     assert(stmt->vtable);      \
     assert(stmt->base.vtable);
 
+#define STATEMENT_INIT(custom_vtab)          \
+    (Statement) {                            \
+        .base =                              \
+            (Node){                          \
+                .vtable = &custom_vtab.base, \
+            },                               \
+        .vtable = &custom_vtab,              \
+    }
+
 typedef struct Statement       Statement;
 typedef struct StatementVTable StatementVTable;
 

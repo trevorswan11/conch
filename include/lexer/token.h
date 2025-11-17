@@ -13,10 +13,10 @@
         PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(FLOAT),      \
         PROCESS(STRING), PROCESS(CHARACTER),                                                       \
                                                                                                    \
-        PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(PLUS_ASSIGN), PROCESS(PLUS_PLUS), \
-        PROCESS(MINUS), PROCESS(MINUS_ASSIGN), PROCESS(MINUS_MINUS), PROCESS(STAR),                \
-        PROCESS(STAR_ASSIGN), PROCESS(STAR_STAR), PROCESS(SLASH), PROCESS(SLASH_ASSIGN),           \
-        PROCESS(PERCENT), PROCESS(PERCENT_ASSIGN), PROCESS(BANG), PROCESS(WHAT),                   \
+        PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(PLUS_ASSIGN), PROCESS(MINUS),     \
+        PROCESS(MINUS_ASSIGN), PROCESS(STAR), PROCESS(STAR_ASSIGN), PROCESS(STAR_STAR),            \
+        PROCESS(SLASH), PROCESS(SLASH_ASSIGN), PROCESS(PERCENT), PROCESS(PERCENT_ASSIGN),          \
+        PROCESS(BANG), PROCESS(WHAT),                                                              \
                                                                                                    \
         PROCESS(AND), PROCESS(AND_ASSIGN), PROCESS(OR), PROCESS(OR_ASSIGN), PROCESS(SHL),          \
         PROCESS(SHL_ASSIGN), PROCESS(SHR), PROCESS(SHR_ASSIGN), PROCESS(NOT), PROCESS(NOT_ASSIGN), \

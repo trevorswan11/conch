@@ -8,6 +8,7 @@
 #include "ast/expressions/float.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/integer.h"
+#include "ast/expressions/prefix.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/return.h"
 #include "ast/statements/statement.h"
@@ -19,17 +20,47 @@
 #include "util/allocator.h"
 #include "util/alphanum.h"
 #include "util/containers/hash_set.h"
+#include "util/containers/string_builder.h"
+#include "util/mem.h"
 #include "util/status.h"
 
 const char* precedence_name(Precedence precedence) {
     return PRECEDENCE_NAMES[precedence];
 }
 
+static inline TRY_STATUS record_missing_prefix(Parser* p) {
+    const Token   current = p->current_token;
+    StringBuilder sb;
+    PROPAGATE_IF_ERROR(string_builder_init_allocator(&sb, 50, p->allocator));
+
+    const char start[] = "No prefix parse function for ";
+    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&sb, start, sizeof(start) - 1),
+                          string_builder_deinit(&sb));
+
+    const char* token_literal = token_type_name(current.type);
+    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&sb, token_literal, strlen(token_literal)),
+                          string_builder_deinit(&sb));
+
+    const char end[] = " found";
+    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&sb, end, sizeof(end) - 1),
+                          string_builder_deinit(&sb));
+
+    PROPAGATE_IF_ERROR_DO(error_append_ln_col(current.line, current.column, &sb),
+                          string_builder_deinit(&sb));
+
+    MutSlice slice;
+    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&sb, &slice), string_builder_deinit(&sb));
+    PROPAGATE_IF_ERROR_DO(array_list_push(&p->errors, &slice), string_builder_deinit(&sb));
+    return SUCCESS;
+}
+
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
     assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
 
     PrefixFn prefix;
     if (!poll_prefix(p, p->current_token.type, &prefix)) {
+        PROPAGATE_IF_ERROR(record_missing_prefix(p));
         return ELEMENT_MISSING;
     }
 
@@ -127,5 +158,24 @@ TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression) {
         float_literal_expression_create(current, value, &float_expr, p->allocator.memory_alloc));
 
     *expression = (Expression*)float_expr;
+    return SUCCESS;
+}
+
+TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression) {
+    const Token prefix_token = p->current_token;
+    assert(prefix_token.slice.length > 0);
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* rhs;
+    PROPAGATE_IF_ERROR(expression_parse(p, PREFIX, &rhs));
+
+    PrefixExpression* prefix;
+    PROPAGATE_IF_ERROR_DO(
+        prefix_expression_create(prefix_token, rhs, &prefix, p->allocator.memory_alloc), {
+            Node* node = (Node*)rhs;
+            node->vtable->destroy(node, p->allocator.free_alloc);
+        });
+
+    *expression = (Expression*)prefix;
     return SUCCESS;
 }

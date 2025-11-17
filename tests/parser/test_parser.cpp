@@ -7,12 +7,14 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/integer.h"
+#include "ast/expressions/prefix.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
@@ -118,6 +120,7 @@ TEST_CASE("Declarations") {
         std::vector<std::string> expected_errors = {
             "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
             "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
+            "No prefix parse function for ASSIGN found [Ln 2, Col 5]",
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
         };
 
@@ -194,6 +197,38 @@ TEST_CASE("Identifier Expressions") {
 
 template <typename T>
 static inline void
+test_number_expression(Expression* expression, const char* expected_literal, T expected_value) {
+    if constexpr (std::is_same_v<T, double>) {
+        FloatLiteralExpression* f = (FloatLiteralExpression*)expression;
+        REQUIRE(f->value == expected_value);
+        Node* f_node = (Node*)f;
+        if (expected_literal) {
+            Slice literal = f_node->vtable->token_literal(f_node);
+            REQUIRE(slice_equals_str_z(&literal, expected_literal));
+        }
+    } else if constexpr (std::is_same_v<T, int64_t>) {
+        IntegerLiteralExpression* i = (IntegerLiteralExpression*)expression;
+        REQUIRE(i->value == expected_value);
+        Node* i_node = (Node*)i;
+        if (expected_literal) {
+            Slice literal = i_node->vtable->token_literal(i_node);
+            REQUIRE(slice_equals_str_z(&literal, expected_literal));
+        }
+    } else if constexpr (std::is_same_v<T, uint64_t>) {
+        UnsignedIntegerLiteralExpression* i = (UnsignedIntegerLiteralExpression*)expression;
+        REQUIRE(i->value == expected_value);
+        Node* i_node = (Node*)i;
+        if (expected_literal) {
+            Slice literal = i_node->vtable->token_literal(i_node);
+            REQUIRE(slice_equals_str_z(&literal, expected_literal));
+        }
+    } else {
+        REQUIRE(false);
+    }
+}
+
+template <typename T>
+static inline void
 test_number_expression(const char* input, const char* expected_literal, T expected_value) {
     ParserFixture pf(input);
 
@@ -204,28 +239,7 @@ test_number_expression(const char* input, const char* expected_literal, T expect
     REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
 
     ExpressionStatement* expr = (ExpressionStatement*)stmt;
-
-    if constexpr (std::is_same_v<T, double>) {
-        FloatLiteralExpression* f = (FloatLiteralExpression*)expr->expression;
-        REQUIRE(f->value == expected_value);
-        Node* f_node  = (Node*)f;
-        Slice literal = f_node->vtable->token_literal(f_node);
-        REQUIRE(slice_equals_str_z(&literal, expected_literal));
-    } else if constexpr (std::is_same_v<T, int64_t>) {
-        IntegerLiteralExpression* i = (IntegerLiteralExpression*)expr->expression;
-        REQUIRE(i->value == expected_value);
-        Node* i_node  = (Node*)i;
-        Slice literal = i_node->vtable->token_literal(i_node);
-        REQUIRE(slice_equals_str_z(&literal, expected_literal));
-    } else if constexpr (std::is_same_v<T, uint64_t>) {
-        UnsignedIntegerLiteralExpression* i = (UnsignedIntegerLiteralExpression*)expr->expression;
-        REQUIRE(i->value == expected_value);
-        Node* i_node  = (Node*)i;
-        Slice literal = i_node->vtable->token_literal(i_node);
-        REQUIRE(slice_equals_str_z(&literal, expected_literal));
-    } else {
-        REQUIRE(false);
-    }
+    test_number_expression<T>(expr->expression, expected_literal, expected_value);
 }
 
 TEST_CASE("Number-based expressions") {
@@ -262,5 +276,43 @@ TEST_CASE("Number-based expressions") {
         test_number_expression<double>("1023.0;", "1023.0", 1023.0);
         test_number_expression<double>("1023.234612;", "1023.234612", 1023.234612);
         test_number_expression<double>("1023.234612e234;", "1023.234612e234", 1023.234612e234);
+    }
+}
+
+TEST_CASE("Prefix expressions") {
+    struct TestCase {
+        const char*                             input;
+        TokenType                               op;
+        std::variant<int64_t, uint64_t, double> value;
+    };
+
+    const TestCase cases[] = {
+        {"!5", TokenType::BANG, 5ll},
+        {"-15u", TokenType::MINUS, 15ull},
+        {"!3.4", TokenType::BANG, 3.4},
+        {"~0b101101", TokenType::NOT, 0b101101ll},
+        {"!1.2345e100", TokenType::BANG, 1.2345e100},
+    };
+
+    for (const auto& t : cases) {
+        ParserFixture pf(t.input);
+        check_parse_errors(&pf.p, {}, true);
+
+        REQUIRE(pf.ast.statements.length == 1);
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
+
+        REQUIRE(expr->token.type == t.op);
+        if (std::holds_alternative<int64_t>(t.value)) {
+            test_number_expression<int64_t>(expr->rhs, NULL, std::get<int64_t>(t.value));
+        } else if (std::holds_alternative<uint64_t>(t.value)) {
+            test_number_expression<uint64_t>(expr->rhs, NULL, std::get<uint64_t>(t.value));
+        } else if (std::holds_alternative<double>(t.value)) {
+            test_number_expression<double>(expr->rhs, NULL, std::get<double>(t.value));
+        } else {
+            REQUIRE(false);
+        }
     }
 }

@@ -15,20 +15,14 @@ TRY_STATUS decl_statement_create(Token                 token,
                                  DeclStatement**       decl_stmt,
                                  memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
+    assert(token.slice.ptr);
     DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));
     if (!declaration) {
         return ALLOCATION_FAILED;
     }
 
     *declaration = (DeclStatement){
-        .base =
-            (Statement){
-                .base =
-                    (Node){
-                        .vtable = &DECL_VTABLE.base,
-                    },
-                .vtable = &DECL_VTABLE,
-            },
+        .base  = STATEMENT_INIT(DECL_VTABLE),
         .token = token,
         .ident = ident,
         .value = value,

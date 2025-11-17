@@ -22,14 +22,7 @@ TRY_STATUS expression_statement_create(Token                 first_expression_to
     }
 
     *expr = (ExpressionStatement){
-        .base =
-            (Statement){
-                .base =
-                    (Node){
-                        .vtable = &EXPR_VTABLE.base,
-                    },
-                .vtable = &EXPR_VTABLE,
-            },
+        .base                   = STATEMENT_INIT(EXPR_VTABLE),
         .first_expression_token = first_expression_token,
         .expression             = expression,
     };

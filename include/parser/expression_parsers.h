@@ -33,6 +33,7 @@ TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_e
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression);
 
 typedef struct PrefixFn {
     TokenType       token_key;
@@ -67,6 +68,9 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {UINT_10, &integer_literal_expression_parse},
     {UINT_16, &integer_literal_expression_parse},
     {FLOAT, &float_literal_expression_parse},
+    {BANG, &prefix_expression_parse},
+    {NOT, &prefix_expression_parse},
+    {MINUS, &prefix_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
