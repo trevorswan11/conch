@@ -17,6 +17,20 @@
 #include "util/mem.h"
 #include "util/status.h"
 
+#define FOREACH_PRECEDENCE(PROCESS)                                                                \
+    PROCESS(LOWEST), PROCESS(BOOL_EQUIV), PROCESS(BOOL_LT_GT), PROCESS(ADD_SUB), PROCESS(MUL_DIV), \
+        PROCESS(PREFIX), PROCESS(CALL)
+
+typedef enum Precedence {
+    FOREACH_PRECEDENCE(GENERATE_ENUM),
+} Precedence;
+
+static const char* const PRECEDENCE_NAMES[] = {
+    FOREACH_PRECEDENCE(GENERATE_STRING),
+};
+
+const char* precedence_name(Precedence precedence);
+
 typedef struct Parser {
     Lexer* lexer;
     size_t lexer_index;

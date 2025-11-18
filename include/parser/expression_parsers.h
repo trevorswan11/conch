@@ -15,20 +15,6 @@
 typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
 typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
 
-#define FOREACH_PRECEDENCE(PROCESS)                                                                \
-    PROCESS(LOWEST), PROCESS(BOOL_EQUIV), PROCESS(BOOL_LT_GT), PROCESS(ADD_SUB), PROCESS(MUL_DIV), \
-        PROCESS(PREFIX), PROCESS(CALL)
-
-typedef enum Precedence {
-    FOREACH_PRECEDENCE(GENERATE_ENUM),
-} Precedence;
-
-static const char* const PRECEDENCE_NAMES[] = {
-    FOREACH_PRECEDENCE(GENERATE_STRING),
-};
-
-const char* precedence_name(Precedence precedence);
-
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);

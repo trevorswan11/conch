@@ -24,10 +24,6 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-const char* precedence_name(Precedence precedence) {
-    return PRECEDENCE_NAMES[precedence];
-}
-
 static inline TRY_STATUS record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;
     StringBuilder sb;

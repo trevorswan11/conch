@@ -24,6 +24,10 @@
 #include "util/mem.h"
 #include "util/status.h"
 
+const char* precedence_name(Precedence precedence) {
+    return PRECEDENCE_NAMES[precedence];
+}
+
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
     PROPAGATE_IF_ERROR(hash_set_init_allocator(prefix_set,
                                                64,
