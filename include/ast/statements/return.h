@@ -7,6 +7,7 @@
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -22,7 +23,7 @@ TRY_STATUS return_statement_create(Expression*       value,
 
 void       return_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      return_statement_token_literal(Node* node);
-TRY_STATUS return_statement_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const StatementVTable RET_VTABLE = {
     .base =

@@ -6,6 +6,7 @@
 
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
+#include "parser/precedence.h"
 #include "parser/statement_parsers.h"
 
 #include "lexer/lexer.h"
@@ -18,25 +19,23 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 #include "util/hash.h"
 #include "util/mem.h"
 #include "util/status.h"
 
-const char* precedence_name(Precedence precedence) {
-    return PRECEDENCE_NAMES[precedence];
-}
-
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
+    const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
     PROPAGATE_IF_ERROR(hash_set_init_allocator(prefix_set,
-                                               64,
+                                               num_prefix,
                                                sizeof(PrefixFn),
                                                alignof(PrefixFn),
                                                hash_prefix,
                                                compare_prefix,
                                                allocator));
-    const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
+
     for (size_t i = 0; i < num_prefix; i++) {
         const PrefixFn fn = PREFIX_FUNCTIONS[i];
         hash_set_put_assume_capacity(prefix_set, &fn);
@@ -46,15 +45,44 @@ static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) 
 }
 
 static inline TRY_STATUS _init_infix(HashSet* infix_set, Allocator allocator) {
-    PROPAGATE_IF_ERROR(hash_set_init_allocator(
-        infix_set, 64, sizeof(InfixFn), alignof(InfixFn), hash_infix, compare_infix, allocator));
+    const size_t num_infix = sizeof(INFIX_FUNCTIONS) / sizeof(INFIX_FUNCTIONS[0]);
+    const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
+    if (num_infix < num_pairs) {
+        return VIOLATED_INVARIANT;
+    }
 
-    // TODO
-    // const size_t num_infix = sizeof(INFIX_FUNCTIONS) / sizeof(INFIX_FUNCTIONS[0]);
-    // for (size_t i = 0; i < num_infix; i++) {
-    //     const InfixFn fn = INFIX_FUNCTIONS[i];
-    //     hash_set_put_assume_capacity(infix_set, &fn);
-    // }
+    PROPAGATE_IF_ERROR(hash_set_init_allocator(infix_set,
+                                               num_infix,
+                                               sizeof(InfixFn),
+                                               alignof(InfixFn),
+                                               hash_infix,
+                                               compare_infix,
+                                               allocator));
+
+    for (size_t i = 0; i < num_infix; i++) {
+        const InfixFn fn = INFIX_FUNCTIONS[i];
+        hash_set_put_assume_capacity(infix_set, &fn);
+    }
+
+    return SUCCESS;
+}
+
+static inline TRY_STATUS _init_precedences(HashMap* precedence_map, Allocator allocator) {
+    const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
+    PROPAGATE_IF_ERROR(hash_map_init_allocator(precedence_map,
+                                               num_pairs,
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               sizeof(Precedence),
+                                               alignof(Precedence),
+                                               hash_token_type,
+                                               compare_token_type,
+                                               allocator));
+
+    for (size_t i = 0; i < num_pairs; i++) {
+        const PrecedencePair pair = PRECEDENCE_PAIRS[i];
+        hash_map_put_assume_capacity(precedence_map, &pair.token_key, &pair.precedence);
+    }
 
     return SUCCESS;
 }
@@ -72,10 +100,17 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     PROPAGATE_IF_ERROR_DO(_init_infix(&infix_functions, allocator),
                           hash_set_deinit(&prefix_functions));
 
+    HashMap precedences;
+    PROPAGATE_IF_ERROR_DO(_init_precedences(&precedences, allocator), {
+        hash_set_deinit(&prefix_functions);
+        hash_set_deinit(&infix_functions);
+    });
+
     ArrayList errors;
     PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator), {
         hash_set_deinit(&prefix_functions);
         hash_set_deinit(&infix_functions);
+        hash_map_deinit(&precedences);
     });
 
     *p = (Parser){
@@ -85,6 +120,7 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
         .peek_token       = token_init(END, "", 0, 0, 0),
         .prefix_parse_fns = prefix_functions,
         .infix_parse_fns  = infix_functions,
+        .precedences      = precedences,
         .errors           = errors,
         .io               = io,
         .allocator        = allocator,
@@ -108,6 +144,7 @@ void parser_deinit(Parser* p) {
     array_list_deinit(&p->errors);
     hash_set_deinit(&p->prefix_parse_fns);
     hash_set_deinit(&p->infix_parse_fns);
+    hash_map_deinit(&p->precedences);
 }
 
 TRY_STATUS parser_consume(Parser* p, AST* ast) {
@@ -149,6 +186,7 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
 }
 
 TRY_STATUS parser_next_token(Parser* p) {
+    assert(p);
     p->current_token = p->peek_token;
     return array_list_get(&p->lexer->token_accumulator, p->lexer_index++, &p->peek_token);
 }
@@ -209,7 +247,26 @@ TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     return SUCCESS;
 }
 
+Precedence parser_current_precedence(Parser* p) {
+    assert(p);
+    Precedence current;
+    if (STATUS_OK(hash_map_get_value(&p->precedences, &p->current_token.type, &current))) {
+        return current;
+    }
+    return LOWEST;
+}
+
+Precedence parser_peek_precedence(Parser* p) {
+    assert(p);
+    Precedence peek;
+    if (STATUS_OK(hash_map_get_value(&p->precedences, &p->peek_token.type, &peek))) {
+        return peek;
+    }
+    return LOWEST;
+}
+
 TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
+    assert(p);
     switch (p->current_token.type) {
     case VAR:
     case CONST:

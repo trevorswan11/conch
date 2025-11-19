@@ -6,6 +6,7 @@
 #include "ast/statements/declarations.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
@@ -64,7 +65,7 @@ Slice decl_statement_token_literal(Node* node) {
     };
 }
 
-TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
@@ -75,12 +76,12 @@ TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb) {
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
     Node* ident_node = (Node*)d->ident;
-    PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, sb));
+    PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
 
     if (d->value) {
         Node* value_node = (Node*)d->value;
-        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, sb));
+        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));

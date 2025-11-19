@@ -8,6 +8,8 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -22,9 +24,10 @@ TRY_STATUS integer_literal_expression_create(Token                      token,
                                              IntegerLiteralExpression** int_expr,
                                              memory_alloc_fn            memory_alloc);
 
-void       integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      integer_literal_expression_token_literal(Node* node);
-TRY_STATUS integer_literal_expression_reconstruct(Node* node, StringBuilder* sb);
+void  integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+Slice integer_literal_expression_token_literal(Node* node);
+TRY_STATUS
+integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable INTEGER_VTABLE = {
     .base =
@@ -46,9 +49,10 @@ TRY_STATUS uinteger_literal_expression_create(Token                             
                                               UnsignedIntegerLiteralExpression** int_expr,
                                               memory_alloc_fn                    memory_alloc);
 
-void       uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      uinteger_literal_expression_token_literal(Node* node);
-TRY_STATUS uinteger_literal_expression_reconstruct(Node* node, StringBuilder* sb);
+void  uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+Slice uinteger_literal_expression_token_literal(Node* node);
+TRY_STATUS
+uinteger_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable UNSIGNED_INTEGER_VTABLE = {
     .base =

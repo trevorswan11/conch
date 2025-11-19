@@ -8,6 +8,7 @@
 #include "ast/statements/expression.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
@@ -51,7 +52,8 @@ Slice expression_statement_token_literal(Node* node) {
     return e->first_expression_token.slice;
 }
 
-TRY_STATUS expression_statement_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS
+expression_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
@@ -60,7 +62,7 @@ TRY_STATUS expression_statement_reconstruct(Node* node, StringBuilder* sb) {
     ExpressionStatement* e = (ExpressionStatement*)node;
     if (e->expression) {
         Node* value_node = (Node*)e->expression;
-        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, sb));
+        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }
 
     return SUCCESS;

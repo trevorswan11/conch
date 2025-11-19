@@ -1,7 +1,22 @@
 #include "lexer/token.h"
 
 #include "util/containers/string_builder.h"
+#include "util/hash.h"
 #include "util/mem.h"
+
+Hash hash_token_type(const void* key) {
+    Hash hash = (Hash)(*(const TokenType*)key);
+    hash      = (hash ^ (hash >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    hash      = (hash ^ (hash >> 27)) * 0x94D049BB133111EBULL;
+    hash      = hash ^ (hash >> 31);
+    return hash;
+}
+
+int compare_token_type(const void* a, const void* b) {
+    const TokenType tok_a = *(const TokenType*)a;
+    const TokenType tok_b = *(const TokenType*)b;
+    return (int)tok_a - (int)tok_b;
+}
 
 const char* token_type_name(TokenType type) {
     return TOKEN_TYPE_NAMES[type];

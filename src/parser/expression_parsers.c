@@ -7,6 +7,7 @@
 #include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
 #include "ast/statements/declarations.h"
@@ -59,9 +60,18 @@ TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_e
         PROPAGATE_IF_ERROR(record_missing_prefix(p));
         return ELEMENT_MISSING;
     }
-
-    MAYBE_UNUSED(precedence);
     PROPAGATE_IF_ERROR(prefix.prefix_parse(p, lhs_expression));
+
+    while (!parser_peek_token_is(p, SEMICOLON) && precedence < parser_peek_precedence(p)) {
+        InfixFn infix;
+        if (!poll_infix(p, p->peek_token.type, &infix)) {
+            return SUCCESS;
+        }
+
+        PROPAGATE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR(infix.infix_parse(p, *lhs_expression, lhs_expression));
+    }
+
     return SUCCESS;
 }
 
@@ -173,5 +183,24 @@ TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression) {
         });
 
     *expression = (Expression*)prefix;
+    return SUCCESS;
+}
+
+TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expression) {
+    const TokenType  op_token_type      = p->current_token.type;
+    const Precedence current_precedence = parser_current_precedence(p);
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* right;
+    PROPAGATE_IF_ERROR(expression_parse(p, current_precedence, &right));
+
+    InfixExpression* infix;
+    PROPAGATE_IF_ERROR_DO(
+        infix_expression_create(left, op_token_type, right, &infix, p->allocator.memory_alloc), {
+            Node* node = (Node*)right;
+            node->vtable->destroy(node, p->allocator.free_alloc);
+        });
+
+    *expression = (Expression*)infix;
     return SUCCESS;
 }

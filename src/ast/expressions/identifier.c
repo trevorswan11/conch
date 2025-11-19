@@ -7,6 +7,7 @@
 #include "ast/expressions/identifier.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -57,11 +58,13 @@ Slice identifier_expression_token_literal(Node* node) {
     };
 }
 
-TRY_STATUS identifier_expression_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS
+identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
+    MAYBE_UNUSED(symbol_map);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_mut_slice(sb, ident->name));

@@ -6,20 +6,22 @@
 #include "lexer/token.h"
 
 #include "parser/parser.h"
+#include "parser/precedence.h"
 
 #include "ast/expressions/expression.h"
 
 #include "util/containers/hash_set.h"
 #include "util/status.h"
 
-typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
-typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
-
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expression);
+
+typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
+typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
 
 typedef struct PrefixFn {
     TokenType       token_key;
@@ -28,13 +30,8 @@ typedef struct PrefixFn {
 
 static inline Hash hash_prefix(const void* key) {
     assert(sizeof(Hash) == 8);
-    const PrefixFn fn   = *(const PrefixFn*)key;
-    Hash           hash = (Hash)fn.token_key;
-
-    hash = (hash ^ (hash >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    hash = (hash ^ (hash >> 27)) * 0x94D049BB133111EBULL;
-    hash = hash ^ (hash >> 31);
-    return hash;
+    const PrefixFn fn = *(const PrefixFn*)key;
+    return hash_token_type(&fn.token_key);
 }
 
 static inline int compare_prefix(const void* a, const void* b) {
@@ -79,13 +76,8 @@ typedef struct InfixFn {
 
 static inline Hash hash_infix(const void* key) {
     assert(sizeof(Hash) == 8);
-    const InfixFn fn   = *(const InfixFn*)key;
-    Hash          hash = (Hash)fn.token_key;
-
-    hash = (hash ^ (hash >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    hash = (hash ^ (hash >> 27)) * 0x94D049BB133111EBULL;
-    hash = hash ^ (hash >> 31);
-    return hash;
+    const InfixFn fn = *(const InfixFn*)key;
+    return hash_token_type(&fn.token_key);
 }
 
 static inline int compare_infix(const void* a, const void* b) {
@@ -107,4 +99,21 @@ static inline bool poll_infix(Parser* p, TokenType type, InfixFn* infix) {
     return true;
 }
 
-// static const InfixFn INFIX_FUNCTIONS[] = {};
+static const InfixFn INFIX_FUNCTIONS[] = {
+    {PLUS, &infix_expression_parse},
+    {MINUS, &infix_expression_parse},
+    {STAR, &infix_expression_parse},
+    {SLASH, &infix_expression_parse},
+    {PERCENT, &infix_expression_parse},
+    {LT, &infix_expression_parse},
+    {LTEQ, &infix_expression_parse},
+    {GT, &infix_expression_parse},
+    {GTEQ, &infix_expression_parse},
+    {EQ, &infix_expression_parse},
+    {NEQ, &infix_expression_parse},
+    {AND, &infix_expression_parse},
+    {OR, &infix_expression_parse},
+    {XOR, &infix_expression_parse},
+    {SHR, &infix_expression_parse},
+    {SHL, &infix_expression_parse},
+};

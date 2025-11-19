@@ -6,6 +6,8 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -24,7 +26,7 @@ TRY_STATUS infix_expression_create(Expression*       lhs,
 
 void       infix_expression_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      infix_expression_token_literal(Node* node);
-TRY_STATUS infix_expression_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable INFIX_VTABLE = {
     .base =

@@ -7,6 +7,7 @@
 #include "ast/expressions/integer.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -45,11 +46,13 @@ Slice integer_literal_expression_token_literal(Node* node) {
     return integer->token.slice;
 }
 
-TRY_STATUS integer_literal_expression_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS
+integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
+    MAYBE_UNUSED(symbol_map);
 
     IntegerLiteralExpression* integer = (IntegerLiteralExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));
@@ -97,11 +100,13 @@ Slice uinteger_literal_expression_token_literal(Node* node) {
     return integer->token.slice;
 }
 
-TRY_STATUS uinteger_literal_expression_reconstruct(Node* node, StringBuilder* sb) {
-    ASSERT_NODE(node);
+TRY_STATUS
+uinteger_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+    MAYBE_UNUSED(symbol_map);
     if (!sb) {
         return NULL_PARAMETER;
     }
+    ASSERT_NODE(node);
 
     UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));

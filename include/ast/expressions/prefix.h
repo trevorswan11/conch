@@ -6,6 +6,8 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -22,7 +24,7 @@ TRY_STATUS prefix_expression_create(Token              token,
 
 void       prefix_expression_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      prefix_expression_token_literal(Node* node);
-TRY_STATUS prefix_expression_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable PREFIX_VTABLE = {
     .base =

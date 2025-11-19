@@ -1,6 +1,7 @@
 #include "catch_amalgamated.hpp"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <iostream>
@@ -13,6 +14,7 @@
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/float.h"
+#include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
 #include "ast/statements/declarations.h"
@@ -279,40 +281,135 @@ TEST_CASE("Number-based expressions") {
     }
 }
 
-TEST_CASE("Prefix expressions") {
-    struct TestCase {
-        const char*                             input;
-        TokenType                               op;
-        std::variant<int64_t, uint64_t, double> value;
-    };
+TEST_CASE("Basic prefix / infix expressions") {
+    SECTION("Prefix expressions") {
+        struct TestCase {
+            const char*                             input;
+            TokenType                               op;
+            std::variant<int64_t, uint64_t, double> value;
+        };
 
-    const TestCase cases[] = {
-        {"!5", TokenType::BANG, 5ll},
-        {"-15u", TokenType::MINUS, 15ull},
-        {"!3.4", TokenType::BANG, 3.4},
-        {"~0b101101", TokenType::NOT, 0b101101ll},
-        {"!1.2345e100", TokenType::BANG, 1.2345e100},
-    };
+        const TestCase cases[] = {
+            {"!5", TokenType::BANG, 5ll},
+            {"-15u", TokenType::MINUS, 15ull},
+            {"!3.4", TokenType::BANG, 3.4},
+            {"~0b101101", TokenType::NOT, 0b101101ll},
+            {"!1.2345e100", TokenType::BANG, 1.2345e100},
+        };
 
-    for (const auto& t : cases) {
-        ParserFixture pf(t.input);
-        check_parse_errors(&pf.p, {}, true);
+        for (const auto& t : cases) {
+            ParserFixture pf(t.input);
+            check_parse_errors(&pf.p, {}, true);
 
-        REQUIRE(pf.ast.statements.length == 1);
-        Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
+            REQUIRE(pf.ast.statements.length == 1);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
 
-        REQUIRE(expr->token.type == t.op);
-        if (std::holds_alternative<int64_t>(t.value)) {
-            test_number_expression<int64_t>(expr->rhs, NULL, std::get<int64_t>(t.value));
-        } else if (std::holds_alternative<uint64_t>(t.value)) {
-            test_number_expression<uint64_t>(expr->rhs, NULL, std::get<uint64_t>(t.value));
-        } else if (std::holds_alternative<double>(t.value)) {
-            test_number_expression<double>(expr->rhs, NULL, std::get<double>(t.value));
-        } else {
-            REQUIRE(false);
+            REQUIRE(expr->token.type == t.op);
+            if (std::holds_alternative<int64_t>(t.value)) {
+                test_number_expression<int64_t>(expr->rhs, NULL, std::get<int64_t>(t.value));
+            } else if (std::holds_alternative<uint64_t>(t.value)) {
+                test_number_expression<uint64_t>(expr->rhs, NULL, std::get<uint64_t>(t.value));
+            } else if (std::holds_alternative<double>(t.value)) {
+                test_number_expression<double>(expr->rhs, NULL, std::get<double>(t.value));
+            } else {
+                REQUIRE(false);
+            }
+        }
+    }
+
+    SECTION("Infix expressions") {
+        struct TestCase {
+            const char*                             input;
+            std::variant<int64_t, uint64_t, double> lvalue;
+            TokenType                               op;
+            std::variant<int64_t, uint64_t, double> rvalue;
+        };
+
+        const TestCase cases[] = {
+            {"5 + 5;", 5ll, TokenType::PLUS, 5ll},
+            {"5 - 5;", 5ll, TokenType::MINUS, 5ll},
+            {"5.0 * 5.2;", 5.0, TokenType::STAR, 5.2},
+            {"4.9e2 / 5.1e3;", 4.9e2, TokenType::SLASH, 5.1e3},
+            {"0x231 % 0xF;", 0x231, TokenType::PERCENT, 0xF},
+            {"5 < 5;", 5ll, TokenType::LT, 5ll},
+            {"5 <= 5;", 5ll, TokenType::LTEQ, 5ll},
+            {"5 > 5;", 5ll, TokenType::GT, 5ll},
+            {"5 >= 5;", 5ll, TokenType::GTEQ, 5ll},
+            {"5 == 5;", 5ll, TokenType::EQ, 5ll},
+            {"5 != 5;", 5ll, TokenType::NEQ, 5ll},
+            {"0b10111u & 0b10110u;", 0b10111ull, TokenType::AND, 0b10110ull},
+            {"0b10111u | 0b10110u;", 0b10111ull, TokenType::OR, 0b10110ull},
+            {"0b10111u ^ 0b10110u;", 0b10111ull, TokenType::XOR, 0b10110ull},
+            {"0b10111u >> 5u;", 0b10111ull, TokenType::SHR, 5ull},
+            {"0b10111u << 4u;", 0b10111ull, TokenType::SHL, 4ull},
+        };
+
+        for (const auto& t : cases) {
+            ParserFixture pf(t.input);
+            check_parse_errors(&pf.p, {}, true);
+
+            REQUIRE(pf.ast.statements.length == 1);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            InfixExpression*     expr      = (InfixExpression*)expr_stmt->expression;
+
+            const std::pair<std::variant<int64_t, uint64_t, double>, Expression*> pairs[] = {
+                {t.lvalue, expr->lhs},
+                {t.rvalue, expr->rhs},
+            };
+
+            REQUIRE(expr->op == t.op);
+            for (const auto& p : pairs) {
+                if (std::holds_alternative<int64_t>(p.first)) {
+                    test_number_expression<int64_t>(p.second, NULL, std::get<int64_t>(p.first));
+                } else if (std::holds_alternative<uint64_t>(p.first)) {
+                    test_number_expression<uint64_t>(p.second, NULL, std::get<uint64_t>(p.first));
+                } else if (std::holds_alternative<double>(p.first)) {
+                    test_number_expression<double>(p.second, NULL, std::get<double>(p.first));
+                } else {
+                    REQUIRE(false);
+                }
+            }
+        }
+    }
+
+    SECTION("Operator precedence parsing") {
+        struct TestCase {
+            const char* input;
+            std::string expected;
+        };
+
+        const TestCase cases[] = {
+            {"-a * b", "((-a) * b)"},
+            {"!-a", "(!(-a))"},
+            {"a + b + c", "((a + b) + c)"},
+            {"a + b - c", "((a + b) - c)"},
+            {"a * b * c", "((a * b) * c)"},
+            {"a * b / c", "((a * b) / c)"},
+            {"a + b / c", "(a + (b / c))"},
+            {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+            {"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
+            {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+            {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+            {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+        };
+
+        for (const auto& t : cases) {
+            ParserFixture pf(t.input);
+            check_parse_errors(&pf.p, {}, true);
+
+            StringBuilder actual_builder;
+            REQUIRE(STATUS_OK(string_builder_init(&actual_builder, t.expected.length())));
+            REQUIRE(STATUS_OK(ast_reconstruct(&pf.ast, &actual_builder)));
+
+            MutSlice actual;
+            REQUIRE(STATUS_OK(string_builder_to_string(&actual_builder, &actual)));
+            REQUIRE(t.expected == actual.ptr);
+            free(actual.ptr);
         }
     }
 }

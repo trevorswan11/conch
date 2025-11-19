@@ -7,6 +7,7 @@
 #include "ast/expressions/float.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -45,11 +46,13 @@ Slice float_literal_expression_token_literal(Node* node) {
     return float_expr->token.slice;
 }
 
-TRY_STATUS float_literal_expression_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS
+float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
+    MAYBE_UNUSED(symbol_map);
 
     FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, float_expr->token.slice));

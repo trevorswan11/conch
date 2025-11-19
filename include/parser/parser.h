@@ -6,30 +6,19 @@
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 
+#include "parser/precedence.h"
+
 #include "ast/ast.h"
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
 #include "util/io.h"
 #include "util/mem.h"
 #include "util/status.h"
-
-#define FOREACH_PRECEDENCE(PROCESS)                                                                \
-    PROCESS(LOWEST), PROCESS(BOOL_EQUIV), PROCESS(BOOL_LT_GT), PROCESS(ADD_SUB), PROCESS(MUL_DIV), \
-        PROCESS(PREFIX), PROCESS(CALL)
-
-typedef enum Precedence {
-    FOREACH_PRECEDENCE(GENERATE_ENUM),
-} Precedence;
-
-static const char* const PRECEDENCE_NAMES[] = {
-    FOREACH_PRECEDENCE(GENERATE_STRING),
-};
-
-const char* precedence_name(Precedence precedence);
 
 typedef struct Parser {
     Lexer* lexer;
@@ -39,6 +28,7 @@ typedef struct Parser {
 
     HashSet prefix_parse_fns;
     HashSet infix_parse_fns;
+    HashMap precedences;
 
     ArrayList errors;
     FileIO*   io;
@@ -59,6 +49,9 @@ bool       parser_current_token_is(const Parser* p, TokenType t);
 bool       parser_peek_token_is(const Parser* p, TokenType t);
 TRY_STATUS parser_expect_peek(Parser* p, TokenType t);
 TRY_STATUS parser_peek_error(Parser* p, TokenType t);
+
+Precedence parser_current_precedence(Parser* p);
+Precedence parser_peek_precedence(Parser* p);
 
 TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt);
 

@@ -6,6 +6,8 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -20,9 +22,10 @@ TRY_STATUS identifier_expression_create(Token                  token,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc);
 
-void       identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      identifier_expression_token_literal(Node* node);
-TRY_STATUS identifier_expression_reconstruct(Node* node, StringBuilder* sb);
+void  identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
+Slice identifier_expression_token_literal(Node* node);
+TRY_STATUS
+identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =

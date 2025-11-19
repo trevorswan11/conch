@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "util/hash.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -56,6 +57,8 @@ static const char* const TOKEN_TYPE_NAMES[] = {
     FOREACH_TOKEN(GENERATE_STRING),
 };
 
+Hash        hash_token_type(const void* key);
+int         compare_token_type(const void* a, const void* b);
 const char* token_type_name(TokenType type);
 
 // Converts the provided char into its token type representation.

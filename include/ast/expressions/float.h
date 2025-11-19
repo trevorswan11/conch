@@ -8,6 +8,8 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -22,9 +24,10 @@ TRY_STATUS float_literal_expression_create(Token                    token,
                                            FloatLiteralExpression** float_expr,
                                            memory_alloc_fn          memory_alloc);
 
-void       float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      float_literal_expression_token_literal(Node* node);
-TRY_STATUS float_literal_expression_reconstruct(Node* node, StringBuilder* sb);
+void  float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+Slice float_literal_expression_token_literal(Node* node);
+TRY_STATUS
+float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable FLOAT_VTABLE = {
     .base =

@@ -4,9 +4,11 @@
 
 #include "lexer/token.h"
 
+#include "ast/ast.h"
 #include "ast/expressions/infix.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -59,7 +61,7 @@ Slice infix_expression_token_literal(Node* node) {
     return slice_from_str_z(token_type_name(infix->op));
 }
 
-TRY_STATUS infix_expression_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
@@ -67,17 +69,17 @@ TRY_STATUS infix_expression_reconstruct(Node* node, StringBuilder* sb) {
 
     InfixExpression* infix = (InfixExpression*)node;
     Node*            lhs   = (Node*)infix->lhs;
-    const char*      op    = token_type_name(infix->op);
+    Slice            op    = poll_tt_symbol(symbol_map, infix->op);
     Node*            rhs   = (Node*)infix->rhs;
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
-    PROPAGATE_IF_ERROR(lhs->vtable->reconstruct(lhs, sb));
+    PROPAGATE_IF_ERROR(lhs->vtable->reconstruct(lhs, symbol_map, sb));
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, op, strlen(op)));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, op));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
-    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, sb));
+    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, symbol_map, sb));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
 
     return SUCCESS;

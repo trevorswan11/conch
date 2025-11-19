@@ -3,6 +3,7 @@
 #include "lexer/token.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -15,7 +16,7 @@ typedef struct NodeVTable NodeVTable;
 struct NodeVTable {
     void (*destroy)(Node*, free_alloc_fn);
     Slice (*token_literal)(Node*);
-    TRY_STATUS (*reconstruct)(Node*, StringBuilder*);
+    TRY_STATUS (*reconstruct)(Node*, const HashMap*, StringBuilder*);
 };
 
 struct Node {

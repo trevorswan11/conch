@@ -7,10 +7,12 @@
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
+// TODO: Maybe use union for walrus vs typed assign
 typedef struct {
     Statement             base;
     Token                 token;
@@ -26,7 +28,7 @@ TRY_STATUS decl_statement_create(Token                 token,
 
 void       decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      decl_statement_token_literal(Node* node);
-TRY_STATUS decl_statement_reconstruct(Node* node, StringBuilder* sb);
+TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const StatementVTable DECL_VTABLE = {
     .base =

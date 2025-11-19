@@ -8,6 +8,7 @@
 #include "ast/statements/return.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
@@ -53,7 +54,7 @@ Slice return_statement_token_literal(Node* node) {
     };
 }
 
-TRY_STATUS return_statement_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
@@ -65,7 +66,7 @@ TRY_STATUS return_statement_reconstruct(Node* node, StringBuilder* sb) {
     ReturnStatement* r = (ReturnStatement*)node;
     if (r->value) {
         Node* value_node = (Node*)r->value;
-        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, sb));
+        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));

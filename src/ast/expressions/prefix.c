@@ -4,9 +4,11 @@
 
 #include "lexer/token.h"
 
+#include "ast/ast.h"
 #include "ast/expressions/prefix.h"
 
 #include "util/allocator.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -52,19 +54,19 @@ Slice prefix_expression_token_literal(Node* node) {
     return prefix->token.slice;
 }
 
-TRY_STATUS prefix_expression_reconstruct(Node* node, StringBuilder* sb) {
+TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
 
     PrefixExpression* prefix = (PrefixExpression*)node;
-    const char*       op     = token_type_name(prefix->token.type);
+    Slice             op     = poll_tt_symbol(symbol_map, prefix->token.type);
     Node*             rhs    = (Node*)prefix->rhs;
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, op, strlen(op)));
-    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, sb));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, op));
+    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, symbol_map, sb));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
 
     return SUCCESS;
