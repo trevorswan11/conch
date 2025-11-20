@@ -5,6 +5,7 @@
 
 #include "ast/ast.h"
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/return.h"
@@ -20,28 +21,51 @@
 TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
-    DeclStatement* decl_stmt;
-    PROPAGATE_IF_ERROR(
-        decl_statement_create(p->current_token, NULL, NULL, &decl_stmt, p->allocator.memory_alloc));
 
-    PROPAGATE_IF_ERROR_DO_IS(parser_expect_peek(p, IDENT),
-                             decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc),
-                             UNEXPECTED_TOKEN);
-    PROPAGATE_IF_ERROR_DO(identifier_expression_create(p->current_token,
-                                                       &decl_stmt->ident,
-                                                       p->allocator.memory_alloc,
-                                                       p->allocator.free_alloc),
-                          decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc));
+    const Token decl_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
 
-    PROPAGATE_IF_ERROR_DO_IS(parser_expect_peek(p, WALRUS),
-                             decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc),
-                             UNEXPECTED_TOKEN);
+    IdentifierExpression* ident;
+    PROPAGATE_IF_ERROR(identifier_expression_create(
+        p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+    bool value_initialized;
 
-    // TODO: handle skipped expressions to generate value
-    while (!parser_current_token_is(p, SEMICOLON)) {
-        PROPAGATE_IF_ERROR_DO(parser_next_token(p),
-                              decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc););
+    Expression* type_expr;
+    PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &value_initialized), {
+        Node* ident_node = (Node*)ident;
+        ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
+    });
+    TypeExpression* type = (TypeExpression*)type_expr;
+
+    Expression* value = NULL;
+    if (value_initialized) {
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value), {
+            Node* ident_node = (Node*)ident;
+            ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
+            Node* type_node = (Node*)type;
+            type_node->vtable->destroy(type_node, p->allocator.free_alloc);
+        });
     }
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    DeclStatement* decl_stmt;
+    PROPAGATE_IF_ERROR_DO(
+        decl_statement_create(
+            decl_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc),
+        {
+            Node* ident_node = (Node*)ident;
+            ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
+            Node* type_node = (Node*)type;
+            type_node->vtable->destroy(type_node, p->allocator.free_alloc);
+
+            if (value) {
+                Node* value_node = (Node*)value;
+                value_node->vtable->destroy(value_node, p->allocator.free_alloc);
+            }
+        });
 
     *stmt = decl_stmt;
     return SUCCESS;
@@ -50,16 +74,21 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
 TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
+    UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+    Expression* value = NULL;
+    if (!parser_current_token_is(p, SEMICOLON)) {
+        PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &value));
+    }
+
     ReturnStatement* ret_stmt;
-    PROPAGATE_IF_ERROR(return_statement_create(NULL, &ret_stmt, p->allocator.memory_alloc));
+    PROPAGATE_IF_ERROR_DO(return_statement_create(value, &ret_stmt, p->allocator.memory_alloc), {
+        Node* value_node = (Node*)value;
+        value_node->vtable->destroy(value_node, p->allocator.free_alloc);
+    });
 
-    PROPAGATE_IF_ERROR_DO(parser_next_token(p),
-                          return_statement_destroy((Node*)ret_stmt, p->allocator.free_alloc));
-
-    // TODO: handle skipped expressions to generate value
-    while (!parser_current_token_is(p, SEMICOLON)) {
-        PROPAGATE_IF_ERROR_DO(parser_next_token(p),
-                              return_statement_destroy((Node*)ret_stmt, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
 
     *stmt = ret_stmt;

@@ -28,6 +28,7 @@ typedef struct Parser {
 
     HashSet prefix_parse_fns;
     HashSet infix_parse_fns;
+    HashSet primitives;
     HashMap precedences;
 
     ArrayList errors;

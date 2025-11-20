@@ -12,11 +12,28 @@
 
 TRY_STATUS decl_statement_create(Token                 token,
                                  IdentifierExpression* ident,
+                                 TypeExpression*       type,
                                  Expression*           value,
                                  DeclStatement**       decl_stmt,
                                  memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(token.slice.ptr);
+    if (!type) {
+        return DECL_MISSING_TYPE;
+    }
+    if (token.type != CONST && token.type != VAR) {
+        return UNEXPECTED_TOKEN;
+    }
+
+    // Theres some behavior to check for wit uninitialized decls
+    if (!value) {
+        if (token.type == CONST) {
+            return CONST_DECL_MISSING_VALUE;
+        } else if (token.type == VAR && type->type.tag == IMPLICIT) {
+            return FORWARD_VAR_DECL_MISSING_TYPE;
+        }
+    }
+
     DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));
     if (!declaration) {
         return ALLOCATION_FAILED;
@@ -26,6 +43,7 @@ TRY_STATUS decl_statement_create(Token                 token,
         .base  = STATEMENT_INIT(DECL_VTABLE),
         .token = token,
         .ident = ident,
+        .type  = type,
         .value = value,
     };
 
@@ -42,6 +60,12 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
         Node* n_ident = (Node*)d->ident;
         n_ident->vtable->destroy(n_ident, free_alloc);
         d->ident = NULL;
+    }
+
+    if (d->type) {
+        Node* n_type = (Node*)d->type;
+        n_type->vtable->destroy(n_type, free_alloc);
+        d->type = NULL;
     }
 
     if (d->value) {
@@ -77,9 +101,16 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
 
     Node* ident_node = (Node*)d->ident;
     PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+
+    Node* type_node = (Node*)d->type;
+    PROPAGATE_IF_ERROR(type_node->vtable->reconstruct(type_node, symbol_map, sb));
 
     if (d->value) {
+        if (d->type->type.tag == EXPLICIT) {
+            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+        } else {
+            PROPAGATE_IF_ERROR(string_builder_append_many(sb, "= ", 2));
+        }
         Node* value_node = (Node*)d->value;
         PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }

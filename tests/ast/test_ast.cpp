@@ -6,6 +6,7 @@ extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/type.h"
 #include "ast/node.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/statement.h"
@@ -37,10 +38,14 @@ TEST_CASE("AST Manual Reconstruction") {
         malloc,
         free)));
 
+    TypeExpression* type;
+    REQUIRE(STATUS_OK(type_expression_create(TypeTag::IMPLICIT, IMPLICIT_TYPE, &type, malloc)));
+
     DeclStatement* decl;
     REQUIRE(STATUS_OK(decl_statement_create(
         token_init(TokenType::VAR, KEYWORD_VAR.slice.ptr, KEYWORD_VAR.slice.length, 0, 0),
         ident_lhs,
+        type,
         (Expression*)ident_rhs,
         &decl,
         malloc)));
@@ -55,7 +60,7 @@ TEST_CASE("AST Manual Reconstruction") {
     MutSlice reconstructed;
     REQUIRE(STATUS_OK(string_builder_to_string(&sb, &reconstructed)));
     REQUIRE(reconstructed.ptr);
-    REQUIRE(mut_slice_equals_str_z(&reconstructed, "var my_var = another_var;"));
+    REQUIRE(mut_slice_equals_str_z(&reconstructed, "var my_var := another_var;"));
     free(reconstructed.ptr);
 
     ast_deinit(&ast);

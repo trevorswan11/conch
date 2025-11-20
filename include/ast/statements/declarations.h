@@ -3,6 +3,7 @@
 #include "lexer/token.h"
 
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/type.h"
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
@@ -17,11 +18,13 @@ typedef struct {
     Statement             base;
     Token                 token;
     IdentifierExpression* ident;
+    TypeExpression*       type;
     Expression*           value;
 } DeclStatement;
 
 TRY_STATUS decl_statement_create(Token                 token,
                                  IdentifierExpression* ident,
+                                 TypeExpression*       type,
                                  Expression*           value,
                                  DeclStatement**       decl_stmt,
                                  memory_alloc_fn       memory_alloc);

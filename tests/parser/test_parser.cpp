@@ -17,6 +17,7 @@ extern "C" {
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
@@ -88,9 +89,51 @@ test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ide
     IdentifierExpression* ident     = decl_stmt->ident;
     Node*                 node      = (Node*)ident;
     literal                         = node->vtable->token_literal(node);
-    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
 
+    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
     REQUIRE(mut_slice_equals_str_z(&decl_stmt->ident->name, expected_ident));
+}
+
+static inline void test_decl_statement(Statement*  stmt,
+                                       bool        expect_const,
+                                       const char* expected_ident,
+                                       bool        expect_nullable,
+                                       bool        expect_primitive,
+                                       const char* expected_type_literal,
+                                       TypeTag     expected_tag,
+                                       const char* expected_type_name) {
+    Node* stmt_node = (Node*)stmt;
+    Slice literal   = stmt_node->vtable->token_literal(stmt_node);
+    REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
+
+    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
+    IdentifierExpression* ident     = decl_stmt->ident;
+    Node*                 node      = (Node*)ident;
+    literal                         = node->vtable->token_literal(node);
+
+    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
+    REQUIRE(mut_slice_equals_str_z(&ident->name, expected_ident));
+
+    TypeExpression* type_expr = (TypeExpression*)decl_stmt->type;
+    Type            type      = type_expr->type;
+
+    REQUIRE(type.tag == expected_tag);
+    if (type.tag == TypeTag::EXPLICIT) {
+        const ExplicitType explicit_type = type.variant.explicit_type;
+        REQUIRE(explicit_type.nullable == expect_nullable);
+        REQUIRE(explicit_type.primitive == expect_primitive);
+
+        ident   = explicit_type.identifier;
+        node    = (Node*)ident;
+        literal = node->vtable->token_literal(node);
+
+        REQUIRE(slice_equals_str_z(&literal, expected_type_literal));
+        REQUIRE(mut_slice_equals_str_z(&ident->name, expected_type_name));
+    } else {
+        REQUIRE_FALSE(expect_nullable);
+        REQUIRE_FALSE(expect_primitive);
+        REQUIRE_FALSE(expected_type_name);
+    }
 }
 
 TEST_CASE("Declarations") {
@@ -120,7 +163,7 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
 
         std::vector<std::string> expected_errors = {
-            "Expected token WALRUS, found INT_10 [Ln 1, Col 7]",
+            "Expected token COLON, found INT_10 [Ln 1, Col 7]",
             "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
             "No prefix parse function for ASSIGN found [Ln 2, Col 5]",
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
@@ -148,17 +191,63 @@ TEST_CASE("Declarations") {
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
     }
+
+    SECTION("Complex typed decl statements") {
+        const char*   input = "var x: int = 5;\n"
+                              "var z: uint;\n"
+                              "const y: bool = 10;\n"
+                              "var foobar := 838383;\n"
+                              "var baz: ?LongNum = 838383;\n"
+                              "const boo: Conch = 2;\n";
+        ParserFixture pf(input);
+
+        check_parse_errors(&pf.p, {}, true);
+
+        std::vector<const char*> expected_identifiers = {"x", "z", "y", "foobar", "baz", "boo"};
+        std::vector<bool>        is_const             = {false, false, true, false, false, true};
+        std::vector<bool>        is_nullable          = {false, false, false, false, true, false};
+        std::vector<bool>        is_primitive         = {true, true, true, false, false, false};
+        std::vector<TypeTag>     tags                 = {TypeTag::EXPLICIT,
+                                                         TypeTag::EXPLICIT,
+                                                         TypeTag::EXPLICIT,
+                                                         TypeTag::IMPLICIT,
+                                                         TypeTag::EXPLICIT,
+                                                         TypeTag::EXPLICIT};
+        std::vector<const char*> type_type_literals   = {token_type_name(TokenType::INT_TYPE),
+                                                         token_type_name(TokenType::UINT_TYPE),
+                                                         token_type_name(TokenType::BOOL_TYPE),
+                                                         NULL,
+                                                         token_type_name(TokenType::IDENT),
+                                                         token_type_name(TokenType::IDENT)};
+        std::vector<const char*> expected_type_names  = {
+            "int", "uint", "bool", NULL, "LongNum", "Conch"};
+        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
+
+        Statement* stmt;
+        for (size_t i = 0; i < expected_identifiers.size(); i++) {
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            test_decl_statement(stmt,
+                                is_const[i],
+                                expected_identifiers[i],
+                                is_nullable[i],
+                                is_primitive[i],
+                                type_type_literals[i],
+                                tags[i],
+                                expected_type_names[i]);
+        }
+    }
 }
 
 TEST_CASE("Return statements") {
     SECTION("Happy returns") {
-        const char*   input = "return 5;\n"
+        const char*   input = "return;\n"
+                              "return 5;\n"
                               "return 10;\n"
                               "return 993322;";
         ParserFixture pf(input);
 
         check_parse_errors(&pf.p, {}, true);
-        REQUIRE(pf.ast.statements.length == 3);
+        REQUIRE(pf.ast.statements.length == 4);
 
         Statement* stmt;
         for (size_t i = 0; i < pf.ast.statements.length; i++) {

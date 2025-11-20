@@ -61,10 +61,10 @@ TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, S
     }
 
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->vtable->token_literal(node)));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
     ReturnStatement* r = (ReturnStatement*)node;
     if (r->value) {
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
         Node* value_node = (Node*)r->value;
         PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }

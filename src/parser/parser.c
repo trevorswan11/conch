@@ -13,6 +13,7 @@
 #include "lexer/token.h"
 
 #include "ast/ast.h"
+#include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
@@ -67,6 +68,24 @@ static inline TRY_STATUS _init_infix(HashSet* infix_set, Allocator allocator) {
     return SUCCESS;
 }
 
+static inline TRY_STATUS _init_primitives(HashSet* primitive_set, Allocator allocator) {
+    const size_t num_primitives = sizeof(ALL_PRIMITIVES) / sizeof(ALL_PRIMITIVES[0]);
+    PROPAGATE_IF_ERROR(hash_set_init_allocator(primitive_set,
+                                               num_primitives,
+                                               sizeof(TokenType),
+                                               alignof(TokenType),
+                                               hash_token_type,
+                                               compare_token_type,
+                                               allocator));
+
+    for (size_t i = 0; i < num_primitives; i++) {
+        const Keyword keyword = ALL_PRIMITIVES[i];
+        hash_set_put_assume_capacity(primitive_set, &keyword.type);
+    }
+
+    return SUCCESS;
+}
+
 static inline TRY_STATUS _init_precedences(HashMap* precedence_map, Allocator allocator) {
     const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
     PROPAGATE_IF_ERROR(hash_map_init_allocator(precedence_map,
@@ -100,16 +119,24 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     PROPAGATE_IF_ERROR_DO(_init_infix(&infix_functions, allocator),
                           hash_set_deinit(&prefix_functions));
 
+    HashSet primitives;
+    PROPAGATE_IF_ERROR_DO(_init_primitives(&primitives, allocator), {
+        hash_set_deinit(&prefix_functions);
+        hash_set_deinit(&infix_functions);
+    });
+
     HashMap precedences;
     PROPAGATE_IF_ERROR_DO(_init_precedences(&precedences, allocator), {
         hash_set_deinit(&prefix_functions);
         hash_set_deinit(&infix_functions);
+        hash_set_deinit(&primitives);
     });
 
     ArrayList errors;
     PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator), {
         hash_set_deinit(&prefix_functions);
         hash_set_deinit(&infix_functions);
+        hash_set_deinit(&primitives);
         hash_map_deinit(&precedences);
     });
 
@@ -120,6 +147,7 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
         .peek_token       = token_init(END, "", 0, 0, 0),
         .prefix_parse_fns = prefix_functions,
         .infix_parse_fns  = infix_functions,
+        .primitives       = primitives,
         .precedences      = precedences,
         .errors           = errors,
         .io               = io,
@@ -144,6 +172,7 @@ void parser_deinit(Parser* p) {
     array_list_deinit(&p->errors);
     hash_set_deinit(&p->prefix_parse_fns);
     hash_set_deinit(&p->infix_parse_fns);
+    hash_set_deinit(&p->primitives);
     hash_map_deinit(&p->precedences);
 }
 

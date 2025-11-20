@@ -15,6 +15,7 @@
 
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized);
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression);

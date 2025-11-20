@@ -10,6 +10,7 @@
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/return.h"
 #include "ast/statements/statement.h"
@@ -80,6 +81,70 @@ TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression) {
     PROPAGATE_IF_ERROR(identifier_expression_create(
         p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
     *expression = (Expression*)ident;
+    return SUCCESS;
+}
+
+TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
+    assert(p->primitives.buffer);
+    *initialized = false;
+
+    TypeExpression* type;
+    if (parser_peek_token_is(p, WALRUS)) {
+        PROPAGATE_IF_ERROR(
+            type_expression_create(IMPLICIT, IMPLICIT_TYPE, &type, p->allocator.memory_alloc));
+
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        *initialized = true;
+    } else if (parser_peek_token_is(p, COLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        // Check for a question mark to allow nil
+        bool is_nullable = false;
+        if (parser_peek_token_is(p, WHAT)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            is_nullable = true;
+        }
+
+        // Check for primitive before creating an identifier
+        const bool is_primitive = hash_set_contains(&p->primitives, &p->peek_token.type);
+        if (is_primitive || parser_peek_token_is(p, IDENT)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+            Expression* ident_expr;
+            PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
+            IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
+
+            const TypeUnion onion = (TypeUnion){
+                .explicit_type =
+                    (ExplicitType){
+                        .identifier = ident,
+                        .nullable   = is_nullable,
+                        .primitive  = is_primitive,
+                    },
+            };
+
+            PROPAGATE_IF_ERROR_DO(
+                type_expression_create(EXPLICIT, onion, &type, p->allocator.memory_alloc), {
+                    Node* ident_node = (Node*)ident_expr;
+                    ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
+                });
+        } else {
+            return UNEXPECTED_TOKEN;
+        }
+
+        if (parser_peek_token_is(p, ASSIGN)) {
+            *initialized = true;
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+        }
+    } else {
+        PROPAGATE_IF_ERROR_IS(parser_peek_error(p, COLON), REALLOCATION_FAILED);
+        return UNEXPECTED_TOKEN;
+    }
+
+    // Advance again to prepare for rhs
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    *expression = (Expression*)type;
     return SUCCESS;
 }
 
