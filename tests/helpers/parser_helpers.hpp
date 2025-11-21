@@ -48,3 +48,11 @@ void test_number_expression(Expression* expression, const char* expected_literal
 
 template <typename T>
 void test_number_expression(const char* input, const char* expected_literal, T expected_value);
+
+void test_bool_expression(Expression* expression,
+                          bool        expected_value,
+                          const char* expected_literal);
+
+void test_string_expression(Expression* expression,
+                            std::string expected_string_literal,
+                            std::string expected_token_literal);

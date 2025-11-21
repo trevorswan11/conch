@@ -66,6 +66,10 @@ bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size)
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
+Slice slice_from_mut(const MutSlice* slice) {
+    return slice_from_str_s(slice->ptr, slice->length);
+}
+
 uintptr_t align_up(uintptr_t ptr, size_t alignment) {
     assert(is_power_of_two(alignment));
     return (ptr + (alignment - 1)) & ~(alignment - 1);

@@ -20,6 +20,7 @@ extern "C" {
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
@@ -37,6 +38,7 @@ extern "C" {
 TEST_CASE("Declarations") {
     SECTION("Var statements") {
         const char*   input = "var x := 5;\n"
+                              "// var x := 5;\n"
                               "var y := 10;\n"
                               "var foobar := 838383;";
         ParserFixture pf(input);
@@ -355,7 +357,7 @@ TEST_CASE("Basic prefix / infix expressions") {
 TEST_CASE("Bool expressions") {
     SECTION("Basic expressions") {
         const char*   input = "true;\n"
-                              "false;\n";
+                              "false;";
         ParserFixture pf(input);
         check_parse_errors(&pf.p, {}, true);
 
@@ -367,13 +369,64 @@ TEST_CASE("Bool expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
 
-            ExpressionStatement*   expr_stmt = (ExpressionStatement*)stmt;
-            BoolLiteralExpression* boolean   = (BoolLiteralExpression*)expr_stmt->expression;
-            REQUIRE(boolean->value == expected_values[i]);
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            test_bool_expression(expr_stmt->expression, expected_values[i], expected_literals[i]);
+        }
+    }
+}
 
-            Node* bool_node = (Node*)boolean;
-            Slice literal   = bool_node->vtable->token_literal(bool_node);
-            REQUIRE(slice_equals_str_z(&literal, expected_literals[i]));
+TEST_CASE("String expressions") {
+    SECTION("Single-line strings") {
+        const char*   input = "\"This is a string\";\n"
+                              "\"Hello, 'World'!\";\n"
+                              "\"\";";
+        ParserFixture pf(input);
+        check_parse_errors(&pf.p, {}, true);
+
+        const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!", ""};
+        const std::string expected_literals[] = {
+            "\"This is a string\"",
+            "\"Hello, 'World'!\"",
+            "\"\"",
+        };
+
+        REQUIRE(pf.ast.statements.length == 3);
+        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            test_string_expression(
+                expr_stmt->expression, expected_strings[i], expected_literals[i]);
+        }
+    }
+
+    SECTION("Multiline strings") {
+        const char*   input = "\\\\This is a string\n"
+                              ";"
+                              "\\\\Hello, 'World'!\n"
+                              "\\\\\n"
+                              ";"
+                              "\\\\\n"
+                              ";";
+        ParserFixture pf(input);
+        check_parse_errors(&pf.p, {}, true);
+
+        const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!\n", ""};
+        const std::string expected_literals[] = {
+            "This is a string",
+            "Hello, 'World'!\n\\\\",
+            "",
+        };
+
+        REQUIRE(pf.ast.statements.length == 3);
+        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            test_string_expression(
+                expr_stmt->expression, expected_strings[i], expected_literals[i]);
         }
     }
 }

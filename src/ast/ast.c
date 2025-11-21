@@ -77,6 +77,8 @@ void ast_free_statements(AST* ast) {
         ASSERT_NODE(node);
         node->vtable->destroy(node, ast->allocator.free_alloc);
     }
+
+    array_list_clear_retaining_capacity(&ast->statements);
 }
 
 TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb) {

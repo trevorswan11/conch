@@ -63,6 +63,11 @@ static inline bool mut_slice_equals_slice(const MutSlice* a, const Slice* b) {
     return mut_slice_equals_str_s(a, b->ptr, b->length);
 }
 
+// Creates a slice from a mutable one.
+//
+// Makes no assumptions about ownership.
+Slice slice_from_mut(const MutSlice* slice);
+
 uintptr_t align_up(uintptr_t ptr, size_t alignment);
 void*     align_ptr(void* ptr, size_t alignment);
 void*     ptr_offset(void* p, size_t offset);

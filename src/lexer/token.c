@@ -77,29 +77,28 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
     };
 }
 
-TRY_STATUS promote_token_string(Token token, MutSlice* slice) {
+TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocator) {
     if (token.type != STRING && token.type != MULTILINE_STRING) {
         return TYPE_MISMATCH;
     }
 
     StringBuilder builder;
-    PROPAGATE_IF_ERROR(string_builder_init(&builder, token.slice.length));
+    PROPAGATE_IF_ERROR(string_builder_init_allocator(&builder, token.slice.length + 1, allocator));
 
     if (token.type == STRING) {
-        if (token.slice.length <= 2) {
+        if (token.slice.length < 2) {
             string_builder_deinit(&builder);
-            return EMPTY;
-        }
+            return UNEXPECTED_TOKEN;
+        } else if (token.slice.length > 2) {
 
-        PROPAGATE_IF_ERROR_DO(
-            string_builder_append_many(&builder, token.slice.ptr, token.slice.length),
-            string_builder_deinit(&builder));
-    } else if (token.type == MULTILINE_STRING) {
-        if (token.slice.length == 0) {
-            string_builder_deinit(&builder);
-            return EMPTY;
-        }
+            const char*  skipped_quote  = token.slice.ptr + 1;
+            const size_t skipped_length = token.slice.length - 2;
 
+            PROPAGATE_IF_ERROR_DO(
+                string_builder_append_many(&builder, skipped_quote, skipped_length),
+                string_builder_deinit(&builder));
+        }
+    } else if (token.type == MULTILINE_STRING && token.slice.length > 0) {
         bool at_line_start = true;
         for (size_t i = 0; i < token.slice.length; i++) {
             const char c = token.slice.ptr[i];

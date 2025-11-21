@@ -11,6 +11,7 @@
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/return.h"
@@ -272,14 +273,16 @@ TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expr
 }
 
 TRY_STATUS bool_expression_parse(Parser* p, Expression** expression) {
-    const TokenType current_token_type = p->current_token.type;
-    if (current_token_type != TRUE && current_token_type != FALSE) {
-        return UNEXPECTED_TOKEN;
-    }
-
     BoolLiteralExpression* boolean;
     PROPAGATE_IF_ERROR(bool_literal_expression_create(
-        current_token_type == TRUE, &boolean, p->allocator.memory_alloc));
+        p->current_token.type == TRUE, &boolean, p->allocator.memory_alloc));
     *expression = (Expression*)boolean;
+    return SUCCESS;
+}
+
+TRY_STATUS string_expression_parse(Parser* p, Expression** expression) {
+    StringLiteralExpression* string;
+    PROPAGATE_IF_ERROR(string_literal_expression_create(p->current_token, &string, p->allocator));
+    *expression = (Expression*)string;
     return SUCCESS;
 }

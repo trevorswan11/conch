@@ -5,8 +5,10 @@
 #include "parser_helpers.hpp"
 
 extern "C" {
+#include "ast/expressions/bool.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/integer.h"
+#include "ast/expressions/string.h"
 #include "ast/node.h"
 #include "ast/statements/declarations.h"
 }
@@ -153,3 +155,24 @@ void test_number_expression(const char* input, const char* expected_literal, T e
 template void test_number_expression<int64_t>(const char*, const char*, int64_t);
 template void test_number_expression<uint64_t>(const char*, const char*, uint64_t);
 template void test_number_expression<double>(const char*, const char*, double);
+
+void test_bool_expression(Expression* expression,
+                          bool        expected_value,
+                          const char* expected_literal) {
+    BoolLiteralExpression* boolean = (BoolLiteralExpression*)expression;
+    REQUIRE(boolean->value == expected_value);
+
+    Node* bool_node = (Node*)boolean;
+    Slice literal   = bool_node->vtable->token_literal(bool_node);
+    REQUIRE(slice_equals_str_z(&literal, expected_literal));
+}
+
+void test_string_expression(Expression* expression,
+                            std::string expected_string_literal,
+                            std::string expected_token_literal) {
+    StringLiteralExpression* string = (StringLiteralExpression*)expression;
+    REQUIRE(expected_string_literal == string->slice.ptr);
+
+    std::string actual_token_literal(string->token.slice.ptr, string->token.slice.length);
+    REQUIRE(expected_token_literal == actual_token_literal);
+}

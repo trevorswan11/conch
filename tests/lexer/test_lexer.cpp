@@ -592,7 +592,8 @@ TEST_CASE("Advanced literals") {
     SECTION("Promotion of invalid tokens") {
         Token    string_tok = token_init(TokenType::INT_10, "1", strlen("1"), 0, 0);
         MutSlice promoted_string;
-        REQUIRE(promote_token_string(string_tok, &promoted_string) == Status::TYPE_MISMATCH);
+        REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
+                Status::TYPE_MISMATCH);
     }
 
     SECTION("Promotion of standard string literals") {
@@ -600,7 +601,8 @@ TEST_CASE("Advanced literals") {
             Token string_tok = token_init(
                 TokenType::STRING, "\"Hello, World!\"", strlen("\"Hello, World!\""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(STATUS_OK(promote_token_string(string_tok, &promoted_string)));
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello, World!");
             free(promoted_string.ptr);
@@ -610,7 +612,8 @@ TEST_CASE("Advanced literals") {
             Token string_tok = token_init(
                 TokenType::STRING, "\"\"Hello, World!\"\"", strlen("\"\"Hello, World!\"\""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(STATUS_OK(promote_token_string(string_tok, &promoted_string)));
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "\"Hello, World!\"");
             free(promoted_string.ptr);
@@ -619,13 +622,15 @@ TEST_CASE("Advanced literals") {
         SECTION("Empty case") {
             Token    string_tok = token_init(TokenType::STRING, "\"\"", strlen("\"\""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(promote_token_string(string_tok, &promoted_string) == Status::EMPTY);
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
         }
 
         SECTION("Malformed case") {
             Token    string_tok = token_init(TokenType::STRING, "\"", strlen("\""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(promote_token_string(string_tok, &promoted_string) == Status::EMPTY);
+            REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
+                    Status::UNEXPECTED_TOKEN);
         }
     }
 
@@ -637,7 +642,8 @@ TEST_CASE("Advanced literals") {
                                           0,
                                           0);
             MutSlice promoted_string;
-            REQUIRE(STATUS_OK(promote_token_string(string_tok, &promoted_string)));
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello,\"World!\"");
             free(promoted_string.ptr);
@@ -650,7 +656,8 @@ TEST_CASE("Advanced literals") {
                                           0,
                                           0);
             MutSlice promoted_string;
-            REQUIRE(STATUS_OK(promote_token_string(string_tok, &promoted_string)));
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello,\nWorld!\n");
             free(promoted_string.ptr);
@@ -659,14 +666,10 @@ TEST_CASE("Advanced literals") {
         SECTION("Empty case") {
             Token    string_tok = token_init(TokenType::MULTILINE_STRING, "", strlen(""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(promote_token_string(string_tok, &promoted_string) == Status::EMPTY);
-        }
-
-        SECTION("Malformed case") {
-            Token    string_tok = token_init(TokenType::MULTILINE_STRING, "\\", strlen("\\"), 0, 0);
-            MutSlice promoted_string;
-            REQUIRE(STATUS_OK(promote_token_string(string_tok, &promoted_string)));
+            REQUIRE(
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "");
             free(promoted_string.ptr);
         }
     }
