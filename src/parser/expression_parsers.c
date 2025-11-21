@@ -4,6 +4,7 @@
 #include "lexer/token.h"
 
 #include "ast/ast.h"
+#include "ast/expressions/bool.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/identifier.h"
@@ -267,5 +268,18 @@ TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expr
         });
 
     *expression = (Expression*)infix;
+    return SUCCESS;
+}
+
+TRY_STATUS bool_expression_parse(Parser* p, Expression** expression) {
+    const TokenType current_token_type = p->current_token.type;
+    if (current_token_type != TRUE && current_token_type != FALSE) {
+        return UNEXPECTED_TOKEN;
+    }
+
+    BoolLiteralExpression* boolean;
+    PROPAGATE_IF_ERROR(bool_literal_expression_create(
+        current_token_type == TRUE, &boolean, p->allocator.memory_alloc));
+    *expression = (Expression*)boolean;
     return SUCCESS;
 }

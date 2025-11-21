@@ -26,7 +26,7 @@ endif
 
 DEPFLAGS = -MMD -MP
 INCLUDES := -I$(INC_DIR)
-TEST_INCLUDES := -I$(INC_DIR) -I$(TEST_DIR)/test_framework
+TEST_INCLUDES := -I$(INC_DIR) -I$(TEST_DIR)/helpers -I$(TEST_DIR)/test_framework
 
 rwildcard = $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
@@ -111,7 +111,7 @@ OBJS_TEST := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_TEST)/%.o,$(SRCS))
 CFLAGS_TEST := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST
 
 TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
-CATCH_OBJ_TESTS := $(BUILD_DIR)/tests/catch_amalgamated.o
+CATCH_OBJ_TESTS := $(BUILD_DIR)/catch/tests/catch_amalgamated.o
 LIB_OBJS_FOR_TESTS := $(filter-out $(OBJ_DIR_TEST)/main.o,$(OBJS_TEST))
 CXXFLAGS_TEST = -std=c++20 -O0 -Wall -Wextra -g $(TEST_INCLUDES) $(DEPFLAGS) -DTEST
 
@@ -138,7 +138,7 @@ OBJS_ASAN := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ASAN)/%.o,$(SRCS))
 CFLAGS_ASAN := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g -fsanitize=address,undefined -fno-sanitize-recover=all $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST -DASAN
 
 ASAN_TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/asan/%.o,$(TEST_SRCS))
-CATCH_OBJ_ASAN := $(BUILD_DIR)/asan/catch_amalgamated.o
+CATCH_OBJ_ASAN := $(BUILD_DIR)/catch/asan/catch_amalgamated.o
 LIB_OBJS_FOR_ASAN := $(filter-out $(OBJ_DIR_ASAN)/main.o,$(OBJS_ASAN))
 CXXFLAGS_ASAN = -std=c++20 -O0 -Wall -Wextra -g -fsanitize=address,undefined -fno-sanitize-recover=all $(TEST_INCLUDES) $(DEPFLAGS) -DTEST -DASAN
 
@@ -165,7 +165,7 @@ OBJS_COVERAGE := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_COVERAGE)/%.o,$(SRCS))
 CFLAGS_COVERAGE := -std=c17 -fprofile-instr-generate -fcoverage-mapping -O0 -g -Wall -Wextra -Werror -Wpedantic $(INCLUDES) $(DEPFLAGS) -DDEBUG -DCOVERAGE
 
 COVERAGE_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/coverage/%.o,$(TEST_SRCS))
-CATCH_OBJ_COVERAGE := $(BUILD_DIR)/coverage/catch_amalgamated.o
+CATCH_OBJ_COVERAGE := $(BUILD_DIR)/catch/coverage/catch_amalgamated.o
 LIB_OBJS_FOR_COVERAGES := $(filter-out $(OBJ_DIR_COVERAGE)/main.o,$(OBJS_COVERAGE))
 CXXFLAGS_COVERAGE = -std=c++20 -fprofile-instr-generate -fcoverage-mapping -O0 -g -Wall -Wextra $(TEST_INCLUDES) $(DEPFLAGS) -DCOVERAGE
 
@@ -263,6 +263,15 @@ else
 	@rm -rf $(BIN_ROOT)
 endif
 
+cltest:
+ifeq ($(OS),Windows_NT)
+	@if exist "$(BUILD_DIR)/tests" rmdir /S /Q "$(BUILD_DIR)/tests"
+	@if exist "$(BIN_ROOT)/tests" rmdir /S /Q "$(BIN_ROOT)/tests"
+else
+	@rm -rf $(BUILD_DIR)/tests
+	@rm -rf $(BIN_ROOT)/tests
+endif
+
 # ================ FORMATTING ================
 
 fmt:
@@ -300,6 +309,7 @@ asan              > Build and run the tests with address and UB sanitizers\n\
 fmt               > Format all source and header files with clang-format\n\
 fmt-check         > Check formatting rules without modifying files\n\
 clean             > Remove object files, dependency files, and binaries\n\
+cltest            > Remove test object files, dependency files, and binaries, excluding Catch2 objects\n\
 \n\
 General Targets:\n\
 \n\
@@ -309,4 +319,4 @@ help              > Print this help menu\n\
 .PHONY: default install all dist release debug \
 		test run run-dist run-release run-debug \
 		coverage coverage-report coverage-badge \
-		asan fmt fmt-check clean help
+		asan fmt fmt-check clean cltest help
