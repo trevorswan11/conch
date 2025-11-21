@@ -624,6 +624,9 @@ TEST_CASE("Advanced literals") {
             MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+            REQUIRE(promoted_string.ptr);
+            mut_slice_equals_str_z(&promoted_string, "");
+            free(promoted_string.ptr);
         }
 
         SECTION("Malformed case") {
