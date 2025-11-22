@@ -22,6 +22,7 @@ TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expression);
 TRY_STATUS bool_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS string_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression);
 
 typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
 typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -61,6 +62,7 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {FALSE, &bool_expression_parse},
     {STRING, &string_expression_parse},
     {MULTILINE_STRING, &string_expression_parse},
+    {LPAREN, &grouped_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {

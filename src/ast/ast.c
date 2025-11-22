@@ -3,6 +3,7 @@
 
 #include "ast/ast.h"
 #include "ast/node.h"
+#include "ast/statements/block.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/keywords.h"
@@ -63,22 +64,9 @@ void ast_deinit(AST* ast) {
     }
     ASSERT_ALLOCATOR(ast->allocator);
 
-    ast_free_statements(ast);
+    clear_statement_list(&ast->statements, ast->allocator.free_alloc);
     array_list_deinit(&ast->statements);
     hash_map_deinit(&ast->token_type_symbols);
-}
-
-void ast_free_statements(AST* ast) {
-    Statement* stmt;
-    for (size_t i = 0; i < ast->statements.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&ast->statements, i, &stmt));
-        ASSERT_STATEMENT(stmt);
-        Node* node = (Node*)stmt;
-        ASSERT_NODE(node);
-        node->vtable->destroy(node, ast->allocator.free_alloc);
-    }
-
-    array_list_clear_retaining_capacity(&ast->statements);
 }
 
 TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb) {

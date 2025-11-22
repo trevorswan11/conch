@@ -272,6 +272,24 @@ else
 	@rm -rf $(BIN_ROOT)/tests
 endif
 
+clasan:
+ifeq ($(OS),Windows_NT)
+	@if exist "$(BUILD_DIR)/asan" rmdir /S /Q "$(BUILD_DIR)/asan"
+	@if exist "$(BIN_ROOT)/asan" rmdir /S /Q "$(BIN_ROOT)/asan"
+else
+	@rm -rf $(BUILD_DIR)/asan
+	@rm -rf $(BIN_ROOT)/asan
+endif
+
+clcov:
+ifeq ($(OS),Windows_NT)
+	@if exist "$(BUILD_DIR)/coverage" rmdir /S /Q "$(BUILD_DIR)/coverage"
+	@if exist "$(BIN_ROOT)/coverage" rmdir /S /Q "$(BIN_ROOT)/coverage"
+else
+	@rm -rf $(BUILD_DIR)/coverage
+	@rm -rf $(BIN_ROOT)/coverage
+endif
+
 # ================ FORMATTING ================
 
 fmt:
@@ -310,6 +328,8 @@ fmt               > Format all source and header files with clang-format\n\
 fmt-check         > Check formatting rules without modifying files\n\
 clean             > Remove object files, dependency files, and binaries\n\
 cltest            > Remove test object files, dependency files, and binaries, excluding Catch2 objects\n\
+clasan            > Remove asan object files, dependency files, and binaries, excluding Catch2 objects\n\
+clcov             > Remove coverage object files, dependency files, and binaries, excluding Catch2 objects\n\
 \n\
 General Targets:\n\
 \n\
@@ -319,4 +339,5 @@ help              > Print this help menu\n\
 .PHONY: default install all dist release debug \
 		test run run-dist run-release run-debug \
 		coverage coverage-report coverage-badge \
-		asan fmt fmt-check clean cltest help
+		asan fmt fmt-check clean cltest clasan \
+		clcov help

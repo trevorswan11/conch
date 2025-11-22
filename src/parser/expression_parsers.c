@@ -286,3 +286,18 @@ TRY_STATUS string_expression_parse(Parser* p, Expression** expression) {
     *expression = (Expression*)string;
     return SUCCESS;
 }
+
+TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression) {
+    UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+    Expression* inner;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &inner));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
+        Node* inner_node = (Node*)inner;
+        inner_node->vtable->destroy(inner_node, p->allocator.free_alloc);
+    });
+
+    *expression = inner;
+    return SUCCESS;
+}

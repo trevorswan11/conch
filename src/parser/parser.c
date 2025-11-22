@@ -14,6 +14,7 @@
 
 #include "ast/ast.h"
 #include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
@@ -210,7 +211,7 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
 
     // If we encountered any errors, invalidate the tree for now
     if (p->errors.length > 0) {
-        ast_free_statements(ast);
+        clear_statement_list(&ast->statements, ast->allocator.free_alloc);
     }
 
     return SUCCESS;

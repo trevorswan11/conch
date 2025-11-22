@@ -257,7 +257,7 @@ TEST_CASE("Malformed find") {
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
 
     size_t  maybe_idx;
-    int32_t maybe_item;
+    int32_t maybe_item = 0;
     REQUIRE(array_list_find(&a, NULL, &maybe_item, compare_int32_t) == Status::NULL_PARAMETER);
     REQUIRE(array_list_find(&a, &maybe_idx, NULL, compare_int32_t) == Status::NULL_PARAMETER);
     REQUIRE(array_list_find(&a, &maybe_idx, &maybe_item, NULL) == Status::NULL_PARAMETER);
