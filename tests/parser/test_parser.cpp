@@ -25,6 +25,7 @@ extern "C" {
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+#include "ast/statements/return.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/lexer.h"
@@ -538,5 +539,85 @@ TEST_CASE("Conditional expressions") {
 
         ExpressionStatement* alternate = (ExpressionStatement*)if_expr->alternate;
         test_number_expression<int64_t>(alternate->expression, "2", 2);
+    }
+
+    SECTION("If/Else with return statement") {
+        const char*   input = "if (true) return 1; else return 2;";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        REQUIRE(if_expr->alternate);
+
+        BoolLiteralExpression* condition = (BoolLiteralExpression*)if_expr->condition;
+        REQUIRE(condition->value);
+
+        ReturnStatement* consequence = (ReturnStatement*)if_expr->consequence;
+        test_number_expression<int64_t>(consequence->value, "1", 1);
+
+        ReturnStatement* alternate = (ReturnStatement*)if_expr->alternate;
+        test_number_expression<int64_t>(alternate->value, "2", 2);
+    }
+
+    SECTION("If/Else with nested ifs and terminal else") {
+        const char* input = "if (x < y) {return -1;} else if (x > y) {return 1;} else {return 0;}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        // Verify the first condition
+        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        REQUIRE(if_expr->alternate);
+
+        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        REQUIRE(condition->op == TokenType::LT);
+        test_identifier_expression(condition->lhs, "x");
+        test_identifier_expression(condition->rhs, "y");
+
+        // Verify the first consequence
+        BlockStatement* consequence_one = (BlockStatement*)if_expr->consequence;
+        REQUIRE(consequence_one->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
+        ReturnStatement*  return_stmt = (ReturnStatement*)stmt;
+        PrefixExpression* neg_num     = (PrefixExpression*)return_stmt->value;
+        REQUIRE(neg_num->token.type == TokenType::MINUS);
+        test_number_expression<int64_t>(neg_num->rhs, "1", 1);
+
+        // Verify the first alternate and its condition
+        ExpressionStatement* alternate_one = (ExpressionStatement*)if_expr->alternate;
+        if_expr                            = (IfExpression*)alternate_one->expression;
+        REQUIRE(if_expr->alternate);
+
+        condition = (InfixExpression*)if_expr->condition;
+        REQUIRE(condition->op == TokenType::GT);
+        test_identifier_expression(condition->lhs, "x");
+        test_identifier_expression(condition->rhs, "y");
+
+        // Verify the second consequence
+        BlockStatement* consequence_two = (BlockStatement*)if_expr->consequence;
+        REQUIRE(consequence_two->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
+        return_stmt = (ReturnStatement*)stmt;
+        test_number_expression<int64_t>(return_stmt->value, "1", 1);
+
+        // Verify the second alternate
+        BlockStatement* alternate_two = (BlockStatement*)if_expr->alternate;
+        REQUIRE(alternate_two->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
+        return_stmt = (ReturnStatement*)stmt;
+        test_number_expression<int64_t>(return_stmt->value, "0", 0);
     }
 }

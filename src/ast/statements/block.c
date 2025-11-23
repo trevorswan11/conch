@@ -55,6 +55,7 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     BlockStatement* block = (BlockStatement*)node;
     clear_statement_list(&block->statements, free_alloc);
     array_list_deinit(&block->statements);
+    free_alloc(block);
 }
 
 Slice block_statement_token_literal(Node* node) {
