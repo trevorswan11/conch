@@ -7,6 +7,7 @@
 #include "ast/expressions/bool.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
+#include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
@@ -369,5 +370,26 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
         });
 
     *expression = (Expression*)if_expr;
+    return SUCCESS;
+}
+
+TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+
+    ArrayList parameters;
+    PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters));
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), free_parameter_list(&parameters));
+
+    BlockStatement* body;
+    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &body), free_parameter_list(&parameters));
+
+    FunctionExpression* function;
+    PROPAGATE_IF_ERROR_DO(
+        function_expression_create(parameters, body, &function, p->allocator.memory_alloc), {
+            free_parameter_list(&parameters);
+            block_statement_destroy((Node*)body, p->allocator.free_alloc);
+        });
+
+    *expression = (Expression*)function;
     return SUCCESS;
 }

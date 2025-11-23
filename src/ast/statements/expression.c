@@ -17,6 +17,10 @@ TRY_STATUS expression_statement_create(Token                 first_expression_to
                                        ExpressionStatement** expr_stmt,
                                        memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
+    if (!expression) {
+        return NULL_PARAMETER;
+    }
+
     ExpressionStatement* expr = memory_alloc(sizeof(ExpressionStatement));
     if (!expr) {
         return ALLOCATION_FAILED;

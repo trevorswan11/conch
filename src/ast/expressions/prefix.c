@@ -65,8 +65,9 @@ TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, 
     }
 
     PrefixExpression* prefix = (PrefixExpression*)node;
-    Slice             op     = poll_tt_symbol(symbol_map, prefix->token.type);
-    Node*             rhs    = (Node*)prefix->rhs;
+    assert(prefix->rhs);
+    Slice op  = poll_tt_symbol(symbol_map, prefix->token.type);
+    Node* rhs = (Node*)prefix->rhs;
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, op));

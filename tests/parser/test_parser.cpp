@@ -17,6 +17,7 @@ extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/float.h"
+#include "ast/expressions/function.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
@@ -619,5 +620,10 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
         return_stmt = (ReturnStatement*)stmt;
         test_number_expression<int64_t>(return_stmt->value, "0", 0);
+    }
+}
+
+TEST_CASE("Function literals") {
+    SECTION("Parameter allocation") {
     }
 }

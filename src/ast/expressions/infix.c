@@ -72,9 +72,11 @@ TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, S
     }
 
     InfixExpression* infix = (InfixExpression*)node;
-    Node*            lhs   = (Node*)infix->lhs;
-    Slice            op    = poll_tt_symbol(symbol_map, infix->op);
-    Node*            rhs   = (Node*)infix->rhs;
+    assert(infix->lhs && infix->rhs);
+
+    Node* lhs = (Node*)infix->lhs;
+    Slice op  = poll_tt_symbol(symbol_map, infix->op);
+    Node* rhs = (Node*)infix->rhs;
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
     PROPAGATE_IF_ERROR(lhs->vtable->reconstruct(lhs, symbol_map, sb));

@@ -17,7 +17,6 @@
 // Frees all allocated statements and resets the buffer length.
 void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
 
-// TODO: Maybe use union for walrus vs typed assign
 typedef struct {
     Statement base;
     ArrayList statements;

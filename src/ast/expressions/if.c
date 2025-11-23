@@ -80,11 +80,13 @@ if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* 
     IfExpression* if_expr = (IfExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, "if ", 3));
 
+    assert(if_expr->condition);
     Node* condition_node = (Node*)if_expr->condition;
     PROPAGATE_IF_ERROR(condition_node->vtable->reconstruct(condition_node, symbol_map, sb));
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
+    assert(if_expr->consequence);
     Node* consequence_node = (Node*)if_expr->consequence;
     PROPAGATE_IF_ERROR(consequence_node->vtable->reconstruct(consequence_node, symbol_map, sb));
 

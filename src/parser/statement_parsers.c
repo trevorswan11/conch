@@ -28,9 +28,9 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     IdentifierExpression* ident;
     PROPAGATE_IF_ERROR(identifier_expression_create(
         p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
-    bool value_initialized;
 
     Expression* type_expr;
+    bool        value_initialized;
     PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &value_initialized), {
         Node* ident_node = (Node*)ident;
         ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
