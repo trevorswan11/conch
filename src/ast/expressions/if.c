@@ -42,8 +42,8 @@ TRY_STATUS if_expression_create(Expression*     condition,
 void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-
     IfExpression* if_expr = (IfExpression*)node;
+
     if (if_expr->condition) {
         Node* condition = (Node*)if_expr->condition;
         condition->vtable->destroy(condition, free_alloc);

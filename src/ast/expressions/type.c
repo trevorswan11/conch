@@ -36,11 +36,13 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
     TypeExpression* type = (TypeExpression*)node;
+
     if (type->type.tag == EXPLICIT && type->type.variant.explicit_type.identifier) {
         IdentifierExpression* ident      = type->type.variant.explicit_type.identifier;
         Node*                 ident_node = (Node*)ident;
         ident_node->vtable->destroy(ident_node, free_alloc);
     }
+
     free_alloc(type);
 }
 

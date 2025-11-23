@@ -42,8 +42,8 @@ TRY_STATUS infix_expression_create(Expression*       lhs,
 void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-
     InfixExpression* infix = (InfixExpression*)node;
+
     if (infix->lhs) {
         Node* lhs = (Node*)infix->lhs;
         lhs->vtable->destroy(lhs, free_alloc);

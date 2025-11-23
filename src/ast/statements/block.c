@@ -51,10 +51,11 @@ TRY_STATUS block_statement_create(BlockStatement** block_stmt, Allocator allocat
 void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-
     BlockStatement* block = (BlockStatement*)node;
+
     clear_statement_list(&block->statements, free_alloc);
     array_list_deinit(&block->statements);
+
     free_alloc(block);
 }
 

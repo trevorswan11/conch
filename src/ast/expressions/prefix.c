@@ -41,8 +41,8 @@ TRY_STATUS prefix_expression_create(Token              token,
 void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-
     PrefixExpression* prefix = (PrefixExpression*)node;
+
     if (prefix->rhs) {
         Node* rhs = (Node*)prefix->rhs;
         rhs->vtable->destroy(rhs, free_alloc);
