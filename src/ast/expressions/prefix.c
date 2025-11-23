@@ -17,8 +17,12 @@ TRY_STATUS prefix_expression_create(Token              token,
                                     Expression*        rhs,
                                     PrefixExpression** prefix_expr,
                                     memory_alloc_fn    memory_alloc) {
-    assert(rhs && memory_alloc);
+    assert(memory_alloc);
     assert(token.slice.ptr);
+    if (!rhs) {
+        return NULL_PARAMETER;
+    }
+
     PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
     if (!prefix) {
         return ALLOCATION_FAILED;

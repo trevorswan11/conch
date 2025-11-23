@@ -7,6 +7,7 @@
 #include "ast/expressions/expression.h"
 #include "ast/node.h"
 #include "ast/statements/block.h"
+#include "ast/statements/statement.h"
 
 #include "util/allocator.h"
 #include "util/containers/hash_map.h"
@@ -15,15 +16,15 @@
 #include "util/status.h"
 
 typedef struct {
-    Expression      base;
-    Expression*     condition;
-    BlockStatement* consequence;
-    BlockStatement* alternate;
+    Expression  base;
+    Expression* condition;
+    Statement*  consequence;
+    Statement*  alternate;
 } IfExpression;
 
 TRY_STATUS if_expression_create(Expression*     condition,
-                                BlockStatement* consequence,
-                                BlockStatement* alternate,
+                                Statement*      consequence,
+                                Statement*      alternate,
                                 IfExpression**  if_expr,
                                 memory_alloc_fn memory_alloc);
 

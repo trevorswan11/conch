@@ -36,7 +36,7 @@ TRY_STATUS block_statement_create(BlockStatement** block_stmt, Allocator allocat
     }
 
     ArrayList statements;
-    PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&statements, 8, sizeof(Statement), allocator),
+    PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&statements, 8, sizeof(Statement*), allocator),
                           allocator.free_alloc(block));
 
     *block = (BlockStatement){

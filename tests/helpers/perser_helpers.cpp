@@ -17,10 +17,10 @@ ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {
     REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
     REQUIRE(STATUS_OK(lexer_consume(&l)));
 
-    REQUIRE(STATUS_OK(ast_init(&ast, standard_allocator)));
+    REQUIRE(STATUS_OK(ast_init(&a, standard_allocator)));
 
     REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
-    REQUIRE(STATUS_OK(parser_consume(&p, &ast)));
+    REQUIRE(STATUS_OK(parser_consume(&p, &a)));
 }
 
 void check_parse_errors(Parser* p, std::vector<std::string> expected_errors, bool print_anyways) {
@@ -141,12 +141,13 @@ template void test_number_expression<double>(Expression*, const char*, double);
 template <typename T>
 void test_number_expression(const char* input, const char* expected_literal, T expected_value) {
     ParserFixture pf(input);
+    auto          ast = pf.ast();
 
     check_parse_errors(&pf.p, {}, true);
-    REQUIRE(pf.ast.statements.length == 1);
+    REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
     ExpressionStatement* expr = (ExpressionStatement*)stmt;
     test_number_expression<T>(expr->expression, expected_literal, expected_value);
@@ -175,4 +176,12 @@ void test_string_expression(Expression* expression,
 
     std::string actual_token_literal(string->token.slice.ptr, string->token.slice.length);
     REQUIRE(expected_token_literal == actual_token_literal);
+}
+
+void test_identifier_expression(Expression* expression,
+                                std::string expected_name,
+                                TokenType   expected_type) {
+    IdentifierExpression* ident = (IdentifierExpression*)expression;
+    REQUIRE(expected_name == ident->name.ptr);
+    REQUIRE(expected_type == ident->token_type);
 }

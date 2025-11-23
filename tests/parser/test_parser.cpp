@@ -17,6 +17,7 @@ extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/float.h"
+#include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
@@ -42,14 +43,15 @@ TEST_CASE("Declarations") {
                               "var y := 10;\n"
                               "var foobar := 838383;";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
 
+        auto                     ast                  = pf.ast();
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
-        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
+        REQUIRE(ast->statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
     }
@@ -68,8 +70,8 @@ TEST_CASE("Declarations") {
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
         };
 
-        check_parse_errors(&pf.p, expected_errors);
-        REQUIRE(pf.ast.statements.length == 0);
+        check_parse_errors(pf.parser(), expected_errors);
+        REQUIRE(pf.ast()->statements.length == 0);
     }
 
     SECTION("Var and const statements") {
@@ -77,16 +79,16 @@ TEST_CASE("Declarations") {
                               "const y := 10;\n"
                               "var foobar := 838383;";
         ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
 
-        check_parse_errors(&pf.p, {}, true);
-
+        auto                     ast                  = pf.ast();
         std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
         std::vector<bool>        is_const             = {false, true, false};
-        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
+        REQUIRE(ast->statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
     }
@@ -99,7 +101,7 @@ TEST_CASE("Declarations") {
                               "var baz: ?LongNum = 838383;\n"
                               "const boo: Conch = 2;\n";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
 
         std::vector<const char*> expected_identifiers = {"x", "z", "y", "foobar", "baz", "boo"};
         std::vector<bool>        is_const             = {false, false, true, false, false, true};
@@ -117,13 +119,15 @@ TEST_CASE("Declarations") {
                                                          NULL,
                                                          token_type_name(TokenType::IDENT),
                                                          token_type_name(TokenType::IDENT)};
-        std::vector<const char*> expected_type_names  = {
+
+        auto                     ast                 = pf.ast();
+        std::vector<const char*> expected_type_names = {
             "int", "uint", "bool", NULL, "LongNum", "Conch"};
-        REQUIRE(pf.ast.statements.length == expected_identifiers.size());
+        REQUIRE(ast->statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < expected_identifiers.size(); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt,
                                 is_const[i],
                                 expected_identifiers[i],
@@ -143,13 +147,14 @@ TEST_CASE("Return statements") {
                               "return 10;\n"
                               "return 993322;";
         ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
 
-        check_parse_errors(&pf.p, {}, true);
-        REQUIRE(pf.ast.statements.length == 4);
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 4);
 
         Statement* stmt;
-        for (size_t i = 0; i < pf.ast.statements.length; i++) {
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+        for (size_t i = 0; i < ast->statements.length; i++) {
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             Slice literal = stmt->base.vtable->token_literal((Node*)stmt);
             REQUIRE(slice_equals_str_z(&literal, "return"));
         }
@@ -158,7 +163,7 @@ TEST_CASE("Return statements") {
     SECTION("Returns w/o sentinel semicolon") {
         const char*   input = "return 5";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
     }
 }
 
@@ -166,21 +171,20 @@ TEST_CASE("Identifier Expressions") {
     SECTION("Single arbitrary identifier") {
         const char*   input = "foobar;";
         ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
 
-        check_parse_errors(&pf.p, {}, true);
-        REQUIRE(pf.ast.statements.length == 1);
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
         Node* node    = (Node*)stmt;
         Slice literal = node->vtable->token_literal(node);
         REQUIRE(slice_equals_str_z(&literal, "foobar"));
 
-        ExpressionStatement*  expr_stmt = (ExpressionStatement*)stmt;
-        IdentifierExpression* ident     = (IdentifierExpression*)expr_stmt->expression;
-        REQUIRE(ident->token_type == TokenType::IDENT);
-        REQUIRE(mut_slice_equals_str_z(&ident->name, "foobar"));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        test_identifier_expression(expr_stmt->expression, "foobar");
     }
 }
 
@@ -195,7 +199,7 @@ TEST_CASE("Number-based expressions") {
     SECTION("Signed integer overflow") {
         const char*   input = "0xFFFFFFFFFFFFFFFF";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        check_parse_errors(pf.parser(), {"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
     }
 
     SECTION("Unsigned integer bases") {
@@ -211,7 +215,7 @@ TEST_CASE("Number-based expressions") {
     SECTION("Unsigned integer overflow") {
         const char*   input = "0x10000000000000000u";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        check_parse_errors(pf.parser(), {"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
     }
 
     SECTION("Floating points") {
@@ -239,11 +243,13 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
-            check_parse_errors(&pf.p, {}, true);
+            check_parse_errors(pf.parser(), {}, true);
 
-            REQUIRE(pf.ast.statements.length == 1);
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
 
@@ -289,11 +295,13 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
-            check_parse_errors(&pf.p, {}, true);
+            check_parse_errors(pf.parser(), {}, true);
 
-            REQUIRE(pf.ast.statements.length == 1);
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             InfixExpression*     expr      = (InfixExpression*)expr_stmt->expression;
 
@@ -345,11 +353,11 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
-            check_parse_errors(&pf.p, {}, true);
+            check_parse_errors(pf.parser(), {}, true);
 
             StringBuilder actual_builder;
             REQUIRE(STATUS_OK(string_builder_init(&actual_builder, t.expected.length())));
-            REQUIRE(STATUS_OK(ast_reconstruct(&pf.ast, &actual_builder)));
+            REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), &actual_builder)));
 
             MutSlice actual;
             REQUIRE(STATUS_OK(string_builder_to_string(&actual_builder, &actual)));
@@ -364,15 +372,17 @@ TEST_CASE("Bool expressions") {
         const char*   input = "true;\n"
                               "false;";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 2);
 
         const bool  expected_values[]   = {true, false};
         const char* expected_literals[] = {"true", "false"};
 
-        REQUIRE(pf.ast.statements.length == 2);
-        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+        for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             test_bool_expression(expr_stmt->expression, expected_values[i], expected_literals[i]);
@@ -386,7 +396,10 @@ TEST_CASE("String expressions") {
                               "\"Hello, 'World'!\";\n"
                               "\"\";";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 3);
 
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!", ""};
         const std::string expected_literals[] = {
@@ -395,10 +408,9 @@ TEST_CASE("String expressions") {
             "\"\"",
         };
 
-        REQUIRE(pf.ast.statements.length == 3);
-        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+        for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             test_string_expression(
@@ -415,7 +427,10 @@ TEST_CASE("String expressions") {
                               "\\\\\n"
                               ";";
         ParserFixture pf(input);
-        check_parse_errors(&pf.p, {}, true);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 3);
 
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!\n", ""};
         const std::string expected_literals[] = {
@@ -424,14 +439,104 @@ TEST_CASE("String expressions") {
             "",
         };
 
-        REQUIRE(pf.ast.statements.length == 3);
-        for (size_t i = 0; i < pf.ast.statements.length; i++) {
+        for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&pf.ast.statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             test_string_expression(
                 expr_stmt->expression, expected_strings[i], expected_literals[i]);
         }
+    }
+}
+
+TEST_CASE("Conditional expressions") {
+    SECTION("If without alternate") {
+        const char*   input = "if (x < y) { x }";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        REQUIRE_FALSE(if_expr->alternate);
+
+        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        REQUIRE(condition->op == TokenType::LT);
+        test_identifier_expression(condition->lhs, "x");
+        test_identifier_expression(condition->rhs, "y");
+
+        BlockStatement* consequence = (BlockStatement*)if_expr->consequence;
+        REQUIRE(consequence->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
+        expr_stmt = (ExpressionStatement*)stmt;
+        test_identifier_expression(expr_stmt->expression, "x");
+    }
+
+    SECTION("If with alternate") {
+        const char*   input = "if (x < y) { x } else { y }";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        REQUIRE(if_expr->alternate);
+
+        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        REQUIRE(condition->op == TokenType::LT);
+        test_identifier_expression(condition->lhs, "x");
+        test_identifier_expression(condition->rhs, "y");
+
+        BlockStatement* consequence = (BlockStatement*)if_expr->consequence;
+        REQUIRE(consequence->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
+        expr_stmt = (ExpressionStatement*)stmt;
+        test_identifier_expression(expr_stmt->expression, "x");
+
+        BlockStatement* alternate = (BlockStatement*)if_expr->alternate;
+        REQUIRE(alternate->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&alternate->statements, 0, &stmt)));
+        expr_stmt = (ExpressionStatement*)stmt;
+        test_identifier_expression(expr_stmt->expression, "y");
+    }
+
+    SECTION("If/Else with non-block assignment") {
+        const char*   input = "const val := if (x >= y) 1 else 2;";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        test_decl_statement(stmt, true, "val");
+        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+        REQUIRE(decl_stmt->type->type.tag == IMPLICIT);
+
+        IfExpression* if_expr = (IfExpression*)decl_stmt->value;
+        REQUIRE(if_expr->alternate);
+
+        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        REQUIRE(condition->op == TokenType::GTEQ);
+        test_identifier_expression(condition->lhs, "x");
+        test_identifier_expression(condition->rhs, "y");
+
+        ExpressionStatement* consequence = (ExpressionStatement*)if_expr->consequence;
+        test_number_expression<int64_t>(consequence->expression, "1", 1);
+
+        ExpressionStatement* alternate = (ExpressionStatement*)if_expr->alternate;
+        test_number_expression<int64_t>(alternate->expression, "2", 2);
     }
 }

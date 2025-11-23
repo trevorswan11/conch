@@ -8,11 +8,13 @@
 #include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/identifier.h"
+#include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/return.h"
 #include "ast/statements/statement.h"
@@ -299,5 +301,73 @@ TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression) {
     });
 
     *expression = inner;
+    return SUCCESS;
+}
+
+static inline TRY_STATUS _if_expression_parse_branch(Parser* p, Statement** stmt) {
+    if (parser_peek_token_is(p, LBRACE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        BlockStatement* alt_block;
+        PROPAGATE_IF_ERROR(block_statement_parse(p, &alt_block));
+
+        *stmt = (Statement*)alt_block;
+    } else {
+        PROPAGATE_IF_ERROR(parser_next_token(p));
+
+        Statement* alt_stmt;
+        PROPAGATE_IF_ERROR(parser_parse_statement(p, &alt_stmt));
+        *stmt = alt_stmt;
+    }
+
+    return SUCCESS;
+}
+
+TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* condition;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &condition));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
+        Node* cond_node = (Node*)condition;
+        cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
+    });
+
+    Statement* consequence;
+    PROPAGATE_IF_ERROR_DO(_if_expression_parse_branch(p, &consequence), {
+        Node* cond_node = (Node*)condition;
+        cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
+    });
+
+    Statement* alternate = NULL;
+    if (parser_peek_token_is(p, ELSE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR_DO(_if_expression_parse_branch(p, &alternate), {
+            Node* cond_node = (Node*)condition;
+            cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
+            Node* conseq_node = (Node*)consequence;
+            conseq_node->vtable->destroy(conseq_node, p->allocator.free_alloc);
+        });
+    }
+
+    IfExpression* if_expr;
+    PROPAGATE_IF_ERROR_DO(
+        if_expression_create(
+            condition, consequence, alternate, &if_expr, p->allocator.memory_alloc),
+        {
+            Node* cond_node = (Node*)condition;
+            cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
+            Node* conseq_node = (Node*)consequence;
+            conseq_node->vtable->destroy(conseq_node, p->allocator.free_alloc);
+
+            if (alternate) {
+                Node* alt_node = (Node*)alternate;
+                alt_node->vtable->destroy(alt_node, p->allocator.free_alloc);
+            }
+        });
+
+    *expression = (Expression*)if_expr;
     return SUCCESS;
 }

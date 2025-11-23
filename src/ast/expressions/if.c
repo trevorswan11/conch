@@ -14,10 +14,14 @@
 #include "util/status.h"
 
 TRY_STATUS if_expression_create(Expression*     condition,
-                                BlockStatement* consequence,
-                                BlockStatement* alternate,
+                                Statement*      consequence,
+                                Statement*      alternate,
                                 IfExpression**  if_expr,
                                 memory_alloc_fn memory_alloc) {
+    if (!condition || !consequence) {
+        return NULL_PARAMETER;
+    }
+
     assert(memory_alloc);
     IfExpression* if_local = memory_alloc(sizeof(IfExpression));
     if (!if_local) {
@@ -90,6 +94,5 @@ if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* 
         PROPAGATE_IF_ERROR(alternate_node->vtable->reconstruct(alternate_node, symbol_map, sb));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->vtable->token_literal(node)));
     return SUCCESS;
 }

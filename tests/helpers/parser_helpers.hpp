@@ -19,12 +19,22 @@ struct ParserFixture {
 
     ~ParserFixture() {
         parser_deinit(&p);
-        ast_deinit(&ast);
+        ast_deinit(&a);
         lexer_deinit(&l);
     }
 
+    Parser* parser() {
+        return &p;
+    }
+    AST* ast() {
+        return &a;
+    }
+    Lexer* lexer() {
+        return &l;
+    }
+
     Parser p;
-    AST    ast;
+    AST    a;
     Lexer  l;
     FileIO stdio;
 };
@@ -56,3 +66,6 @@ void test_bool_expression(Expression* expression,
 void test_string_expression(Expression* expression,
                             std::string expected_string_literal,
                             std::string expected_token_literal);
+void test_identifier_expression(Expression* expression,
+                                std::string expected_name,
+                                TokenType   expected_type = TokenType::IDENT);

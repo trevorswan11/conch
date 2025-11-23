@@ -18,7 +18,11 @@ TRY_STATUS infix_expression_create(Expression*       lhs,
                                    Expression*       rhs,
                                    InfixExpression** infix_expr,
                                    memory_alloc_fn   memory_alloc) {
-    assert(rhs && memory_alloc);
+    assert(memory_alloc);
+    if (!lhs || !rhs) {
+        return NULL_PARAMETER;
+    }
+
     InfixExpression* infix = memory_alloc(sizeof(InfixExpression));
     if (!infix) {
         return ALLOCATION_FAILED;

@@ -119,3 +119,31 @@ TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
     *stmt = expr_stmt;
     return SUCCESS;
 }
+
+TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    BlockStatement* block;
+    PROPAGATE_IF_ERROR(block_statement_create(&block, p->allocator));
+
+    while (!parser_current_token_is(p, RBRACE) && !parser_current_token_is(p, END)) {
+        Statement* stmt;
+        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &stmt), {
+            Node* block_node = (Node*)block;
+            block_node->vtable->destroy(block_node, p->allocator.free_alloc);
+        });
+
+        PROPAGATE_IF_ERROR_DO(block_statement_append(block, stmt), {
+            Node* stmt_node = (Node*)stmt;
+            stmt_node->vtable->destroy(stmt_node, p->allocator.free_alloc);
+            Node* block_node = (Node*)block;
+            block_node->vtable->destroy(block_node, p->allocator.free_alloc);
+        });
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *stmt = block;
+    return SUCCESS;
+}
