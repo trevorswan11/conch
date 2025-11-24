@@ -111,7 +111,20 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
         }
 
         // Check for primitive before creating an identifier
-        const bool is_primitive = hash_set_contains(&p->primitives, &p->peek_token.type);
+        const bool is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
+        TypeUnion  explicit_union = (TypeUnion){
+             .explicit_type =
+                (ExplicitType){
+                     .tag = EXPLICIT_IDENT,
+                     .variant =
+                        (ExplicitTypeUnion){
+                             .ident_type_name = NULL,
+                        },
+                     .nullable  = is_nullable,
+                     .primitive = is_primitive,
+                },
+        };
+
         if (is_primitive || parser_peek_token_is(p, IDENT)) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
 
@@ -119,20 +132,42 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
             PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
             IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
-            const TypeUnion onion = (TypeUnion){
-                .explicit_type =
-                    (ExplicitType){
-                        .identifier = ident,
-                        .nullable   = is_nullable,
-                        .primitive  = is_primitive,
-                    },
+            explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .ident_type_name = ident,
             };
 
             PROPAGATE_IF_ERROR_DO(
-                type_expression_create(EXPLICIT, onion, &type, p->allocator.memory_alloc), {
+                type_expression_create(EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
+                {
                     Node* ident_node = (Node*)ident_expr;
                     ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
                 });
+        } else if (parser_peek_token_is(p, FUNCTION)) {
+            const Token type_start = p->current_token;
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+
+            bool      contains_default_param;
+            ArrayList parameters;
+            PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters, &contains_default_param));
+
+            // Default values in function types make no sense to allow, but shouldn't halt parsing
+            if (contains_default_param) {
+                PROPAGATE_IF_ERROR_DO(
+                    parser_put_status_error(
+                        p, ILLEGAL_DEFAULT_FUNCTION_PARAMETER, type_start.line, type_start.column),
+                    free_parameter_list(&parameters));
+            }
+
+            explicit_union.explicit_type.tag     = EXPLICIT_FN;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .fn_type_params = parameters,
+            };
+
+            PROPAGATE_IF_ERROR_DO(
+                type_expression_create(EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
+                free_parameter_list(&parameters));
         } else {
             return UNEXPECTED_TOKEN;
         }
@@ -377,7 +412,7 @@ TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
     PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
 
     ArrayList parameters;
-    PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters));
+    PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters, NULL));
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), free_parameter_list(&parameters));
 
     BlockStatement* body;

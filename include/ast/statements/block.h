@@ -3,7 +3,6 @@
 #include "lexer/token.h"
 
 #include "ast/expressions/identifier.h"
-#include "ast/expressions/type.h"
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 

@@ -233,6 +233,16 @@ bool parser_peek_token_is(const Parser* p, TokenType t) {
     return p->peek_token.type == t;
 }
 
+TRY_STATUS parser_expect_current(Parser* p, TokenType t) {
+    assert(p);
+    if (parser_current_token_is(p, t)) {
+        return parser_next_token(p);
+    } else {
+        PROPAGATE_IF_ERROR_IS(parser_current_error(p, t), REALLOCATION_FAILED);
+        return UNEXPECTED_TOKEN;
+    }
+}
+
 TRY_STATUS parser_expect_peek(Parser* p, TokenType t) {
     assert(p);
     if (parser_peek_token_is(p, t)) {
@@ -243,7 +253,7 @@ TRY_STATUS parser_expect_peek(Parser* p, TokenType t) {
     }
 }
 
-TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
+static inline TRY_STATUS _parser_error(Parser* p, TokenType t, Token actual_tok) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -264,12 +274,12 @@ TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
     PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, mid, sizeof(mid) - 1),
                           string_builder_deinit(&builder));
 
-    const char* actual = token_type_name(p->peek_token.type);
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, actual, strlen(actual)),
+    const char* actual_name = token_type_name(actual_tok.type);
+    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, actual_name, strlen(actual_name)),
                           string_builder_deinit(&builder));
 
     // Append line/col information for debugging
-    PROPAGATE_IF_ERROR_DO(error_append_ln_col(p->peek_token.line, p->peek_token.column, &builder),
+    PROPAGATE_IF_ERROR_DO(error_append_ln_col(actual_tok.line, actual_tok.column, &builder),
                           string_builder_deinit(&builder));
 
     MutSlice slice;
@@ -277,6 +287,14 @@ TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
                           string_builder_deinit(&builder));
     PROPAGATE_IF_ERROR_DO(array_list_push(&p->errors, &slice), string_builder_deinit(&builder));
     return SUCCESS;
+}
+
+TRY_STATUS parser_current_error(Parser* p, TokenType t) {
+    return _parser_error(p, t, p->current_token);
+}
+
+TRY_STATUS parser_peek_error(Parser* p, TokenType t) {
+    return _parser_error(p, t, p->peek_token);
 }
 
 Precedence parser_current_precedence(Parser* p) {

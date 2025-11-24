@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "lexer/token.h"
@@ -26,8 +27,10 @@ typedef struct {
 } Parameter;
 
 // Allocates all function parameters and consumes them from the parser.
-TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters);
+TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param);
 void       free_parameter_list(ArrayList* parameters);
+TRY_STATUS
+reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
 
 typedef struct {
     Expression      base;

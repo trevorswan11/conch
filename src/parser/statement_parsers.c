@@ -21,6 +21,7 @@
 TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
+    const Token start_token = p->current_token;
 
     const Token decl_token = p->current_token;
     PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
@@ -52,20 +53,33 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     }
 
     DeclStatement* decl_stmt;
-    PROPAGATE_IF_ERROR_DO(
-        decl_statement_create(
-            decl_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc),
-        {
-            Node* ident_node = (Node*)ident;
-            ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
-            Node* type_node = (Node*)type;
-            type_node->vtable->destroy(type_node, p->allocator.free_alloc);
+    const Status   create_status = decl_statement_create(
+        decl_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc);
+    if (create_status == ALLOCATION_FAILED) {
+        Node* ident_node = (Node*)ident;
+        ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
+        Node* type_node = (Node*)type;
+        type_node->vtable->destroy(type_node, p->allocator.free_alloc);
 
-            if (value) {
-                Node* value_node = (Node*)value;
-                value_node->vtable->destroy(value_node, p->allocator.free_alloc);
-            }
-        });
+        if (value) {
+            Node* value_node = (Node*)value;
+            value_node->vtable->destroy(value_node, p->allocator.free_alloc);
+        }
+        return create_status;
+    } else if (create_status != SUCCESS) {
+        PROPAGATE_IF_ERROR_DO(
+            parser_put_status_error(p, create_status, start_token.line, start_token.column), {
+                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+                type_expression_destroy((Node*)type, p->allocator.free_alloc);
+                decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc);
+
+                if (value) {
+                    Node* value_node = (Node*)value;
+                    value_node->vtable->destroy(value_node, p->allocator.free_alloc);
+                }
+            });
+        return create_status;
+    }
 
     *stmt = decl_stmt;
     return SUCCESS;

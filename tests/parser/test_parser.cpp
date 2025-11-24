@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -105,26 +106,27 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {}, true);
 
-        std::vector<const char*> expected_identifiers = {"x", "z", "y", "foobar", "baz", "boo"};
-        std::vector<bool>        is_const             = {false, false, true, false, false, true};
-        std::vector<bool>        is_nullable          = {false, false, false, false, true, false};
-        std::vector<bool>        is_primitive         = {true, true, true, false, false, false};
-        std::vector<TypeTag>     tags                 = {TypeTag::EXPLICIT,
-                                                         TypeTag::EXPLICIT,
-                                                         TypeTag::EXPLICIT,
-                                                         TypeTag::IMPLICIT,
-                                                         TypeTag::EXPLICIT,
-                                                         TypeTag::EXPLICIT};
-        std::vector<const char*> type_type_literals   = {token_type_name(TokenType::INT_TYPE),
-                                                         token_type_name(TokenType::UINT_TYPE),
-                                                         token_type_name(TokenType::BOOL_TYPE),
-                                                         NULL,
-                                                         token_type_name(TokenType::IDENT),
-                                                         token_type_name(TokenType::IDENT)};
+        std::vector<std::string>     expected_identifiers = {"x", "z", "y", "foobar", "baz", "boo"};
+        std::vector<bool>            is_const     = {false, false, true, false, false, true};
+        std::vector<bool>            is_nullable  = {false, false, false, false, true, false};
+        std::vector<bool>            is_primitive = {true, true, true, false, false, false};
+        std::vector<TypeTag>         tags         = {TypeTag::EXPLICIT,
+                                                     TypeTag::EXPLICIT,
+                                                     TypeTag::EXPLICIT,
+                                                     TypeTag::IMPLICIT,
+                                                     TypeTag::EXPLICIT,
+                                                     TypeTag::EXPLICIT};
+        std::vector<ExplicitTypeTag> explicit_tags(tags.size(), ExplicitTypeTag::EXPLICIT_IDENT);
+        std::vector<std::string>     type_type_literals = {token_type_name(TokenType::INT_TYPE),
+                                                           token_type_name(TokenType::UINT_TYPE),
+                                                           token_type_name(TokenType::BOOL_TYPE),
+                                                           {},
+                                                           token_type_name(TokenType::IDENT),
+                                                           token_type_name(TokenType::IDENT)};
 
         auto                     ast                 = pf.ast();
-        std::vector<const char*> expected_type_names = {
-            "int", "uint", "bool", NULL, "LongNum", "Conch"};
+        std::vector<std::string> expected_type_names = {
+            "int", "uint", "bool", {}, "LongNum", "Conch"};
         REQUIRE(ast->statements.length == expected_identifiers.size());
 
         Statement* stmt;
@@ -137,6 +139,7 @@ TEST_CASE("Declarations") {
                                 is_primitive[i],
                                 type_type_literals[i],
                                 tags[i],
+                                explicit_tags[i],
                                 expected_type_names[i]);
         }
     }
@@ -624,6 +627,132 @@ TEST_CASE("Conditional expressions") {
 }
 
 TEST_CASE("Function literals") {
+    struct TestParameter {
+        std::string name;
+
+        bool        nullable     = false;
+        bool        primitive    = true;
+        std::string type_literal = token_type_name(TokenType::INT_TYPE);
+        TypeTag     tag          = TypeTag::EXPLICIT;
+        std::string type_name    = "int";
+
+        std::optional<int64_t> default_value = std::nullopt;
+    };
+
+    const auto test_parameters = [](ArrayList* actuals, std::vector<TestParameter> expecteds) {
+        REQUIRE(actuals->length == expecteds.size());
+        for (size_t i = 0; i < actuals->length; i++) {
+            Parameter parameter;
+            REQUIRE(STATUS_OK(array_list_get(actuals, i, &parameter)));
+            TestParameter expected_parameter = expecteds[i];
+
+            test_identifier_expression((Expression*)parameter.ident, expected_parameter.name);
+            test_type_expression((Expression*)parameter.type,
+                                 expected_parameter.nullable,
+                                 expected_parameter.primitive,
+                                 expected_parameter.type_literal,
+                                 expected_parameter.tag,
+                                 ExplicitTypeTag::EXPLICIT_IDENT,
+                                 expected_parameter.type_name);
+
+            if (expected_parameter.default_value.has_value()) {
+                test_number_expression<int64_t>(
+                    parameter.default_value, NULL, expected_parameter.default_value.value());
+            } else {
+                REQUIRE_FALSE(parameter.default_value);
+                REQUIRE_FALSE(expected_parameter.default_value.has_value());
+            }
+        }
+    };
+
+    SECTION("Functions as types") {
+        SECTION("Correct declaration") {
+            std::vector<TestParameter> expected_params = {TestParameter{"a"}, TestParameter{"b"}};
+
+            const char*   input = "var add: fn(a: int, b: int);";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+            auto ast = pf.ast();
+
+            REQUIRE(ast->statements.length == 1);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+
+            test_decl_statement(stmt,
+                                false,
+                                "add",
+                                false,
+                                false,
+                                {},
+                                TypeTag::EXPLICIT,
+                                ExplicitTypeTag::EXPLICIT_FN,
+                                {});
+            DeclStatement* decl_stmt = (DeclStatement*)stmt;
+            REQUIRE_FALSE(decl_stmt->value);
+
+            TypeExpression* type_expr     = (TypeExpression*)decl_stmt->type;
+            ExplicitType    explicit_type = type_expr->type.variant.explicit_type;
+            ArrayList       parameters    = explicit_type.variant.fn_type_params;
+            test_parameters(&parameters, expected_params);
+        }
+
+        SECTION("Incorrect declaration with first default") {
+            const char*   input = "var add: fn(a: int = 1, b: int);";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 8]"});
+        }
+
+        SECTION("Incorrect declaration with second default") {
+            const char*   input = "var add: fn(a: int, b: int = 2);";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 8]"});
+        }
+
+        SECTION("Incorrect declaration with both default") {
+            const char*   input = "const add: fn(a: int = -345, b: uint = 209u);";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 10]",
+                                "CONST_DECL_MISSING_VALUE [Ln 1, Col 1]"});
+        }
+    }
+
     SECTION("Parameter allocation") {
+        struct TestCase {
+            const char*                input;
+            std::vector<TestParameter> expected_params;
+        };
+
+        const TestCase cases[] = {
+            {"fn() {};", {}},
+            {"fn(x: int) {};", {TestParameter{"x"}}},
+            {"fn(x: int, y: int, z: int) {};",
+             {TestParameter{"x"}, TestParameter{"y"}, TestParameter{"z"}}},
+            {"fn(x: int, y: int = 2, z: int) {};",
+             {TestParameter{"x"},
+              TestParameter{.name = "y", .default_value = 2},
+              TestParameter{"z"}}},
+            {"fn(x: int, y: int, z: int = 3) {};",
+             {TestParameter{"x"},
+              TestParameter{"y"},
+              TestParameter{.name = "z", .default_value = 3}}},
+        };
+
+        for (const auto& t : cases) {
+            ParserFixture pf(t.input);
+            check_parse_errors(pf.parser(), {}, true);
+            auto ast = pf.ast();
+
+            REQUIRE(ast->statements.length == 1);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            FunctionExpression*  function  = (FunctionExpression*)expr_stmt->expression;
+            REQUIRE(function->body->statements.length == 0);
+
+            ArrayList parameters = function->parameters;
+            test_parameters(&parameters, t.expected_params);
+        }
     }
 }

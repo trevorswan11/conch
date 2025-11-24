@@ -27,19 +27,30 @@ static const Keyword ALL_PRIMITIVES[] = {
 };
 
 typedef enum {
-    EXPLICIT,
-    IMPLICIT,
-} TypeTag;
+    EXPLICIT_IDENT,
+    EXPLICIT_FN,
+} ExplicitTypeTag;
+
+typedef union {
+    IdentifierExpression* ident_type_name;
+    ArrayList             fn_type_params;
+} ExplicitTypeUnion;
 
 typedef struct {
-    IdentifierExpression* identifier;
-    bool                  nullable;
-    bool                  primitive;
+    ExplicitTypeTag   tag;
+    ExplicitTypeUnion variant;
+    bool              nullable;
+    bool              primitive;
 } ExplicitType;
 
 typedef struct {
     char _;
 } ImplicitType;
+
+typedef enum {
+    EXPLICIT,
+    IMPLICIT,
+} TypeTag;
 
 typedef union {
     ExplicitType explicit_type;
@@ -60,7 +71,7 @@ typedef struct {
 
 TRY_STATUS
 type_expression_create(TypeTag          tag,
-                       TypeUnion        onion,
+                       TypeUnion        variant,
                        TypeExpression** type_expr,
                        memory_alloc_fn  memory_alloc);
 

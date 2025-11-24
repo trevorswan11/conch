@@ -16,7 +16,7 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters) {
+TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param) {
     if (!p || !parameters) {
         return NULL_PARAMETER;
     }
@@ -26,6 +26,7 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters) {
     ArrayList list;
     PROPAGATE_IF_ERROR(array_list_init_allocator(&list, 2, sizeof(Parameter), allocator));
 
+    bool some_initialized = false;
     if (parser_peek_token_is(p, RPAREN)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     } else {
@@ -56,9 +57,20 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters) {
             // Parse the default value based on the types knowledge of it
             Expression* default_value = NULL;
             if (initalized) {
+                some_initialized = some_initialized || initalized;
+
                 PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &default_value), {
                     identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                     type_expression_destroy((Node*)type, allocator.free_alloc);
+                    free_parameter_list(&list);
+                });
+
+                // Expression parsing moves up to the end of the expression, so pass it
+                PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+                    identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                    type_expression_destroy((Node*)type, allocator.free_alloc);
+                    Node* default_node = (Node*)default_value;
+                    default_node->vtable->destroy(default_node, p->allocator.free_alloc);
                     free_parameter_list(&list);
                 });
             }
@@ -72,31 +84,27 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters) {
             PROPAGATE_IF_ERROR_DO(array_list_push(&list, &parameter), {
                 identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                 type_expression_destroy((Node*)type, allocator.free_alloc);
-                Node* default_node = (Node*)default_value;
-                default_node->vtable->destroy(default_node, allocator.free_alloc);
+                if (default_value) {
+                    Node* default_node = (Node*)default_value;
+                    default_node->vtable->destroy(default_node, allocator.free_alloc);
+                }
 
                 free_parameter_list(&list);
             });
+
+            // Parsing a type may move up to the closing parentheses
+            if (parser_current_token_is(p, RPAREN)) {
+                break;
+            }
 
             // Consume the comma and advance past it if theres not a closing delim
-            PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
-                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                type_expression_destroy((Node*)type, allocator.free_alloc);
-                Node* default_node = (Node*)default_value;
-                default_node->vtable->destroy(default_node, allocator.free_alloc);
-
-                free_parameter_list(&list);
-            });
-
-            PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
-                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                type_expression_destroy((Node*)type, allocator.free_alloc);
-                Node* default_node = (Node*)default_value;
-                default_node->vtable->destroy(default_node, allocator.free_alloc);
-
-                free_parameter_list(&list);
-            });
+            PROPAGATE_IF_ERROR_DO(parser_expect_current(p, COMMA), free_parameter_list(&list););
         }
+    }
+
+    // The caller may not care about default parameter presence
+    if (contains_default_param) {
+        *contains_default_param = some_initialized;
     }
 
     *parameters = list;
@@ -131,6 +139,34 @@ void free_parameter_list(ArrayList* parameters) {
     }
 
     array_list_deinit(parameters);
+}
+
+TRY_STATUS
+reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb) {
+    if (!parameters || !symbol_map || !sb) {
+        return NULL_PARAMETER;
+    }
+
+    for (size_t i = 0; i < parameters->length; i++) {
+        Parameter parameter;
+        UNREACHABLE_IF_ERROR(array_list_get(parameters, i, &parameter));
+
+        assert(parameter.ident);
+        Node* ident = (Node*)parameter.ident;
+        PROPAGATE_IF_ERROR(ident->vtable->reconstruct(ident, symbol_map, sb));
+
+        assert(parameter.type);
+        Node* type = (Node*)parameter.type;
+        PROPAGATE_IF_ERROR(type->vtable->reconstruct(type, symbol_map, sb));
+
+        if (parameter.default_value) {
+            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+            Node* default_value = (Node*)parameter.default_value;
+            PROPAGATE_IF_ERROR(default_value->vtable->reconstruct(default_value, symbol_map, sb));
+        }
+    }
+
+    return SUCCESS;
 }
 
 TRY_STATUS function_expression_create(ArrayList            parameters,
@@ -187,25 +223,7 @@ function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
 
     FunctionExpression* func = (FunctionExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, "fn(", 3));
-
-    for (size_t i = 0; i < func->parameters.length; i++) {
-        Parameter parameter;
-        UNREACHABLE_IF_ERROR(array_list_get(&func->parameters, i, &parameter));
-
-        assert(parameter.ident);
-        Node* ident = (Node*)parameter.ident;
-        PROPAGATE_IF_ERROR(ident->vtable->reconstruct(ident, symbol_map, sb));
-
-        assert(parameter.type);
-        Node* type = (Node*)parameter.type;
-        PROPAGATE_IF_ERROR(type->vtable->reconstruct(type, symbol_map, sb));
-
-        if (parameter.default_value) {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
-            Node* default_value = (Node*)parameter.default_value;
-            PROPAGATE_IF_ERROR(default_value->vtable->reconstruct(default_value, symbol_map, sb));
-        }
-    }
+    PROPAGATE_IF_ERROR(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
 
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, ") ", 2));
     Node* body = (Node*)func->body;

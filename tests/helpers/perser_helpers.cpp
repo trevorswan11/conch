@@ -45,60 +45,85 @@ void check_parse_errors(Parser* p, std::vector<std::string> expected_errors, boo
     }
 }
 
-void test_decl_statement(Statement* stmt, bool expect_const, const char* expected_ident) {
-    Node* stmt_node = (Node*)stmt;
-    Slice literal   = stmt_node->vtable->token_literal(stmt_node);
-    REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
-
-    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
-    IdentifierExpression* ident     = decl_stmt->ident;
-    Node*                 node      = (Node*)ident;
-    literal                         = node->vtable->token_literal(node);
-
-    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
-    REQUIRE(mut_slice_equals_str_z(&decl_stmt->ident->name, expected_ident));
-}
-
-void test_decl_statement(Statement*  stmt,
-                         bool        expect_const,
-                         const char* expected_ident,
-                         bool        expect_nullable,
-                         bool        expect_primitive,
-                         const char* expected_type_literal,
-                         TypeTag     expected_tag,
-                         const char* expected_type_name) {
-    Node* stmt_node = (Node*)stmt;
-    Slice literal   = stmt_node->vtable->token_literal(stmt_node);
-    REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
-
-    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
-    IdentifierExpression* ident     = decl_stmt->ident;
-    Node*                 node      = (Node*)ident;
-    literal                         = node->vtable->token_literal(node);
-
-    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
-    REQUIRE(mut_slice_equals_str_z(&ident->name, expected_ident));
-
-    TypeExpression* type_expr = (TypeExpression*)decl_stmt->type;
+void test_type_expression(Expression*     expression,
+                          bool            expect_nullable,
+                          bool            expect_primitive,
+                          std::string     expected_type_literal,
+                          TypeTag         expected_tag,
+                          ExplicitTypeTag expected_explicit_tag,
+                          std::string     expected_type_name) {
+    TypeExpression* type_expr = (TypeExpression*)expression;
     Type            type      = type_expr->type;
-
     REQUIRE(type.tag == expected_tag);
+
     if (type.tag == TypeTag::EXPLICIT) {
         const ExplicitType explicit_type = type.variant.explicit_type;
         REQUIRE(explicit_type.nullable == expect_nullable);
         REQUIRE(explicit_type.primitive == expect_primitive);
+        REQUIRE(explicit_type.tag == expected_explicit_tag);
 
-        ident   = explicit_type.identifier;
-        node    = (Node*)ident;
-        literal = node->vtable->token_literal(node);
+        switch (explicit_type.tag) {
+        case EXPLICIT_IDENT: {
+            IdentifierExpression* ident   = explicit_type.variant.ident_type_name;
+            Node*                 node    = (Node*)ident;
+            Slice                 literal = node->vtable->token_literal(node);
 
-        REQUIRE(slice_equals_str_z(&literal, expected_type_literal));
-        REQUIRE(mut_slice_equals_str_z(&ident->name, expected_type_name));
+            REQUIRE(literal.ptr == expected_type_literal);
+            REQUIRE(ident->name.ptr == expected_type_name);
+            break;
+        }
+        default:
+            break;
+        }
     } else {
         REQUIRE_FALSE(expect_nullable);
         REQUIRE_FALSE(expect_primitive);
-        REQUIRE_FALSE(expected_type_name);
+        REQUIRE(expected_type_name.empty());
     }
+}
+
+void test_decl_statement(Statement* stmt, bool expect_const, std::string expected_ident) {
+    Node* stmt_node = (Node*)stmt;
+    Slice literal   = stmt_node->vtable->token_literal(stmt_node);
+    REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
+
+    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
+    IdentifierExpression* ident     = decl_stmt->ident;
+    Node*                 node      = (Node*)ident;
+    literal                         = node->vtable->token_literal(node);
+
+    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
+    REQUIRE(expected_ident == decl_stmt->ident->name.ptr);
+}
+
+void test_decl_statement(Statement*      stmt,
+                         bool            expect_const,
+                         std::string     expected_ident,
+                         bool            expect_nullable,
+                         bool            expect_primitive,
+                         std::string     expected_type_literal,
+                         TypeTag         expected_tag,
+                         ExplicitTypeTag expected_explicit_tag,
+                         std::string     expected_type_name) {
+    Node* stmt_node = (Node*)stmt;
+    Slice literal   = stmt_node->vtable->token_literal(stmt_node);
+    REQUIRE(slice_equals_str_z(&literal, expect_const ? "const" : "var"));
+
+    DeclStatement*        decl_stmt = (DeclStatement*)stmt;
+    IdentifierExpression* ident     = decl_stmt->ident;
+    Node*                 node      = (Node*)ident;
+    literal                         = node->vtable->token_literal(node);
+
+    REQUIRE(slice_equals_str_z(&literal, token_type_name(TokenType::IDENT)));
+    REQUIRE(expected_ident == ident->name.ptr);
+
+    test_type_expression((Expression*)decl_stmt->type,
+                         expect_nullable,
+                         expect_primitive,
+                         expected_type_literal,
+                         expected_tag,
+                         expected_explicit_tag,
+                         expected_type_name);
 }
 
 template <typename T>
@@ -143,7 +168,7 @@ void test_number_expression(const char* input, const char* expected_literal, T e
     ParserFixture pf(input);
     auto          ast = pf.ast();
 
-    check_parse_errors(&pf.p, {}, true);
+    check_parse_errors(pf.parser(), {}, true);
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
@@ -159,13 +184,13 @@ template void test_number_expression<double>(const char*, const char*, double);
 
 void test_bool_expression(Expression* expression,
                           bool        expected_value,
-                          const char* expected_literal) {
+                          std::string expected_literal) {
     BoolLiteralExpression* boolean = (BoolLiteralExpression*)expression;
     REQUIRE(boolean->value == expected_value);
 
     Node* bool_node = (Node*)boolean;
     Slice literal   = bool_node->vtable->token_literal(bool_node);
-    REQUIRE(slice_equals_str_z(&literal, expected_literal));
+    REQUIRE(expected_literal == literal.ptr);
 }
 
 void test_string_expression(Expression* expression,

@@ -49,13 +49,8 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice identifier_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-
     IdentifierExpression* ident = (IdentifierExpression*)node;
-    const char*           str   = token_type_name(ident->token_type);
-    return (Slice){
-        .ptr    = str,
-        .length = strlen(str),
-    };
+    return slice_from_str_z(token_type_name(ident->token_type));
 }
 
 TRY_STATUS

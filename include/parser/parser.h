@@ -48,7 +48,9 @@ TRY_STATUS parser_next_token(Parser* p);
 
 bool       parser_current_token_is(const Parser* p, TokenType t);
 bool       parser_peek_token_is(const Parser* p, TokenType t);
+TRY_STATUS parser_expect_current(Parser* p, TokenType t);
 TRY_STATUS parser_expect_peek(Parser* p, TokenType t);
+TRY_STATUS parser_current_error(Parser* p, TokenType t);
 TRY_STATUS parser_peek_error(Parser* p, TokenType t);
 
 Precedence parser_current_precedence(Parser* p);
