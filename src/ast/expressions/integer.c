@@ -71,14 +71,7 @@ TRY_STATUS uinteger_literal_expression_create(Token                             
     }
 
     *integer = (UnsignedIntegerLiteralExpression){
-        .base =
-            (Expression){
-                .base =
-                    (Node){
-                        .vtable = &UNSIGNED_INTEGER_VTABLE.base,
-                    },
-                .vtable = &UNSIGNED_INTEGER_VTABLE,
-            },
+        .base  = EXPRESSION_INIT(UNSIGNED_INTEGER_VTABLE),
         .token = token,
         .value = value,
     };

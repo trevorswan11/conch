@@ -43,11 +43,8 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     PrefixExpression* prefix = (PrefixExpression*)node;
 
-    if (prefix->rhs) {
-        Node* rhs = (Node*)prefix->rhs;
-        rhs->vtable->destroy(rhs, free_alloc);
-        rhs = NULL;
-    }
+    NODE_VIRTUAL_FREE(prefix->rhs, free_alloc);
+    prefix->rhs = NULL;
 
     free_alloc(prefix);
 }

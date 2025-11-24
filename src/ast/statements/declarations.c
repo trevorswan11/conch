@@ -57,22 +57,17 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     DeclStatement* d = (DeclStatement*)node;
 
     if (d->ident) {
-        Node* n_ident = (Node*)d->ident;
-        n_ident->vtable->destroy(n_ident, free_alloc);
+        identifier_expression_destroy((Node*)d->ident, free_alloc);
         d->ident = NULL;
     }
 
     if (d->type) {
-        Node* n_type = (Node*)d->type;
-        n_type->vtable->destroy(n_type, free_alloc);
+        type_expression_destroy((Node*)d->type, free_alloc);
         d->type = NULL;
     }
 
-    if (d->value) {
-        Node* n_value = (Node*)d->value;
-        n_value->vtable->destroy(n_value, free_alloc);
-        d->value = NULL;
-    }
+    NODE_VIRTUAL_FREE(d->value, free_alloc);
+    d->value = NULL;
 
     free_alloc(d);
 }

@@ -19,9 +19,7 @@ void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
     for (size_t i = 0; i < statements->length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(statements, i, &stmt));
         ASSERT_STATEMENT(stmt);
-        Node* node = (Node*)stmt;
-        ASSERT_NODE(node);
-        node->vtable->destroy(node, free_alloc);
+        NODE_VIRTUAL_FREE(stmt, free_alloc);
     }
 
     array_list_clear_retaining_capacity(statements);

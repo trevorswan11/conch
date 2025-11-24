@@ -44,17 +44,11 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     InfixExpression* infix = (InfixExpression*)node;
 
-    if (infix->lhs) {
-        Node* lhs = (Node*)infix->lhs;
-        lhs->vtable->destroy(lhs, free_alloc);
-        lhs = NULL;
-    }
+    NODE_VIRTUAL_FREE(infix->lhs, free_alloc);
+    infix->lhs = NULL;
 
-    if (infix->rhs) {
-        Node* rhs = (Node*)infix->rhs;
-        rhs->vtable->destroy(rhs, free_alloc);
-        rhs = NULL;
-    }
+    NODE_VIRTUAL_FREE(infix->rhs, free_alloc);
+    infix->rhs = NULL;
 
     free_alloc(infix);
 }

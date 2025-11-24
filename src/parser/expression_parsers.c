@@ -139,10 +139,7 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
 
             PROPAGATE_IF_ERROR_DO(
                 type_expression_create(EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
-                {
-                    Node* ident_node = (Node*)ident_expr;
-                    ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
-                });
+                identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
         } else if (parser_peek_token_is(p, FUNCTION)) {
             const Token type_start = p->current_token;
             UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -282,10 +279,8 @@ TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression) {
 
     PrefixExpression* prefix;
     PROPAGATE_IF_ERROR_DO(
-        prefix_expression_create(prefix_token, rhs, &prefix, p->allocator.memory_alloc), {
-            Node* node = (Node*)rhs;
-            node->vtable->destroy(node, p->allocator.free_alloc);
-        });
+        prefix_expression_create(prefix_token, rhs, &prefix, p->allocator.memory_alloc),
+        NODE_VIRTUAL_FREE(rhs, p->allocator.free_alloc));
 
     *expression = (Expression*)prefix;
     return SUCCESS;
@@ -301,10 +296,8 @@ TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expr
 
     InfixExpression* infix;
     PROPAGATE_IF_ERROR_DO(
-        infix_expression_create(left, op_token_type, right, &infix, p->allocator.memory_alloc), {
-            Node* node = (Node*)right;
-            node->vtable->destroy(node, p->allocator.free_alloc);
-        });
+        infix_expression_create(left, op_token_type, right, &infix, p->allocator.memory_alloc),
+        NODE_VIRTUAL_FREE(right, p->allocator.free_alloc));
 
     *expression = (Expression*)infix;
     return SUCCESS;
@@ -331,10 +324,8 @@ TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression) {
     Expression* inner;
     PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &inner));
 
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
-        Node* inner_node = (Node*)inner;
-        inner_node->vtable->destroy(inner_node, p->allocator.free_alloc);
-    });
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
+                          NODE_VIRTUAL_FREE(inner, p->allocator.free_alloc));
 
     *expression = inner;
     return SUCCESS;
@@ -366,25 +357,19 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
     Expression* condition;
     PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &condition));
 
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
-        Node* cond_node = (Node*)condition;
-        cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
-    });
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
+                          NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     Statement* consequence;
-    PROPAGATE_IF_ERROR_DO(_if_expression_parse_branch(p, &consequence), {
-        Node* cond_node = (Node*)condition;
-        cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
-    });
+    PROPAGATE_IF_ERROR_DO(_if_expression_parse_branch(p, &consequence),
+                          NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     Statement* alternate = NULL;
     if (parser_peek_token_is(p, ELSE)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         PROPAGATE_IF_ERROR_DO(_if_expression_parse_branch(p, &alternate), {
-            Node* cond_node = (Node*)condition;
-            cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
-            Node* conseq_node = (Node*)consequence;
-            conseq_node->vtable->destroy(conseq_node, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
         });
     }
 
@@ -393,15 +378,9 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
         if_expression_create(
             condition, consequence, alternate, &if_expr, p->allocator.memory_alloc),
         {
-            Node* cond_node = (Node*)condition;
-            cond_node->vtable->destroy(cond_node, p->allocator.free_alloc);
-            Node* conseq_node = (Node*)consequence;
-            conseq_node->vtable->destroy(conseq_node, p->allocator.free_alloc);
-
-            if (alternate) {
-                Node* alt_node = (Node*)alternate;
-                alt_node->vtable->destroy(alt_node, p->allocator.free_alloc);
-            }
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(alternate, p->allocator.free_alloc);
         });
 
     *expression = (Expression*)if_expr;

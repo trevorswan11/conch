@@ -35,11 +35,8 @@ void return_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     ReturnStatement* r = (ReturnStatement*)node;
 
-    if (r->value) {
-        Node* n_value = (Node*)r->value;
-        n_value->vtable->destroy(n_value, free_alloc);
-        r->value = NULL;
-    }
+    NODE_VIRTUAL_FREE(r->value, free_alloc);
+    r->value = NULL;
 
     free_alloc(r);
 }
@@ -47,11 +44,7 @@ void return_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 Slice return_statement_token_literal(Node* node) {
     ASSERT_NODE(node);
     MAYBE_UNUSED(node);
-
-    return (Slice){
-        .ptr    = "return",
-        .length = sizeof("return") - 1,
-    };
+    return slice_from_str_z("return");
 }
 
 TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {

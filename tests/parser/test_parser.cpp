@@ -39,6 +39,11 @@ extern "C" {
 #include "util/status.h"
 }
 
+TEST_CASE("Precedence confirmation") {
+    const std::string expected = "MUL_DIV";
+    REQUIRE(expected == precedence_name(Precedence::MUL_DIV));
+}
+
 TEST_CASE("Declarations") {
     SECTION("Var statements") {
         const char*   input = "var x := 5;\n"

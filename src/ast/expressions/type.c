@@ -42,8 +42,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
         switch (type->type.variant.explicit_type.tag) {
         case EXPLICIT_IDENT: {
             IdentifierExpression* ident = type->type.variant.explicit_type.variant.ident_type_name;
-            Node*                 ident_node = (Node*)ident;
-            ident_node->vtable->destroy(ident_node, free_alloc);
+            identifier_expression_destroy((Node*)ident, free_alloc);
+            ident = NULL;
             break;
         }
         case EXPLICIT_FN: {
@@ -69,10 +69,13 @@ Slice type_expression_token_literal(Node* node) {
         }
         case EXPLICIT_FN:
             return slice_from_str_z(token_type_name(FUNCTION));
+        default:
+            UNREACHABLE_IF(false);
+            return slice_from_str_z("UNREACHABLE");
         }
-    } else {
-        return slice_from_str_z(token_type_name(WALRUS));
     }
+
+    return slice_from_str_z(token_type_name(WALRUS));
 }
 
 TRY_STATUS
@@ -91,11 +94,10 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
         }
 
         switch (type->type.variant.explicit_type.tag) {
-        case EXPLICIT_IDENT: {
+        case EXPLICIT_IDENT:
             PROPAGATE_IF_ERROR(string_builder_append_mut_slice(
                 sb, type->type.variant.explicit_type.variant.ident_type_name->name));
             break;
-        }
         case EXPLICIT_FN: {
             PROPAGATE_IF_ERROR(string_builder_append_many(sb, "fn(", 3));
             ArrayList params = type->type.variant.explicit_type.variant.fn_type_params;
@@ -103,6 +105,8 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
             PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
             break;
         }
+        default:
+            UNREACHABLE_IF(false);
         }
     } else {
         PROPAGATE_IF_ERROR(string_builder_append_many(sb, " :", 2));

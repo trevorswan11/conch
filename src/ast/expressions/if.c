@@ -44,23 +44,14 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     IfExpression* if_expr = (IfExpression*)node;
 
-    if (if_expr->condition) {
-        Node* condition = (Node*)if_expr->condition;
-        condition->vtable->destroy(condition, free_alloc);
-        condition = NULL;
-    }
+    NODE_VIRTUAL_FREE(if_expr->condition, free_alloc);
+    if_expr->condition = NULL;
 
-    if (if_expr->consequence) {
-        Node* consequence = (Node*)if_expr->consequence;
-        consequence->vtable->destroy(consequence, free_alloc);
-        consequence = NULL;
-    }
+    NODE_VIRTUAL_FREE(if_expr->consequence, free_alloc);
+    if_expr->consequence = NULL;
 
-    if (if_expr->alternate) {
-        Node* alternate = (Node*)if_expr->alternate;
-        alternate->vtable->destroy(alternate, free_alloc);
-        alternate = NULL;
-    }
+    NODE_VIRTUAL_FREE(if_expr->alternate, free_alloc);
+    if_expr->alternate = NULL;
 
     free_alloc(if_expr);
 }

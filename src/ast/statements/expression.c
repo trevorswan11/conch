@@ -41,11 +41,8 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     ExpressionStatement* e = (ExpressionStatement*)node;
 
-    if (e->expression) {
-        Node* n_value = (Node*)e->expression;
-        n_value->vtable->destroy(n_value, free_alloc);
-        e->expression = NULL;
-    }
+    NODE_VIRTUAL_FREE(e->expression, free_alloc);
+    e->expression = NULL;
 
     free_alloc(e);
 }

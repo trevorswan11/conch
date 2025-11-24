@@ -32,19 +32,15 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
 
     Expression* type_expr;
     bool        value_initialized;
-    PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &value_initialized), {
-        Node* ident_node = (Node*)ident;
-        ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
-    });
+    PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &value_initialized),
+                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
     TypeExpression* type = (TypeExpression*)type_expr;
 
     Expression* value = NULL;
     if (value_initialized) {
         PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value), {
-            Node* ident_node = (Node*)ident;
-            ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
-            Node* type_node = (Node*)type;
-            type_node->vtable->destroy(type_node, p->allocator.free_alloc);
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            type_expression_destroy((Node*)type, p->allocator.free_alloc);
         });
     }
 
@@ -56,15 +52,10 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     const Status   create_status = decl_statement_create(
         decl_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc);
     if (create_status == ALLOCATION_FAILED) {
-        Node* ident_node = (Node*)ident;
-        ident_node->vtable->destroy(ident_node, p->allocator.free_alloc);
-        Node* type_node = (Node*)type;
-        type_node->vtable->destroy(type_node, p->allocator.free_alloc);
+        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        type_expression_destroy((Node*)type, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
 
-        if (value) {
-            Node* value_node = (Node*)value;
-            value_node->vtable->destroy(value_node, p->allocator.free_alloc);
-        }
         return create_status;
     } else if (create_status != SUCCESS) {
         PROPAGATE_IF_ERROR_DO(
@@ -72,11 +63,7 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
                 identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
                 type_expression_destroy((Node*)type, p->allocator.free_alloc);
                 decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc);
-
-                if (value) {
-                    Node* value_node = (Node*)value;
-                    value_node->vtable->destroy(value_node, p->allocator.free_alloc);
-                }
+                NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
             });
         return create_status;
     }
@@ -96,10 +83,8 @@ TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
     }
 
     ReturnStatement* ret_stmt;
-    PROPAGATE_IF_ERROR_DO(return_statement_create(value, &ret_stmt, p->allocator.memory_alloc), {
-        Node* value_node = (Node*)value;
-        value_node->vtable->destroy(value_node, p->allocator.free_alloc);
-    });
+    PROPAGATE_IF_ERROR_DO(return_statement_create(value, &ret_stmt, p->allocator.memory_alloc),
+                          NODE_VIRTUAL_FREE(value, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -118,16 +103,12 @@ TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
 
     ExpressionStatement* expr_stmt;
     PROPAGATE_IF_ERROR_DO(
-        expression_statement_create(p->current_token, lhs, &expr_stmt, p->allocator.memory_alloc), {
-            Node* lhs_node = (Node*)lhs;
-            lhs_node->vtable->destroy(lhs_node, p->allocator.free_alloc);
-        });
+        expression_statement_create(p->current_token, lhs, &expr_stmt, p->allocator.memory_alloc),
+        NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
-        PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
-            Node* lhs_node = (Node*)lhs;
-            lhs_node->vtable->destroy(lhs_node, p->allocator.free_alloc);
-        });
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p),
+                              NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
     }
 
     *stmt = expr_stmt;
@@ -144,16 +125,12 @@ TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
 
     while (!parser_current_token_is(p, RBRACE) && !parser_current_token_is(p, END)) {
         Statement* stmt;
-        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &stmt), {
-            Node* block_node = (Node*)block;
-            block_node->vtable->destroy(block_node, p->allocator.free_alloc);
-        });
+        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &stmt),
+                              NODE_VIRTUAL_FREE(block, p->allocator.free_alloc););
 
         PROPAGATE_IF_ERROR_DO(block_statement_append(block, stmt), {
-            Node* stmt_node = (Node*)stmt;
-            stmt_node->vtable->destroy(stmt_node, p->allocator.free_alloc);
-            Node* block_node = (Node*)block;
-            block_node->vtable->destroy(block_node, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(stmt, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         });
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     }

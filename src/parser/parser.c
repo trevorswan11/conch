@@ -199,10 +199,8 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
             Statement* stmt = NULL;
             PROPAGATE_IF_ERROR_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
             if (stmt) {
-                PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt), {
-                    Node* node = (Node*)stmt;
-                    node->vtable->destroy(node, p->allocator.free_alloc);
-                });
+                PROPAGATE_IF_ERROR_DO(array_list_push(&ast->statements, &stmt),
+                                      NODE_VIRTUAL_FREE(stmt, p->allocator.free_alloc));
             }
         }
 

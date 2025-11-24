@@ -69,8 +69,7 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
                 PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
                     identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                     type_expression_destroy((Node*)type, allocator.free_alloc);
-                    Node* default_node = (Node*)default_value;
-                    default_node->vtable->destroy(default_node, p->allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
                     free_parameter_list(&list);
                 });
             }
@@ -84,11 +83,7 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
             PROPAGATE_IF_ERROR_DO(array_list_push(&list, &parameter), {
                 identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                 type_expression_destroy((Node*)type, allocator.free_alloc);
-                if (default_value) {
-                    Node* default_node = (Node*)default_value;
-                    default_node->vtable->destroy(default_node, allocator.free_alloc);
-                }
-
+                NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
                 free_parameter_list(&list);
             });
 
@@ -120,22 +115,17 @@ void free_parameter_list(ArrayList* parameters) {
         UNREACHABLE_IF_ERROR(array_list_get(parameters, i, &parameter));
 
         if (parameter.ident) {
-            Node* ident = (Node*)parameter.ident;
-            ident->vtable->destroy(ident, free_alloc);
-            ident = NULL;
+            identifier_expression_destroy((Node*)parameter.ident, free_alloc);
+            parameter.ident = NULL;
         }
 
         if (parameter.type) {
-            Node* type = (Node*)parameter.type;
-            type->vtable->destroy(type, free_alloc);
-            type = NULL;
+            type_expression_destroy((Node*)parameter.type, free_alloc);
+            parameter.type = NULL;
         }
 
-        if (parameter.default_value) {
-            Node* default_value = (Node*)parameter.default_value;
-            default_value->vtable->destroy(default_value, free_alloc);
-            default_value = NULL;
-        }
+        NODE_VIRTUAL_FREE(parameter.default_value, free_alloc);
+        parameter.default_value = NULL;
     }
 
     array_list_deinit(parameters);
@@ -152,12 +142,11 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
         UNREACHABLE_IF_ERROR(array_list_get(parameters, i, &parameter));
 
         assert(parameter.ident);
-        Node* ident = (Node*)parameter.ident;
-        PROPAGATE_IF_ERROR(ident->vtable->reconstruct(ident, symbol_map, sb));
+        PROPAGATE_IF_ERROR(
+            identifier_expression_reconstruct((Node*)parameter.ident, symbol_map, sb));
 
         assert(parameter.type);
-        Node* type = (Node*)parameter.type;
-        PROPAGATE_IF_ERROR(type->vtable->reconstruct(type, symbol_map, sb));
+        PROPAGATE_IF_ERROR(type_expression_reconstruct((Node*)parameter.type, symbol_map, sb));
 
         if (parameter.default_value) {
             PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
@@ -200,11 +189,8 @@ void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     FunctionExpression* func = (FunctionExpression*)node;
     free_parameter_list(&func->parameters);
 
-    if (func->body) {
-        Node* body = (Node*)func->body;
-        body->vtable->destroy(body, free_alloc);
-        body = NULL;
-    }
+    block_statement_destroy((Node*)func->body, free_alloc);
+    func->body = NULL;
 
     free_alloc(func);
 }

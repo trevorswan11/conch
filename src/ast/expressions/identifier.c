@@ -42,6 +42,7 @@ TRY_STATUS identifier_expression_create(Token                  token,
 void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     IdentifierExpression* ident = (IdentifierExpression*)node;
     free_alloc(ident->name.ptr);
     free_alloc(ident);
