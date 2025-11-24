@@ -39,6 +39,7 @@ TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRCS))
 TEST_BIN := $(BIN_ROOT)/tests/run_tests$(EXE)
 COVERAGE_BIN := $(BIN_ROOT)/coverage/run_tests$(EXE)
 ASAN_BIN := $(BIN_ROOT)/asan/run_tests$(EXE)
+LSAN_BIN := $(BIN_ROOT)/lsan/run_tests$(EXE)
 
 FMT_SRCS := $(SRCS) \
             $(call rwildcard,$(INC_DIR)/,*.h) \
@@ -100,8 +101,13 @@ ifeq ($(OS),Windows_NT)
 asan: 
 	$(error Sanitizers are not supported on Windows)
 else
+ifeq ($(shell uname -s),Darwin)
+asan: $(LSAN_BIN)
+	@leaks --atExit -- $(LSAN_BIN)
+else
 asan: $(ASAN_BIN)
 	@$(ASAN_BIN)
+endif
 endif
 
 # ================ TESTING BUILD ================
@@ -157,6 +163,33 @@ $(CATCH_OBJ_ASAN): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
 $(ASAN_BIN): $(CATCH_OBJ_ASAN) $(ASAN_TEST_OBJS) $(LIB_OBJS_FOR_ASAN)
 	@$(call MKDIR,$(dir $@))
 	$(CXX) $(CXXFLAGS_ASAN) -o $@ $^
+
+# ================ LSAN BUILD ================
+
+OBJ_DIR_LSAN := $(BUILD_DIR)/lsan
+OBJS_LSAN := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_LSAN)/%.o,$(SRCS))
+CFLAGS_LSAN := -std=c17 -O0 -Wall -Wextra -Werror -Wpedantic -g -fsanitize=undefined -fno-sanitize-recover=all $(INCLUDES) $(DEPFLAGS) -DDEBUG -DTEST -DLSAN
+
+LSAN_TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/lsan/%.o,$(TEST_SRCS))
+CATCH_OBJ_LSAN := $(BUILD_DIR)/catch/lsan/catch_amalgamated.o
+LIB_OBJS_FOR_LSAN := $(filter-out $(OBJ_DIR_LSAN)/main.o,$(OBJS_LSAN))
+CXXFLAGS_LSAN = -std=c++20 -O0 -Wall -Wextra -g -fsanitize=undefined -fno-sanitize-recover=all $(TEST_INCLUDES) $(DEPFLAGS) -DTEST -DLSAN
+
+$(OBJ_DIR_LSAN)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CC) $(CFLAGS_LSAN) -c $< -o $@
+
+$(BUILD_DIR)/lsan/%.o: $(TEST_DIR)/%.cpp $(HEADERS)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_LSAN) -c $< -o $@
+
+$(CATCH_OBJ_LSAN): $(TEST_DIR)/test_framework/catch_amalgamated.cpp
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_LSAN) -c $< -o $@
+
+$(LSAN_BIN): $(CATCH_OBJ_LSAN) $(LSAN_TEST_OBJS) $(LIB_OBJS_FOR_LSAN)
+	@$(call MKDIR,$(dir $@))
+	$(CXX) $(CXXFLAGS_LSAN) -o $@ $^
 
 # ================ COVERAGE BUILD ================
 
