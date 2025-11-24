@@ -13,12 +13,12 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS prefix_expression_create(Token              token,
+TRY_STATUS prefix_expression_create(Token              start_token,
                                     Expression*        rhs,
                                     PrefixExpression** prefix_expr,
                                     memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
-    assert(token.slice.ptr);
+    assert(start_token.slice.ptr);
     if (!rhs) {
         return NULL_PARAMETER;
     }
@@ -29,9 +29,8 @@ TRY_STATUS prefix_expression_create(Token              token,
     }
 
     *prefix = (PrefixExpression){
-        .base  = EXPRESSION_INIT(PREFIX_VTABLE),
-        .token = token,
-        .rhs   = rhs,
+        .base = EXPRESSION_INIT(PREFIX_VTABLE, start_token),
+        .rhs  = rhs,
     };
 
     *prefix_expr = prefix;
@@ -51,8 +50,7 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice prefix_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    PrefixExpression* prefix = (PrefixExpression*)node;
-    return prefix->token.slice;
+    return node->start_token.slice;
 }
 
 TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
@@ -61,9 +59,9 @@ TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, 
         return NULL_PARAMETER;
     }
 
+    Slice             op     = poll_tt_symbol(symbol_map, node->start_token.type);
     PrefixExpression* prefix = (PrefixExpression*)node;
     assert(prefix->rhs);
-    Slice op  = poll_tt_symbol(symbol_map, prefix->token.type);
     Node* rhs = (Node*)prefix->rhs;
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));

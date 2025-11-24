@@ -17,7 +17,8 @@ typedef struct {
     Expression* value;
 } ReturnStatement;
 
-TRY_STATUS return_statement_create(Expression*       value,
+TRY_STATUS return_statement_create(Token             start_token,
+                                   Expression*       value,
                                    ReturnStatement** ret_stmt,
                                    memory_alloc_fn   memory_alloc);
 

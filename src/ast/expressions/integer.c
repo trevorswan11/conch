@@ -12,20 +12,19 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS integer_literal_expression_create(Token                      token,
+TRY_STATUS integer_literal_expression_create(Token                      start_token,
                                              int64_t                    value,
                                              IntegerLiteralExpression** int_expr,
                                              memory_alloc_fn            memory_alloc) {
     assert(memory_alloc);
-    assert(token.slice.ptr);
+    assert(start_token.slice.ptr);
     IntegerLiteralExpression* integer = memory_alloc(sizeof(IntegerLiteralExpression));
     if (!integer) {
         return ALLOCATION_FAILED;
     }
 
     *integer = (IntegerLiteralExpression){
-        .base  = EXPRESSION_INIT(INTEGER_VTABLE),
-        .token = token,
+        .base  = EXPRESSION_INIT(INTEGER_VTABLE, start_token),
         .value = value,
     };
 
@@ -42,8 +41,7 @@ void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice integer_literal_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    IntegerLiteralExpression* integer = (IntegerLiteralExpression*)node;
-    return integer->token.slice;
+    return node->start_token.slice;
 }
 
 TRY_STATUS
@@ -54,12 +52,11 @@ integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, St
     }
     MAYBE_UNUSED(symbol_map);
 
-    IntegerLiteralExpression* integer = (IntegerLiteralExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }
 
-TRY_STATUS uinteger_literal_expression_create(Token                              token,
+TRY_STATUS uinteger_literal_expression_create(Token                              start_token,
                                               uint64_t                           value,
                                               UnsignedIntegerLiteralExpression** int_expr,
                                               memory_alloc_fn                    memory_alloc) {
@@ -71,8 +68,7 @@ TRY_STATUS uinteger_literal_expression_create(Token                             
     }
 
     *integer = (UnsignedIntegerLiteralExpression){
-        .base  = EXPRESSION_INIT(UNSIGNED_INTEGER_VTABLE),
-        .token = token,
+        .base  = EXPRESSION_INIT(UNSIGNED_INTEGER_VTABLE, start_token),
         .value = value,
     };
 
@@ -89,8 +85,7 @@ void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice uinteger_literal_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
-    return integer->token.slice;
+    return node->start_token.slice;
 }
 
 TRY_STATUS
@@ -101,7 +96,6 @@ uinteger_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, S
     }
     ASSERT_NODE(node);
 
-    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, integer->token.slice));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }

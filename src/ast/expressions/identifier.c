@@ -12,27 +12,27 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS identifier_expression_create(Token                  token,
+TRY_STATUS identifier_expression_create(Token                  start_token,
                                         IdentifierExpression** ident_expr,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc) {
     assert(memory_alloc && free_alloc);
-    assert(token.slice.ptr);
+    assert(start_token.slice.ptr);
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
     if (!ident) {
         return ALLOCATION_FAILED;
     }
 
-    char* mut_name = strdup_s_allocator(token.slice.ptr, token.slice.length, memory_alloc);
+    char* mut_name =
+        strdup_s_allocator(start_token.slice.ptr, start_token.slice.length, memory_alloc);
     if (!mut_name) {
         free_alloc(ident);
         return ALLOCATION_FAILED;
     }
 
     *ident = (IdentifierExpression){
-        .base       = EXPRESSION_INIT(IDENTIFIER_VTABLE),
-        .name       = mut_slice_from_str_z(mut_name),
-        .token_type = token.type,
+        .base = EXPRESSION_INIT(IDENTIFIER_VTABLE, start_token),
+        .name = mut_slice_from_str_z(mut_name),
     };
 
     *ident_expr = ident;
@@ -50,8 +50,7 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice identifier_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    IdentifierExpression* ident = (IdentifierExpression*)node;
-    return slice_from_str_z(token_type_name(ident->token_type));
+    return slice_from_str_z(token_type_name(node->start_token.type));
 }
 
 TRY_STATUS

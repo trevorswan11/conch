@@ -10,26 +10,26 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-TRY_STATUS decl_statement_create(Token                 token,
+TRY_STATUS decl_statement_create(Token                 start_token,
                                  IdentifierExpression* ident,
                                  TypeExpression*       type,
                                  Expression*           value,
                                  DeclStatement**       decl_stmt,
                                  memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
-    assert(token.slice.ptr);
+    assert(start_token.slice.ptr);
     if (!type) {
         return DECL_MISSING_TYPE;
     }
-    if (token.type != CONST && token.type != VAR) {
+    if (start_token.type != CONST && start_token.type != VAR) {
         return UNEXPECTED_TOKEN;
     }
 
     // Theres some behavior to check for wit uninitialized decls
     if (!value) {
-        if (token.type == CONST) {
+        if (start_token.type == CONST) {
             return CONST_DECL_MISSING_VALUE;
-        } else if (token.type == VAR && type->type.tag == IMPLICIT) {
+        } else if (start_token.type == VAR && type->type.tag == IMPLICIT) {
             return FORWARD_VAR_DECL_MISSING_TYPE;
         }
     }
@@ -40,8 +40,7 @@ TRY_STATUS decl_statement_create(Token                 token,
     }
 
     *declaration = (DeclStatement){
-        .base  = STATEMENT_INIT(DECL_VTABLE),
-        .token = token,
+        .base  = STATEMENT_INIT(DECL_VTABLE, start_token),
         .ident = ident,
         .type  = type,
         .value = value,
@@ -74,10 +73,9 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice decl_statement_token_literal(Node* node) {
     ASSERT_NODE(node);
-    DeclStatement* d = (DeclStatement*)node;
-    assert(d->token.type == CONST || d->token.type == VAR);
+    assert(node->start_token.type == CONST || node->start_token.type == VAR);
 
-    const char* literal = d->token.type == CONST ? "const" : "var";
+    const char* literal = node->start_token.type == CONST ? "const" : "var";
     return slice_from_str_z(literal);
 }
 
@@ -87,11 +85,12 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
         return NULL_PARAMETER;
     }
 
-    DeclStatement* d = (DeclStatement*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, d->token.slice.ptr, d->token.slice.length));
+    PROPAGATE_IF_ERROR(string_builder_append_many(
+        sb, node->start_token.slice.ptr, node->start_token.slice.length));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
-    Node* ident_node = (Node*)d->ident;
+    DeclStatement* d          = (DeclStatement*)node;
+    Node*          ident_node = (Node*)d->ident;
     PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
 
     Node* type_node = (Node*)d->type;

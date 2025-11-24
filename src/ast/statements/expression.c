@@ -12,7 +12,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-TRY_STATUS expression_statement_create(Token                 first_expression_token,
+TRY_STATUS expression_statement_create(Token                 start_token,
                                        Expression*           expression,
                                        ExpressionStatement** expr_stmt,
                                        memory_alloc_fn       memory_alloc) {
@@ -27,9 +27,8 @@ TRY_STATUS expression_statement_create(Token                 first_expression_to
     }
 
     *expr = (ExpressionStatement){
-        .base                   = STATEMENT_INIT(EXPR_VTABLE),
-        .first_expression_token = first_expression_token,
-        .expression             = expression,
+        .base       = STATEMENT_INIT(EXPR_VTABLE, start_token),
+        .expression = expression,
     };
 
     *expr_stmt = expr;
@@ -49,8 +48,7 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice expression_statement_token_literal(Node* node) {
     ASSERT_NODE(node);
-    ExpressionStatement* e = (ExpressionStatement*)node;
-    return e->first_expression_token.slice;
+    return node->start_token.slice;
 }
 
 TRY_STATUS

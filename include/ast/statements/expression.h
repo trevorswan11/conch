@@ -14,11 +14,10 @@
 
 typedef struct {
     Statement   base;
-    Token       first_expression_token;
     Expression* expression;
 } ExpressionStatement;
 
-TRY_STATUS expression_statement_create(Token                 first_expression_token,
+TRY_STATUS expression_statement_create(Token                 start_token,
                                        Expression*           expression,
                                        ExpressionStatement** expr_stmt,
                                        memory_alloc_fn       memory_alloc);

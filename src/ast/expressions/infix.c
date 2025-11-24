@@ -13,7 +13,8 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS infix_expression_create(Expression*       lhs,
+TRY_STATUS infix_expression_create(Token             start_token,
+                                   Expression*       lhs,
                                    TokenType         op,
                                    Expression*       rhs,
                                    InfixExpression** infix_expr,
@@ -29,7 +30,7 @@ TRY_STATUS infix_expression_create(Expression*       lhs,
     }
 
     *infix = (InfixExpression){
-        .base = EXPRESSION_INIT(INFIX_VTABLE),
+        .base = EXPRESSION_INIT(INFIX_VTABLE, start_token),
         .lhs  = lhs,
         .op   = op,
         .rhs  = rhs,

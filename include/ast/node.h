@@ -8,7 +8,10 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-#define ASSERT_NODE(node) assert(node->vtable);
+#define ASSERT_NODE(node) \
+    assert(node->vtable); \
+    assert(node->start_token.slice.ptr);
+
 #define NODE_VIRTUAL_FREE(node, free_alloc)                                  \
     do {                                                                     \
         Node* _node_obfuscated = (Node*)node;                                \
@@ -28,4 +31,5 @@ struct NodeVTable {
 
 struct Node {
     const NodeVTable* vtable;
+    Token             start_token;
 };

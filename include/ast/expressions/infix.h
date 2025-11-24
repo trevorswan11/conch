@@ -18,7 +18,8 @@ typedef struct {
     Expression* rhs;
 } InfixExpression;
 
-TRY_STATUS infix_expression_create(Expression*       lhs,
+TRY_STATUS infix_expression_create(Token             start_token,
+                                   Expression*       lhs,
                                    TokenType         op,
                                    Expression*       rhs,
                                    InfixExpression** infix_expr,

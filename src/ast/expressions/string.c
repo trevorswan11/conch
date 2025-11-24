@@ -12,7 +12,7 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS string_literal_expression_create(Token                     token,
+TRY_STATUS string_literal_expression_create(Token                     start_token,
                                             StringLiteralExpression** string_expr,
                                             Allocator                 allocator) {
     ASSERT_ALLOCATOR(allocator);
@@ -22,12 +22,11 @@ TRY_STATUS string_literal_expression_create(Token                     token,
     }
 
     MutSlice slice;
-    PROPAGATE_IF_ERROR_DO(promote_token_string(token, &slice, allocator),
+    PROPAGATE_IF_ERROR_DO(promote_token_string(start_token, &slice, allocator),
                           allocator.free_alloc(string));
 
     *string = (StringLiteralExpression){
-        .base  = EXPRESSION_INIT(STRING_VTABLE),
-        .token = token,
+        .base  = EXPRESSION_INIT(STRING_VTABLE, start_token),
         .slice = slice,
     };
 
@@ -61,7 +60,6 @@ string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Str
     }
     MAYBE_UNUSED(symbol_map);
 
-    StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, string_expr->token.slice));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }

@@ -70,7 +70,8 @@ typedef struct {
 } TypeExpression;
 
 TRY_STATUS
-type_expression_create(TypeTag          tag,
+type_expression_create(Token            start_token,
+                       TypeTag          tag,
                        TypeUnion        variant,
                        TypeExpression** type_expr,
                        memory_alloc_fn  memory_alloc);

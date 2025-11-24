@@ -13,7 +13,8 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS if_expression_create(Expression*     condition,
+TRY_STATUS if_expression_create(Token           start_token,
+                                Expression*     condition,
                                 Statement*      consequence,
                                 Statement*      alternate,
                                 IfExpression**  if_expr,
@@ -29,7 +30,7 @@ TRY_STATUS if_expression_create(Expression*     condition,
     }
 
     *if_local = (IfExpression){
-        .base        = EXPRESSION_INIT(IF_VTABLE),
+        .base        = EXPRESSION_INIT(IF_VTABLE, start_token),
         .condition   = condition,
         .consequence = consequence,
         .alternate   = alternate,

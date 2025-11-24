@@ -12,7 +12,8 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-TRY_STATUS return_statement_create(Expression*       value,
+TRY_STATUS return_statement_create(Token             start_token,
+                                   Expression*       value,
                                    ReturnStatement** ret_stmt,
                                    memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
@@ -22,7 +23,7 @@ TRY_STATUS return_statement_create(Expression*       value,
     }
 
     *ret = (ReturnStatement){
-        .base  = STATEMENT_INIT(RET_VTABLE),
+        .base  = STATEMENT_INIT(RET_VTABLE, start_token),
         .value = value,
     };
 

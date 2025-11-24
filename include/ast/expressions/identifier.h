@@ -14,10 +14,9 @@
 typedef struct {
     Expression base;
     MutSlice   name;
-    TokenType  token_type;
 } IdentifierExpression;
 
-TRY_STATUS identifier_expression_create(Token                  token,
+TRY_STATUS identifier_expression_create(Token                  start_token,
                                         IdentifierExpression** ident_expr,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc);

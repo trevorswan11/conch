@@ -15,11 +15,10 @@
 
 typedef struct {
     Expression base;
-    Token      token;
     double     value;
 } FloatLiteralExpression;
 
-TRY_STATUS float_literal_expression_create(Token                    token,
+TRY_STATUS float_literal_expression_create(Token                    start_token,
                                            double                   value,
                                            FloatLiteralExpression** float_expr,
                                            memory_alloc_fn          memory_alloc);

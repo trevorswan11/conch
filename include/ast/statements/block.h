@@ -21,7 +21,8 @@ typedef struct {
     ArrayList statements;
 } BlockStatement;
 
-TRY_STATUS block_statement_create(BlockStatement** block_stmt, Allocator allocator);
+TRY_STATUS
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator);
 
 void       block_statement_destroy(Node* node, free_alloc_fn free_alloc);
 Slice      block_statement_token_literal(Node* node);

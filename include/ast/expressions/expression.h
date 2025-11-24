@@ -6,15 +6,16 @@
 
 #define ASSERT_EXPRESSION(expr) \
     assert(expr->vtable);       \
-    assert(expr->base.vtable);
+    ASSERT_NODE(((Node*)expr));
 
-#define EXPRESSION_INIT(custom_vtab)         \
-    (Expression) {                           \
-        .base =                              \
-            (Node){                          \
-                .vtable = &custom_vtab.base, \
-            },                               \
-        .vtable = &custom_vtab,              \
+#define EXPRESSION_INIT(custom_vtab, token)       \
+    (Expression) {                                \
+        .base =                                   \
+            (Node){                               \
+                .vtable      = &custom_vtab.base, \
+                .start_token = token,             \
+            },                                    \
+        .vtable = &custom_vtab,                   \
     }
 
 typedef struct Expression       Expression;

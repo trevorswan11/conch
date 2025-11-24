@@ -199,7 +199,9 @@ void test_string_expression(Expression* expression,
     StringLiteralExpression* string = (StringLiteralExpression*)expression;
     REQUIRE(expected_string_literal == string->slice.ptr);
 
-    std::string actual_token_literal(string->token.slice.ptr, string->token.slice.length);
+    Node*       string_node = (Node*)string;
+    std::string actual_token_literal(string_node->start_token.slice.ptr,
+                                     string_node->start_token.slice.length);
     REQUIRE(expected_token_literal == actual_token_literal);
 }
 
@@ -208,5 +210,5 @@ void test_identifier_expression(Expression* expression,
                                 TokenType   expected_type) {
     IdentifierExpression* ident = (IdentifierExpression*)expression;
     REQUIRE(expected_name == ident->name.ptr);
-    REQUIRE(expected_type == ident->token_type);
+    REQUIRE(expected_type == ((Node*)ident)->start_token.type);
 }

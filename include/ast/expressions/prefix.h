@@ -13,11 +13,10 @@
 
 typedef struct {
     Expression  base;
-    Token       token;
     Expression* rhs;
 } PrefixExpression;
 
-TRY_STATUS prefix_expression_create(Token              token,
+TRY_STATUS prefix_expression_create(Token              start_token,
                                     Expression*        rhs,
                                     PrefixExpression** prefix_expr,
                                     memory_alloc_fn    memory_alloc);

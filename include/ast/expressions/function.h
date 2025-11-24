@@ -38,7 +38,8 @@ typedef struct {
     BlockStatement* body;
 } FunctionExpression;
 
-TRY_STATUS function_expression_create(ArrayList            parameters,
+TRY_STATUS function_expression_create(Token                start_token,
+                                      ArrayList            parameters,
                                       BlockStatement*      body,
                                       FunctionExpression** function_expr,
                                       memory_alloc_fn      memory_alloc);

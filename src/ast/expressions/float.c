@@ -12,20 +12,19 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-TRY_STATUS float_literal_expression_create(Token                    token,
+TRY_STATUS float_literal_expression_create(Token                    start_token,
                                            double                   value,
                                            FloatLiteralExpression** float_expr,
                                            memory_alloc_fn          memory_alloc) {
     assert(memory_alloc);
-    assert(token.slice.ptr);
+    assert(start_token.slice.ptr);
     FloatLiteralExpression* float_local = memory_alloc(sizeof(FloatLiteralExpression));
     if (!float_local) {
         return ALLOCATION_FAILED;
     }
 
     *float_local = (FloatLiteralExpression){
-        .base  = EXPRESSION_INIT(FLOAT_VTABLE),
-        .token = token,
+        .base  = EXPRESSION_INIT(FLOAT_VTABLE, start_token),
         .value = value,
     };
 
@@ -42,8 +41,7 @@ void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
 Slice float_literal_expression_token_literal(Node* node) {
     ASSERT_NODE(node);
-    FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
-    return float_expr->token.slice;
+    return node->start_token.slice;
 }
 
 TRY_STATUS
@@ -54,7 +52,6 @@ float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
     }
     MAYBE_UNUSED(symbol_map);
 
-    FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, float_expr->token.slice));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }

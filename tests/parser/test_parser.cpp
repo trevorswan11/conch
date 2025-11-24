@@ -263,7 +263,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
 
-            REQUIRE(expr->token.type == t.op);
+            REQUIRE(((Node*)expr)->start_token.type == t.op);
             if (std::holds_alternative<int64_t>(t.value)) {
                 test_number_expression<int64_t>(expr->rhs, NULL, std::get<int64_t>(t.value));
             } else if (std::holds_alternative<uint64_t>(t.value)) {
@@ -602,7 +602,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
         ReturnStatement*  return_stmt = (ReturnStatement*)stmt;
         PrefixExpression* neg_num     = (PrefixExpression*)return_stmt->value;
-        REQUIRE(neg_num->token.type == TokenType::MINUS);
+        REQUIRE(((Node*)neg_num)->start_token.type == TokenType::MINUS);
         test_number_expression<int64_t>(neg_num->rhs, "1", 1);
 
         // Verify the first alternate and its condition

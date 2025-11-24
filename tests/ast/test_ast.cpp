@@ -39,7 +39,11 @@ TEST_CASE("AST Manual Reconstruction") {
         free)));
 
     TypeExpression* type;
-    REQUIRE(STATUS_OK(type_expression_create(TypeTag::IMPLICIT, IMPLICIT_TYPE, &type, malloc)));
+    REQUIRE(STATUS_OK(type_expression_create(token_init(TokenType::COLON, "", 0, 0, 0),
+                                             TypeTag::IMPLICIT,
+                                             IMPLICIT_TYPE,
+                                             &type,
+                                             malloc)));
 
     DeclStatement* decl;
     REQUIRE(STATUS_OK(decl_statement_create(

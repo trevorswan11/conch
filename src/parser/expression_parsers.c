@@ -90,13 +90,14 @@ TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression) {
 }
 
 TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
+    const Token start_token = p->current_token;
     assert(p->primitives.buffer);
     *initialized = false;
 
     TypeExpression* type;
     if (parser_peek_token_is(p, WALRUS)) {
-        PROPAGATE_IF_ERROR(
-            type_expression_create(IMPLICIT, IMPLICIT_TYPE, &type, p->allocator.memory_alloc));
+        PROPAGATE_IF_ERROR(type_expression_create(
+            start_token, IMPLICIT, IMPLICIT_TYPE, &type, p->allocator.memory_alloc));
 
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         *initialized = true;
@@ -138,7 +139,8 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
             };
 
             PROPAGATE_IF_ERROR_DO(
-                type_expression_create(EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
+                type_expression_create(
+                    start_token, EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
                 identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
         } else if (parser_peek_token_is(p, FUNCTION)) {
             const Token type_start = p->current_token;
@@ -163,7 +165,8 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
             };
 
             PROPAGATE_IF_ERROR_DO(
-                type_expression_create(EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
+                type_expression_create(
+                    start_token, EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
                 free_parameter_list(&parameters));
         } else {
             return UNEXPECTED_TOKEN;
@@ -206,40 +209,42 @@ static inline Base integer_token_to_base(TokenType type) {
 }
 
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) {
-    const Token current = p->current_token;
-    assert(current.slice.length > 0);
-    const int base = integer_token_to_base(current.type);
+    const Token start_token = p->current_token;
+    assert(start_token.slice.length > 0);
+    const int base = integer_token_to_base(start_token.type);
 
-    if (token_is_signed_integer(current.type)) {
+    if (token_is_signed_integer(start_token.type)) {
         int64_t      value;
-        const Status parse_status = strntoll(current.slice.ptr, current.slice.length, base, &value);
+        const Status parse_status =
+            strntoll(start_token.slice.ptr, start_token.slice.length, base, &value);
         if (STATUS_ERR(parse_status)) {
             PROPAGATE_IF_ERROR(
-                parser_put_status_error(p, parse_status, current.line, current.column));
+                parser_put_status_error(p, parse_status, start_token.line, start_token.column));
             return parse_status;
         }
 
         IntegerLiteralExpression* integer;
-        PROPAGATE_IF_ERROR(
-            integer_literal_expression_create(current, value, &integer, p->allocator.memory_alloc));
+        PROPAGATE_IF_ERROR(integer_literal_expression_create(
+            start_token, value, &integer, p->allocator.memory_alloc));
 
         *expression = (Expression*)integer;
-    } else if (token_is_unsigned_integer(current.type)) {
+    } else if (token_is_unsigned_integer(start_token.type)) {
         uint64_t     value;
         const Status parse_status =
-            strntoull(current.slice.ptr, current.slice.length - 1, base, &value);
+            strntoull(start_token.slice.ptr, start_token.slice.length - 1, base, &value);
         if (STATUS_ERR(parse_status)) {
             PROPAGATE_IF_ERROR(
-                parser_put_status_error(p, parse_status, current.line, current.column));
+                parser_put_status_error(p, parse_status, start_token.line, start_token.column));
             return parse_status;
         }
 
         UnsignedIntegerLiteralExpression* integer;
         PROPAGATE_IF_ERROR(uinteger_literal_expression_create(
-            current, value, &integer, p->allocator.memory_alloc));
+            start_token, value, &integer, p->allocator.memory_alloc));
 
         *expression = (Expression*)integer;
     } else {
+        UNREACHABLE_IF(false);
         return UNEXPECTED_TOKEN;
     }
 
@@ -247,23 +252,24 @@ TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) 
 }
 
 TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression) {
-    const Token current = p->current_token;
-    assert(current.slice.length > 0);
+    const Token start_token = p->current_token;
+    assert(start_token.slice.length > 0);
 
     double       value;
-    const Status parse_status = strntod(current.slice.ptr,
-                                        current.slice.length,
+    const Status parse_status = strntod(start_token.slice.ptr,
+                                        start_token.slice.length,
                                         &value,
                                         p->allocator.memory_alloc,
                                         p->allocator.free_alloc);
     if (STATUS_ERR(parse_status)) {
-        PROPAGATE_IF_ERROR(parser_put_status_error(p, parse_status, current.line, current.column));
+        PROPAGATE_IF_ERROR(
+            parser_put_status_error(p, parse_status, start_token.line, start_token.column));
         return parse_status;
     }
 
     FloatLiteralExpression* float_expr;
-    PROPAGATE_IF_ERROR(
-        float_literal_expression_create(current, value, &float_expr, p->allocator.memory_alloc));
+    PROPAGATE_IF_ERROR(float_literal_expression_create(
+        start_token, value, &float_expr, p->allocator.memory_alloc));
 
     *expression = (Expression*)float_expr;
     return SUCCESS;
@@ -290,13 +296,16 @@ TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expr
     const TokenType  op_token_type      = p->current_token.type;
     const Precedence current_precedence = parser_current_precedence(p);
     PROPAGATE_IF_ERROR(parser_next_token(p));
+    ASSERT_EXPRESSION(left);
 
     Expression* right;
     PROPAGATE_IF_ERROR(expression_parse(p, current_precedence, &right));
 
+    Node*            left_node = (Node*)left;
     InfixExpression* infix;
     PROPAGATE_IF_ERROR_DO(
-        infix_expression_create(left, op_token_type, right, &infix, p->allocator.memory_alloc),
+        infix_expression_create(
+            left_node->start_token, left, op_token_type, right, &infix, p->allocator.memory_alloc),
         NODE_VIRTUAL_FREE(right, p->allocator.free_alloc));
 
     *expression = (Expression*)infix;
@@ -305,8 +314,8 @@ TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expr
 
 TRY_STATUS bool_expression_parse(Parser* p, Expression** expression) {
     BoolLiteralExpression* boolean;
-    PROPAGATE_IF_ERROR(bool_literal_expression_create(
-        p->current_token.type == TRUE, &boolean, p->allocator.memory_alloc));
+    PROPAGATE_IF_ERROR(
+        bool_literal_expression_create(p->current_token, &boolean, p->allocator.memory_alloc));
     *expression = (Expression*)boolean;
     return SUCCESS;
 }
@@ -351,6 +360,7 @@ static inline TRY_STATUS _if_expression_parse_branch(Parser* p, Statement** stmt
 }
 
 TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
     PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
     PROPAGATE_IF_ERROR(parser_next_token(p));
 
@@ -376,7 +386,7 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
     IfExpression* if_expr;
     PROPAGATE_IF_ERROR_DO(
         if_expression_create(
-            condition, consequence, alternate, &if_expr, p->allocator.memory_alloc),
+            start_token, condition, consequence, alternate, &if_expr, p->allocator.memory_alloc),
         {
             NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
@@ -388,6 +398,7 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
 }
 
 TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
     PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
 
     ArrayList parameters;
@@ -398,11 +409,12 @@ TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
     PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &body), free_parameter_list(&parameters));
 
     FunctionExpression* function;
-    PROPAGATE_IF_ERROR_DO(
-        function_expression_create(parameters, body, &function, p->allocator.memory_alloc), {
-            free_parameter_list(&parameters);
-            block_statement_destroy((Node*)body, p->allocator.free_alloc);
-        });
+    PROPAGATE_IF_ERROR_DO(function_expression_create(
+                              start_token, parameters, body, &function, p->allocator.memory_alloc),
+                          {
+                              free_parameter_list(&parameters);
+                              block_statement_destroy((Node*)body, p->allocator.free_alloc);
+                          });
 
     *expression = (Expression*)function;
     return SUCCESS;

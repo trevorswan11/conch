@@ -6,15 +6,16 @@
 
 #define ASSERT_STATEMENT(stmt) \
     assert(stmt->vtable);      \
-    assert(stmt->base.vtable);
+    ASSERT_NODE(((Node*)stmt));
 
-#define STATEMENT_INIT(custom_vtab)          \
-    (Statement) {                            \
-        .base =                              \
-            (Node){                          \
-                .vtable = &custom_vtab.base, \
-            },                               \
-        .vtable = &custom_vtab,              \
+#define STATEMENT_INIT(custom_vtab, token)        \
+    (Statement) {                                 \
+        .base =                                   \
+            (Node){                               \
+                .vtable      = &custom_vtab.base, \
+                .start_token = token,             \
+            },                                    \
+        .vtable = &custom_vtab,                   \
     }
 
 typedef struct Statement       Statement;

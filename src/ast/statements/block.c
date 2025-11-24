@@ -25,7 +25,8 @@ void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
     array_list_clear_retaining_capacity(statements);
 }
 
-TRY_STATUS block_statement_create(BlockStatement** block_stmt, Allocator allocator) {
+TRY_STATUS
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
 
     BlockStatement* block = allocator.memory_alloc(sizeof(BlockStatement));
@@ -38,7 +39,7 @@ TRY_STATUS block_statement_create(BlockStatement** block_stmt, Allocator allocat
                           allocator.free_alloc(block));
 
     *block = (BlockStatement){
-        .base       = STATEMENT_INIT(BLOCK_VTABLE),
+        .base       = STATEMENT_INIT(BLOCK_VTABLE, start_token),
         .statements = statements,
     };
 

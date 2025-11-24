@@ -16,13 +16,12 @@
 // TODO: Maybe use union for walrus vs typed assign
 typedef struct {
     Statement             base;
-    Token                 token;
     IdentifierExpression* ident;
     TypeExpression*       type;
     Expression*           value;
 } DeclStatement;
 
-TRY_STATUS decl_statement_create(Token                 token,
+TRY_STATUS decl_statement_create(Token                 start_token,
                                  IdentifierExpression* ident,
                                  TypeExpression*       type,
                                  Expression*           value,

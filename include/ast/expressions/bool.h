@@ -18,7 +18,7 @@ typedef struct {
     bool       value;
 } BoolLiteralExpression;
 
-TRY_STATUS bool_literal_expression_create(bool                    value,
+TRY_STATUS bool_literal_expression_create(Token                   start_token,
                                           BoolLiteralExpression** bool_expr,
                                           memory_alloc_fn         memory_alloc);
 

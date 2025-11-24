@@ -15,11 +15,10 @@
 
 typedef struct {
     Expression base;
-    Token      token;
     MutSlice   slice;
 } StringLiteralExpression;
 
-TRY_STATUS string_literal_expression_create(Token                     token,
+TRY_STATUS string_literal_expression_create(Token                     start_token,
                                             StringLiteralExpression** string_expr,
                                             Allocator                 allocator);
 
