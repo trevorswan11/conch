@@ -51,20 +51,13 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     DeclStatement* decl_stmt;
     const Status   create_status = decl_statement_create(
         decl_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc);
-    if (create_status == ALLOCATION_FAILED) {
+    if (STATUS_ERR(create_status)) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, create_status, start_token.line, start_token.column));
+
         identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
         type_expression_destroy((Node*)type, p->allocator.free_alloc);
         NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
-
-        return create_status;
-    } else if (create_status != SUCCESS) {
-        PROPAGATE_IF_ERROR_DO(
-            parser_put_status_error(p, create_status, start_token.line, start_token.column), {
-                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-                type_expression_destroy((Node*)type, p->allocator.free_alloc);
-                decl_statement_destroy((Node*)decl_stmt, p->allocator.free_alloc);
-                NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
-            });
         return create_status;
     }
 
