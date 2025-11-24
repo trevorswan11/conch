@@ -9,10 +9,13 @@
 #include "util/status.h"
 
 #define ASSERT_NODE(node) assert(node->vtable);
-#define NODE_VIRTUAL_FREE(node, free_alloc)                      \
-    if (node) {                                                  \
-        ((Node*)node)->vtable->destroy((Node*)node, free_alloc); \
-    }
+#define NODE_VIRTUAL_FREE(node, free_alloc)                                  \
+    do {                                                                     \
+        Node* _node_obfuscated = (Node*)node;                                \
+        if (_node_obfuscated) {                                              \
+            _node_obfuscated->vtable->destroy(_node_obfuscated, free_alloc); \
+        }                                                                    \
+    } while (0);
 
 typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;

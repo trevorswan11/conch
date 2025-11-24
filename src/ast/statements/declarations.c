@@ -78,10 +78,7 @@ Slice decl_statement_token_literal(Node* node) {
     assert(d->token.type == CONST || d->token.type == VAR);
 
     const char* literal = d->token.type == CONST ? "const" : "var";
-    return (Slice){
-        .ptr    = literal,
-        .length = strlen(literal),
-    };
+    return slice_from_str_z(literal);
 }
 
 TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
