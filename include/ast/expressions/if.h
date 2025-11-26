@@ -29,16 +29,14 @@ TRY_STATUS if_expression_create(Token           start_token,
                                 IfExpression**  if_expr,
                                 memory_alloc_fn memory_alloc);
 
-void  if_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice if_expression_token_literal(Node* node);
+void if_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable IF_VTABLE = {
     .base =
         {
-            .destroy       = if_expression_destroy,
-            .token_literal = if_expression_token_literal,
-            .reconstruct   = if_expression_reconstruct,
+            .destroy     = if_expression_destroy,
+            .reconstruct = if_expression_reconstruct,
         },
 };

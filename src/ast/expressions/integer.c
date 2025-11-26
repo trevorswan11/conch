@@ -39,11 +39,6 @@ void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(integer);
 }
 
-Slice integer_literal_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    return node->start_token.slice;
-}
-
 TRY_STATUS
 integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
@@ -81,11 +76,6 @@ void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
     UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
     free_alloc(integer);
-}
-
-Slice uinteger_literal_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    return node->start_token.slice;
 }
 
 TRY_STATUS

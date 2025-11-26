@@ -22,16 +22,14 @@ TRY_STATUS string_literal_expression_create(Token                     start_toke
                                             StringLiteralExpression** string_expr,
                                             Allocator                 allocator);
 
-void  string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice string_literal_expression_token_literal(Node* node);
+void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable STRING_VTABLE = {
     .base =
         {
-            .destroy       = string_literal_expression_destroy,
-            .token_literal = string_literal_expression_token_literal,
-            .reconstruct   = string_literal_expression_reconstruct,
+            .destroy     = string_literal_expression_destroy,
+            .reconstruct = string_literal_expression_reconstruct,
         },
 };

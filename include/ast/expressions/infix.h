@@ -26,14 +26,12 @@ TRY_STATUS infix_expression_create(Token             start_token,
                                    memory_alloc_fn   memory_alloc);
 
 void       infix_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      infix_expression_token_literal(Node* node);
 TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable INFIX_VTABLE = {
     .base =
         {
-            .destroy       = infix_expression_destroy,
-            .token_literal = infix_expression_token_literal,
-            .reconstruct   = infix_expression_reconstruct,
+            .destroy     = infix_expression_destroy,
+            .reconstruct = infix_expression_reconstruct,
         },
 };

@@ -22,16 +22,14 @@ TRY_STATUS bool_literal_expression_create(Token                   start_token,
                                           BoolLiteralExpression** bool_expr,
                                           memory_alloc_fn         memory_alloc);
 
-void  bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice bool_literal_expression_token_literal(Node* node);
+void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable BOOL_VTABLE = {
     .base =
         {
-            .destroy       = bool_literal_expression_destroy,
-            .token_literal = bool_literal_expression_token_literal,
-            .reconstruct   = bool_literal_expression_reconstruct,
+            .destroy     = bool_literal_expression_destroy,
+            .reconstruct = bool_literal_expression_reconstruct,
         },
 };

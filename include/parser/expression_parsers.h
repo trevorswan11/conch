@@ -13,8 +13,20 @@
 #include "util/containers/hash_set.h"
 #include "util/status.h"
 
+typedef struct TypeExpression TypeExpression;
+
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
+
+// Parses a function definition, assuming the current token is a function
+TRY_STATUS function_definition_parse(Parser*          p,
+                                     ArrayList*       parameters,
+                                     TypeExpression** return_type,
+                                     bool*            contains_default_param);
+
+// Parses an explicit type without considering colon or assignment presence
+TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
+
 TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized);
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression);
@@ -25,6 +37,7 @@ TRY_STATUS string_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS if_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS function_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** expression);
 
 typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
 typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -113,20 +126,14 @@ static inline bool poll_infix(Parser* p, TokenType type, InfixFn* infix) {
 }
 
 static const InfixFn INFIX_FUNCTIONS[] = {
-    {PLUS, &infix_expression_parse},
-    {MINUS, &infix_expression_parse},
-    {STAR, &infix_expression_parse},
-    {SLASH, &infix_expression_parse},
-    {PERCENT, &infix_expression_parse},
-    {LT, &infix_expression_parse},
-    {LTEQ, &infix_expression_parse},
-    {GT, &infix_expression_parse},
-    {GTEQ, &infix_expression_parse},
-    {EQ, &infix_expression_parse},
-    {NEQ, &infix_expression_parse},
-    {AND, &infix_expression_parse},
-    {OR, &infix_expression_parse},
-    {XOR, &infix_expression_parse},
-    {SHR, &infix_expression_parse},
-    {SHL, &infix_expression_parse},
+    {PLUS, &infix_expression_parse},    {MINUS, &infix_expression_parse},
+    {STAR, &infix_expression_parse},    {SLASH, &infix_expression_parse},
+    {PERCENT, &infix_expression_parse}, {LT, &infix_expression_parse},
+    {LTEQ, &infix_expression_parse},    {GT, &infix_expression_parse},
+    {GTEQ, &infix_expression_parse},    {EQ, &infix_expression_parse},
+    {NEQ, &infix_expression_parse},     {AND, &infix_expression_parse},
+    {OR, &infix_expression_parse},      {XOR, &infix_expression_parse},
+    {SHR, &infix_expression_parse},     {SHL, &infix_expression_parse},
+    {IS, &infix_expression_parse},      {IN, &infix_expression_parse},
+    {LPAREN, &call_expression_parse},
 };

@@ -29,14 +29,14 @@ TRY_STATUS decl_statement_create(Token                 start_token,
                                  memory_alloc_fn       memory_alloc);
 
 void       decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      decl_statement_token_literal(Node* node);
 TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
         {
-            .destroy       = decl_statement_destroy,
-            .token_literal = decl_statement_token_literal,
-            .reconstruct   = decl_statement_reconstruct,
+            .destroy     = decl_statement_destroy,
+            .reconstruct = decl_statement_reconstruct,
         },
 };
+
+bool decl_statement_const(Node* node);

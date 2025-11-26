@@ -35,25 +35,25 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
 typedef struct {
     Expression      base;
     ArrayList       parameters;
+    TypeExpression* return_type;
     BlockStatement* body;
 } FunctionExpression;
 
 TRY_STATUS function_expression_create(Token                start_token,
                                       ArrayList            parameters,
+                                      TypeExpression*      return_type,
                                       BlockStatement*      body,
                                       FunctionExpression** function_expr,
                                       memory_alloc_fn      memory_alloc);
 
-void  function_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice function_expression_token_literal(Node* node);
+void function_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable FUNCTION_VTABLE = {
     .base =
         {
-            .destroy       = function_expression_destroy,
-            .token_literal = function_expression_token_literal,
-            .reconstruct   = function_expression_reconstruct,
+            .destroy     = function_expression_destroy,
+            .reconstruct = function_expression_reconstruct,
         },
 };

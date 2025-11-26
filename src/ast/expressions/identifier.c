@@ -48,11 +48,6 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(ident);
 }
 
-Slice identifier_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    return slice_from_str_z(token_type_name(node->start_token.type));
-}
-
 TRY_STATUS
 identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);

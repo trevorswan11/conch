@@ -27,3 +27,6 @@ TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb);
 //
 // If the symbol does not exist, returns the standard representation.
 Slice poll_tt_symbol(const HashMap* symbol_map, TokenType t);
+
+void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
+void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);

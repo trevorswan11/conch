@@ -17,6 +17,7 @@
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
+#include "ast/expressions/call.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/if.h"
@@ -122,12 +123,6 @@ TEST_CASE("Declarations") {
                                                      TypeTag::EXPLICIT,
                                                      TypeTag::EXPLICIT};
         std::vector<ExplicitTypeTag> explicit_tags(tags.size(), ExplicitTypeTag::EXPLICIT_IDENT);
-        std::vector<std::string>     type_type_literals = {token_type_name(TokenType::INT_TYPE),
-                                                           token_type_name(TokenType::UINT_TYPE),
-                                                           token_type_name(TokenType::BOOL_TYPE),
-                                                           {},
-                                                           token_type_name(TokenType::IDENT),
-                                                           token_type_name(TokenType::IDENT)};
 
         auto                     ast                 = pf.ast();
         std::vector<std::string> expected_type_names = {
@@ -142,7 +137,6 @@ TEST_CASE("Declarations") {
                                 expected_identifiers[i],
                                 is_nullable[i],
                                 is_primitive[i],
-                                type_type_literals[i],
                                 tags[i],
                                 explicit_tags[i],
                                 expected_type_names[i]);
@@ -162,11 +156,15 @@ TEST_CASE("Return statements") {
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 4);
 
+        const std::optional<int64_t> values[] = {std::nullopt, 5, 10, 993322};
+
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
-            Slice literal = stmt->base.vtable->token_literal((Node*)stmt);
-            REQUIRE(slice_equals_str_z(&literal, "return"));
+            ReturnStatement* return_stmt = (ReturnStatement*)stmt;
+            if (values[i].has_value()) {
+                test_number_expression<int64_t>(return_stmt->value, values[i].value());
+            }
         }
     }
 
@@ -189,10 +187,6 @@ TEST_CASE("Identifier Expressions") {
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-        Node* node    = (Node*)stmt;
-        Slice literal = node->vtable->token_literal(node);
-        REQUIRE(slice_equals_str_z(&literal, "foobar"));
-
         ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
         test_identifier_expression(expr_stmt->expression, "foobar");
     }
@@ -200,10 +194,10 @@ TEST_CASE("Identifier Expressions") {
 
 TEST_CASE("Number-based expressions") {
     SECTION("Signed integer bases") {
-        test_number_expression<int64_t>("5;", "5", 5);
-        test_number_expression<int64_t>("0b10011101101;", "0b10011101101", 0b10011101101);
-        test_number_expression<int64_t>("0o1234567;", "0o1234567", 342391);
-        test_number_expression<int64_t>("0xFF8a91d;", "0xFF8a91d", 0xFF8a91d);
+        test_number_expression<int64_t>("5;", 5);
+        test_number_expression<int64_t>("0b10011101101;", 0b10011101101);
+        test_number_expression<int64_t>("0o1234567;", 342391);
+        test_number_expression<int64_t>("0xFF8a91d;", 0xFF8a91d);
     }
 
     SECTION("Signed integer overflow") {
@@ -213,13 +207,12 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Unsigned integer bases") {
-        test_number_expression<uint64_t>("5u;", "5u", 5);
-        test_number_expression<uint64_t>("0b10011101101u;", "0b10011101101u", 0b10011101101);
-        test_number_expression<uint64_t>("0o1234567U;", "0o1234567U", 342391);
-        test_number_expression<uint64_t>("0xFF8a91du;", "0xFF8a91du", 0xFF8a91d);
+        test_number_expression<uint64_t>("5u;", 5);
+        test_number_expression<uint64_t>("0b10011101101u;", 0b10011101101);
+        test_number_expression<uint64_t>("0o1234567U;", 342391);
+        test_number_expression<uint64_t>("0xFF8a91du;", 0xFF8a91d);
 
-        test_number_expression<uint64_t>(
-            "0xFFFFFFFFFFFFFFFFu;", "0xFFFFFFFFFFFFFFFFu", 0xFFFFFFFFFFFFFFFF);
+        test_number_expression<uint64_t>("0xFFFFFFFFFFFFFFFFu;", 0xFFFFFFFFFFFFFFFF);
     }
 
     SECTION("Unsigned integer overflow") {
@@ -229,9 +222,9 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Floating points") {
-        test_number_expression<double>("1023.0;", "1023.0", 1023.0);
-        test_number_expression<double>("1023.234612;", "1023.234612", 1023.234612);
-        test_number_expression<double>("1023.234612e234;", "1023.234612e234", 1023.234612e234);
+        test_number_expression<double>("1023.0;", 1023.0);
+        test_number_expression<double>("1023.234612;", 1023.234612);
+        test_number_expression<double>("1023.234612e234;", 1023.234612e234);
     }
 }
 
@@ -265,11 +258,11 @@ TEST_CASE("Basic prefix / infix expressions") {
 
             REQUIRE(((Node*)expr)->start_token.type == t.op);
             if (std::holds_alternative<int64_t>(t.value)) {
-                test_number_expression<int64_t>(expr->rhs, NULL, std::get<int64_t>(t.value));
+                test_number_expression<int64_t>(expr->rhs, std::get<int64_t>(t.value));
             } else if (std::holds_alternative<uint64_t>(t.value)) {
-                test_number_expression<uint64_t>(expr->rhs, NULL, std::get<uint64_t>(t.value));
+                test_number_expression<uint64_t>(expr->rhs, std::get<uint64_t>(t.value));
             } else if (std::holds_alternative<double>(t.value)) {
-                test_number_expression<double>(expr->rhs, NULL, std::get<double>(t.value));
+                test_number_expression<double>(expr->rhs, std::get<double>(t.value));
             } else {
                 REQUIRE(false);
             }
@@ -323,11 +316,11 @@ TEST_CASE("Basic prefix / infix expressions") {
             REQUIRE(expr->op == t.op);
             for (const auto& p : pairs) {
                 if (std::holds_alternative<int64_t>(p.first)) {
-                    test_number_expression<int64_t>(p.second, NULL, std::get<int64_t>(p.first));
+                    test_number_expression<int64_t>(p.second, std::get<int64_t>(p.first));
                 } else if (std::holds_alternative<uint64_t>(p.first)) {
-                    test_number_expression<uint64_t>(p.second, NULL, std::get<uint64_t>(p.first));
+                    test_number_expression<uint64_t>(p.second, std::get<uint64_t>(p.first));
                 } else if (std::holds_alternative<double>(p.first)) {
-                    test_number_expression<double>(p.second, NULL, std::get<double>(p.first));
+                    test_number_expression<double>(p.second, std::get<double>(p.first));
                 } else {
                     REQUIRE(false);
                 }
@@ -359,6 +352,10 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"2 / (5 + 5)", "(2 / (5 + 5))"},
             {"-(5 + 5)", "(-(5 + 5))"},
             {"!(true == true)", "(!(true == true))"},
+            {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+            {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+             "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+            {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
         };
 
         for (const auto& t : cases) {
@@ -387,15 +384,14 @@ TEST_CASE("Bool expressions") {
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 2);
 
-        const bool  expected_values[]   = {true, false};
-        const char* expected_literals[] = {"true", "false"};
+        const bool expected_values[] = {true, false};
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            test_bool_expression(expr_stmt->expression, expected_values[i], expected_literals[i]);
+            test_bool_expression(expr_stmt->expression, expected_values[i]);
         }
     }
 }
@@ -423,8 +419,7 @@ TEST_CASE("String expressions") {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            test_string_expression(
-                expr_stmt->expression, expected_strings[i], expected_literals[i]);
+            test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
 
@@ -454,8 +449,7 @@ TEST_CASE("String expressions") {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            test_string_expression(
-                expr_stmt->expression, expected_strings[i], expected_literals[i]);
+            test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
 }
@@ -544,10 +538,10 @@ TEST_CASE("Conditional expressions") {
         test_identifier_expression(condition->rhs, "y");
 
         ExpressionStatement* consequence = (ExpressionStatement*)if_expr->consequence;
-        test_number_expression<int64_t>(consequence->expression, "1", 1);
+        test_number_expression<int64_t>(consequence->expression, 1);
 
         ExpressionStatement* alternate = (ExpressionStatement*)if_expr->alternate;
-        test_number_expression<int64_t>(alternate->expression, "2", 2);
+        test_number_expression<int64_t>(alternate->expression, 2);
     }
 
     SECTION("If/Else with return statement") {
@@ -569,10 +563,10 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(condition->value);
 
         ReturnStatement* consequence = (ReturnStatement*)if_expr->consequence;
-        test_number_expression<int64_t>(consequence->value, "1", 1);
+        test_number_expression<int64_t>(consequence->value, 1);
 
         ReturnStatement* alternate = (ReturnStatement*)if_expr->alternate;
-        test_number_expression<int64_t>(alternate->value, "2", 2);
+        test_number_expression<int64_t>(alternate->value, 2);
     }
 
     SECTION("If/Else with nested ifs and terminal else") {
@@ -603,7 +597,7 @@ TEST_CASE("Conditional expressions") {
         ReturnStatement*  return_stmt = (ReturnStatement*)stmt;
         PrefixExpression* neg_num     = (PrefixExpression*)return_stmt->value;
         REQUIRE(((Node*)neg_num)->start_token.type == TokenType::MINUS);
-        test_number_expression<int64_t>(neg_num->rhs, "1", 1);
+        test_number_expression<int64_t>(neg_num->rhs, 1);
 
         // Verify the first alternate and its condition
         ExpressionStatement* alternate_one = (ExpressionStatement*)if_expr->alternate;
@@ -620,14 +614,14 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(consequence_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
         return_stmt = (ReturnStatement*)stmt;
-        test_number_expression<int64_t>(return_stmt->value, "1", 1);
+        test_number_expression<int64_t>(return_stmt->value, 1);
 
         // Verify the second alternate
         BlockStatement* alternate_two = (BlockStatement*)if_expr->alternate;
         REQUIRE(alternate_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
         return_stmt = (ReturnStatement*)stmt;
-        test_number_expression<int64_t>(return_stmt->value, "0", 0);
+        test_number_expression<int64_t>(return_stmt->value, 0);
     }
 }
 
@@ -635,11 +629,10 @@ TEST_CASE("Function literals") {
     struct TestParameter {
         std::string name;
 
-        bool        nullable     = false;
-        bool        primitive    = true;
-        std::string type_literal = token_type_name(TokenType::INT_TYPE);
-        TypeTag     tag          = TypeTag::EXPLICIT;
-        std::string type_name    = "int";
+        bool        nullable  = false;
+        bool        primitive = true;
+        TypeTag     tag       = TypeTag::EXPLICIT;
+        std::string type_name = "int";
 
         std::optional<int64_t> default_value = std::nullopt;
     };
@@ -655,14 +648,13 @@ TEST_CASE("Function literals") {
             test_type_expression((Expression*)parameter.type,
                                  expected_parameter.nullable,
                                  expected_parameter.primitive,
-                                 expected_parameter.type_literal,
                                  expected_parameter.tag,
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  expected_parameter.type_name);
 
             if (expected_parameter.default_value.has_value()) {
-                test_number_expression<int64_t>(
-                    parameter.default_value, NULL, expected_parameter.default_value.value());
+                test_number_expression<int64_t>(parameter.default_value,
+                                                expected_parameter.default_value.value());
             } else {
                 REQUIRE_FALSE(parameter.default_value);
                 REQUIRE_FALSE(expected_parameter.default_value.has_value());
@@ -674,7 +666,7 @@ TEST_CASE("Function literals") {
         SECTION("Correct declaration") {
             std::vector<TestParameter> expected_params = {TestParameter{"a"}, TestParameter{"b"}};
 
-            const char*   input = "var add: fn(a: int, b: int);";
+            const char*   input = "var add: fn(a: int, b: int): int;";
             ParserFixture pf(input);
             check_parse_errors(pf.parser(), {}, true);
             auto ast = pf.ast();
@@ -688,59 +680,82 @@ TEST_CASE("Function literals") {
                                 "add",
                                 false,
                                 false,
-                                {},
                                 TypeTag::EXPLICIT,
                                 ExplicitTypeTag::EXPLICIT_FN,
                                 {});
             DeclStatement* decl_stmt = (DeclStatement*)stmt;
             REQUIRE_FALSE(decl_stmt->value);
 
-            TypeExpression* type_expr     = (TypeExpression*)decl_stmt->type;
-            ExplicitType    explicit_type = type_expr->type.variant.explicit_type;
-            ArrayList       parameters    = explicit_type.variant.fn_type_params;
-            test_parameters(&parameters, expected_params);
+            TypeExpression*      type_expr     = (TypeExpression*)decl_stmt->type;
+            ExplicitType         explicit_type = type_expr->type.variant.explicit_type;
+            ExplicitFunctionType function_type = explicit_type.variant.function_type;
+            test_parameters(&function_type.fn_type_params, expected_params);
+            test_type_expression((Expression*)function_type.return_type,
+                                 false,
+                                 true,
+                                 TypeTag::EXPLICIT,
+                                 ExplicitTypeTag::EXPLICIT_IDENT,
+                                 "int");
         }
 
         SECTION("Incorrect declaration with first default") {
-            const char*   input = "var add: fn(a: int = 1, b: int);";
+            const char*   input = "var add: fn(a: int = 1, b: int): ?int;";
             ParserFixture pf(input);
-            check_parse_errors(pf.parser(), {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 8]"});
+            check_parse_errors(pf.parser(), {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"});
         }
 
         SECTION("Incorrect declaration with second default") {
-            const char*   input = "var add: fn(a: int, b: int = 2);";
+            const char*   input = "var add: fn(a: int, b: int = 2): int;";
             ParserFixture pf(input);
-            check_parse_errors(pf.parser(), {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 8]"});
+            check_parse_errors(pf.parser(), {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"});
+        }
+
+        SECTION("Incorrect declaration with missing return type") {
+            const char*   input = "var add: fn(a: int, b: int):;";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 28]",
+                                "No prefix parse function for SEMICOLON found [Ln 1, Col 29]"});
         }
 
         SECTION("Incorrect declaration with both default") {
             const char*   input = "const add: fn(a: int = -345, b: uint = 209u);";
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
-                               {"ILLEGAL_DEFAULT_FUNCTION_PARAMETER [Ln 1, Col 10]",
-                                "CONST_DECL_MISSING_VALUE [Ln 1, Col 1]"});
+                               {"Expected token COLON, found SEMICOLON [Ln 1, Col 45]",
+                                "No prefix parse function for SEMICOLON found [Ln 1, Col 45]"});
         }
     }
 
     SECTION("Parameter allocation") {
+        struct TestReturnType {
+            std::string type_name;
+            bool        nullable;
+            bool        primitive;
+        };
+
         struct TestCase {
             const char*                input;
             std::vector<TestParameter> expected_params;
+            TestReturnType             expected_return;
         };
 
         const TestCase cases[] = {
-            {"fn() {};", {}},
-            {"fn(x: int) {};", {TestParameter{"x"}}},
-            {"fn(x: int, y: int, z: int) {};",
-             {TestParameter{"x"}, TestParameter{"y"}, TestParameter{"z"}}},
-            {"fn(x: int, y: int = 2, z: int) {};",
+            {"fn(): void {};", {}, {"void", false, true}},
+            {"fn(x: int): Blk {};", {TestParameter{"x"}}, {"Blk", false, false}},
+            {"fn(x: int, y: int, z: int): int {};",
+             {TestParameter{"x"}, TestParameter{"y"}, TestParameter{"z"}},
+             {"int", false, true}},
+            {"fn(x: int, y: int = 2, z: int): ?Sock {};",
              {TestParameter{"x"},
               TestParameter{.name = "y", .default_value = 2},
-              TestParameter{"z"}}},
-            {"fn(x: int, y: int, z: int = 3) {};",
+              TestParameter{"z"}},
+             {"Sock", true, false}},
+            {"fn(x: int, y: int, z: int = 3): ?uint {};",
              {TestParameter{"x"},
               TestParameter{"y"},
-              TestParameter{.name = "z", .default_value = 3}}},
+              TestParameter{.name = "z", .default_value = 3}},
+             {"uint", true, true}},
         };
 
         for (const auto& t : cases) {
@@ -758,6 +773,54 @@ TEST_CASE("Function literals") {
 
             ArrayList parameters = function->parameters;
             test_parameters(&parameters, t.expected_params);
+
+            test_type_expression((Expression*)function->return_type,
+                                 t.expected_return.nullable,
+                                 t.expected_return.primitive,
+                                 TypeTag::EXPLICIT,
+                                 ExplicitTypeTag::EXPLICIT_IDENT,
+                                 t.expected_return.type_name);
         }
+    }
+
+    SECTION("Call expression with identifier function") {
+        const char*   input = "add(1, 2 * 3, 4 + 5);";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        CallExpression*      call      = (CallExpression*)expr_stmt->expression;
+
+        // Verify function identifier
+        IdentifierExpression* function               = (IdentifierExpression*)call->function;
+        std::string           expected_function_name = "add";
+        REQUIRE(expected_function_name == function->name.ptr);
+
+        ArrayList arguments = call->arguments;
+        REQUIRE(arguments.length == 3);
+
+        // Verify arguments
+        Expression* first;
+        REQUIRE(STATUS_OK(array_list_get(&arguments, 0, &first)));
+        test_number_expression<int64_t>(first, 1);
+
+        Expression* second;
+        REQUIRE(STATUS_OK(array_list_get(&arguments, 1, &second)));
+        InfixExpression* argument = (InfixExpression*)second;
+        test_number_expression<int64_t>(argument->lhs, 2);
+        REQUIRE(argument->op == TokenType::STAR);
+        test_number_expression<int64_t>(argument->rhs, 3);
+
+        Expression* third;
+        REQUIRE(STATUS_OK(array_list_get(&arguments, 2, &third)));
+        argument = (InfixExpression*)third;
+        test_number_expression<int64_t>(argument->lhs, 4);
+        REQUIRE(argument->op == TokenType::PLUS);
+        test_number_expression<int64_t>(argument->rhs, 5);
     }
 }

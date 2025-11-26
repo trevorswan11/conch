@@ -13,9 +13,6 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-// Frees all allocated statements and resets the buffer length.
-void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
-
 typedef struct {
     Statement base;
     ArrayList statements;
@@ -25,15 +22,13 @@ TRY_STATUS
 block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator);
 
 void       block_statement_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      block_statement_token_literal(Node* node);
 TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const StatementVTable BLOCK_VTABLE = {
     .base =
         {
-            .destroy       = block_statement_destroy,
-            .token_literal = block_statement_token_literal,
-            .reconstruct   = block_statement_reconstruct,
+            .destroy     = block_statement_destroy,
+            .reconstruct = block_statement_reconstruct,
         },
 };
 

@@ -9,11 +9,11 @@
         PROCESS(PREFIX), PROCESS(CALL)
 
 typedef enum Precedence {
-    FOREACH_PRECEDENCE(GENERATE_ENUM),
+    FOREACH_PRECEDENCE(ENUMERATE),
 } Precedence;
 
 static const char* const PRECEDENCE_NAMES[] = {
-    FOREACH_PRECEDENCE(GENERATE_STRING),
+    FOREACH_PRECEDENCE(STRINGIFY),
 };
 
 static inline const char* precedence_name(Precedence precedence) {
@@ -42,4 +42,5 @@ static const PrecedencePair PRECEDENCE_PAIRS[] = {
     {XOR, ADD_SUB},
     {SHR, MUL_DIV},
     {SHL, MUL_DIV},
+    {LPAREN, CALL},
 };

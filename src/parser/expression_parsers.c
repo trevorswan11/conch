@@ -5,6 +5,7 @@
 
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
+#include "ast/expressions/call.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
@@ -89,6 +90,110 @@ TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
+TRY_STATUS function_definition_parse(Parser*          p,
+                                     ArrayList*       parameters,
+                                     TypeExpression** return_type,
+                                     bool*            contains_default_param) {
+    assert(parser_current_token_is(p, FUNCTION));
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+
+    PROPAGATE_IF_ERROR(allocate_parameter_list(p, parameters, contains_default_param));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COLON), free_parameter_list(parameters));
+    const Token type_token_start = p->current_token;
+
+    PROPAGATE_IF_ERROR_DO(explicit_type_parse(p, type_token_start, return_type), {
+        IGNORE_STATUS(parser_put_status_error(
+            p, MALFORMED_FUNCTION_LITERAL, type_token_start.line, type_token_start.column));
+        free_parameter_list(parameters);
+    });
+
+    return SUCCESS;
+}
+
+TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** type) {
+    // Check for a question mark to allow nil
+    bool is_nullable = false;
+    if (parser_peek_token_is(p, WHAT)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        is_nullable = true;
+    }
+
+    // Check for primitive before creating an identifier
+    const bool is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
+    TypeUnion  explicit_union = (TypeUnion){
+         .explicit_type =
+            (ExplicitType){
+                 .tag = EXPLICIT_IDENT,
+                 .variant =
+                    (ExplicitTypeUnion){
+                         .ident_type_name = NULL,
+                    },
+                 .nullable  = is_nullable,
+                 .primitive = is_primitive,
+            },
+    };
+
+    if (is_primitive || parser_peek_token_is(p, IDENT)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        Expression* ident_expr;
+        PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
+        IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
+
+        explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
+        explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+            .ident_type_name = ident,
+        };
+
+        PROPAGATE_IF_ERROR_DO(
+            type_expression_create(
+                start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
+            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
+    } else if (parser_peek_token_is(p, FUNCTION)) {
+        const Token type_start = p->current_token;
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        bool            contains_default_param;
+        ArrayList       parameters;
+        TypeExpression* return_type;
+        PROPAGATE_IF_ERROR(
+            function_definition_parse(p, &parameters, &return_type, &contains_default_param));
+
+        // Default values in function types make no sense to allow, but shouldn't halt parsing
+        if (contains_default_param) {
+            PROPAGATE_IF_ERROR_DO(
+                parser_put_status_error(
+                    p, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
+                {
+                    free_parameter_list(&parameters);
+                    type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                });
+        }
+
+        explicit_union.explicit_type.tag     = EXPLICIT_FN;
+        explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+            .function_type =
+                (ExplicitFunctionType){
+                    .fn_type_params = parameters,
+                    .return_type    = return_type,
+                },
+        };
+
+        PROPAGATE_IF_ERROR_DO(
+            type_expression_create(
+                start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
+            {
+                free_parameter_list(&parameters);
+                type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+            });
+    } else {
+        return UNEXPECTED_TOKEN;
+    }
+
+    return SUCCESS;
+}
+
 TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
     const Token start_token = p->current_token;
     assert(p->primitives.buffer);
@@ -103,74 +208,7 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
         *initialized = true;
     } else if (parser_peek_token_is(p, COLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
-
-        // Check for a question mark to allow nil
-        bool is_nullable = false;
-        if (parser_peek_token_is(p, WHAT)) {
-            UNREACHABLE_IF_ERROR(parser_next_token(p));
-            is_nullable = true;
-        }
-
-        // Check for primitive before creating an identifier
-        const bool is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
-        TypeUnion  explicit_union = (TypeUnion){
-             .explicit_type =
-                (ExplicitType){
-                     .tag = EXPLICIT_IDENT,
-                     .variant =
-                        (ExplicitTypeUnion){
-                             .ident_type_name = NULL,
-                        },
-                     .nullable  = is_nullable,
-                     .primitive = is_primitive,
-                },
-        };
-
-        if (is_primitive || parser_peek_token_is(p, IDENT)) {
-            UNREACHABLE_IF_ERROR(parser_next_token(p));
-
-            Expression* ident_expr;
-            PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
-            IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
-
-            explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
-            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
-                .ident_type_name = ident,
-            };
-
-            PROPAGATE_IF_ERROR_DO(
-                type_expression_create(
-                    start_token, EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
-                identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
-        } else if (parser_peek_token_is(p, FUNCTION)) {
-            const Token type_start = p->current_token;
-            UNREACHABLE_IF_ERROR(parser_next_token(p));
-            PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
-
-            bool      contains_default_param;
-            ArrayList parameters;
-            PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters, &contains_default_param));
-
-            // Default values in function types make no sense to allow, but shouldn't halt parsing
-            if (contains_default_param) {
-                PROPAGATE_IF_ERROR_DO(
-                    parser_put_status_error(
-                        p, ILLEGAL_DEFAULT_FUNCTION_PARAMETER, type_start.line, type_start.column),
-                    free_parameter_list(&parameters));
-            }
-
-            explicit_union.explicit_type.tag     = EXPLICIT_FN;
-            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
-                .fn_type_params = parameters,
-            };
-
-            PROPAGATE_IF_ERROR_DO(
-                type_expression_create(
-                    start_token, EXPLICIT, explicit_union, &type, p->allocator.memory_alloc),
-                free_parameter_list(&parameters));
-        } else {
-            return UNEXPECTED_TOKEN;
-        }
+        PROPAGATE_IF_ERROR(explicit_type_parse(p, start_token, &type));
 
         if (parser_peek_token_is(p, ASSIGN)) {
             *initialized = true;
@@ -398,24 +436,90 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
 }
 
 TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
-    const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+    const Token     start_token = p->current_token;
+    ArrayList       parameters;
+    TypeExpression* return_type;
 
-    ArrayList parameters;
-    PROPAGATE_IF_ERROR(allocate_parameter_list(p, &parameters, NULL));
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), free_parameter_list(&parameters));
+    PROPAGATE_IF_ERROR(function_definition_parse(p, &parameters, &return_type, NULL));
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), {
+        free_parameter_list(&parameters);
+        type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+    });
 
     BlockStatement* body;
-    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &body), free_parameter_list(&parameters));
+    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &body), {
+        free_parameter_list(&parameters);
+        type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+    });
 
     FunctionExpression* function;
-    PROPAGATE_IF_ERROR_DO(function_expression_create(
-                              start_token, parameters, body, &function, p->allocator.memory_alloc),
-                          {
-                              free_parameter_list(&parameters);
-                              block_statement_destroy((Node*)body, p->allocator.free_alloc);
-                          });
+    PROPAGATE_IF_ERROR_DO(
+        function_expression_create(
+            start_token, parameters, return_type, body, &function, p->allocator.memory_alloc),
+        {
+            type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+            free_parameter_list(&parameters);
+            block_statement_destroy((Node*)body, p->allocator.free_alloc);
+        });
 
     *expression = (Expression*)function;
+    return SUCCESS;
+}
+
+TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** expression) {
+    const Token start_token = p->current_token;
+
+    ArrayList arguments;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&arguments, 2, sizeof(Expression*), p->allocator));
+
+    if (parser_peek_token_is(p, RPAREN)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    } else {
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), array_list_deinit(&arguments));
+
+        // Append the first argument to prepare for comma peeking
+        Expression* argument;
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument),
+                              array_list_deinit(&arguments));
+
+        PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument), {
+            NODE_VIRTUAL_FREE(argument, p->allocator.free_alloc);
+            array_list_deinit(&arguments);
+        });
+
+        // Add the rest of the comma separated argument list
+        while (parser_peek_token_is(p, COMMA)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+                clear_expression_list(&arguments, p->allocator.free_alloc);
+                array_list_deinit(&arguments);
+            });
+
+            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument), {
+                clear_expression_list(&arguments, p->allocator.free_alloc);
+                array_list_deinit(&arguments);
+            });
+
+            PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument), {
+                clear_expression_list(&arguments, p->allocator.free_alloc);
+                array_list_deinit(&arguments);
+            });
+        }
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
+            clear_expression_list(&arguments, p->allocator.free_alloc);
+            array_list_deinit(&arguments);
+        });
+    }
+
+    CallExpression* call;
+    PROPAGATE_IF_ERROR_DO(
+        call_expression_create(start_token, function, arguments, &call, p->allocator.memory_alloc),
+        {
+            clear_expression_list(&arguments, p->allocator.free_alloc);
+            array_list_deinit(&arguments);
+        });
+
+    *expression = (Expression*)call;
     return SUCCESS;
 }

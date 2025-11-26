@@ -90,9 +90,15 @@ coverage: CXX := clang++
 ifeq ($(OS),Windows_NT)
 coverage: 
 	$(error Coverage is not supported on Windows)
+
+clcov: coverage
 else
 coverage: $(COVERAGE_BIN)
 	@LLVM_PROFILE_FILE=$(BIN_DIR_COVERAGE)/default.profraw $(COVERAGE_BIN)
+
+clcov:
+	@rm -rf $(BUILD_DIR)/coverage
+	@rm -rf $(BIN_ROOT)/coverage
 endif
 
 asan: CC := clang
@@ -100,13 +106,24 @@ asan: CXX := clang++
 ifeq ($(OS),Windows_NT)
 asan: 
 	$(error Sanitizers are not supported on Windows)
+clasan:
+	@if exist "$(BUILD_DIR)/asan" rmdir /S /Q "$(BUILD_DIR)/asan"
+	@if exist "$(BIN_ROOT)/asan" rmdir /S /Q "$(BIN_ROOT)/asan"
 else
 ifeq ($(shell uname -s),Darwin)
 asan: $(LSAN_BIN)
 	@leaks --atExit -- $(LSAN_BIN)
+
+clasan:
+	@rm -rf $(BUILD_DIR)/lsan
+	@rm -rf $(BIN_ROOT)/lsan
 else
 asan: $(ASAN_BIN)
 	@$(ASAN_BIN)
+
+clasan:
+	@rm -rf $(BUILD_DIR)/asan
+	@rm -rf $(BIN_ROOT)/asan
 endif
 endif
 
@@ -303,24 +320,6 @@ ifeq ($(OS),Windows_NT)
 else
 	@rm -rf $(BUILD_DIR)/tests
 	@rm -rf $(BIN_ROOT)/tests
-endif
-
-clasan:
-ifeq ($(OS),Windows_NT)
-	@if exist "$(BUILD_DIR)/asan" rmdir /S /Q "$(BUILD_DIR)/asan"
-	@if exist "$(BIN_ROOT)/asan" rmdir /S /Q "$(BIN_ROOT)/asan"
-else
-	@rm -rf $(BUILD_DIR)/asan
-	@rm -rf $(BIN_ROOT)/asan
-endif
-
-clcov:
-ifeq ($(OS),Windows_NT)
-	@if exist "$(BUILD_DIR)/coverage" rmdir /S /Q "$(BUILD_DIR)/coverage"
-	@if exist "$(BIN_ROOT)/coverage" rmdir /S /Q "$(BIN_ROOT)/coverage"
-else
-	@rm -rf $(BUILD_DIR)/coverage
-	@rm -rf $(BIN_ROOT)/coverage
 endif
 
 # ================ FORMATTING ================

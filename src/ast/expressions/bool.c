@@ -38,12 +38,6 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(bool_expr);
 }
 
-Slice bool_literal_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
-    return bool_expr->value ? slice_from_str_z("true") : slice_from_str_z("false");
-}
-
 TRY_STATUS
 bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
@@ -52,7 +46,8 @@ bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Strin
     }
     MAYBE_UNUSED(symbol_map);
 
-    PROPAGATE_IF_ERROR(
-        string_builder_append_slice(sb, bool_literal_expression_token_literal(node)));
+    BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
+    const Slice slice = bool_expr->value ? slice_from_str_z("true") : slice_from_str_z("false");
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, slice));
     return SUCCESS;
 }

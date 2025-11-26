@@ -71,14 +71,6 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(d);
 }
 
-Slice decl_statement_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    assert(node->start_token.type == CONST || node->start_token.type == VAR);
-
-    const char* literal = node->start_token.type == CONST ? "const" : "var";
-    return slice_from_str_z(literal);
-}
-
 TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
@@ -108,4 +100,10 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
     return SUCCESS;
+}
+
+bool decl_statement_const(Node* node) {
+    ASSERT_NODE(node);
+    assert(node->start_token.type == CONST || node->start_token.type == VAR);
+    return node->start_token.type == CONST;
 }

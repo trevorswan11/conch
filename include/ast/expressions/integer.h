@@ -23,17 +23,15 @@ TRY_STATUS integer_literal_expression_create(Token                      start_to
                                              IntegerLiteralExpression** int_expr,
                                              memory_alloc_fn            memory_alloc);
 
-void  integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice integer_literal_expression_token_literal(Node* node);
+void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable INTEGER_VTABLE = {
     .base =
         {
-            .destroy       = integer_literal_expression_destroy,
-            .token_literal = integer_literal_expression_token_literal,
-            .reconstruct   = integer_literal_expression_reconstruct,
+            .destroy     = integer_literal_expression_destroy,
+            .reconstruct = integer_literal_expression_reconstruct,
         },
 };
 
@@ -47,14 +45,12 @@ TRY_STATUS uinteger_literal_expression_create(Token                             
                                               UnsignedIntegerLiteralExpression** int_expr,
                                               memory_alloc_fn                    memory_alloc);
 
-void  uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice uinteger_literal_expression_token_literal(Node* node);
+void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
 
 static const ExpressionVTable UNSIGNED_INTEGER_VTABLE = {
     .base =
         {
-            .destroy       = uinteger_literal_expression_destroy,
-            .token_literal = uinteger_literal_expression_token_literal,
-            .reconstruct   = integer_literal_expression_reconstruct,
+            .destroy     = uinteger_literal_expression_destroy,
+            .reconstruct = integer_literal_expression_reconstruct,
         },
 };

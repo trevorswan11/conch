@@ -38,9 +38,9 @@
                                                                                                    \
         PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STATIC), PROCESS(STRUCT),         \
         PROCESS(ENUM), PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR),   \
-        PROCESS(IS), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(CASE), PROCESS(RETURN),   \
-        PROCESS(FOR), PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL),             \
-        PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM),                                           \
+        PROCESS(IS), PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(CASE),       \
+        PROCESS(RETURN), PROCESS(FOR), PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK),          \
+        PROCESS(NIL), PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM),                             \
                                                                                                    \
         PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(FLOAT_TYPE), PROCESS(BYTE_TYPE),            \
         PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE), PROCESS(TYPE_TYPE),          \
@@ -48,15 +48,15 @@
         PROCESS(ILLEGAL)
 
 typedef enum TokenType {
-    FOREACH_TOKEN(GENERATE_ENUM),
+    FOREACH_TOKEN(ENUMERATE),
 } TokenType;
 
 static const TokenType TOKEN_TYPES[] = {
-    FOREACH_TOKEN(GENERATE_ENUM),
+    FOREACH_TOKEN(ENUMERATE),
 };
 
 static const char* const TOKEN_TYPE_NAMES[] = {
-    FOREACH_TOKEN(GENERATE_STRING),
+    FOREACH_TOKEN(STRINGIFY),
 };
 
 Hash        hash_token_type(const void* key);

@@ -46,12 +46,6 @@ void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(string_expr);
 }
 
-Slice string_literal_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
-    return slice_from_mut(&string_expr->slice);
-}
-
 TRY_STATUS
 string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);

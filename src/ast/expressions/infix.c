@@ -54,12 +54,6 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(infix);
 }
 
-Slice infix_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    InfixExpression* infix = (InfixExpression*)node;
-    return slice_from_str_z(token_type_name(infix->op));
-}
-
 TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {

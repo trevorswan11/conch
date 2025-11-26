@@ -48,8 +48,10 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
             break;
         }
         case EXPLICIT_FN: {
-            ArrayList params = type->type.variant.explicit_type.variant.fn_type_params;
-            free_parameter_list(&params);
+            ExplicitFunctionType function_type =
+                type->type.variant.explicit_type.variant.function_type;
+            free_parameter_list(&function_type.fn_type_params);
+            type_expression_destroy((Node*)function_type.return_type, free_alloc);
             break;
         }
         }
@@ -58,34 +60,12 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type);
 }
 
-Slice type_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    TypeExpression* type = (TypeExpression*)node;
-    if (type->type.tag == EXPLICIT) {
-        switch (type->type.variant.explicit_type.tag) {
-        case EXPLICIT_IDENT: {
-            const MutSlice type_name =
-                type->type.variant.explicit_type.variant.ident_type_name->name;
-            return slice_from_str_s(type_name.ptr, type_name.length);
-        }
-        case EXPLICIT_FN:
-            return slice_from_str_z(token_type_name(FUNCTION));
-        default:
-            UNREACHABLE_IF(false);
-            return slice_from_str_z("UNREACHABLE");
-        }
-    }
-
-    return slice_from_str_z(token_type_name(WALRUS));
-}
-
 TRY_STATUS
 type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
-    MAYBE_UNUSED(symbol_map);
 
     TypeExpression* type = (TypeExpression*)node;
     if (type->type.tag == EXPLICIT) {
@@ -101,9 +81,13 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
             break;
         case EXPLICIT_FN: {
             PROPAGATE_IF_ERROR(string_builder_append_many(sb, "fn(", 3));
-            ArrayList params = type->type.variant.explicit_type.variant.fn_type_params;
-            PROPAGATE_IF_ERROR(reconstruct_parameter_list(&params, symbol_map, sb));
+            ExplicitFunctionType function_type =
+                type->type.variant.explicit_type.variant.function_type;
+            PROPAGATE_IF_ERROR(
+                reconstruct_parameter_list(&function_type.fn_type_params, symbol_map, sb));
             PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+            PROPAGATE_IF_ERROR(
+                type_expression_reconstruct((Node*)function_type.return_type, symbol_map, sb));
             break;
         }
         default:

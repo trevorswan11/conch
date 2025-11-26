@@ -26,14 +26,21 @@ static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_TYPE,
 };
 
+typedef struct TypeExpression TypeExpression;
+
 typedef enum {
     EXPLICIT_IDENT,
     EXPLICIT_FN,
 } ExplicitTypeTag;
 
+typedef struct {
+    ArrayList       fn_type_params;
+    TypeExpression* return_type;
+} ExplicitFunctionType;
+
 typedef union {
     IdentifierExpression* ident_type_name;
-    ArrayList             fn_type_params;
+    ExplicitFunctionType  function_type;
 } ExplicitTypeUnion;
 
 typedef struct {
@@ -64,7 +71,7 @@ typedef struct {
     TypeUnion variant;
 } Type;
 
-typedef struct {
+typedef struct TypeExpression {
     Expression base;
     Type       type;
 } TypeExpression;
@@ -76,16 +83,14 @@ type_expression_create(Token            start_token,
                        TypeExpression** type_expr,
                        memory_alloc_fn  memory_alloc);
 
-void  type_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice type_expression_token_literal(Node* node);
+void type_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable TYPE_VTABLE = {
     .base =
         {
-            .destroy       = type_expression_destroy,
-            .token_literal = type_expression_token_literal,
-            .reconstruct   = type_expression_reconstruct,
+            .destroy     = type_expression_destroy,
+            .reconstruct = type_expression_reconstruct,
         },
 };

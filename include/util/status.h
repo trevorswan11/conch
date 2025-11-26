@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define GENERATE_ENUM(ENUM) ENUM
-#define GENERATE_STRING(STRING) #STRING
+#define ENUMERATE(ENUM) ENUM
+#define STRINGIFY(STRING) #STRING
 
 #define TRY_PROPAGATE_ERROR(E) \
     if (E != SUCCESS) {        \
@@ -64,7 +64,7 @@
 
 // Allows a variable to be left unused.
 //
-// For unused error codes, see `UNREACHABLE_ERROR` or `IGNORE_STATUS`.
+// For unused error codes, see `UNREACHABLE_IF_ERROR` or `IGNORE_STATUS`.
 #define MAYBE_UNUSED(x) ((void)(x))
 
 // Prints to stderr without considering the chance of IO failure.
@@ -118,14 +118,14 @@ void debug_print(const char* format, ...);
         PROCESS(WRITE_ERROR), PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH),                 \
         PROCESS(UNEXPECTED_TOKEN), PROCESS(MALFORMED_INTEGER_STR), PROCESS(MALFORMED_FLOAT_STR), \
         PROCESS(NOT_IMPLEMENTED), PROCESS(DECL_MISSING_TYPE), PROCESS(CONST_DECL_MISSING_VALUE), \
-        PROCESS(FORWARD_VAR_DECL_MISSING_TYPE), PROCESS(ILLEGAL_DEFAULT_FUNCTION_PARAMETER)
+        PROCESS(FORWARD_VAR_DECL_MISSING_TYPE), PROCESS(MALFORMED_FUNCTION_LITERAL)
 
 typedef enum Status {
-    FOREACH_STATUS(GENERATE_ENUM),
+    FOREACH_STATUS(ENUMERATE),
 } Status;
 
 static const char* const STATUS_TYPE_NAMES[] = {
-    FOREACH_STATUS(GENERATE_STRING),
+    FOREACH_STATUS(STRINGIFY),
 };
 
 #define STATUS_OK(expr) expr == SUCCESS

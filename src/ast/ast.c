@@ -98,3 +98,31 @@ Slice poll_tt_symbol(const HashMap* symbol_map, TokenType t) {
     const char* name = token_type_name(t);
     return slice_from_str_z(name);
 }
+
+void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
+    assert(statements && statements->data);
+    assert(free_alloc);
+
+    Statement* stmt;
+    for (size_t i = 0; i < statements->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(statements, i, &stmt));
+        ASSERT_STATEMENT(stmt);
+        NODE_VIRTUAL_FREE(stmt, free_alloc);
+    }
+
+    array_list_clear_retaining_capacity(statements);
+}
+
+void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
+    assert(expressions && expressions->data);
+    assert(free_alloc);
+
+    Expression* expr;
+    for (size_t i = 0; i < expressions->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(expressions, i, &expr));
+        ASSERT_EXPRESSION(expr);
+        NODE_VIRTUAL_FREE(expr, free_alloc);
+    }
+
+    array_list_clear_retaining_capacity(expressions);
+}

@@ -160,13 +160,14 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
 
 TRY_STATUS function_expression_create(Token                start_token,
                                       ArrayList            parameters,
+                                      TypeExpression*      return_type,
                                       BlockStatement*      body,
                                       FunctionExpression** function_expr,
                                       memory_alloc_fn      memory_alloc) {
-    assert(parameters.data);
     if (!body) {
         return NULL_PARAMETER;
     }
+    assert(parameters.item_size == sizeof(Parameter));
 
     assert(memory_alloc);
     FunctionExpression* func = memory_alloc(sizeof(FunctionExpression));
@@ -175,9 +176,10 @@ TRY_STATUS function_expression_create(Token                start_token,
     }
 
     *func = (FunctionExpression){
-        .base       = EXPRESSION_INIT(FUNCTION_VTABLE, start_token),
-        .parameters = parameters,
-        .body       = body,
+        .base        = EXPRESSION_INIT(FUNCTION_VTABLE, start_token),
+        .parameters  = parameters,
+        .return_type = return_type,
+        .body        = body,
     };
 
     *function_expr = func;
@@ -193,12 +195,10 @@ void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     block_statement_destroy((Node*)func->body, free_alloc);
     func->body = NULL;
 
-    free_alloc(func);
-}
+    type_expression_destroy((Node*)func->return_type, free_alloc);
+    func->return_type = NULL;
 
-Slice function_expression_token_literal(Node* node) {
-    MAYBE_UNUSED(node);
-    return slice_from_str_z(token_type_name(FUNCTION));
+    free_alloc(func);
 }
 
 TRY_STATUS

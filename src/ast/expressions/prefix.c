@@ -48,11 +48,6 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(prefix);
 }
 
-Slice prefix_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    return node->start_token.slice;
-}
-
 TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {

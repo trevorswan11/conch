@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/statements/block.h"
 
@@ -10,20 +11,6 @@
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 #include "util/status.h"
-
-void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
-    assert(statements && statements->data);
-    assert(free_alloc);
-
-    Statement* stmt;
-    for (size_t i = 0; i < statements->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(statements, i, &stmt));
-        ASSERT_STATEMENT(stmt);
-        NODE_VIRTUAL_FREE(stmt, free_alloc);
-    }
-
-    array_list_clear_retaining_capacity(statements);
-}
 
 TRY_STATUS
 block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {
@@ -56,11 +43,6 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     array_list_deinit(&block->statements);
 
     free_alloc(block);
-}
-
-Slice block_statement_token_literal(Node* node) {
-    MAYBE_UNUSED(node);
-    return slice_from_str_z(token_type_name(LBRACE));
 }
 
 TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {

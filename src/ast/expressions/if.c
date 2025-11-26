@@ -57,11 +57,6 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(if_expr);
 }
 
-Slice if_expression_token_literal(Node* node) {
-    MAYBE_UNUSED(node);
-    return slice_from_str_z(token_type_name(IF));
-}
-
 TRY_STATUS
 if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);

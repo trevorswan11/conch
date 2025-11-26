@@ -23,14 +23,12 @@ TRY_STATUS return_statement_create(Token             start_token,
                                    memory_alloc_fn   memory_alloc);
 
 void       return_statement_destroy(Node* node, free_alloc_fn free_alloc);
-Slice      return_statement_token_literal(Node* node);
 TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const StatementVTable RET_VTABLE = {
     .base =
         {
-            .destroy       = return_statement_destroy,
-            .token_literal = return_statement_token_literal,
-            .reconstruct   = return_statement_reconstruct,
+            .destroy     = return_statement_destroy,
+            .reconstruct = return_statement_reconstruct,
         },
 };

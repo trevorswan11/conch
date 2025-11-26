@@ -39,11 +39,6 @@ void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(float_expr);
 }
 
-Slice float_literal_expression_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    return node->start_token.slice;
-}
-
 TRY_STATUS
 float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);

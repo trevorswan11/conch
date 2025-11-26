@@ -21,16 +21,14 @@ TRY_STATUS identifier_expression_create(Token                  start_token,
                                         memory_alloc_fn        memory_alloc,
                                         free_alloc_fn          free_alloc);
 
-void  identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
-Slice identifier_expression_token_literal(Node* node);
+void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
 TRY_STATUS
 identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =
         {
-            .destroy       = identifier_expression_destroy,
-            .token_literal = identifier_expression_token_literal,
-            .reconstruct   = identifier_expression_reconstruct,
+            .destroy     = identifier_expression_destroy,
+            .reconstruct = identifier_expression_reconstruct,
         },
 };

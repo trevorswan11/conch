@@ -42,19 +42,13 @@ void return_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(r);
 }
 
-Slice return_statement_token_literal(Node* node) {
-    ASSERT_NODE(node);
-    MAYBE_UNUSED(node);
-    return slice_from_str_z("return");
-}
-
 TRY_STATUS return_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_NODE(node);
     if (!sb) {
         return NULL_PARAMETER;
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->vtable->token_literal(node)));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, slice_from_str_z("return")));
 
     ReturnStatement* r = (ReturnStatement*)node;
     if (r->value) {
