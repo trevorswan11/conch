@@ -12,7 +12,6 @@ typedef struct {
 static const Keyword KEYWORD_FN          = {{"fn", 2}, FUNCTION};
 static const Keyword KEYWORD_VAR         = {{"var", 3}, VAR};
 static const Keyword KEYWORD_CONST       = {{"const", 5}, CONST};
-static const Keyword KEYWORD_STATIC      = {{"static", 6}, STATIC};
 static const Keyword KEYWORD_STRUCT      = {{"struct", 6}, STRUCT};
 static const Keyword KEYWORD_ENUM        = {{"enum", 4}, ENUM};
 static const Keyword KEYWORD_TRUE        = {{"true", 4}, TRUE};
@@ -20,10 +19,10 @@ static const Keyword KEYWORD_FALSE       = {{"false", 5}, FALSE};
 static const Keyword KEYWORD_BOOLEAN_AND = {{"and", 3}, BOOLEAN_AND};
 static const Keyword KEYWORD_BOOLEAN_OR  = {{"or", 2}, BOOLEAN_OR};
 static const Keyword KEYWORD_IS          = {{"is", 2}, IS};
+static const Keyword KEYWORD_IN          = {{"in", 2}, IN};
 static const Keyword KEYWORD_IF          = {{"if", 2}, IF};
 static const Keyword KEYWORD_ELSE        = {{"else", 4}, ELSE};
 static const Keyword KEYWORD_MATCH       = {{"match", 5}, MATCH};
-static const Keyword KEYWORD_CASE        = {{"case", 4}, CASE};
 static const Keyword KEYWORD_RETURN      = {{"return", 6}, RETURN};
 static const Keyword KEYWORD_FOR         = {{"for", 3}, FOR};
 static const Keyword KEYWORD_WHILE       = {{"while", 5}, WHILE};
@@ -43,11 +42,11 @@ static const Keyword KEYWORD_VOID        = {{"void", 4}, VOID_TYPE};
 static const Keyword KEYWORD_TYPE        = {{"type", 4}, TYPE_TYPE};
 
 static const Keyword ALL_KEYWORDS[] = {
-    KEYWORD_FN,     KEYWORD_VAR,    KEYWORD_CONST,  KEYWORD_STATIC,      KEYWORD_STRUCT,
-    KEYWORD_ENUM,   KEYWORD_TRUE,   KEYWORD_FALSE,  KEYWORD_BOOLEAN_AND, KEYWORD_BOOLEAN_OR,
-    KEYWORD_IS,     KEYWORD_IF,     KEYWORD_ELSE,   KEYWORD_MATCH,       KEYWORD_CASE,
-    KEYWORD_RETURN, KEYWORD_FOR,    KEYWORD_WHILE,  KEYWORD_CONTINUE,    KEYWORD_BREAK,
-    KEYWORD_NIL,    KEYWORD_TYPEOF, KEYWORD_IMPORT, KEYWORD_FROM,        KEYWORD_INT,
-    KEYWORD_UINT,   KEYWORD_FLOAT,  KEYWORD_BYTE,   KEYWORD_STRING,      KEYWORD_BOOL,
-    KEYWORD_VOID,   KEYWORD_TYPE,
+    KEYWORD_FN,     KEYWORD_VAR,    KEYWORD_CONST,       KEYWORD_STRUCT,     KEYWORD_ENUM,
+    KEYWORD_TRUE,   KEYWORD_FALSE,  KEYWORD_BOOLEAN_AND, KEYWORD_BOOLEAN_OR, KEYWORD_IS,
+    KEYWORD_IN,     KEYWORD_IF,     KEYWORD_ELSE,        KEYWORD_MATCH,      KEYWORD_RETURN,
+    KEYWORD_FOR,    KEYWORD_WHILE,  KEYWORD_CONTINUE,    KEYWORD_BREAK,      KEYWORD_NIL,
+    KEYWORD_TYPEOF, KEYWORD_IMPORT, KEYWORD_FROM,        KEYWORD_INT,        KEYWORD_UINT,
+    KEYWORD_FLOAT,  KEYWORD_BYTE,   KEYWORD_STRING,      KEYWORD_BOOL,       KEYWORD_VOID,
+    KEYWORD_TYPE,
 };

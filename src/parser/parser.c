@@ -17,6 +17,7 @@
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+#include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
@@ -107,8 +108,33 @@ static inline TRY_STATUS _init_precedences(HashMap* precedence_map, Allocator al
     return SUCCESS;
 }
 
+void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
+    if (!errors) {
+        return;
+    }
+    assert(free_alloc);
+
+    MutSlice error;
+    for (size_t i = 0; i < errors->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(errors, i, &error));
+        free_alloc(error.ptr);
+    }
+
+    array_list_clear_retaining_capacity(errors);
+}
+
 TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
-    if (!p || !l || !io) {
+    if (!l) {
+        return NULL_PARAMETER;
+    }
+
+    PROPAGATE_IF_ERROR(parser_null_init(p, io, allocator));
+    PROPAGATE_IF_ERROR_DO(parser_reset(p, l), parser_deinit(p));
+    return SUCCESS;
+}
+
+TRY_STATUS parser_null_init(Parser* p, FileIO* io, Allocator allocator) {
+    if (!p || !io) {
         return NULL_PARAMETER;
     }
     ASSERT_ALLOCATOR(allocator);
@@ -142,7 +168,7 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     });
 
     *p = (Parser){
-        .lexer            = l,
+        .lexer            = NULL,
         .lexer_index      = 0,
         .current_token    = token_init(END, "", 0, 0, 0),
         .peek_token       = token_init(END, "", 0, 0, 0),
@@ -155,21 +181,32 @@ TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
         .allocator        = allocator,
     };
 
+    return SUCCESS;
+}
+
+TRY_STATUS parser_reset(Parser* p, Lexer* l) {
+    if (!l) {
+        return NULL_PARAMETER;
+    }
+
+    p->lexer         = l;
+    p->lexer_index   = 0;
+    p->current_token = token_init(END, "", 0, 0, 0);
+    p->peek_token    = token_init(END, "", 0, 0, 0);
+
+    clear_error_list(&p->errors, p->allocator.free_alloc);
+
     // Read twice to set current and peek
-    PROPAGATE_IF_ERROR(parser_next_token(p));
-    PROPAGATE_IF_ERROR(parser_next_token(p));
+    PROPAGATE_IF_ERROR_DO(parser_next_token(p), parser_deinit(p));
+    PROPAGATE_IF_ERROR_DO(parser_next_token(p), parser_deinit(p));
     return SUCCESS;
 }
 
 void parser_deinit(Parser* p) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
-    MutSlice allocated;
-    for (size_t i = 0; i < p->errors.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&p->errors, i, &allocated));
-        p->allocator.free_alloc(allocated.ptr);
-    }
 
+    clear_error_list(&p->errors, p->allocator.free_alloc);
     array_list_deinit(&p->errors);
     hash_set_deinit(&p->prefix_parse_fns);
     hash_set_deinit(&p->infix_parse_fns);
@@ -190,8 +227,8 @@ TRY_STATUS parser_consume(Parser* p, AST* ast) {
     PROPAGATE_IF_ERROR(parser_next_token(p));
     PROPAGATE_IF_ERROR(parser_next_token(p));
 
-    array_list_clear_retaining_capacity(&ast->statements);
-    array_list_clear_retaining_capacity(&p->errors);
+    clear_statement_list(&ast->statements, ast->allocator.free_alloc);
+    clear_error_list(&p->errors, p->allocator.free_alloc);
 
     // Traverse the tokens and append until exhausted
     while (!parser_current_token_is(p, END)) {
@@ -320,8 +357,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
     case CONST:
         PROPAGATE_IF_ERROR(decl_statement_parse(p, (DeclStatement**)stmt));
         break;
+    case BREAK:
     case RETURN:
-        PROPAGATE_IF_ERROR(return_statement_parse(p, (ReturnStatement**)stmt));
+        PROPAGATE_IF_ERROR(jump_statement_parse(p, (JumpStatement**)stmt));
         break;
     default:
         PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));

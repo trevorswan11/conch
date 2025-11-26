@@ -91,7 +91,7 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
             break;
         }
         default:
-            UNREACHABLE_IF(false);
+            UNREACHABLE;
         }
     } else {
         PROPAGATE_IF_ERROR(string_builder_append_many(sb, " :", 2));

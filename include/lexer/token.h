@@ -7,45 +7,53 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-#define FOREACH_TOKEN(PROCESS)                                                                     \
-    PROCESS(END),                                                                                  \
-                                                                                                   \
-        PROCESS(IDENT), PROCESS(INT_2), PROCESS(INT_8), PROCESS(INT_10), PROCESS(INT_16),          \
-        PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(FLOAT),      \
-        PROCESS(STRING), PROCESS(CHARACTER),                                                       \
-                                                                                                   \
-        PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(PLUS_ASSIGN), PROCESS(MINUS),     \
-        PROCESS(MINUS_ASSIGN), PROCESS(STAR), PROCESS(STAR_ASSIGN), PROCESS(STAR_STAR),            \
-        PROCESS(SLASH), PROCESS(SLASH_ASSIGN), PROCESS(PERCENT), PROCESS(PERCENT_ASSIGN),          \
-        PROCESS(BANG), PROCESS(WHAT),                                                              \
-                                                                                                   \
-        PROCESS(AND), PROCESS(AND_ASSIGN), PROCESS(OR), PROCESS(OR_ASSIGN), PROCESS(SHL),          \
-        PROCESS(SHL_ASSIGN), PROCESS(SHR), PROCESS(SHR_ASSIGN), PROCESS(NOT), PROCESS(NOT_ASSIGN), \
-        PROCESS(XOR), PROCESS(XOR_ASSIGN),                                                         \
-                                                                                                   \
-        PROCESS(LT), PROCESS(LTEQ), PROCESS(GT), PROCESS(GTEQ), PROCESS(EQ), PROCESS(NEQ),         \
-                                                                                                   \
-        PROCESS(DOT), PROCESS(DOT_DOT), PROCESS(DOT_DOT_EQ), PROCESS(ARROW), PROCESS(FAT_ARROW),   \
-                                                                                                   \
-        PROCESS(COMMENT), PROCESS(MULTILINE_STRING),                                               \
-                                                                                                   \
-        PROCESS(COMMA), PROCESS(COLON), PROCESS(SEMICOLON),                                        \
-                                                                                                   \
-        PROCESS(LPAREN), PROCESS(RPAREN), PROCESS(LBRACE), PROCESS(RBRACE), PROCESS(LBRACKET),     \
-        PROCESS(RBRACKET),                                                                         \
-                                                                                                   \
-        PROCESS(SINGLE_QUOTE), PROCESS(DOUBLE_QUOTE),                                              \
-                                                                                                   \
-        PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STATIC), PROCESS(STRUCT),         \
-        PROCESS(ENUM), PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR),   \
-        PROCESS(IS), PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(CASE),       \
-        PROCESS(RETURN), PROCESS(FOR), PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK),          \
-        PROCESS(NIL), PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(FROM),                             \
-                                                                                                   \
-        PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(FLOAT_TYPE), PROCESS(BYTE_TYPE),            \
-        PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE), PROCESS(TYPE_TYPE),          \
-                                                                                                   \
+#define FOREACH_TOKEN(PROCESS)                                                                    \
+    PROCESS(END),                                                                                 \
+                                                                                                  \
+        PROCESS(IDENT), PROCESS(INT_2), PROCESS(INT_8), PROCESS(INT_10), PROCESS(INT_16),         \
+        PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(FLOAT),     \
+        PROCESS(STRING), PROCESS(CHARACTER),                                                      \
+                                                                                                  \
+        PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(MINUS), PROCESS(STAR),           \
+        PROCESS(STAR_STAR), PROCESS(SLASH), PROCESS(PERCENT), PROCESS(BANG), PROCESS(WHAT),       \
+                                                                                                  \
+        PROCESS(AND), PROCESS(OR), PROCESS(SHL), PROCESS(SHR), PROCESS(NOT), PROCESS(XOR),        \
+                                                                                                  \
+        PROCESS(PLUS_ASSIGN), PROCESS(MINUS_ASSIGN), PROCESS(STAR_ASSIGN), PROCESS(SLASH_ASSIGN), \
+        PROCESS(PERCENT_ASSIGN), PROCESS(AND_ASSIGN), PROCESS(OR_ASSIGN), PROCESS(SHL_ASSIGN),    \
+        PROCESS(SHR_ASSIGN), PROCESS(NOT_ASSIGN), PROCESS(XOR_ASSIGN),                            \
+                                                                                                  \
+        PROCESS(LT), PROCESS(LTEQ), PROCESS(GT), PROCESS(GTEQ), PROCESS(EQ), PROCESS(NEQ),        \
+                                                                                                  \
+        PROCESS(DOT), PROCESS(DOT_DOT), PROCESS(DOT_DOT_EQ), PROCESS(FAT_ARROW),                  \
+                                                                                                  \
+        PROCESS(COMMENT), PROCESS(MULTILINE_STRING),                                              \
+                                                                                                  \
+        PROCESS(COMMA), PROCESS(COLON), PROCESS(SEMICOLON), PROCESS(COLON_COLON),                 \
+                                                                                                  \
+        PROCESS(LPAREN), PROCESS(RPAREN), PROCESS(LBRACE), PROCESS(RBRACE), PROCESS(LBRACKET),    \
+        PROCESS(RBRACKET),                                                                        \
+                                                                                                  \
+        PROCESS(SINGLE_QUOTE),                                                                    \
+                                                                                                  \
+        PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STRUCT), PROCESS(ENUM),          \
+        PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
+        PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(FOR),   \
+        PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
+        PROCESS(IMPORT), PROCESS(FROM),                                                           \
+                                                                                                  \
+        PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(BYTE_TYPE), PROCESS(FLOAT_TYPE),           \
+        PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE), PROCESS(TYPE_TYPE),         \
+                                                                                                  \
         PROCESS(ILLEGAL)
+
+// Tokens TODO:
+// - MATCH w/ FAT_ARROW
+// - STRUCT & ENUM
+// - CONTINUE & NIL single-token statements
+// - FOR & WHILE loops
+// - TYPE & VOID type specialization
+// - IMPORT & FROM/IMPORT statements
 
 typedef enum TokenType {
     FOREACH_TOKEN(ENUMERATE),

@@ -20,6 +20,8 @@
 #include "util/mem.h"
 #include "util/status.h"
 
+void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);
+
 typedef struct Parser {
     Lexer* lexer;
     size_t lexer_index;
@@ -38,6 +40,10 @@ typedef struct Parser {
 } Parser;
 
 TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator);
+TRY_STATUS parser_null_init(Parser* p, FileIO* io, Allocator allocator);
+
+// Reinitializes the parser without reallocating internal resources.
+TRY_STATUS parser_reset(Parser* p, Lexer* l);
 
 // Deinitializes the parser, freeing only its personally allocated data.
 void parser_deinit(Parser* p);

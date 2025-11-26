@@ -6,14 +6,14 @@
 #include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
-#include "ast/statements/return.h"
+#include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
-#include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
 #include "util/status.h"
@@ -64,7 +64,7 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
+TRY_STATUS jump_statement_parse(Parser* p, JumpStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -76,16 +76,16 @@ TRY_STATUS return_statement_parse(Parser* p, ReturnStatement** stmt) {
         PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &value));
     }
 
-    ReturnStatement* ret_stmt;
+    JumpStatement* jump_stmt;
     PROPAGATE_IF_ERROR_DO(
-        return_statement_create(start_token, value, &ret_stmt, p->allocator.memory_alloc),
+        jump_statement_create(start_token, value, &jump_stmt, p->allocator.memory_alloc),
         NODE_VIRTUAL_FREE(value, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
 
-    *stmt = ret_stmt;
+    *stmt = jump_stmt;
     return SUCCESS;
 }
 

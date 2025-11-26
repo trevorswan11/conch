@@ -341,12 +341,14 @@ TEST_CASE("Advanced next token") {
     }
 
     SECTION("Dot operators") {
-        const char* input = ". .. ..=";
+        const char* input = ". .. ..= : ::";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::DOT, "."},
             {TokenType::DOT_DOT, ".."},
             {TokenType::DOT_DOT_EQ, "..="},
+            {TokenType::COLON, ":"},
+            {TokenType::COLON_COLON, "::"},
             {TokenType::END, ""},
         };
 
@@ -362,13 +364,12 @@ TEST_CASE("Advanced next token") {
     }
 
     SECTION("Control flow keywords") {
-        const char* input = "if else match case return for while continue break";
+        const char* input = "if else match return for while continue break";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::IF, "if"},
             {TokenType::ELSE, "else"},
             {TokenType::MATCH, "match"},
-            {TokenType::CASE, "case"},
             {TokenType::RETURN, "return"},
             {TokenType::FOR, "for"},
             {TokenType::WHILE, "while"},

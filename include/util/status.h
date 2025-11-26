@@ -62,6 +62,14 @@
         }                              \
     } while (0)
 
+#define PROPAGATE_IF_IO_ERROR_DO(io_expr, action) \
+    do {                                          \
+        if (io_expr < 0) {                        \
+            action;                               \
+            return GENERAL_IO_ERROR;              \
+        }                                         \
+    } while (0)
+
 // Allows a variable to be left unused.
 //
 // For unused error codes, see `UNREACHABLE_IF_ERROR` or `IGNORE_STATUS`.
@@ -108,6 +116,8 @@ void debug_print(const char* format, ...);
             UNREACHABLE_IMPL;                                                             \
         }                                                                                 \
     } while (0)
+
+#define UNREACHABLE UNREACHABLE_IF(false)
 
 #define FOREACH_STATUS(PROCESS)                                                                  \
     PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),                  \

@@ -47,10 +47,10 @@ static const Operator OPERATOR_GTEQ = {{">=", 2}, GTEQ};
 static const Operator OPERATOR_EQ   = {{"==", 2}, EQ};
 static const Operator OPERATOR_NEQ  = {{"!=", 2}, NEQ};
 
+static const Operator OPERATOR_COLON_COLON      = {{"::", 2}, COLON_COLON};
 static const Operator OPERATOR_DOT              = {{".", 1}, DOT};
 static const Operator OPERATOR_DOT_DOT          = {{"..", 2}, DOT_DOT};
 static const Operator OPERATOR_DOT_DOT_EQ       = {{"..=", 3}, DOT_DOT_EQ};
-static const Operator OPERATOR_ARROW            = {{"->", 2}, ARROW};
 static const Operator OPERATOR_FAT_ARROW        = {{"=>", 2}, FAT_ARROW};
 static const Operator OPERATOR_COMMENT          = {{"//", 2}, COMMENT};
 static const Operator OPERATOR_MULTILINE_STRING = {{"\\\\", 2}, MULTILINE_STRING};
@@ -92,10 +92,10 @@ static const Operator ALL_OPERATORS[] = {
     OPERATOR_EQ,
     OPERATOR_NEQ,
 
+    OPERATOR_COLON_COLON,
     OPERATOR_DOT,
     OPERATOR_DOT_DOT,
     OPERATOR_DOT_DOT_EQ,
-    OPERATOR_ARROW,
     OPERATOR_FAT_ARROW,
     OPERATOR_COMMENT,
     OPERATOR_MULTILINE_STRING,

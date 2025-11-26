@@ -1,25 +1,35 @@
 #include <assert.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "evaluate/program.h"
 #include "evaluate/repl.h"
-
-#include "lexer/lexer.h"
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/containers/string_builder.h"
 #include "util/io.h"
 #include "util/status.h"
 
+static volatile sig_atomic_t interrupted = 0;
+
+static inline void sigint_handler(int sig) {
+    MAYBE_UNUSED(sig);
+    interrupted = 1;
+}
+
 TRY_STATUS repl_start(void) {
+    signal(SIGINT, sigint_handler);
+
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    PROPAGATE_IF_ERROR(array_list_init(&buf_out, 1024, sizeof(char)));
+    PROPAGATE_IF_ERROR(
+        array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), standard_allocator));
 
-    FileIO io;
-    PROPAGATE_IF_ERROR(file_io_init(&io, stdin, stdout, stderr));
-    PROPAGATE_IF_ERROR(repl_run(&io, buf_in, &buf_out));
+    FileIO io = file_io_std();
+    PROPAGATE_IF_ERROR_DO(repl_run(&io, buf_in, &buf_out), array_list_deinit(&buf_out));
 
     array_list_deinit(&buf_out);
     return SUCCESS;
@@ -32,41 +42,52 @@ TRY_STATUS repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver)
         return TYPE_MISMATCH;
     }
 
+    Program program;
+    PROPAGATE_IF_ERROR(program_init(&program, io, standard_allocator));
+
     PROPAGATE_IF_IO_ERROR(fprintf(io->out, WELCOME_MESSAGE));
     PROPAGATE_IF_IO_ERROR(fprintf(io->out, "\n"));
-    Lexer l;
-    PROPAGATE_IF_ERROR_DO(
-        lexer_null_init(&l, standard_allocator),
-        PROPAGATE_IF_IO_ERROR(fprintf(io->err, "Failed to default initialize lexer\n")));
 
     while (true) {
-        array_list_clear_retaining_capacity(stream_receiver);
-        PROPAGATE_IF_IO_ERROR(fprintf(io->out, PROMPT));
-        PROPAGATE_IF_IO_ERROR(fflush(io->out));
-
-        PROPAGATE_IF_ERROR_DO(repl_read_chunked(io, stream_buffer, stream_receiver),
-                              lexer_deinit(&l));
-
-        const char* line = (const char*)stream_receiver->data;
-        if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
-            break;
+        // Interrupts will cancel current input but not the process
+        if (interrupted) {
+            interrupted = 0;
+            fprintf(io->out, "\n");
+            array_list_clear_retaining_capacity(stream_receiver);
+            array_list_clear_retaining_capacity(&program.output_buffer.buffer);
+            continue;
         }
 
-        l.input        = line;
-        l.input_length = strlen(line);
-        PROPAGATE_IF_ERROR(lexer_consume(&l));
-        PROPAGATE_IF_ERROR(lexer_print_tokens(io, &l));
+        array_list_clear_retaining_capacity(stream_receiver);
+        PROPAGATE_IF_IO_ERROR_DO(fprintf(io->out, PROMPT), program_deinit(&program));
+        PROPAGATE_IF_IO_ERROR_DO(fflush(io->out), program_deinit(&program));
+        PROPAGATE_IF_IO_ERROR_DO(fflush(io->err), program_deinit(&program));
+
+        PROPAGATE_IF_ERROR_DO(repl_read_chunked(io, stream_buffer, stream_receiver),
+                              program_deinit(&program));
+
+        const char*  line        = (const char*)stream_receiver->data;
+        const size_t line_length = strlen(line);
+        if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
+            break;
+        } else if (line_length == 1 && strncmp(line, "\n", 1) == 0) {
+            continue;
+        } else if (line_length == 2 && strncmp(line, "\r\n", 2) == 0) {
+            continue;
+        }
+
+        PROPAGATE_IF_ERROR_DO(program_run(&program, slice_from_str_s(line, line_length)),
+                              program_deinit(&program));
     }
 
-    lexer_deinit(&l);
+    program_deinit(&program);
     return SUCCESS;
 }
 
 TRY_STATUS repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     const char null = 0;
     while (true) {
-        char* result = fgets(stream_buffer, BUF_SIZE, io->in);
-        if (!result) {
+        if (!fgets(stream_buffer, BUF_SIZE, io->in)) {
             PROPAGATE_IF_IO_ERROR(fprintf(io->err, "Failed to read from input stream.\n"));
             PROPAGATE_IF_IO_ERROR(fprintf(io->out, "\n"));
             return READ_ERROR;
@@ -78,6 +99,15 @@ TRY_STATUS repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_
 
         memcpy((char*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
         stream_receiver->length += n;
+
+        // Check for a continuation character and reread if needed
+        if (n >= 2 && stream_buffer[n - 2] == '\\') {
+            ((char*)stream_receiver->data)[stream_receiver->length - 2] = '\n';
+            fprintf(io->out, CONTINUATION_PROMPT);
+            fflush(io->out);
+
+            continue;
+        }
 
         if (stream_buffer[n - 1] == '\n' || feof(io->in)) {
             break;

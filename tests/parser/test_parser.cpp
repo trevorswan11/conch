@@ -28,7 +28,7 @@ extern "C" {
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
-#include "ast/statements/return.h"
+#include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/lexer.h"
@@ -144,26 +144,27 @@ TEST_CASE("Declarations") {
     }
 }
 
-TEST_CASE("Return statements") {
-    SECTION("Happy returns") {
+TEST_CASE("Jump statements") {
+    SECTION("Standard jumps") {
         const char*   input = "return;\n"
                               "return 5;\n"
-                              "return 10;\n"
+                              "break;"
+                              "break 10;\n"
                               "return 993322;";
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {}, true);
 
         auto ast = pf.ast();
-        REQUIRE(ast->statements.length == 4);
+        REQUIRE(ast->statements.length == 5);
 
-        const std::optional<int64_t> values[] = {std::nullopt, 5, 10, 993322};
+        const std::optional<int64_t> values[] = {std::nullopt, 5, std::nullopt, 10, 993322};
 
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
-            ReturnStatement* return_stmt = (ReturnStatement*)stmt;
+            JumpStatement* jump_stmt = (JumpStatement*)stmt;
             if (values[i].has_value()) {
-                test_number_expression<int64_t>(return_stmt->value, values[i].value());
+                test_number_expression<int64_t>(jump_stmt->value, values[i].value());
             }
         }
     }
@@ -172,6 +173,27 @@ TEST_CASE("Return statements") {
         const char*   input = "return 5";
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {}, true);
+        auto ast = pf.ast();
+
+        REQUIRE(ast->statements.length == 1);
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        JumpStatement* jump_stmt = (JumpStatement*)stmt;
+        test_number_expression<int64_t>(jump_stmt->value, 5);
+    }
+
+    SECTION("Breaks w/o sentinel semicolon") {
+        const char*   input = "break -5";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+        auto ast = pf.ast();
+
+        REQUIRE(ast->statements.length == 1);
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        JumpStatement*    jump_stmt = (JumpStatement*)stmt;
+        PrefixExpression* prefix    = (PrefixExpression*)jump_stmt->value;
+        test_number_expression<int64_t>(prefix->rhs, 5);
     }
 }
 
@@ -294,6 +316,13 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"0b10111u ^ 0b10110u;", 0b10111ull, TokenType::XOR, 0b10110ull},
             {"0b10111u >> 5u;", 0b10111ull, TokenType::SHR, 5ull},
             {"0b10111u << 4u;", 0b10111ull, TokenType::SHL, 4ull},
+            {"0b10111u..4u;", 0b10111ull, TokenType::DOT_DOT, 4ull},
+            {"0b10111u..=4u;", 0b10111ull, TokenType::DOT_DOT_EQ, 4ull},
+            {"0b10111u is 4u;", 0b10111ull, TokenType::IS, 4ull},
+            {"0b10111u in 4u;", 0b10111ull, TokenType::IN, 4ull},
+            {"0b10111u and 4u;", 0b10111ull, TokenType::BOOLEAN_AND, 4ull},
+            {"0b10111u or 4u;", 0b10111ull, TokenType::BOOLEAN_OR, 4ull},
+            {"0b10111u::4u;", 0b10111ull, TokenType::COLON_COLON, 4ull},
         };
 
         for (const auto& t : cases) {
@@ -562,10 +591,10 @@ TEST_CASE("Conditional expressions") {
         BoolLiteralExpression* condition = (BoolLiteralExpression*)if_expr->condition;
         REQUIRE(condition->value);
 
-        ReturnStatement* consequence = (ReturnStatement*)if_expr->consequence;
+        JumpStatement* consequence = (JumpStatement*)if_expr->consequence;
         test_number_expression<int64_t>(consequence->value, 1);
 
-        ReturnStatement* alternate = (ReturnStatement*)if_expr->alternate;
+        JumpStatement* alternate = (JumpStatement*)if_expr->alternate;
         test_number_expression<int64_t>(alternate->value, 2);
     }
 
@@ -594,8 +623,8 @@ TEST_CASE("Conditional expressions") {
         BlockStatement* consequence_one = (BlockStatement*)if_expr->consequence;
         REQUIRE(consequence_one->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
-        ReturnStatement*  return_stmt = (ReturnStatement*)stmt;
-        PrefixExpression* neg_num     = (PrefixExpression*)return_stmt->value;
+        JumpStatement*    jump_stmt = (JumpStatement*)stmt;
+        PrefixExpression* neg_num   = (PrefixExpression*)jump_stmt->value;
         REQUIRE(((Node*)neg_num)->start_token.type == TokenType::MINUS);
         test_number_expression<int64_t>(neg_num->rhs, 1);
 
@@ -613,15 +642,15 @@ TEST_CASE("Conditional expressions") {
         BlockStatement* consequence_two = (BlockStatement*)if_expr->consequence;
         REQUIRE(consequence_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
-        return_stmt = (ReturnStatement*)stmt;
-        test_number_expression<int64_t>(return_stmt->value, 1);
+        jump_stmt = (JumpStatement*)stmt;
+        test_number_expression<int64_t>(jump_stmt->value, 1);
 
         // Verify the second alternate
         BlockStatement* alternate_two = (BlockStatement*)if_expr->alternate;
         REQUIRE(alternate_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
-        return_stmt = (ReturnStatement*)stmt;
-        test_number_expression<int64_t>(return_stmt->value, 0);
+        jump_stmt = (JumpStatement*)stmt;
+        test_number_expression<int64_t>(jump_stmt->value, 0);
     }
 }
 

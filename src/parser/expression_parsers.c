@@ -18,7 +18,7 @@
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
-#include "ast/statements/return.h"
+#include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "parser/expression_parsers.h"
@@ -282,7 +282,7 @@ TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) 
 
         *expression = (Expression*)integer;
     } else {
-        UNREACHABLE_IF(false);
+        UNREACHABLE;
         return UNEXPECTED_TOKEN;
     }
 

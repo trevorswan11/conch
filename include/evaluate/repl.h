@@ -4,7 +4,8 @@
 #include "util/io.h"
 #include "util/status.h"
 
-#define PROMPT ">> "
+#define PROMPT ">>> "
+#define CONTINUATION_PROMPT "... "
 #define BUF_SIZE 4096
 #define WELCOME_MESSAGE "Welcome to Conch REPL! Type 'exit' to quit."
 #define EXIT_TOKEN "exit"
