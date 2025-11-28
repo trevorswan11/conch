@@ -18,6 +18,7 @@ extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
+#include "ast/expressions/enum.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/if.h"
@@ -851,5 +852,94 @@ TEST_CASE("Function literals") {
         test_number_expression<int64_t>(argument->lhs, 4);
         REQUIRE(argument->op == TokenType::PLUS);
         test_number_expression<int64_t>(argument->rhs, 5);
+    }
+}
+
+TEST_CASE("Enum declarations") {
+    struct EnumVariantTestCase {
+        std::string            expected_name;
+        std::optional<int64_t> expected_value = std::nullopt;
+    };
+
+    SECTION("Correctly formed enums") {
+        const char* inputs[] = {
+            "enum { RED, BLUE, GREEN, }",
+            "enum { RED, BLUE = 1, GREEN, }",
+            "enum { RED = 100, BLUE = 20, GREEN = 3, }",
+        };
+        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+        const std::vector<EnumVariantTestCase> expected_variants_lists[] = {
+            {{"RED"}, {"BLUE"}, {"GREEN"}},
+            {{"RED"}, {"BLUE", 1}, {"GREEN"}},
+            {{"RED", 100}, {"BLUE", 20}, {"GREEN", 3}},
+        };
+        const size_t expecteds_size =
+            sizeof(expected_variants_lists) / sizeof(expected_variants_lists[0]);
+
+        REQUIRE(inputs_size == expecteds_size);
+        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            const char* input             = inputs[test_idx];
+            const auto  expected_variants = expected_variants_lists[test_idx];
+
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            EnumExpression*      enum_expr = (EnumExpression*)expr_stmt->expression;
+
+            REQUIRE(enum_expr->variants.length == expected_variants.size());
+            for (size_t i = 0; i < enum_expr->variants.length; i++) {
+                EnumVariant variant;
+                REQUIRE(STATUS_OK(array_list_get(&enum_expr->variants, i, &variant)));
+                REQUIRE(variant.name);
+
+                EnumVariantTestCase expected = expected_variants[i];
+                REQUIRE(expected.expected_name == variant.name->name.ptr);
+
+                if (expected.expected_value.has_value()) {
+                    REQUIRE(variant.value);
+                    IntegerLiteralExpression* mock_int = (IntegerLiteralExpression*)variant.value;
+                    REQUIRE(expected.expected_value.value() == mock_int->value);
+                } else {
+                    REQUIRE_FALSE(variant.value);
+                }
+            }
+        }
+    }
+
+    SECTION("Malformed enum expressions") {
+        SECTION("Missing trailing comma") {
+            const char*   input = "enum { a, b, c }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"Expected token COMMA, found RBRACE [Ln 1, Col 16]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
+                               false);
+        }
+
+        SECTION("Missing internal comma") {
+            const char*   input = "enum { a, b c, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"Expected token COMMA, found IDENT [Ln 1, Col 13]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 14]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
+                               false);
+        }
+
+        SECTION("All commas omitted") {
+            const char*   input = "enum { a b c }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"Expected token COMMA, found IDENT [Ln 1, Col 10]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 14]"},
+                               false);
+        }
     }
 }

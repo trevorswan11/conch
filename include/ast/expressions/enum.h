@@ -16,13 +16,15 @@
 
 typedef struct {
     IdentifierExpression* name;
-    int64_t               value;
+    Expression*           value;
 } EnumVariant;
 
 typedef struct {
     Expression base;
     ArrayList  variants;
 } EnumExpression;
+
+void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc);
 
 TRY_STATUS enum_expression_create(Token            start_token,
                                   ArrayList        variants,

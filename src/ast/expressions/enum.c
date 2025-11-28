@@ -2,6 +2,20 @@
 
 #include "ast/expressions/enum.h"
 
+void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
+    assert(variants);
+    assert(free_alloc);
+
+    EnumVariant variant;
+    for (size_t i = 0; i < variants->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(variants, i, &variant));
+        identifier_expression_destroy((Node*)variant.name, free_alloc);
+        NODE_VIRTUAL_FREE(variant.value, free_alloc);
+    }
+
+    array_list_deinit(variants);
+}
+
 TRY_STATUS enum_expression_create(Token            start_token,
                                   ArrayList        variants,
                                   EnumExpression** enum_expr,
@@ -32,11 +46,9 @@ void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
 
     EnumExpression* e = (EnumExpression*)node;
-    EnumVariant     variant;
-    for (size_t i = 0; i < e->variants.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&e->variants, i, &variant));
-        identifier_expression_destroy((Node*)variant.name, free_alloc);
-    }
+    free_enum_variant_list(&e->variants, free_alloc);
+
+    free_alloc(e);
 }
 
 TRY_STATUS
@@ -54,12 +66,16 @@ enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
         UNREACHABLE_IF_ERROR(array_list_get(&e->variants, i, &variant));
 
         PROPAGATE_IF_ERROR(identifier_expression_reconstruct((Node*)variant.name, symbol_map, sb));
-        PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
-        PROPAGATE_IF_ERROR(string_builder_append_signed(sb, variant.value));
+        if (variant.value) {
+            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+
+            Node* value_node = (Node*)variant.value;
+            PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+        }
 
         PROPAGATE_IF_ERROR(string_builder_append_many(sb, ", ", 2));
     }
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "};", 2));
 
-    return NOT_IMPLEMENTED;
+    PROPAGATE_IF_ERROR(string_builder_append(sb, '}'));
+    return SUCCESS;
 }

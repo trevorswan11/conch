@@ -4,6 +4,7 @@
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
+#include "ast/expressions/enum.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
@@ -525,7 +526,65 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
 }
 
 TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
-    MAYBE_UNUSED(p);
-    MAYBE_UNUSED(expression);
-    return NOT_IMPLEMENTED;
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LBRACE));
+
+    ArrayList variants;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&variants, 4, sizeof(EnumVariant), p->allocator));
+    while (true) {
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
+                              free_enum_variant_list(&variants, p->allocator.free_alloc));
+
+        IdentifierExpression* ident;
+        PROPAGATE_IF_ERROR_DO(
+            identifier_expression_create(
+                p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc),
+            free_enum_variant_list(&variants, p->allocator.free_alloc));
+
+        Expression* value = NULL;
+        if (parser_peek_token_is(p, ASSIGN)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+                free_enum_variant_list(&variants, p->allocator.free_alloc);
+                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            });
+
+            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value), {
+                free_enum_variant_list(&variants, p->allocator.free_alloc);
+                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            });
+        }
+
+        // All variants require a trailing comma!
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
+            free_enum_variant_list(&variants, p->allocator.free_alloc);
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
+        });
+
+        EnumVariant variant = (EnumVariant){.name = ident, .value = value};
+        PROPAGATE_IF_ERROR_DO(array_list_push(&variants, &variant), {
+            free_enum_variant_list(&variants, p->allocator.free_alloc);
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
+        });
+
+        // A terminal delimiter ends the enum, and can be followed by a semicolon
+        if (parser_peek_token_is(p, RBRACE)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            if (parser_peek_token_is(p, SEMICOLON)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+            }
+
+            break;
+        }
+    }
+
+    EnumExpression* enum_expr;
+    PROPAGATE_IF_ERROR_DO(
+        enum_expression_create(start_token, variants, &enum_expr, p->allocator.memory_alloc),
+        free_enum_variant_list(&variants, p->allocator.free_alloc));
+
+    *expression = (Expression*)enum_expr;
+    return SUCCESS;
 }

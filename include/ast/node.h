@@ -15,7 +15,7 @@
 #define NODE_VIRTUAL_FREE(node, free_alloc)                                  \
     do {                                                                     \
         Node* _node_obfuscated = (Node*)node;                                \
-        if (_node_obfuscated) {                                              \
+        if (node && _node_obfuscated) {                                      \
             _node_obfuscated->vtable->destroy(_node_obfuscated, free_alloc); \
         }                                                                    \
     } while (0);

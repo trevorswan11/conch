@@ -117,7 +117,7 @@ void debug_print(const char* format, ...);
         }                                                                                 \
     } while (0)
 
-#define UNREACHABLE UNREACHABLE_IF(false)
+#define UNREACHABLE UNREACHABLE_IF(true)
 
 #define FOREACH_STATUS(PROCESS)                                                                  \
     PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),                  \

@@ -44,11 +44,13 @@ typedef struct {
     Statement             base;
     IdentifierExpression* ident;
     Expression*           value;
+    bool                  primitive_alias;
 } TypeDeclStatement;
 
 TRY_STATUS type_decl_statement_create(Token                 start_token,
                                       IdentifierExpression* ident,
                                       Expression*           value,
+                                      bool                  primitive_alias,
                                       TypeDeclStatement**   type_decl_stmt,
                                       memory_alloc_fn       memory_alloc);
 

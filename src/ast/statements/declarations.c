@@ -97,6 +97,7 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
 TRY_STATUS type_decl_statement_create(Token                 start_token,
                                       IdentifierExpression* ident,
                                       Expression*           value,
+                                      bool                  primitive_alias,
                                       TypeDeclStatement**   type_decl_stmt,
                                       memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
@@ -112,9 +113,10 @@ TRY_STATUS type_decl_statement_create(Token                 start_token,
     }
 
     *declaration = (TypeDeclStatement){
-        .base  = STATEMENT_INIT(TYPE_DECL_VTABLE, start_token),
-        .ident = ident,
-        .value = value,
+        .base            = STATEMENT_INIT(TYPE_DECL_VTABLE, start_token),
+        .ident           = ident,
+        .value           = value,
+        .primitive_alias = primitive_alias,
     };
 
     *type_decl_stmt = declaration;
@@ -131,7 +133,7 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
         d->ident = NULL;
     }
 
-    NODE_VIRTUAL_FREE((Node*)d->value, free_alloc);
+    NODE_VIRTUAL_FREE(d->value, free_alloc);
     d->value = NULL;
 }
 
@@ -145,8 +147,8 @@ type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, "type", 4));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
-    DeclStatement* d          = (DeclStatement*)node;
-    Node*          ident_node = (Node*)d->ident;
+    TypeDeclStatement* d          = (TypeDeclStatement*)node;
+    Node*              ident_node = (Node*)d->ident;
     PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
 
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));

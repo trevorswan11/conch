@@ -78,20 +78,28 @@ TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
 
     Expression* value;
     UNREACHABLE_IF_ERROR(parser_next_token(p));
-    PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value),
-                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    bool is_primitive_alias = false;
+    if (hash_set_contains(&p->primitives, &p->current_token.type)) {
+        is_primitive_alias = true;
+        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &value),
+                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    } else {
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value),
+                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    }
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
 
     TypeDeclStatement* type_decl;
-    PROPAGATE_IF_ERROR_DO(type_decl_statement_create(
-                              start_token, ident, value, &type_decl, p->allocator.memory_alloc),
-                          {
-                              NODE_VIRTUAL_FREE((Node*)value, p->allocator.free_alloc);
-                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-                          });
+    PROPAGATE_IF_ERROR_DO(
+        type_decl_statement_create(
+            start_token, ident, value, is_primitive_alias, &type_decl, p->allocator.memory_alloc),
+        {
+            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        });
 
     *stmt = type_decl;
     return SUCCESS;
