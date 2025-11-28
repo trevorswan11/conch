@@ -903,9 +903,7 @@ TEST_CASE("Enum declarations") {
                 REQUIRE(expected.expected_name == variant.name->name.ptr);
 
                 if (expected.expected_value.has_value()) {
-                    REQUIRE(variant.value);
-                    IntegerLiteralExpression* mock_int = (IntegerLiteralExpression*)variant.value;
-                    REQUIRE(expected.expected_value.value() == mock_int->value);
+                    test_number_expression<int64_t>(variant.value, expected.expected_value.value());
                 } else {
                     REQUIRE_FALSE(variant.value);
                 }
