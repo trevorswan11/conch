@@ -1,16 +1,6 @@
 #include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include "lexer/token.h"
 
 #include "ast/expressions/integer.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS integer_literal_expression_create(Token                      start_token,
                                              int64_t                    value,

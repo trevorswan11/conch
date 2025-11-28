@@ -38,6 +38,8 @@ TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS if_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS function_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** expression);
+TRY_STATUS struct_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS enum_expression_parse(Parser* p, Expression** expression);
 
 typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
 typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -81,6 +83,8 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {LPAREN, &grouped_expression_parse},
     {IF, &if_expression_parse},
     {FUNCTION, &function_expression_parse},
+    {STRUCT, &struct_expression_parse},
+    {ENUM, &enum_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {

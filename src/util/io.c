@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "util/io.h"
-#include "util/status.h"
 
 FileIO file_io_std(void) {
     return (FileIO){

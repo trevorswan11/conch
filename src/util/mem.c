@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
 #include "util/mem.h"
 
 Slice slice_from_str_z(const char* start) {

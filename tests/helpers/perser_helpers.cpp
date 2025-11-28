@@ -78,8 +78,8 @@ void test_type_expression(Expression*     expression,
 }
 
 void test_decl_statement(Statement* stmt, bool expect_const, std::string expected_ident) {
-    REQUIRE(expect_const == decl_statement_const((Node*)stmt));
     DeclStatement* decl_stmt = (DeclStatement*)stmt;
+    REQUIRE(expect_const == decl_stmt->is_const);
     REQUIRE(expected_ident == decl_stmt->ident->name.ptr);
 }
 

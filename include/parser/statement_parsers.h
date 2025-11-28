@@ -12,6 +12,7 @@
 #include "util/status.h"
 
 TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt);
+TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt);
 TRY_STATUS jump_statement_parse(Parser* p, JumpStatement** stmt);
 TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt);
 TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt);

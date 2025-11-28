@@ -4,11 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/math.h"
 #include "util/mem.h"
-#include "util/status.h"
 
 MAX_FN(size_t, size_t)
 

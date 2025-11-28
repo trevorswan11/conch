@@ -6,12 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/allocator.h"
 #include "util/containers/hash_map.h"
-#include "util/hash.h"
 #include "util/math.h"
 #include "util/mem.h"
-#include "util/status.h"
 
 static_assert(sizeof(Metadata) == 1, "Metadata must be a single byte in size.");
 static_assert(alignof(Metadata) == 1, "Metadata must be a single byte alignment.");

@@ -9,16 +9,10 @@
 #include "lexer/keywords.h"
 #include "lexer/lexer.h"
 #include "lexer/operators.h"
-#include "lexer/token.h"
 
 #include "util/alphanum.h"
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/hash.h"
-#include "util/io.h"
 #include "util/math.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocator) {
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);

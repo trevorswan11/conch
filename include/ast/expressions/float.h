@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"

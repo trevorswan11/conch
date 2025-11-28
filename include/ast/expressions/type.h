@@ -23,7 +23,6 @@ static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_STRING,
     KEYWORD_BOOL,
     KEYWORD_VOID,
-    KEYWORD_TYPE,
 };
 
 typedef struct TypeExpression TypeExpression;

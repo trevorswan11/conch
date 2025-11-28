@@ -1,16 +1,7 @@
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "ast/ast.h"
-#include "ast/expressions/identifier.h"
 #include "ast/statements/block.h"
-
-#include "util/allocator.h"
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/status.h"
 
 TRY_STATUS
 block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {

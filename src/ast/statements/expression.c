@@ -1,16 +1,6 @@
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#include "lexer/token.h"
-
-#include "ast/node.h"
 #include "ast/statements/expression.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/status.h"
 
 TRY_STATUS expression_statement_create(Token                 start_token,
                                        Expression*           expression,

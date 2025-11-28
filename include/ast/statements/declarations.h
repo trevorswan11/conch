@@ -17,6 +17,7 @@
 typedef struct {
     Statement             base;
     IdentifierExpression* ident;
+    bool                  is_const;
     TypeExpression*       type;
     Expression*           value;
 } DeclStatement;
@@ -39,4 +40,26 @@ static const StatementVTable DECL_VTABLE = {
         },
 };
 
-bool decl_statement_const(Node* node);
+typedef struct {
+    Statement             base;
+    IdentifierExpression* ident;
+    Expression*           value;
+} TypeDeclStatement;
+
+TRY_STATUS type_decl_statement_create(Token                 start_token,
+                                      IdentifierExpression* ident,
+                                      Expression*           value,
+                                      TypeDeclStatement**   type_decl_stmt,
+                                      memory_alloc_fn       memory_alloc);
+
+void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+TRY_STATUS
+type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+
+static const StatementVTable TYPE_DECL_VTABLE = {
+    .base =
+        {
+            .destroy     = type_decl_statement_destroy,
+            .reconstruct = type_decl_statement_reconstruct,
+        },
+};

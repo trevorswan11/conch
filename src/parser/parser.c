@@ -6,28 +6,16 @@
 
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
-#include "parser/precedence.h"
 #include "parser/statement_parsers.h"
 
-#include "lexer/lexer.h"
-#include "lexer/token.h"
-
-#include "ast/ast.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/jump.h"
-#include "ast/statements/statement.h"
 
-#include "util/allocator.h"
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 #include "util/hash.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
     const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
@@ -357,6 +345,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
     case CONST:
         PROPAGATE_IF_ERROR(decl_statement_parse(p, (DeclStatement**)stmt));
         break;
+    case TYPE:
+        PROPAGATE_IF_ERROR(type_decl_statement_parse(p, (TypeDeclStatement**)stmt));
+        break;
     case BREAK:
     case RETURN:
         PROPAGATE_IF_ERROR(jump_statement_parse(p, (JumpStatement**)stmt));
@@ -398,9 +389,9 @@ TRY_STATUS error_append_ln_col(size_t line, size_t col, StringBuilder* sb) {
     const char col_no[]  = ", Col ";
 
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, line_no, sizeof(line_no) - 1));
-    PROPAGATE_IF_ERROR(string_builder_append_size(sb, line));
+    PROPAGATE_IF_ERROR(string_builder_append_unsigned(sb, (uint64_t)line));
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, col_no, sizeof(col_no) - 1));
-    PROPAGATE_IF_ERROR(string_builder_append_size(sb, col));
+    PROPAGATE_IF_ERROR(string_builder_append_unsigned(sb, (uint64_t)col));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ']'));
 
     return SUCCESS;

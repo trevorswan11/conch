@@ -84,12 +84,16 @@ TEST_CASE("StringBuilder number appends") {
     REQUIRE(STATUS_OK(string_builder_append(&sb, 'A')));
     REQUIRE(STATUS_OK(string_builder_append_many(&sb, "BC", 2)));
     REQUIRE(STATUS_OK(string_builder_append(&sb, 'D')));
-    REQUIRE(STATUS_OK(string_builder_append_size(&sb, 12032)));
+    REQUIRE(STATUS_OK(string_builder_append_unsigned(&sb, 12032)));
+    REQUIRE(STATUS_OK(string_builder_append_many(&sb, " EF ", 4)));
+    REQUIRE(STATUS_OK(string_builder_append_signed(&sb, -12032)));
 
     MutSlice slice;
     REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "ABCD12032") == 0);
+
+    std::string expected = "ABCD12032 EF -12032";
+    REQUIRE(expected == slice.ptr);
 
     free(slice.ptr);
 }

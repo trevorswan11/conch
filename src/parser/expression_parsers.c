@@ -1,12 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "lexer/token.h"
-
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
-#include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
@@ -22,15 +19,12 @@
 #include "ast/statements/statement.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
 #include "util/alphanum.h"
-#include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
-#include "util/status.h"
 
 static inline TRY_STATUS record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;
@@ -522,4 +516,16 @@ TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** e
 
     *expression = (Expression*)call;
     return SUCCESS;
+}
+
+TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
+}
+
+TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
 }

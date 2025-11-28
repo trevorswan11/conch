@@ -6,9 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "util/allocator.h"
 #include "util/alphanum.h"
-#include "util/status.h"
 
 #define PARSE_INT_STR(T, max, overflow_err)             \
     assert(base != UNKNOWN);                            \

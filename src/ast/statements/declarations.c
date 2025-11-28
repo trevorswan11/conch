@@ -1,14 +1,6 @@
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#include "ast/expressions/identifier.h"
 #include "ast/statements/declarations.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/status.h"
 
 TRY_STATUS decl_statement_create(Token                 start_token,
                                  IdentifierExpression* ident,
@@ -18,10 +10,10 @@ TRY_STATUS decl_statement_create(Token                 start_token,
                                  memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
+
     if (!type) {
         return DECL_MISSING_TYPE;
-    }
-    if (start_token.type != CONST && start_token.type != VAR) {
+    } else if (start_token.type != CONST && start_token.type != VAR) {
         return UNEXPECTED_TOKEN;
     }
 
@@ -40,10 +32,11 @@ TRY_STATUS decl_statement_create(Token                 start_token,
     }
 
     *declaration = (DeclStatement){
-        .base  = STATEMENT_INIT(DECL_VTABLE, start_token),
-        .ident = ident,
-        .type  = type,
-        .value = value,
+        .base     = STATEMENT_INIT(DECL_VTABLE, start_token),
+        .ident    = ident,
+        .is_const = start_token.type == CONST,
+        .type     = type,
+        .value    = value,
     };
 
     *decl_stmt = declaration;
@@ -77,8 +70,7 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
         return NULL_PARAMETER;
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_many(
-        sb, node->start_token.slice.ptr, node->start_token.slice.length));
+    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
     DeclStatement* d          = (DeclStatement*)node;
@@ -102,8 +94,65 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
     return SUCCESS;
 }
 
-bool decl_statement_const(Node* node) {
+TRY_STATUS type_decl_statement_create(Token                 start_token,
+                                      IdentifierExpression* ident,
+                                      Expression*           value,
+                                      TypeDeclStatement**   type_decl_stmt,
+                                      memory_alloc_fn       memory_alloc) {
+    assert(memory_alloc);
+    assert(start_token.slice.ptr);
+
+    if (!ident || !value) {
+        return NULL_PARAMETER;
+    }
+
+    TypeDeclStatement* declaration = memory_alloc(sizeof(TypeDeclStatement));
+    if (!declaration) {
+        return ALLOCATION_FAILED;
+    }
+
+    *declaration = (TypeDeclStatement){
+        .base  = STATEMENT_INIT(TYPE_DECL_VTABLE, start_token),
+        .ident = ident,
+        .value = value,
+    };
+
+    *type_decl_stmt = declaration;
+    return SUCCESS;
+}
+
+void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
-    assert(node->start_token.type == CONST || node->start_token.type == VAR);
-    return node->start_token.type == CONST;
+    assert(free_alloc);
+    TypeDeclStatement* d = (TypeDeclStatement*)node;
+
+    if (d->ident) {
+        identifier_expression_destroy((Node*)d->ident, free_alloc);
+        d->ident = NULL;
+    }
+
+    NODE_VIRTUAL_FREE((Node*)d->value, free_alloc);
+    d->value = NULL;
+}
+
+TRY_STATUS
+type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+    ASSERT_NODE(node);
+    if (!sb) {
+        return NULL_PARAMETER;
+    }
+
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "type", 4));
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+
+    DeclStatement* d          = (DeclStatement*)node;
+    Node*          ident_node = (Node*)d->ident;
+    PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
+
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+    Node* value_node = (Node*)d->value;
+    PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
+    return SUCCESS;
 }

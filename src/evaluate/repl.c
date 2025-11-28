@@ -8,10 +8,7 @@
 #include "evaluate/repl.h"
 
 #include "util/allocator.h"
-#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
-#include "util/io.h"
-#include "util/status.h"
 
 static volatile sig_atomic_t interrupted = 0;
 

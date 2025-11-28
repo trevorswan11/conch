@@ -8,10 +8,8 @@
 
 #include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
-#include "util/hash.h"
 #include "util/math.h"
 #include "util/mem.h"
-#include "util/status.h"
 
 MAX_FN(size_t, size_t)
 

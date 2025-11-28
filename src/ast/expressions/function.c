@@ -1,20 +1,8 @@
 #include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include "lexer/token.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
 
 #include "ast/expressions/function.h"
-#include "ast/statements/block.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param) {
     if (!p || !parameters) {
@@ -213,8 +201,7 @@ function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     PROPAGATE_IF_ERROR(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
 
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, ") ", 2));
-    Node* body = (Node*)func->body;
-    PROPAGATE_IF_ERROR(body->vtable->reconstruct(body, symbol_map, sb));
+    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)func->body, symbol_map, sb));
 
     return SUCCESS;
 }

@@ -40,10 +40,10 @@
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
         PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(FOR),   \
         PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
-        PROCESS(IMPORT), PROCESS(FROM),                                                           \
+        PROCESS(IMPORT), PROCESS(FROM), PROCESS(TYPE),                                            \
                                                                                                   \
         PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(BYTE_TYPE), PROCESS(FLOAT_TYPE),           \
-        PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE), PROCESS(TYPE_TYPE),         \
+        PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),                             \
                                                                                                   \
         PROCESS(ILLEGAL)
 

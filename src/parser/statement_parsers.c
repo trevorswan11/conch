@@ -3,20 +3,13 @@
 
 #include "lexer/token.h"
 
-#include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
-#include "ast/statements/block.h"
-#include "ast/statements/declarations.h"
-#include "ast/statements/expression.h"
-#include "ast/statements/jump.h"
-#include "ast/statements/statement.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
+#include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
-#include "util/status.h"
 
 TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
@@ -61,6 +54,46 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     }
 
     *stmt = decl_stmt;
+    return SUCCESS;
+}
+
+TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+    const Token start_token = p->current_token;
+
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
+
+    IdentifierExpression* ident;
+    PROPAGATE_IF_ERROR(identifier_expression_create(
+        p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, ASSIGN),
+                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+
+    if (parser_peek_token_is(p, SEMICOLON) || parser_peek_token_is(p, END)) {
+        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        return UNEXPECTED_TOKEN;
+    }
+
+    Expression* value;
+    UNREACHABLE_IF_ERROR(parser_next_token(p));
+    PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value),
+                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    TypeDeclStatement* type_decl;
+    PROPAGATE_IF_ERROR_DO(type_decl_statement_create(
+                              start_token, ident, value, &type_decl, p->allocator.memory_alloc),
+                          {
+                              NODE_VIRTUAL_FREE((Node*)value, p->allocator.free_alloc);
+                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+                          });
+
+    *stmt = type_decl;
     return SUCCESS;
 }
 

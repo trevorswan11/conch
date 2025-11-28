@@ -2,8 +2,6 @@
 
 #include "ast/node.h"
 
-#include "util/status.h"
-
 #define ASSERT_STATEMENT(stmt) \
     assert(stmt->vtable);      \
     ASSERT_NODE(((Node*)stmt));

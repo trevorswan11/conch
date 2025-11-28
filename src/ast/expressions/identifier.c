@@ -1,16 +1,6 @@
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "lexer/token.h"
 
 #include "ast/expressions/identifier.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS identifier_expression_create(Token                  start_token,
                                         IdentifierExpression** ident_expr,

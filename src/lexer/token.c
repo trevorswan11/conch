@@ -1,8 +1,6 @@
 #include "lexer/token.h"
 
 #include "util/containers/string_builder.h"
-#include "util/hash.h"
-#include "util/mem.h"
 
 Hash hash_token_type(const void* key) {
     Hash hash = (Hash)(*(const TokenType*)key);

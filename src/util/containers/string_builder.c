@@ -1,11 +1,8 @@
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
-#include "util/allocator.h"
-#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS
 string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator) {
@@ -59,12 +56,12 @@ TRY_STATUS string_builder_append_mut_slice(StringBuilder* sb, MutSlice slice) {
     return SUCCESS;
 }
 
-TRY_STATUS string_builder_append_size(StringBuilder* sb, size_t value) {
+TRY_STATUS string_builder_append_unsigned(StringBuilder* sb, uint64_t value) {
     assert(sb);
 
     // Use a copy to determine the total number of digits to reserve
-    size_t temp   = value;
-    size_t digits = 0;
+    uint64_t temp   = value;
+    uint64_t digits = 0;
     if (temp == 0) {
         digits = 1;
     } else {
@@ -77,7 +74,7 @@ TRY_STATUS string_builder_append_size(StringBuilder* sb, size_t value) {
     PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + digits));
 
     // Now we can push in reverse order without further allocations
-    size_t div = 1;
+    uint64_t div = 1;
     for (size_t i = 1; i < digits; i++) {
         div *= 10;
     }
@@ -88,6 +85,17 @@ TRY_STATUS string_builder_append_size(StringBuilder* sb, size_t value) {
         div /= 10;
     }
 
+    return SUCCESS;
+}
+
+TRY_STATUS string_builder_append_signed(StringBuilder* sb, int64_t value) {
+    char   buffer[32];
+    size_t written = snprintf(buffer, sizeof(buffer), "%lli", value);
+    if (written > sizeof(buffer)) {
+        return BUFFER_OVERFLOW;
+    }
+
+    PROPAGATE_IF_ERROR(string_builder_append_many(sb, buffer, written));
     return SUCCESS;
 }
 

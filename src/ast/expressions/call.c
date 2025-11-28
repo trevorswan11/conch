@@ -1,21 +1,9 @@
 #include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include "lexer/token.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
 
 #include "ast/ast.h"
 #include "ast/expressions/call.h"
-#include "ast/statements/block.h"
-
-#include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS call_expression_create(Token            start_token,
                                   Expression*      function,

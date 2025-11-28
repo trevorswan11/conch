@@ -39,7 +39,7 @@ static const Keyword KEYWORD_BYTE        = {{"byte", 4}, BYTE_TYPE};
 static const Keyword KEYWORD_STRING      = {{"string", 6}, STRING_TYPE};
 static const Keyword KEYWORD_BOOL        = {{"bool", 4}, BOOL_TYPE};
 static const Keyword KEYWORD_VOID        = {{"void", 4}, VOID_TYPE};
-static const Keyword KEYWORD_TYPE        = {{"type", 4}, TYPE_TYPE};
+static const Keyword KEYWORD_TYPE        = {{"type", 4}, TYPE};
 
 static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_FN,     KEYWORD_VAR,    KEYWORD_CONST,       KEYWORD_STRUCT,     KEYWORD_ENUM,

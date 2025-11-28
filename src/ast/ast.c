@@ -8,14 +8,6 @@
 
 #include "lexer/keywords.h"
 #include "lexer/operators.h"
-#include "lexer/token.h"
-
-#include "util/allocator.h"
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 TRY_STATUS ast_init(AST* ast, Allocator allocator) {
     if (!ast) {
