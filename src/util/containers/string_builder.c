@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -90,7 +91,7 @@ TRY_STATUS string_builder_append_unsigned(StringBuilder* sb, uint64_t value) {
 
 TRY_STATUS string_builder_append_signed(StringBuilder* sb, int64_t value) {
     char   buffer[32];
-    size_t written = snprintf(buffer, sizeof(buffer), "%lli", value);
+    size_t written = snprintf(buffer, sizeof(buffer), "%" PRId64, value);
     if (written > sizeof(buffer)) {
         return BUFFER_OVERFLOW;
     }
