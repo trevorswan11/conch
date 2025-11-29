@@ -52,6 +52,7 @@ jobs:
           cp -r build/cov/coverage_report/* .
           cp build/cov/coverage_summary.txt .
           cp build/cov/coverage.svg .
+          rm -rf build
           git add .
           git commit -m "Update coverage report"
           git push -f origin coverage

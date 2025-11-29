@@ -12,8 +12,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Wall -Wextra -Werror -Wpedantic)
-
 # Source file collection
 file(GLOB_RECURSE ALL_SOURCES "src/*.c")
 file(GLOB_RECURSE HEADERS "include/*.h")
@@ -27,47 +25,33 @@ list(FILTER TEST_SOURCES EXCLUDE REGEX "catch_amalgamated.cpp")
 function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     add_library(conch_core_${TARGET_NAME} STATIC ${LIB_SOURCES})
     target_include_directories(conch_core_${TARGET_NAME} PUBLIC include)
+    target_compile_options(conch_core_${TARGET_NAME} PRIVATE -Wall -Wextra -Werror -Wpedantic)
 
-    if(EXTRA_FLAGS)
-        target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-        target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    endif()
-
-    set_target_properties(conch_core_${TARGET_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR}
-    )
+    target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    set_target_properties(conch_core_${TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR})
 
     # Fresh catch2 configuration per target
     add_library(catch2_${TARGET_NAME} STATIC tests/test_framework/catch_amalgamated.cpp)
     target_include_directories(catch2_${TARGET_NAME} PUBLIC tests/test_framework)
-    if(EXTRA_FLAGS)
-        target_compile_options(catch2_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    endif()
-    set_target_properties(catch2_${TARGET_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR}
-    )
+    target_compile_options(catch2_${TARGET_NAME} PRIVATE -w)
+    set_target_properties(catch2_${TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR})
 
     add_executable(conch_tests_${TARGET_NAME} ${TEST_SOURCES})
     target_link_libraries(conch_tests_${TARGET_NAME} PRIVATE catch2_${TARGET_NAME} conch_core_${TARGET_NAME})
     target_include_directories(conch_tests_${TARGET_NAME} PRIVATE include tests/helpers)
+    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 
-    set_target_properties(conch_tests_${TARGET_NAME} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${OUT_DIR}
-    )
-
-    if(EXTRA_FLAGS)
-        target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-        target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    endif()
+    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    set_target_properties(conch_tests_${TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OUT_DIR})
 endfunction()
 
 function(create_standard_target EXTRA_FLAGS TARGET_NAME)
     create_conch_suite("${TARGET_NAME}" "${EXTRA_FLAGS}" "${CMAKE_BINARY_DIR}/${TARGET_NAME}")
     add_executable(conch_${TARGET_NAME} src/main.c)
     target_link_libraries(conch_${TARGET_NAME} PRIVATE conch_core_${TARGET_NAME})
-    add_custom_target(${TARGET_NAME}
-        DEPENDS conch_tests_${TARGET_NAME} conch_${TARGET_NAME}
-    )
+    add_custom_target(${TARGET_NAME} DEPENDS conch_tests_${TARGET_NAME} conch_${TARGET_NAME})
 
     set_target_properties(conch_${TARGET_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${TARGET_NAME}
@@ -86,17 +70,34 @@ create_standard_target("${RELEASE_FLAGS}" "release")
 set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
 create_standard_target("${DEBUG_FLAGS}" "debug")
 
+add_custom_target(all-exes DEPENDS dist release debug)
+
+# Testing targets
 enable_testing()
 add_test(NAME run_tests_debug COMMAND conch_tests_debug)
 add_test(NAME run_tests_release COMMAND conch_tests_release)
 add_test(NAME run_tests_dist COMMAND conch_tests_dist)
+
+add_custom_target(dbg-tests
+    DEPENDS conch_tests_debug
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+    USES_TERMINAL
+)
+
+add_custom_target(all-tests
+    DEPENDS conch_tests_debug conch_tests_release conch_tests_dist
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_release
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_dist
+    USES_TERMINAL
+)
 
 # Standard tooling disabled on windows due to clang/llvm weirdness
 if(NOT WIN32)
     if (NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
         message(WARNING
             "ASan and Coverage target will be generated, but compiler is not clang.\n"
-            "For correct builds, use the clang/clang++ toolchain"
+            "For correct builds, use the clang/clang++ toolchain."
         )
     endif()
 
@@ -157,11 +158,6 @@ if(CLANG_FORMAT)
     list(FILTER FMT_SOURCES EXCLUDE REGEX "catch_amalgamated.cpp")
     list(FILTER FMT_SOURCES EXCLUDE REGEX "catch_amalgamated.hpp")
 
-    add_custom_target(fmt
-        COMMAND ${CLANG_FORMAT} -i ${FMT_SOURCES}
-    )
-
-    add_custom_target(fmt-check
-        COMMAND ${CLANG_FORMAT} --dry-run --Werror ${FMT_SOURCES}
-    )
+    add_custom_target(fmt COMMAND ${CLANG_FORMAT} -i ${FMT_SOURCES})
+    add_custom_target(fmt-check COMMAND ${CLANG_FORMAT} --dry-run --Werror ${FMT_SOURCES})
 endif()
