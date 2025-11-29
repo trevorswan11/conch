@@ -12,6 +12,22 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    set(BASE_FLAGS "/W4" "/WX")
+    set(WARNING_IGNORE "/W0")
+
+    set(DIST_FLAGS "/O2 /DNDEBUG /DDIST")
+    set(RELEASE_FLAGS "/O1 /DRELEASE")
+    set(DEBUG_FLAGS "/Od /Zi /DDEBUG")
+else()
+    set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
+    set(WARNING_IGNORE "-w")
+
+    set(DIST_FLAGS "-O3" "-DNDEBUG" "-DDIST")
+    set(RELEASE_FLAGS "-O2" "-DRELEASE")
+    set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
+endif()
+
 # Source file collection
 file(GLOB_RECURSE ALL_SOURCES "src/*.c")
 file(GLOB_RECURSE HEADERS "include/*.h")
@@ -25,25 +41,29 @@ list(FILTER TEST_SOURCES EXCLUDE REGEX "catch_amalgamated.cpp")
 function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     add_library(conch_core_${TARGET_NAME} STATIC ${LIB_SOURCES})
     target_include_directories(conch_core_${TARGET_NAME} PUBLIC include)
-    target_compile_options(conch_core_${TARGET_NAME} PRIVATE -Wall -Wextra -Werror -Wpedantic)
+    target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${BASE_FLAGS})
 
     target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    if(NOT MSVC)
+        target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    endif()
     set_target_properties(conch_core_${TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR})
 
     # Fresh catch2 configuration per target
     add_library(catch2_${TARGET_NAME} STATIC tests/test_framework/catch_amalgamated.cpp)
     target_include_directories(catch2_${TARGET_NAME} PUBLIC tests/test_framework)
-    target_compile_options(catch2_${TARGET_NAME} PRIVATE -w)
+    target_compile_options(catch2_${TARGET_NAME} PRIVATE ${WARNING_IGNORE})
     set_target_properties(catch2_${TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR})
 
     add_executable(conch_tests_${TARGET_NAME} ${TEST_SOURCES})
     target_link_libraries(conch_tests_${TARGET_NAME} PRIVATE catch2_${TARGET_NAME} conch_core_${TARGET_NAME})
     target_include_directories(conch_tests_${TARGET_NAME} PRIVATE include tests/helpers)
-    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${BASE_FLAGS})
 
     target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    if(NOT MSVC)
+        target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
+    endif()
     set_target_properties(conch_tests_${TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OUT_DIR})
 endfunction()
 
@@ -61,13 +81,8 @@ endfunction()
 
 
 # Standard build targets
-set(DIST_FLAGS "-O3" "-DNDEBUG" "-DDIST")
 create_standard_target("${DIST_FLAGS}" "dist")
-
-set(RELEASE_FLAGS "-O2" "-DRELEASE")
 create_standard_target("${RELEASE_FLAGS}" "release")
-
-set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
 create_standard_target("${DEBUG_FLAGS}" "debug")
 
 add_custom_target(all-exes DEPENDS dist release debug)
