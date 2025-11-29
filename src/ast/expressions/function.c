@@ -137,7 +137,7 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
         PROPAGATE_IF_ERROR(type_expression_reconstruct((Node*)parameter.type, symbol_map, sb));
 
         if (parameter.default_value) {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
             Node* default_value = (Node*)parameter.default_value;
             PROPAGATE_IF_ERROR(default_value->vtable->reconstruct(default_value, symbol_map, sb));
         }
@@ -197,10 +197,10 @@ function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     }
 
     FunctionExpression* func = (FunctionExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "fn(", 3));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn("));
     PROPAGATE_IF_ERROR(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, ") ", 2));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ") "));
     PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)func->body, symbol_map, sb));
 
     return SUCCESS;

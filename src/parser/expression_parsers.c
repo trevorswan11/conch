@@ -37,7 +37,7 @@ static inline TRY_STATUS record_missing_prefix(Parser* p) {
                           string_builder_deinit(&sb));
 
     const char* token_literal = token_type_name(current.type);
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&sb, token_literal, strlen(token_literal)),
+    PROPAGATE_IF_ERROR_DO(string_builder_append_str_z(&sb, token_literal),
                           string_builder_deinit(&sb));
 
     const char end[] = " found";

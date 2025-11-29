@@ -47,6 +47,10 @@ TRY_STATUS string_builder_append_many(StringBuilder* sb, const char* bytes, size
     return SUCCESS;
 }
 
+TRY_STATUS string_builder_append_str_z(StringBuilder* sb, const char* str) {
+    return string_builder_append_many(sb, str, strlen(str));
+}
+
 TRY_STATUS string_builder_append_slice(StringBuilder* sb, Slice slice) {
     PROPAGATE_IF_ERROR(string_builder_append_many(sb, slice.ptr, slice.length));
     return SUCCESS;

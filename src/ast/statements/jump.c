@@ -43,9 +43,9 @@ TRY_STATUS jump_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
     }
 
     if (node->start_token.type == RETURN) {
-        PROPAGATE_IF_ERROR(string_builder_append_slice(sb, slice_from_str_z("return")));
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "return"));
     } else if (node->start_token.type == BREAK) {
-        PROPAGATE_IF_ERROR(string_builder_append_slice(sb, slice_from_str_z("break")));
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "break"));
     } else {
         UNREACHABLE;
     }

@@ -61,7 +61,7 @@ call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
         PROPAGATE_IF_ERROR(arg_node->vtable->reconstruct(arg_node, symbol_map, sb));
 
         if (i != call->arguments.length - 1) {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, ", ", 2));
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
         }
     }
 

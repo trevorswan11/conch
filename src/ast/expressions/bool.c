@@ -37,7 +37,6 @@ bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Strin
     MAYBE_UNUSED(symbol_map);
 
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
-    const Slice slice = bool_expr->value ? slice_from_str_z("true") : slice_from_str_z("false");
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, slice));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, bool_expr->value ? "true" : "false"));
     return SUCCESS;
 }

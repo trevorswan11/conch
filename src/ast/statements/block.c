@@ -38,7 +38,7 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 
 TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     assert(node && symbol_map && sb);
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "{ ", 2));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));
 
     BlockStatement* block = (BlockStatement*)node;
     for (size_t i = 0; i < block->statements.length; i++) {
@@ -50,7 +50,7 @@ TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, St
         PROPAGATE_IF_ERROR(stmt_node->vtable->reconstruct(stmt_node, symbol_map, sb));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, " }", 2));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " }"));
     return SUCCESS;
 }
 

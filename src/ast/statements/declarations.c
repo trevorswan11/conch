@@ -82,9 +82,9 @@ TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
 
     if (d->value) {
         if (d->type->type.tag == EXPLICIT) {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
         } else {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, "= ", 2));
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "= "));
         }
         Node* value_node = (Node*)d->value;
         PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
@@ -144,14 +144,14 @@ type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBui
         return NULL_PARAMETER;
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "type", 4));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "type"));
     PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
 
     TypeDeclStatement* d          = (TypeDeclStatement*)node;
     Node*              ident_node = (Node*)d->ident;
     PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
     Node* value_node = (Node*)d->value;
     PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
 

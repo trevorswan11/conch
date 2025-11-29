@@ -54,7 +54,7 @@ if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* 
     }
 
     IfExpression* if_expr = (IfExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "if ", 3));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "if "));
 
     assert(if_expr->condition);
     Node* condition_node = (Node*)if_expr->condition;
@@ -67,7 +67,7 @@ if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* 
     PROPAGATE_IF_ERROR(consequence_node->vtable->reconstruct(consequence_node, symbol_map, sb));
 
     if (if_expr->alternate) {
-        PROPAGATE_IF_ERROR(string_builder_append_many(sb, " else ", 6));
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " else "));
         Node* alternate_node = (Node*)if_expr->alternate;
         PROPAGATE_IF_ERROR(alternate_node->vtable->reconstruct(alternate_node, symbol_map, sb));
     }

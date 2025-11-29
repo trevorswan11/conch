@@ -59,7 +59,7 @@ enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
     }
 
     EnumExpression* e = (EnumExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_many(sb, "enum { ", 7));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "enum { "));
 
     EnumVariant variant;
     for (size_t i = 0; i < e->variants.length; i++) {
@@ -67,13 +67,12 @@ enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
 
         PROPAGATE_IF_ERROR(identifier_expression_reconstruct((Node*)variant.name, symbol_map, sb));
         if (variant.value) {
-            PROPAGATE_IF_ERROR(string_builder_append_many(sb, " = ", 3));
-
             Node* value_node = (Node*)variant.value;
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
             PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
         }
 
-        PROPAGATE_IF_ERROR(string_builder_append_many(sb, ", ", 2));
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
     }
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, '}'));

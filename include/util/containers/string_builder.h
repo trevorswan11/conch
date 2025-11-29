@@ -19,6 +19,7 @@ TRY_STATUS string_builder_init(StringBuilder* sb, size_t initial_length);
 void       string_builder_deinit(StringBuilder* sb);
 TRY_STATUS string_builder_append(StringBuilder* sb, char byte);
 TRY_STATUS string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length);
+TRY_STATUS string_builder_append_str_z(StringBuilder* sb, const char* str);
 TRY_STATUS string_builder_append_slice(StringBuilder* sb, Slice slice);
 TRY_STATUS string_builder_append_mut_slice(StringBuilder* sb, MutSlice slice);
 TRY_STATUS string_builder_append_unsigned(StringBuilder* sb, uint64_t value);

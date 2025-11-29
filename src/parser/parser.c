@@ -291,14 +291,14 @@ static inline TRY_STATUS _parser_error(Parser* p, TokenType t, Token actual_tok)
                           string_builder_deinit(&builder));
 
     const char* expected = token_type_name(t);
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, expected, strlen(expected)),
+    PROPAGATE_IF_ERROR_DO(string_builder_append_str_z(&builder, expected),
                           string_builder_deinit(&builder));
 
     PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, mid, sizeof(mid) - 1),
                           string_builder_deinit(&builder));
 
     const char* actual_name = token_type_name(actual_tok.type);
-    PROPAGATE_IF_ERROR_DO(string_builder_append_many(&builder, actual_name, strlen(actual_name)),
+    PROPAGATE_IF_ERROR_DO(string_builder_append_str_z(&builder, actual_name),
                           string_builder_deinit(&builder));
 
     // Append line/col information for debugging
@@ -369,9 +369,8 @@ TRY_STATUS parser_put_status_error(Parser* p, Status status, size_t line, size_t
     PROPAGATE_IF_ERROR(string_builder_init_allocator(&builder, 30, p->allocator));
 
     const char* status_literal = status_name(status);
-    PROPAGATE_IF_ERROR_DO(
-        string_builder_append_many(&builder, status_literal, strlen(status_literal)),
-        string_builder_deinit(&builder));
+    PROPAGATE_IF_ERROR_DO(string_builder_append_str_z(&builder, status_literal),
+                          string_builder_deinit(&builder));
 
     PROPAGATE_IF_ERROR_DO(error_append_ln_col(line, col, &builder),
                           string_builder_deinit(&builder));
