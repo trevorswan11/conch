@@ -40,5 +40,5 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          CC=clang CXX=clang++ cmake ..
           cmake --build . --parallel --target fmt-check

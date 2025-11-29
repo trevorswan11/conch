@@ -68,17 +68,13 @@ jobs:
           ln -s /ucrt64/bin/mingw32-make.exe /ucrt64/bin/make || true
         shell: msys2 {0}
 
-      - name: Configure CMake
-        run: |
-          mkdir build
-          cd build
-          cmake -G "Unix Makefiles" ..
-
       - name: Run tests (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
+          mkdir build
           cd build
-          
+          CC=clang CXX=clang++ cmake ..
+
           cmake --build . --parallel --target debug
           cmake --build . --parallel --target release
           cmake --build . --parallel --target dist
@@ -92,7 +88,9 @@ jobs:
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         run: |
+          mkdir build
           cd build
+          cmake -G "Unix Makefiles" ..
 
           cmake --build . --parallel --target debug
           cmake --build . --parallel --target release

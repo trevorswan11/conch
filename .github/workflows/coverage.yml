@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          CC=clang CXX=clang++ cmake ..
           cmake --build . --parallel --target coverage-badge
 
       - name: Commit coverage report & badge
