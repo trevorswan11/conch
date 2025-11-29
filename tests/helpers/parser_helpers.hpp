@@ -66,17 +66,13 @@ void test_decl_statement(Statement*      stmt,
                          ExplicitTypeTag expected_explicit_tag,
                          std::string     expected_type_literal);
 
-template <typename T>
-void test_number_expression(Expression* expression, T expected_value);
+template <typename T> void test_number_expression(Expression* expression, T expected_value);
 
-template <typename T>
-void test_number_expression(const char* input, T expected_value);
+template <typename T> void test_number_expression(const char* input, T expected_value);
 
-void test_bool_expression(Expression* expression,
-                          bool        expected_value);
+void test_bool_expression(Expression* expression, bool expected_value);
 
-void test_string_expression(Expression* expression,
-                            std::string expected_string_literal);
+void test_string_expression(Expression* expression, std::string expected_string_literal);
 void test_identifier_expression(Expression* expression,
                                 std::string expected_name,
                                 TokenType   expected_type = TokenType::IDENT);

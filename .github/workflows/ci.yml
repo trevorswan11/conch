@@ -10,7 +10,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tests/**'
-      - 'Makefile'
+      - 'CMakeLists.txt'
   pull_request:
     branches: 
       - main
@@ -20,7 +20,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tests/**'
-      - 'Makefile'
+      - 'CMakeLists.txt'
 
 jobs:
   build-test:
@@ -39,13 +39,13 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y clang clang-format make
+          sudo apt install -y clang clang-format cmake make
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install llvm clang-format make
+          brew install llvm clang-format cmake
         env:
           HOMEBREW_NO_AUTO_UPDATE: 1
 
@@ -59,6 +59,7 @@ jobs:
             clang
             mingw-w64-ucrt-x86_64-clang
             mingw-w64-ucrt-x86_64-clang-tools-extra
+            mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-make
 
       - name: Fix make alias (Windows)
@@ -67,15 +68,37 @@ jobs:
           ln -s /ucrt64/bin/mingw32-make.exe /ucrt64/bin/make || true
         shell: msys2 {0}
 
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -G "Unix Makefiles" ..
+
       - name: Run tests (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          make clean
-          make all test asan
+          cd build
+          
+          cmake --build . --parallel --target debug
+          cmake --build . --parallel --target release
+          cmake --build . --parallel --target dist
+
+          ctest --output-on-failure -R run_tests_debug
+          ctest --output-on-failure -R run_tests_release
+          ctest --output-on-failure -R run_tests_dist
+
+          cmake --build . --parallel --target asan
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         run: |
-          make clean
-          make all test
+          cd build
+
+          cmake --build . --parallel --target debug
+          cmake --build . --parallel --target release
+          cmake --build . --parallel --target dist
+
+          ctest --output-on-failure -R run_tests_debug
+          ctest --output-on-failure -R run_tests_release
+          ctest --output-on-failure -R run_tests_dist
         shell: msys2 {0}

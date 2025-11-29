@@ -9,7 +9,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tests/**'
-      - 'Makefile'
+      - 'CMakeLists.txt'
   pull_request:
     branches:
       - main
@@ -18,7 +18,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tests/**'
-      - 'Makefile'
+      - 'CMakeLists.txt'
 
 jobs:
   coverage:
@@ -32,12 +32,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang clang-format make lcov llvm llvm-dev
+          sudo apt install -y clang clang-format cmake make lcov llvm llvm-dev
 
       - name: Run coverage report generator
         run: |
-          make clean
-          make coverage-badge
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . --parallel --target coverage-badge
 
       - name: Commit coverage report & badge
         env:
@@ -47,9 +49,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout --orphan coverage || git checkout coverage
           git reset --hard
-          rm -rf bin build
-          cp -r coverage_report/* .
-          rm -rf coverage_report
+          cp -r build/cov/coverage_report/* .
+          cp build/cov/coverage_summary.txt .
+          cp build/cov/coverage.svg .
           git add .
           git commit -m "Update coverage report"
           git push -f origin coverage

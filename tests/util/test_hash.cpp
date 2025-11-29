@@ -27,14 +27,14 @@ TEST_CASE("Slice comparison") {
 }
 
 TEST_CASE("Mutable slice comparison") {
-    MutSlice m1 = (MutSlice){.ptr = (char*)"foo", .length = 3};
-    MutSlice m2 = (MutSlice){.ptr = (char*)"foo", .length = 3};
-    MutSlice m3 = (MutSlice){.ptr = (char*)"bar", .length = 3};
+    MutSlice m1 = {.ptr = (char*)"foo", .length = 3};
+    MutSlice m2 = {.ptr = (char*)"foo", .length = 3};
+    MutSlice m3 = {.ptr = (char*)"bar", .length = 3};
 
     REQUIRE(compare_mut_slices(&m1, &m2) == 0);
     REQUIRE(compare_mut_slices(&m1, &m3) != 0);
 
-    MutSlice m4 = (MutSlice){.ptr = (char*)"foobar", .length = 6};
+    MutSlice m4 = {.ptr = (char*)"foobar", .length = 6};
     REQUIRE(compare_mut_slices(&m1, &m4) != 0);
 }
 
@@ -65,9 +65,9 @@ TEST_CASE("Slice hashing") {
 }
 
 TEST_CASE("Mutable slice hashing") {
-    MutSlice m1 = (MutSlice){.ptr = (char*)"hashme", .length = 6};
-    MutSlice m2 = (MutSlice){.ptr = (char*)"hashme", .length = 6};
-    MutSlice m3 = (MutSlice){.ptr = (char*)"different", .length = 9};
+    MutSlice m1 = {.ptr = (char*)"hashme", .length = 6};
+    MutSlice m2 = {.ptr = (char*)"hashme", .length = 6};
+    MutSlice m3 = {.ptr = (char*)"different", .length = 9};
 
     uint64_t h1 = hash_mut_slice(&m1);
     uint64_t h2 = hash_mut_slice(&m2);

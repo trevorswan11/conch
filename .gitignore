@@ -56,7 +56,10 @@ dkms.conf
 *.dwo
 
 build/
-bin/
+Makefile
+**.sln
+.cache
 
 .vscode
 .vs
+.zed
