@@ -31,6 +31,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            compiler: gnu
+          - os: ubuntu-latest
+            compiler: clang
           - os: macos-latest
           - os: windows-latest
             windows_style: msys2
@@ -42,7 +45,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.compiler == 'clang'
         run: |
           sudo apt update
           sudo apt install -y clang clang-format cmake make
@@ -55,12 +58,29 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: 1
 
-      - name: Run tests (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Run tests (Linux Clang/macOS)
+        if: runner.os == 'macOS' || (runner.os == 'Linux' && matrix.compiler == 'clang')
         run: |
           mkdir build
           cd build
           CC=clang CXX=clang++ cmake ..
+
+          cmake --build . --parallel --target debug
+          cmake --build . --parallel --target release
+          cmake --build . --parallel --target dist
+
+          ctest --output-on-failure -R run_tests_debug
+          ctest --output-on-failure -R run_tests_release
+          ctest --output-on-failure -R run_tests_dist
+
+          cmake --build . --parallel --target asan
+
+      - name: Run tests (Linux GNU)
+        if: runner.os == 'Linux' && matrix.compiler == 'gnu'
+        run: |
+          mkdir build
+          cd build
+          cmake ..
 
           cmake --build . --parallel --target debug
           cmake --build . --parallel --target release
