@@ -156,6 +156,8 @@ if(NOT WIN32 AND (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STR
         # leaks tool is needed and asan pollutes its memory profiler
         set(ASAN_FLAGS "-fsanitize=undefined" "-fno-sanitize-recover=all" "-g")
         set(ASAN_RUN_CMD leaks --atExit -- $<TARGET_FILE:conch_tests_asan>)
+    elseif(APPLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        message(ERROR "The GNU Compiler is not supported on macOS")
     elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
         set(ASAN_FLAGS "-fsanitize=address" "-fsanitize=undefined" "-g")
         set(ASAN_RUN_CMD $<TARGET_FILE:conch_tests_asan>)
