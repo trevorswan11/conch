@@ -163,12 +163,12 @@ TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
     PROPAGATE_IF_ERROR(block_statement_create(start_token, &block, p->allocator));
 
     while (!parser_current_token_is(p, RBRACE) && !parser_current_token_is(p, END)) {
-        Statement* stmt;
-        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &stmt),
+        Statement* inner_stmt;
+        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &inner_stmt),
                               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc););
 
-        PROPAGATE_IF_ERROR_DO(block_statement_append(block, stmt), {
-            NODE_VIRTUAL_FREE(stmt, p->allocator.free_alloc);
+        PROPAGATE_IF_ERROR_DO(block_statement_append(block, inner_stmt), {
+            NODE_VIRTUAL_FREE(inner_stmt, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         });
         UNREACHABLE_IF_ERROR(parser_next_token(p));

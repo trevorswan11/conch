@@ -12,46 +12,46 @@
         return E;              \
     }
 
-#define PROPAGATE_IF_ERROR(expr)              \
-    do {                                      \
-        const Status _stat_obfuscated = expr; \
-        if (_stat_obfuscated != SUCCESS) {    \
-            return _stat_obfuscated;          \
-        }                                     \
-    } while (0)
-
-#define PROPAGATE_IF_ERROR_DO(expr, action)   \
-    do {                                      \
-        const Status _stat_obfuscated = expr; \
-        if (_stat_obfuscated != SUCCESS) {    \
-            action;                           \
-            return _stat_obfuscated;          \
-        }                                     \
-    } while (0)
-
-#define PROPAGATE_IF_ERROR_IS(expr, S)        \
-    do {                                      \
-        const Status _stat_obfuscated = expr; \
-        if (_stat_obfuscated == S) {          \
-            return _stat_obfuscated;          \
-        }                                     \
-    } while (0)
-
-#define PROPAGATE_IF_ERROR_DO_IS(expr, action, S) \
+#define PROPAGATE_IF_ERROR(expr)                  \
     do {                                          \
-        const Status _stat_obfuscated = expr;     \
-        if (_stat_obfuscated == S) {              \
-            action;                               \
-            return _stat_obfuscated;              \
+        const Status _stat_obfuscated_pie = expr; \
+        if (_stat_obfuscated_pie != SUCCESS) {    \
+            return _stat_obfuscated_pie;          \
         }                                         \
     } while (0)
 
-#define PROPAGATE_IF_ERROR_NOT(expr, S)       \
-    do {                                      \
-        const Status _stat_obfuscated = expr; \
-        if (_stat_obfuscated != S) {          \
-            return _stat_obfuscated;          \
-        }                                     \
+#define PROPAGATE_IF_ERROR_DO(expr, action)        \
+    do {                                           \
+        const Status _stat_obfuscated_pied = expr; \
+        if (_stat_obfuscated_pied != SUCCESS) {    \
+            action;                                \
+            return _stat_obfuscated_pied;          \
+        }                                          \
+    } while (0)
+
+#define PROPAGATE_IF_ERROR_IS(expr, S)             \
+    do {                                           \
+        const Status _stat_obfuscated_piei = expr; \
+        if (_stat_obfuscated_piei == S) {          \
+            return _stat_obfuscated_piei;          \
+        }                                          \
+    } while (0)
+
+#define PROPAGATE_IF_ERROR_DO_IS(expr, action, S)   \
+    do {                                            \
+        const Status _stat_obfuscated_piedi = expr; \
+        if (_stat_obfuscated_piedi == S) {          \
+            action;                                 \
+            return _stat_obfuscated_piedi;          \
+        }                                           \
+    } while (0)
+
+#define PROPAGATE_IF_ERROR_NOT(expr, S)            \
+    do {                                           \
+        const Status _stat_obfuscated_pien = expr; \
+        if (_stat_obfuscated_pien != S) {          \
+            return _stat_obfuscated_pien;          \
+        }                                          \
     } while (0)
 
 // Propagates the `GENERAL_IO` status code if the io expression evaluates to a negative int.
@@ -99,8 +99,8 @@ void debug_print(const char* format, ...);
 // A debug message is also emitted with the file and approximate line number.
 #define UNREACHABLE_IF_ERROR(expr)                                                        \
     do {                                                                                  \
-        const Status _stat_obfuscated = expr;                                             \
-        if (_stat_obfuscated != SUCCESS) {                                                \
+        const Status _stat_obfuscated_uie = expr;                                         \
+        if (_stat_obfuscated_uie != SUCCESS) {                                            \
             debug_print("Panic: reached unreachable code (%s:%d)\n", __FILE__, __LINE__); \
             UNREACHABLE_IMPL;                                                             \
         }                                                                                 \
@@ -168,8 +168,8 @@ void status_ignore(Status status);
 // - On MSVC, this is only detected through static analysis
 #define TRY_STATUS WARN_UNUSED_RESULT Status
 
-#define IGNORE_STATUS(expr)                   \
-    do {                                      \
-        const Status _stat_obfuscated = expr; \
-        status_ignore(_stat_obfuscated);      \
+#define IGNORE_STATUS(expr)                      \
+    do {                                         \
+        const Status _stat_obfuscated_is = expr; \
+        status_ignore(_stat_obfuscated_is);      \
     } while (0)

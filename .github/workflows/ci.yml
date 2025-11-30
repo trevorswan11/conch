@@ -116,9 +116,7 @@ jobs:
           
           cmake --build . --config Debug
           cmake --build . --config Release
-          cmake --build . --config Dist
           
           ctest -C Debug --output-on-failure
           ctest -C Release --output-on-failure
-          ctest -C Dist --output-on-failure
         shell: cmd

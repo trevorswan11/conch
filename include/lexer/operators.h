@@ -4,6 +4,7 @@
 
 #include "util/mem.h"
 
+#define OP(str, tok) {{str, sizeof(str) - 1}, tok}
 static const size_t MAX_OPERATOR_LEN = 3;
 
 typedef struct {
@@ -11,49 +12,49 @@ typedef struct {
     TokenType type;
 } Operator;
 
-static const Operator OPERATOR_ASSIGN         = {{"=", 1}, ASSIGN};
-static const Operator OPERATOR_WALRUS         = {{":=", 2}, WALRUS};
-static const Operator OPERATOR_PLUS           = {{"+", 1}, PLUS};
-static const Operator OPERATOR_PLUS_ASSIGN    = {{"+=", 2}, PLUS_ASSIGN};
-static const Operator OPERATOR_MINUS          = {{"-", 1}, MINUS};
-static const Operator OPERATOR_MINUS_ASSIGN   = {{"-=", 2}, MINUS_ASSIGN};
-static const Operator OPERATOR_STAR           = {{"*", 1}, STAR};
-static const Operator OPERATOR_STAR_ASSIGN    = {{"*=", 2}, STAR_ASSIGN};
-static const Operator OPERATOR_STAR_STAR      = {{"**", 2}, STAR_STAR};
-static const Operator OPERATOR_SLASH          = {{"/", 1}, SLASH};
-static const Operator OPERATOR_SLASH_ASSIGN   = {{"/=", 2}, SLASH_ASSIGN};
-static const Operator OPERATOR_PERCENT        = {{"%", 1}, PERCENT};
-static const Operator OPERATOR_PERCENT_ASSIGN = {{"%=", 2}, PERCENT_ASSIGN};
-static const Operator OPERATOR_BANG           = {{"!", 1}, BANG};
-static const Operator OPERATOR_WHAT           = {{"?", 1}, WHAT};
+#define OPERATOR_ASSIGN OP("=", ASSIGN)
+#define OPERATOR_WALRUS OP(":=", WALRUS)
+#define OPERATOR_PLUS OP("+", PLUS)
+#define OPERATOR_PLUS_ASSIGN OP("+=", PLUS_ASSIGN)
+#define OPERATOR_MINUS OP("-", MINUS)
+#define OPERATOR_MINUS_ASSIGN OP("-=", MINUS_ASSIGN)
+#define OPERATOR_STAR OP("*", STAR)
+#define OPERATOR_STAR_ASSIGN OP("*=", STAR_ASSIGN)
+#define OPERATOR_STAR_STAR OP("**", STAR_STAR)
+#define OPERATOR_SLASH OP("/", SLASH)
+#define OPERATOR_SLASH_ASSIGN OP("/=", SLASH_ASSIGN)
+#define OPERATOR_PERCENT OP("%", PERCENT)
+#define OPERATOR_PERCENT_ASSIGN OP("%=", PERCENT_ASSIGN)
+#define OPERATOR_BANG OP("!", BANG)
+#define OPERATOR_WHAT OP("?", WHAT)
 
-static const Operator OPERATOR_AND        = {{"&", 1}, AND};
-static const Operator OPERATOR_AND_ASSIGN = {{"&=", 2}, AND_ASSIGN};
-static const Operator OPERATOR_OR         = {{"|", 1}, OR};
-static const Operator OPERATOR_OR_ASSIGN  = {{"|=", 2}, OR_ASSIGN};
-static const Operator OPERATOR_SHL        = {{"<<", 2}, SHL};
-static const Operator OPERATOR_SHL_ASSIGN = {{"<<=", 3}, SHL_ASSIGN};
-static const Operator OPERATOR_SHR        = {{">>", 2}, SHR};
-static const Operator OPERATOR_SHR_ASSIGN = {{">>=", 3}, SHR_ASSIGN};
-static const Operator OPERATOR_NOT        = {{"~", 1}, NOT};
-static const Operator OPERATOR_NOT_ASSIGN = {{"~=", 2}, NOT_ASSIGN};
-static const Operator OPERATOR_XOR        = {{"^", 1}, XOR};
-static const Operator OPERATOR_XOR_ASSIGN = {{"^=", 2}, XOR_ASSIGN};
+#define OPERATOR_AND OP("&", AND)
+#define OPERATOR_AND_ASSIGN OP("&=", AND_ASSIGN)
+#define OPERATOR_OR OP("|", OR)
+#define OPERATOR_OR_ASSIGN OP("|=", OR_ASSIGN)
+#define OPERATOR_SHL OP("<<", SHL)
+#define OPERATOR_SHL_ASSIGN OP("<<=", SHL_ASSIGN)
+#define OPERATOR_SHR OP(">>", SHR)
+#define OPERATOR_SHR_ASSIGN OP(">>=", SHR_ASSIGN)
+#define OPERATOR_NOT OP("~", NOT)
+#define OPERATOR_NOT_ASSIGN OP("~=", NOT_ASSIGN)
+#define OPERATOR_XOR OP("^", XOR)
+#define OPERATOR_XOR_ASSIGN OP("^=", XOR_ASSIGN)
 
-static const Operator OPERATOR_LT   = {{"<", 1}, LT};
-static const Operator OPERATOR_LTEQ = {{"<=", 2}, LTEQ};
-static const Operator OPERATOR_GT   = {{">", 1}, GT};
-static const Operator OPERATOR_GTEQ = {{">=", 2}, GTEQ};
-static const Operator OPERATOR_EQ   = {{"==", 2}, EQ};
-static const Operator OPERATOR_NEQ  = {{"!=", 2}, NEQ};
+#define OPERATOR_LT OP("<", LT)
+#define OPERATOR_LTEQ OP("<=", LTEQ)
+#define OPERATOR_GT OP(">", GT)
+#define OPERATOR_GTEQ OP(">=", GTEQ)
+#define OPERATOR_EQ OP("==", EQ)
+#define OPERATOR_NEQ OP("!=", NEQ)
 
-static const Operator OPERATOR_COLON_COLON      = {{"::", 2}, COLON_COLON};
-static const Operator OPERATOR_DOT              = {{".", 1}, DOT};
-static const Operator OPERATOR_DOT_DOT          = {{"..", 2}, DOT_DOT};
-static const Operator OPERATOR_DOT_DOT_EQ       = {{"..=", 3}, DOT_DOT_EQ};
-static const Operator OPERATOR_FAT_ARROW        = {{"=>", 2}, FAT_ARROW};
-static const Operator OPERATOR_COMMENT          = {{"//", 2}, COMMENT};
-static const Operator OPERATOR_MULTILINE_STRING = {{"\\\\", 2}, MULTILINE_STRING};
+#define OPERATOR_COLON_COLON OP("::", COLON_COLON)
+#define OPERATOR_DOT OP(".", DOT)
+#define OPERATOR_DOT_DOT OP("..", DOT_DOT)
+#define OPERATOR_DOT_DOT_EQ OP("..=", DOT_DOT_EQ)
+#define OPERATOR_FAT_ARROW OP("=>", FAT_ARROW)
+#define OPERATOR_COMMENT OP("//", COMMENT)
+#define OPERATOR_MULTILINE_STRING OP("\\\\", MULTILINE_STRING)
 
 static const Operator ALL_OPERATORS[] = {
     OPERATOR_ASSIGN,

@@ -13,12 +13,31 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    set(BASE_FLAGS "/W4" "/WX")
+    # Completely wipe MSVC's built-in per-config flags
+    set(CMAKE_C_FLAGS_DEBUG "")
+    set(CMAKE_CXX_FLAGS_DEBUG "")
+
+    set(CMAKE_C_FLAGS_RELEASE "")
+    set(CMAKE_CXX_FLAGS_RELEASE "")
+
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
+
+    set(CMAKE_C_FLAGS_MINSIZEREL "")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "")
+
+    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REPLACE "/RTCsu" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REPLACE "/RTCsu" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    
+    # Add custom flags to stay faithful to Unix
+    set(BASE_FLAGS "/W4" "/WX" "/wd4232")
     set(WARNING_IGNORE "/W0")
 
-    set(DIST_FLAGS "/O2 /DNDEBUG /DDIST")
-    set(RELEASE_FLAGS "/O1 /DRELEASE")
-    set(DEBUG_FLAGS "/Od /Zi /DDEBUG")
+    set(DIST_FLAGS "/O2" "/DNDEBUG" "/DDIST")
+    set(RELEASE_FLAGS "/O1" "/DRELEASE")
+    set(DEBUG_FLAGS "/" "/Zi" "/DDEBUG" "/RTC1")
 else()
     set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
     set(WARNING_IGNORE "-w")
@@ -58,7 +77,7 @@ function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     add_executable(conch_tests_${TARGET_NAME} ${TEST_SOURCES})
     target_link_libraries(conch_tests_${TARGET_NAME} PRIVATE catch2_${TARGET_NAME} conch_core_${TARGET_NAME})
     target_include_directories(conch_tests_${TARGET_NAME} PRIVATE include tests/helpers)
-    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${BASE_FLAGS})
+    target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${WARNING_IGNORE})
 
     target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
     if(NOT MSVC)

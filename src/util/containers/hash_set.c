@@ -224,9 +224,9 @@ void hash_set_rehash(HashSet* hs) {
             continue;
         }
 
-        const Hash   hash        = hs->hash(ptr_offset(keys_ptr, current * hs->header->key_size));
-        const size_t fingerprint = take_fingerprint(hash);
-        size_t       probe       = hash & mask;
+        const Hash    hash        = hs->hash(ptr_offset(keys_ptr, current * hs->header->key_size));
+        const uint8_t fingerprint = take_fingerprint(hash);
+        size_t        probe       = hash & mask;
 
         // For each bucket, rehash to an index:
         // 1) before the cursor, probed into a free slot, or

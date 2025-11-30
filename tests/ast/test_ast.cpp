@@ -45,9 +45,10 @@ TEST_CASE("AST Manual Reconstruction") {
                                              &type,
                                              malloc)));
 
+    const Keyword  keyword_var = KEYWORD_VAR;
     DeclStatement* decl;
     REQUIRE(STATUS_OK(decl_statement_create(
-        token_init(TokenType::VAR, KEYWORD_VAR.slice.ptr, KEYWORD_VAR.slice.length, 0, 0),
+        token_init(TokenType::VAR, keyword_var.slice.ptr, keyword_var.slice.length, 0, 0),
         ident_lhs,
         type,
         (Expression*)ident_rhs,

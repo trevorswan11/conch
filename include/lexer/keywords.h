@@ -4,42 +4,44 @@
 
 #include "util/mem.h"
 
+#define KW(str, tok) {{str, sizeof(str) - 1}, tok}
+
 typedef struct {
     Slice     slice;
     TokenType type;
 } Keyword;
 
-static const Keyword KEYWORD_FN          = {{"fn", 2}, FUNCTION};
-static const Keyword KEYWORD_VAR         = {{"var", 3}, VAR};
-static const Keyword KEYWORD_CONST       = {{"const", 5}, CONST};
-static const Keyword KEYWORD_STRUCT      = {{"struct", 6}, STRUCT};
-static const Keyword KEYWORD_ENUM        = {{"enum", 4}, ENUM};
-static const Keyword KEYWORD_TRUE        = {{"true", 4}, TRUE};
-static const Keyword KEYWORD_FALSE       = {{"false", 5}, FALSE};
-static const Keyword KEYWORD_BOOLEAN_AND = {{"and", 3}, BOOLEAN_AND};
-static const Keyword KEYWORD_BOOLEAN_OR  = {{"or", 2}, BOOLEAN_OR};
-static const Keyword KEYWORD_IS          = {{"is", 2}, IS};
-static const Keyword KEYWORD_IN          = {{"in", 2}, IN};
-static const Keyword KEYWORD_IF          = {{"if", 2}, IF};
-static const Keyword KEYWORD_ELSE        = {{"else", 4}, ELSE};
-static const Keyword KEYWORD_MATCH       = {{"match", 5}, MATCH};
-static const Keyword KEYWORD_RETURN      = {{"return", 6}, RETURN};
-static const Keyword KEYWORD_FOR         = {{"for", 3}, FOR};
-static const Keyword KEYWORD_WHILE       = {{"while", 5}, WHILE};
-static const Keyword KEYWORD_CONTINUE    = {{"continue", 8}, CONTINUE};
-static const Keyword KEYWORD_BREAK       = {{"break", 5}, BREAK};
-static const Keyword KEYWORD_NIL         = {{"nil", 3}, NIL};
-static const Keyword KEYWORD_TYPEOF      = {{"typeof", 3}, TYPEOF};
-static const Keyword KEYWORD_IMPORT      = {{"import", 3}, IMPORT};
-static const Keyword KEYWORD_FROM        = {{"from", 3}, FROM};
-static const Keyword KEYWORD_INT         = {{"int", 3}, INT_TYPE};
-static const Keyword KEYWORD_UINT        = {{"uint", 4}, UINT_TYPE};
-static const Keyword KEYWORD_FLOAT       = {{"float", 5}, FLOAT_TYPE};
-static const Keyword KEYWORD_BYTE        = {{"byte", 4}, BYTE_TYPE};
-static const Keyword KEYWORD_STRING      = {{"string", 6}, STRING_TYPE};
-static const Keyword KEYWORD_BOOL        = {{"bool", 4}, BOOL_TYPE};
-static const Keyword KEYWORD_VOID        = {{"void", 4}, VOID_TYPE};
-static const Keyword KEYWORD_TYPE        = {{"type", 4}, TYPE};
+#define KEYWORD_FN KW("fn", FUNCTION)
+#define KEYWORD_VAR KW("var", VAR)
+#define KEYWORD_CONST KW("const", CONST)
+#define KEYWORD_STRUCT KW("struct", STRUCT)
+#define KEYWORD_ENUM KW("enum", ENUM)
+#define KEYWORD_TRUE KW("true", TRUE)
+#define KEYWORD_FALSE KW("false", FALSE)
+#define KEYWORD_BOOLEAN_AND KW("and", BOOLEAN_AND)
+#define KEYWORD_BOOLEAN_OR KW("or", BOOLEAN_OR)
+#define KEYWORD_IS KW("is", IS)
+#define KEYWORD_IN KW("in", IN)
+#define KEYWORD_IF KW("if", IF)
+#define KEYWORD_ELSE KW("else", ELSE)
+#define KEYWORD_MATCH KW("match", MATCH)
+#define KEYWORD_RETURN KW("return", RETURN)
+#define KEYWORD_FOR KW("for", FOR)
+#define KEYWORD_WHILE KW("while", WHILE)
+#define KEYWORD_CONTINUE KW("continue", CONTINUE)
+#define KEYWORD_BREAK KW("break", BREAK)
+#define KEYWORD_NIL KW("nil", NIL)
+#define KEYWORD_TYPEOF KW("typeof", TYPEOF)
+#define KEYWORD_IMPORT KW("import", IMPORT)
+#define KEYWORD_FROM KW("from", FROM)
+#define KEYWORD_INT KW("int", INT_TYPE)
+#define KEYWORD_UINT KW("uint", UINT_TYPE)
+#define KEYWORD_FLOAT KW("float", FLOAT_TYPE)
+#define KEYWORD_BYTE KW("byte", BYTE_TYPE)
+#define KEYWORD_STRING KW("string", STRING_TYPE)
+#define KEYWORD_BOOL KW("bool", BOOL_TYPE)
+#define KEYWORD_VOID KW("void", VOID_TYPE)
+#define KEYWORD_TYPE KW("type", TYPE)
 
 static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_FN,     KEYWORD_VAR,    KEYWORD_CONST,       KEYWORD_STRUCT,     KEYWORD_ENUM,
