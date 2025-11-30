@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Global configuration
-project(conch 
-    VERSION 0.1.0 
+project(conch
+    VERSION 0.1.0
     LANGUAGES C CXX
 )
 
@@ -30,7 +30,7 @@ if(MSVC)
     string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REPLACE "/RTCsu" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REPLACE "/RTCsu" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    
+
     # Add custom flags to stay faithful to Unix
     set(BASE_FLAGS "/W4" "/WX" "/wd4232")
     set(WARNING_IGNORE "/W0")
@@ -167,17 +167,17 @@ if(NOT WIN32)
     if(LLVM_PROFDATA AND LLVM_COV)
         add_custom_target(coverage-report
             COMMAND ${LLVM_PROFDATA} merge -sparse ${COV_DIR}/default.profraw -o ${COV_DIR}/default.profdata
-            COMMAND ${LLVM_COV} show $<TARGET_FILE:conch_tests_cov> 
-                -instr-profile=${COV_DIR}/default.profdata 
-                -format=html 
-                -output-dir=${COV_DIR}/coverage_report 
+            COMMAND ${LLVM_COV} show $<TARGET_FILE:conch_tests_cov>
+                -instr-profile=${COV_DIR}/default.profdata
+                -format=html
+                -output-dir=${COV_DIR}/coverage_report
                 -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*'
             DEPENDS coverage
         )
 
         add_custom_target(coverage-badge
             COMMAND ${LLVM_COV} report $<TARGET_FILE:conch_tests_cov>
-                -instr-profile=${COV_DIR}/default.profdata 
+                -instr-profile=${COV_DIR}/default.profdata
                 -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*' > ${COV_DIR}/coverage_summary.txt
             COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_badge.sh ${COV_DIR}/coverage_summary.txt ${COV_DIR}/coverage.svg
             DEPENDS coverage-report
