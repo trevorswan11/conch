@@ -130,8 +130,10 @@ add_custom_target(all-tests
 if(NOT WIN32)
     if (NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
         message(WARNING
-            "ASan and Coverage target will be generated, but compiler is not clang.\n"
-            "For correct builds, use the clang/clang++ toolchain."
+						"ASan and coverage targets were generated, but the active compiler is not Clang."
+						"These targets will fail to build or run correctly.\n"
+						"Consider using the Clang/Clang++ toolchain and rebuild with:"
+						"    CC=clang CXX=clang++ cmake .."
         )
     endif()
 
