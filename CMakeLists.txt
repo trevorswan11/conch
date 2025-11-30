@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    # Completely wipe MSVC's built-in per-config flags
+    # Completely wipe MSVC builtin flags
     set(CMAKE_C_FLAGS_DEBUG "")
     set(CMAKE_CXX_FLAGS_DEBUG "")
 
@@ -98,7 +98,6 @@ function(create_standard_target EXTRA_FLAGS TARGET_NAME)
     )
 endfunction()
 
-
 # Standard build targets
 create_standard_target("${DIST_FLAGS}" "dist")
 create_standard_target("${RELEASE_FLAGS}" "release")
@@ -128,13 +127,12 @@ add_custom_target(all-tests
 
 # Standard tooling disabled on windows due to clang/llvm weirdness
 if(NOT WIN32)
-    if (NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
         message(WARNING
-						"ASan and coverage targets were generated, but the active compiler is not Clang."
-						"These targets will fail to build or run correctly.\n"
-						"Consider using the Clang/Clang++ toolchain and rebuild with:"
-						"    CC=clang CXX=clang++ cmake .."
-        )
+                "ASan and coverage targets were generated, but the active compiler is not Clang. "
+                "These targets will fail to build or run correctly.\n"
+                "Consider using the Clang toolchain by rebuilding with:\n"
+                "    CC=clang CXX=clang++ cmake ..")
     endif()
 
     # ASan configuration - address doesn't work on macOS by default
