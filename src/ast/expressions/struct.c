@@ -1,5 +1,6 @@
 #include "ast/expressions/struct.h"
 #include "ast/ast.h"
+#include "ast/statements/statement.h"
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);

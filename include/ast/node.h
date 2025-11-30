@@ -5,7 +5,6 @@
 #include "util/allocator.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 #define ASSERT_NODE(node) \

@@ -9,7 +9,6 @@
 #include "parser/precedence.h"
 
 #include "ast/ast.h"
-#include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
@@ -17,7 +16,6 @@
 #include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
 #include "util/io.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 extern "C" {
-#include "util/allocator.h"
 #include "util/alphanum.h"
 #include "util/math.h"
 #include "util/status.h"

@@ -1,11 +1,9 @@
 #pragma once
 
-#include "ast/ast.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/jump.h"
-#include "ast/statements/statement.h"
 
 #include "parser/parser.h"
 

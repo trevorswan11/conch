@@ -8,7 +8,7 @@
 #include "util/hash.h"
 #include "util/status.h"
 
-struct Metadata;
+typedef struct Metadata Metadata;
 
 static const size_t HASH_SET_MAX_LOAD_PERCENTAGE = 80;
 static const size_t HASH_SET_MINIMUM_CAPACITY    = 8;

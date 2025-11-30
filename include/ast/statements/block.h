@@ -2,7 +2,6 @@
 
 #include "lexer/token.h"
 
-#include "ast/expressions/identifier.h"
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
@@ -10,7 +9,6 @@
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 typedef struct {

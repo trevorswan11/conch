@@ -12,7 +12,6 @@
 
 #include "util/alphanum.h"
 #include "util/hash.h"
-#include "util/math.h"
 
 static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocator) {
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);

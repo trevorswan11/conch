@@ -9,13 +9,11 @@
 #include "parser/statement_parsers.h"
 
 #include "ast/expressions/type.h"
-#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/jump.h"
 
 #include "util/containers/string_builder.h"
-#include "util/hash.h"
 
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
     const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);

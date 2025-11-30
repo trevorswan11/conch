@@ -15,8 +15,6 @@
 #include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
-#include "ast/statements/declarations.h"
-#include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "parser/expression_parsers.h"

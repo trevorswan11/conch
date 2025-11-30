@@ -2,14 +2,13 @@
 
 #include "lexer/token.h"
 
-#include "ast/expressions/identifier.h"
+#include "ast/expressions/expression.h"
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 typedef struct {

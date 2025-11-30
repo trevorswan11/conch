@@ -1,13 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/type.h"
-#include "ast/statements/expression.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/lexer.h"

@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "util/allocator.h"
-#include "util/math.h"
 
 #if INTPTR_MAX == INT64_MAX
 #define WORD_SIZE_64

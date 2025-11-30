@@ -5,7 +5,6 @@
 #include "parser/parser.h"
 
 #include "util/allocator.h"
-#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
 #include "util/io.h"
 #include "util/mem.h"

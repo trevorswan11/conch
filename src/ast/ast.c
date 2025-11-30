@@ -2,8 +2,8 @@
 #include <stdalign.h>
 
 #include "ast/ast.h"
+#include "ast/expressions/expression.h"
 #include "ast/node.h"
-#include "ast/statements/block.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/keywords.h"

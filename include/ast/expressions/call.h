@@ -5,8 +5,6 @@
 
 #include "lexer/token.h"
 
-#include "parser/parser.h"
-
 #include "ast/expressions/expression.h"
 #include "ast/node.h"
 
@@ -14,7 +12,6 @@
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 typedef Expression* Argument;

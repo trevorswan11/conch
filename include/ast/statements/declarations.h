@@ -10,7 +10,6 @@
 #include "util/allocator.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 
 // TODO: Maybe use union for walrus vs typed assign

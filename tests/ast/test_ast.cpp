@@ -7,7 +7,6 @@ extern "C" {
 #include "ast/expressions/expression.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
-#include "ast/node.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/statement.h"
 #include "lexer/keywords.h"

@@ -2,8 +2,6 @@
 
 #include "lexer/token.h"
 
-#include "util/status.h"
-
 #define FOREACH_PRECEDENCE(PROCESS)                                                                \
     PROCESS(LOWEST), PROCESS(BOOL_EQUIV), PROCESS(BOOL_LT_GT), PROCESS(ADD_SUB), PROCESS(MUL_DIV), \
         PROCESS(PREFIX), PROCESS(RANGE), PROCESS(COMPOUND_ASSIGNMENT), PROCESS(NAMESPACE),         \

@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <vector>
-
 extern "C" {
 #include "util/containers/hash_map.h"
 #include "util/hash.h"

@@ -11,6 +11,7 @@ extern "C" {
 #include "ast/expressions/string.h"
 #include "ast/node.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/expression.h"
 }
 
 ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {

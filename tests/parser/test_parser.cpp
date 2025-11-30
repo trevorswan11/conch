@@ -4,10 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <iostream>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -19,25 +17,18 @@ extern "C" {
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
-#include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
-#include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
-#include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
-#include "lexer/lexer.h"
 #include "lexer/token.h"
-#include "parser/parser.h"
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/math.h"
 #include "util/status.h"
 }
 
