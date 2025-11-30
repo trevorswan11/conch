@@ -208,7 +208,7 @@ if(NOT WIN32 AND (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STR
         else()
             message(WARNING 
                     "Failed to locate llvm-profdata and llvm-cov binaries.\n"
-                    "   Targets: 'coverage-report' and 'coverage-badge' are not available with this configuration."
+                    "   Targets 'coverage-report' and 'coverage-badge' are not available with this configuration."
             )
         endif()
     endif()
