@@ -114,8 +114,8 @@ jobs:
           cd build
           cmake -G "Visual Studio 17 2022" ..
           
-          cmake --build . --config Debug
-          cmake --build . --config Release
+          cmake --build . --parallel --config Debug
+          cmake --build . --parallel --config Release
           
           ctest -C Debug --output-on-failure
           ctest -C Release --output-on-failure

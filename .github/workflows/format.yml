@@ -26,19 +26,21 @@ jobs:
   fmt:
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y clang-format cmake make
+          brew update
+          brew install llvm clang-format cmake make
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
 
       - name: Check formatting
         run: |
           mkdir build
           cd build
-          CC=clang CXX=clang++ cmake ..
-          cmake --build . --parallel --target fmt-check
+          cmake ..
+          cmake --build . --target fmt-check
