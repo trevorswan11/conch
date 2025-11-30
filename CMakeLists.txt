@@ -31,13 +31,21 @@ if(MSVC)
     string(REPLACE "/RTCsu" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REPLACE "/RTCsu" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
-    # Add custom flags to stay faithful to Unix
+    # MSVC has configurations, but dist needs to be manually populated
+    set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
+	set(CMAKE_C_FLAGS_DIST          "")
+    set(CMAKE_CXX_FLAGS_DIST        "")
+    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
+    set(CMAKE_SHARED_LINKER_FLAGS_DIST "")
+    set(CMAKE_MODULE_LINKER_FLAGS_DIST "")
+
+	# Set common flags for unix-faithful building
     set(BASE_FLAGS "/W4" "/WX" "/wd4232")
     set(WARNING_IGNORE "/W0")
 
     set(DIST_FLAGS "/O2" "/DNDEBUG" "/DDIST")
     set(RELEASE_FLAGS "/O1" "/DRELEASE")
-    set(DEBUG_FLAGS "/" "/Zi" "/DDEBUG" "/RTC1")
+    set(DEBUG_FLAGS "/Zi" "/DDEBUG" "/RTC1")
 else()
     set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
     set(WARNING_IGNORE "-w")
@@ -98,48 +106,60 @@ function(create_standard_target EXTRA_FLAGS TARGET_NAME)
     )
 endfunction()
 
-# Standard build targets
+# Standard building & testing targets
 create_standard_target("${DIST_FLAGS}" "dist")
 create_standard_target("${RELEASE_FLAGS}" "release")
 create_standard_target("${DEBUG_FLAGS}" "debug")
 
-add_custom_target(all-exes DEPENDS dist release debug)
-
-# Testing targets
 enable_testing()
 add_test(NAME run_tests_debug COMMAND conch_tests_debug)
 add_test(NAME run_tests_release COMMAND conch_tests_release)
 add_test(NAME run_tests_dist COMMAND conch_tests_dist)
 
-add_custom_target(dbg-tests
-    DEPENDS conch_tests_debug
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
-    USES_TERMINAL
-)
+# Compiler specific configuration
+if(MSVC)
+    add_custom_target(conch ALL
+        DEPENDS
+            $<$<CONFIG:Debug>:conch_debug>
+            $<$<CONFIG:Release>:conch_release>
+            $<$<CONFIG:Dist>:conch_dist>
+    )
 
-add_custom_target(all-tests
-    DEPENDS conch_tests_debug conch_tests_release conch_tests_dist
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_release
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_dist
-    USES_TERMINAL
-)
+    add_custom_target(conch_tests ALL
+        DEPENDS
+            $<$<CONFIG:Debug>:conch_tests_debug>
+            $<$<CONFIG:Release>:conch_tests_release>
+            $<$<CONFIG:Dist>:conch_tests_dist>
+    )
+else()
+    add_custom_target(conch DEPENDS dist release debug)
+
+    add_custom_target(qtest
+        DEPENDS conch_tests_debug
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+        USES_TERMINAL
+    )
+
+    add_custom_target(conch_tests
+        DEPENDS conch_tests_debug conch_tests_release conch_tests_dist
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_release
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_dist
+        USES_TERMINAL
+    )
+endif()
 
 # Standard tooling disabled on windows due to clang/llvm weirdness
-if(NOT WIN32)
-    if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
-        message(WARNING
-                "ASan and coverage targets were generated, but the active compiler is not Clang. "
-                "These targets will fail to build or run correctly.\n"
-                "Consider using the Clang toolchain by rebuilding with:\n"
-                "    CC=clang CXX=clang++ cmake ..")
-    endif()
-
-    # ASan configuration - address doesn't work on macOS by default
-    if(APPLE)
+if(NOT WIN32 AND (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU"))
+    # ASan configuration
+    if(APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+        # leaks tool is needed and asan pollutes its memory profiler
         set(ASAN_FLAGS "-fsanitize=undefined" "-fno-sanitize-recover=all" "-g")
         set(ASAN_RUN_CMD leaks --atExit -- $<TARGET_FILE:conch_tests_asan>)
-    else()
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        set(ASAN_FLAGS "-fsanitize=address" "-fsanitize=undefined" "-g")
+        set(ASAN_RUN_CMD $<TARGET_FILE:conch_tests_asan>)
+    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(ASAN_FLAGS "-fsanitize=address,undefined" "-fno-sanitize-recover=all" "-g")
         set(ASAN_RUN_CMD $<TARGET_FILE:conch_tests_asan>)
     endif()
@@ -152,37 +172,49 @@ if(NOT WIN32)
     )
 
     # Coverage configurations
-    set(COV_FLAGS "-fprofile-instr-generate" "-fcoverage-mapping" "-g")
-    set(COV_DIR ${CMAKE_BINARY_DIR}/cov)
-    create_conch_suite("cov" "${COV_FLAGS}" "${COV_DIR}")
-    add_custom_target(coverage
-        COMMAND LLVM_PROFILE_FILE=${COV_DIR}/default.profraw $<TARGET_FILE:conch_tests_cov>
-        DEPENDS conch_tests_cov
-        USES_TERMINAL
-    )
-
-    find_program(LLVM_PROFDATA llvm-profdata)
-    find_program(LLVM_COV llvm-cov)
-
-    if(LLVM_PROFDATA AND LLVM_COV)
-        add_custom_target(coverage-report
-            COMMAND ${LLVM_PROFDATA} merge -sparse ${COV_DIR}/default.profraw -o ${COV_DIR}/default.profdata
-            COMMAND ${LLVM_COV} show $<TARGET_FILE:conch_tests_cov>
-                -instr-profile=${COV_DIR}/default.profdata
-                -format=html
-                -output-dir=${COV_DIR}/coverage_report
-                -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*'
-            DEPENDS coverage
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(COV_FLAGS "-fprofile-instr-generate" "-fcoverage-mapping" "-g")
+        set(COV_DIR ${CMAKE_BINARY_DIR}/cov)
+        create_conch_suite("cov" "${COV_FLAGS}" "${COV_DIR}")
+        add_custom_target(coverage
+            COMMAND LLVM_PROFILE_FILE=${COV_DIR}/default.profraw $<TARGET_FILE:conch_tests_cov>
+            DEPENDS conch_tests_cov
+            USES_TERMINAL
         )
 
-        add_custom_target(coverage-badge
-            COMMAND ${LLVM_COV} report $<TARGET_FILE:conch_tests_cov>
-                -instr-profile=${COV_DIR}/default.profdata
-                -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*' > ${COV_DIR}/coverage_summary.txt
-            COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_badge.sh ${COV_DIR}/coverage_summary.txt ${COV_DIR}/coverage.svg
-            DEPENDS coverage-report
-        )
+        find_program(LLVM_PROFDATA llvm-profdata)
+        find_program(LLVM_COV llvm-cov)
+
+        if(LLVM_PROFDATA AND LLVM_COV)
+            add_custom_target(coverage-report
+                COMMAND ${LLVM_PROFDATA} merge -sparse ${COV_DIR}/default.profraw -o ${COV_DIR}/default.profdata
+                COMMAND ${LLVM_COV} show $<TARGET_FILE:conch_tests_cov>
+                    -instr-profile=${COV_DIR}/default.profdata
+                    -format=html
+                    -output-dir=${COV_DIR}/coverage_report
+                    -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*'
+                DEPENDS coverage
+            )
+
+            add_custom_target(coverage-badge
+                COMMAND ${LLVM_COV} report $<TARGET_FILE:conch_tests_cov>
+                    -instr-profile=${COV_DIR}/default.profdata
+                    -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*' > ${COV_DIR}/coverage_summary.txt
+                COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_badge.sh ${COV_DIR}/coverage_summary.txt ${COV_DIR}/coverage.svg
+                DEPENDS coverage-report
+            )
+        else()
+            message(WARNING 
+                    "Failed to locate llvm-profdata and llvm-cov binaries.\n"
+                    "   Targets: 'coverage-report' and 'coverage-badge' are not available with this configuration."
+            )
+        endif()
     endif()
+elseif(NOT WIN32)
+    message(WARNING
+            "Skipped ASan and coverage generation as the active compiler is not recognized.\n"
+            "Consider using the Clang toolchain by rebuilding with:\n"
+            "    CC=clang CXX=clang++ cmake ..")
 endif()
 
 # Formatting
