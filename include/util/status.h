@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdlib.h>
 
 #define ENUMERATE(ENUM) ENUM
 #define STRINGIFY(STRING) #STRING
@@ -79,17 +78,13 @@
 void debug_print(const char* format, ...);
 
 #if defined(__GNUC__) || defined(__clang__)
-#define UNREACHABLE_IMPL         \
-    do {                         \
-        assert(0);               \
-        __builtin_unreachable(); \
-    } while (0)
+#define UNREACHABLE_IMPL \
+    assert(0);           \
+    __builtin_unreachable();
 #elif defined(_MSC_VER)
 #define UNREACHABLE_IMPL \
-    do {                 \
-        assert(0);       \
-        __assume(0);     \
-    } while (0)
+    assert(0);           \
+    __assume(0);
 #else
 #define UNREACHABLE_IMPL abort()
 #endif
@@ -119,17 +114,18 @@ void debug_print(const char* format, ...);
 
 #define UNREACHABLE UNREACHABLE_IF(true)
 
-#define FOREACH_STATUS(PROCESS)                                                                  \
-    PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),                  \
-        PROCESS(NULL_PARAMETER), PROCESS(VIOLATED_INVARIANT), PROCESS(INDEX_OUT_OF_BOUNDS),      \
-        PROCESS(ELEMENT_MISSING), PROCESS(ZERO_ITEM_SIZE), PROCESS(ZERO_ITEM_ALIGN),             \
-        PROCESS(EMPTY), PROCESS(SIZE_OVERFLOW), PROCESS(SIGNED_INTEGER_OVERFLOW),                \
-        PROCESS(UNSIGNED_INTEGER_OVERFLOW), PROCESS(FLOAT_OVERFLOW), PROCESS(READ_ERROR),        \
-        PROCESS(WRITE_ERROR), PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH),                 \
-        PROCESS(UNEXPECTED_TOKEN), PROCESS(MALFORMED_INTEGER_STR), PROCESS(MALFORMED_FLOAT_STR), \
-        PROCESS(NOT_IMPLEMENTED), PROCESS(DECL_MISSING_TYPE), PROCESS(CONST_DECL_MISSING_VALUE), \
-        PROCESS(FORWARD_VAR_DECL_MISSING_TYPE), PROCESS(MALFORMED_FUNCTION_LITERAL),             \
-        PROCESS(ENUM_MISSING_VARIANTS), PROCESS(BUFFER_OVERFLOW)
+#define FOREACH_STATUS(PROCESS)                                                                    \
+    PROCESS(SUCCESS), PROCESS(ALLOCATION_FAILED), PROCESS(REALLOCATION_FAILED),                    \
+        PROCESS(NULL_PARAMETER), PROCESS(VIOLATED_INVARIANT), PROCESS(INDEX_OUT_OF_BOUNDS),        \
+        PROCESS(ELEMENT_MISSING), PROCESS(ZERO_ITEM_SIZE), PROCESS(ZERO_ITEM_ALIGN),               \
+        PROCESS(EMPTY), PROCESS(SIZE_OVERFLOW), PROCESS(SIGNED_INTEGER_OVERFLOW),                  \
+        PROCESS(UNSIGNED_INTEGER_OVERFLOW), PROCESS(FLOAT_OVERFLOW), PROCESS(READ_ERROR),          \
+        PROCESS(WRITE_ERROR), PROCESS(GENERAL_IO_ERROR), PROCESS(TYPE_MISMATCH),                   \
+        PROCESS(UNEXPECTED_TOKEN), PROCESS(MALFORMED_INTEGER_STR), PROCESS(MALFORMED_FLOAT_STR),   \
+        PROCESS(NOT_IMPLEMENTED), PROCESS(DECL_MISSING_TYPE), PROCESS(CONST_DECL_MISSING_VALUE),   \
+        PROCESS(FORWARD_VAR_DECL_MISSING_TYPE), PROCESS(MALFORMED_FUNCTION_LITERAL),               \
+        PROCESS(ENUM_MISSING_VARIANTS), PROCESS(BUFFER_OVERFLOW), PROCESS(STRUCT_MISSING_MEMBERS), \
+        PROCESS(STRUCT_MEMBER_NOT_EXPLICIT), PROCESS(MISSING_TRAILING_COMMA)
 
 typedef enum Status {
     FOREACH_STATUS(ENUMERATE),

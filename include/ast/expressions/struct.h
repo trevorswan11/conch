@@ -24,14 +24,12 @@ typedef struct {
 typedef struct {
     Expression base;
     ArrayList  members;
-    ArrayList  statements;
 } StructExpression;
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc);
 
 TRY_STATUS struct_expression_create(Token              start_token,
                                     ArrayList          members,
-                                    ArrayList          statements,
                                     StructExpression** struct_expr,
                                     memory_alloc_fn    memory_alloc);
 

@@ -1,10 +1,10 @@
 #include <assert.h>
-#include <stdio.h>
 
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
+#include "ast/expressions/expression.h"
 #include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
@@ -13,17 +13,24 @@
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/string.h"
+#include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
+#include "ast/node.h"
 #include "ast/statements/block.h"
 #include "ast/statements/statement.h"
 
+#include "lexer/token.h"
 #include "parser/expression_parsers.h"
+#include "parser/parser.h"
+#include "parser/precedence.h"
 #include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
 #include "util/alphanum.h"
+#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
+#include "util/status.h"
 
 static inline TRY_STATUS record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;
@@ -190,7 +197,7 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
 TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
     const Token start_token = p->current_token;
     assert(p->primitives.buffer);
-    *initialized = false;
+    bool is_default_initialized = false;
 
     TypeExpression* type;
     if (parser_peek_token_is(p, WALRUS)) {
@@ -198,13 +205,13 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
             start_token, IMPLICIT, IMPLICIT_TYPE, &type, p->allocator.memory_alloc));
 
         UNREACHABLE_IF_ERROR(parser_next_token(p));
-        *initialized = true;
+        is_default_initialized = true;
     } else if (parser_peek_token_is(p, COLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         PROPAGATE_IF_ERROR(explicit_type_parse(p, start_token, &type));
 
         if (parser_peek_token_is(p, ASSIGN)) {
-            *initialized = true;
+            is_default_initialized = true;
             UNREACHABLE_IF_ERROR(parser_next_token(p));
         }
     } else {
@@ -215,7 +222,8 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
     // Advance again to prepare for rhs
     PROPAGATE_IF_ERROR(parser_next_token(p));
 
-    *expression = (Expression*)type;
+    *expression  = (Expression*)type;
+    *initialized = is_default_initialized;
     return SUCCESS;
 }
 
@@ -518,9 +526,93 @@ TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** e
 }
 
 TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
-    MAYBE_UNUSED(p);
-    MAYBE_UNUSED(expression);
-    return NOT_IMPLEMENTED;
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LBRACE));
+
+    ArrayList members;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&members, 4, sizeof(StructMember), p->allocator));
+    while (true) {
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
+                              free_struct_member_list(&members, p->allocator.free_alloc));
+
+        Expression* ident_expr;
+        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident_expr),
+                              free_struct_member_list(&members, p->allocator.free_alloc));
+
+        Expression* type_expr;
+        bool        has_default_value;
+        PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &has_default_value), {
+            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+            free_struct_member_list(&members, p->allocator.free_alloc);
+        });
+
+        // Struct members must have explicit type declarations
+        TypeExpression* type = (TypeExpression*)type_expr;
+        if (type->type.tag == IMPLICIT) {
+            const Token error_token = p->current_token;
+            IGNORE_STATUS(parser_put_status_error(
+                p, STRUCT_MEMBER_NOT_EXPLICIT, error_token.line, error_token.column));
+
+            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+            type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
+            free_struct_member_list(&members, p->allocator.free_alloc);
+
+            return STRUCT_MEMBER_NOT_EXPLICIT;
+        }
+
+        // The type parser leaves with the current token on assignment in this case
+        Expression* default_value = NULL;
+        if (has_default_value) {
+            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &default_value), {
+                identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+                type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
+                free_struct_member_list(&members, p->allocator.free_alloc);
+            });
+        }
+
+        // Now we can create the member and store its data pointers
+        const StructMember member = (StructMember){
+            .name          = (IdentifierExpression*)ident_expr,
+            .type          = type,
+            .default_value = default_value,
+        };
+
+        PROPAGATE_IF_ERROR_DO(array_list_push(&members, &member), {
+            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+            type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
+            free_struct_member_list(&members, p->allocator.free_alloc);
+        });
+
+        // All members require a trailing comma!
+        if (has_default_value && parser_peek_token_is(p, COMMA)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+        } else if (!parser_current_token_is(p, COMMA)) {
+            const Token error_token = p->current_token;
+            IGNORE_STATUS(parser_put_status_error(
+                p, MISSING_TRAILING_COMMA, error_token.line, error_token.column));
+            free_struct_member_list(&members, p->allocator.free_alloc);
+            return MISSING_TRAILING_COMMA;
+        }
+
+        // We only handle members here as methods are in impl blocks
+        if (parser_peek_token_is(p, RBRACE)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            if (parser_peek_token_is(p, SEMICOLON)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+            }
+
+            break;
+        }
+    }
+
+    StructExpression* struct_expr;
+    PROPAGATE_IF_ERROR_DO(
+        struct_expression_create(start_token, members, &struct_expr, p->allocator.memory_alloc),
+        free_struct_member_list(&members, p->allocator.free_alloc));
+
+    *expression = (Expression*)struct_expr;
+    return SUCCESS;
 }
 
 TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
@@ -553,19 +645,21 @@ TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
             });
         }
 
-        // All variants require a trailing comma!
-        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
-            free_enum_variant_list(&variants, p->allocator.free_alloc);
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
-        });
-
         EnumVariant variant = (EnumVariant){.name = ident, .value = value};
         PROPAGATE_IF_ERROR_DO(array_list_push(&variants, &variant), {
             free_enum_variant_list(&variants, p->allocator.free_alloc);
             identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
         });
+
+        // All variants require a trailing comma!
+        if (STATUS_ERR(parser_expect_peek(p, COMMA))) {
+            const Token error_token = p->current_token;
+            IGNORE_STATUS(parser_put_status_error(
+                p, MISSING_TRAILING_COMMA, error_token.line, error_token.column));
+            free_enum_variant_list(&variants, p->allocator.free_alloc);
+            return MISSING_TRAILING_COMMA;
+        }
 
         // A terminal delimiter ends the enum, and can be followed by a semicolon
         if (parser_peek_token_is(p, RBRACE)) {

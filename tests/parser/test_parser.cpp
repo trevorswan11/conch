@@ -1,5 +1,6 @@
 #include "catch_amalgamated.hpp"
 
+#include <cstdint>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,10 +18,12 @@ extern "C" {
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
+#include "ast/expressions/expression.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
@@ -908,6 +911,7 @@ TEST_CASE("Enum declarations") {
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
                                {"Expected token COMMA, found RBRACE [Ln 1, Col 16]",
+                                "MISSING_TRAILING_COMMA [Ln 1, Col 14]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
                                false);
         }
@@ -917,6 +921,7 @@ TEST_CASE("Enum declarations") {
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
                                {"Expected token COMMA, found IDENT [Ln 1, Col 13]",
+                                "MISSING_TRAILING_COMMA [Ln 1, Col 11]",
                                 "No prefix parse function for COMMA found [Ln 1, Col 14]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
                                false);
@@ -927,7 +932,128 @@ TEST_CASE("Enum declarations") {
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
                                {"Expected token COMMA, found IDENT [Ln 1, Col 10]",
+                                "MISSING_TRAILING_COMMA [Ln 1, Col 8]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 14]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("Struct declarations") {
+    struct StructMemberTestCase {
+        std::string            member_name;
+        std::string            type_name;
+        bool                   nullable      = false;
+        bool                   primitive     = true;
+        std::optional<int64_t> default_value = std::nullopt;
+    };
+
+    SECTION("Correctly formed structs") {
+        const char* inputs[] = {
+            "struct { a: int, }",
+            "struct { a: int, b: uint, }",
+        };
+
+        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+        const std::vector<StructMemberTestCase> expected_member_lists[] = {
+            {{"a", "int"}},
+            {{"a", "int"}, {"b", "uint"}},
+        };
+        const size_t expecteds_size =
+            sizeof(expected_member_lists) / sizeof(expected_member_lists[0]);
+
+        REQUIRE(inputs_size == expecteds_size);
+        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            const char* input            = inputs[test_idx];
+            const auto  expected_members = expected_member_lists[test_idx];
+
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
+            StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+
+            REQUIRE(struct_expr->members.length == expected_members.size());
+            for (size_t i = 0; i < struct_expr->members.length; i++) {
+                StructMember member;
+                REQUIRE(STATUS_OK(array_list_get(&struct_expr->members, i, &member)));
+                REQUIRE(member.name);
+                REQUIRE(member.type);
+
+                StructMemberTestCase expected = expected_members[i];
+                test_identifier_expression((Expression*)member.name, expected.member_name);
+                test_type_expression((Expression*)member.type,
+                                     expected.nullable,
+                                     expected.primitive,
+                                     TypeTag::EXPLICIT,
+                                     ExplicitTypeTag::EXPLICIT_IDENT,
+                                     expected.type_name);
+
+                if (expected.default_value.has_value()) {
+                    REQUIRE(member.default_value);
+                    test_number_expression<int64_t>(member.default_value,
+                                                    expected.default_value.value());
+                } else {
+                    REQUIRE_FALSE(member.default_value);
+                }
+            }
+        }
+    }
+
+    SECTION("Malformed struct expressions") {
+        SECTION("Missing trailing comma") {
+            const char*   input = "struct { a: int, b: int }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"MISSING_TRAILING_COMMA [Ln 1, Col 25]"}, false);
+        }
+
+        SECTION("Missing internal comma") {
+            const char*   input = "struct { a: int, b: int c: int, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"MISSING_TRAILING_COMMA [Ln 1, Col 25]",
+                                "No prefix parse function for COLON found [Ln 1, Col 26]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 28]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 31]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 33]"},
+                               false);
+        }
+
+        SECTION("All commas omitted") {
+            const char*   input = "struct { a: int b: int c: int }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"MISSING_TRAILING_COMMA [Ln 1, Col 17]",
+                                "No prefix parse function for COLON found [Ln 1, Col 18]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
+                                "No prefix parse function for COLON found [Ln 1, Col 25]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 27]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 31]"},
+                               false);
+        }
+
+        SECTION("Erroneous declaration") {
+            const char*   input = "struct { const a: int = 1; }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"Expected token IDENT, found CONST [Ln 1, Col 10]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 28]"},
+                               false);
+        }
+
+        SECTION("Implicit member type declaration") {
+            const char*   input = "struct { a := 1, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"STRUCT_MEMBER_NOT_EXPLICIT [Ln 1, Col 15]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 16]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 18]"},
                                false);
         }
     }
