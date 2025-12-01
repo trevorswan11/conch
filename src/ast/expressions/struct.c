@@ -45,6 +45,7 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
     StructExpression* struct_expr = (StructExpression*)node;
     free_struct_member_list(&struct_expr->members, free_alloc);
+    free_alloc(struct_expr);
 }
 
 TRY_STATUS
