@@ -3,6 +3,7 @@
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+#include "ast/statements/impl.h"
 #include "ast/statements/jump.h"
 
 #include "parser/parser.h"
@@ -14,3 +15,4 @@ TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt);
 TRY_STATUS jump_statement_parse(Parser* p, JumpStatement** stmt);
 TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt);
 TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt);
+TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt);

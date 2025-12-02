@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "ast/statements/impl.h"
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
 #include "parser/statement_parsers.h"
@@ -14,6 +15,7 @@
 #include "ast/statements/jump.h"
 
 #include "util/containers/string_builder.h"
+#include "util/status.h"
 
 static inline TRY_STATUS _init_prefix(HashSet* prefix_set, Allocator allocator) {
     const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
@@ -349,6 +351,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
     case BREAK:
     case RETURN:
         PROPAGATE_IF_ERROR(jump_statement_parse(p, (JumpStatement**)stmt));
+        break;
+    case IMPL:
+        PROPAGATE_IF_ERROR(impl_statement_parse(p, (ImplStatement**)stmt));
         break;
     default:
         PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));

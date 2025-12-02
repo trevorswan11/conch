@@ -24,11 +24,15 @@ static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_VOID,
 };
 
-typedef struct TypeExpression TypeExpression;
+typedef struct TypeExpression   TypeExpression;
+typedef struct StructExpression StructExpression;
+typedef struct EnumExpression   EnumExpression;
 
 typedef enum {
     EXPLICIT_IDENT,
     EXPLICIT_FN,
+    EXPLICIT_STRUCT,
+    EXPLICIT_ENUM,
 } ExplicitTypeTag;
 
 typedef struct {
@@ -39,6 +43,8 @@ typedef struct {
 typedef union {
     IdentifierExpression* ident_type_name;
     ExplicitFunctionType  function_type;
+    StructExpression*     struct_type;
+    EnumExpression*       enum_type;
 } ExplicitTypeUnion;
 
 typedef struct {

@@ -17,7 +17,7 @@ TRY_STATUS decl_statement_create(Token                 start_token,
         return UNEXPECTED_TOKEN;
     }
 
-    // Theres some behavior to check for wit uninitialized decls
+    // There's some behavior to check for wit uninitialized decls
     if (!value) {
         if (start_token.type == CONST) {
             return CONST_DECL_MISSING_VALUE;
@@ -143,9 +143,7 @@ type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     if (!sb) {
         return NULL_PARAMETER;
     }
-
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "type"));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "type "));
 
     TypeDeclStatement* d          = (TypeDeclStatement*)node;
     Node*              ident_node = (Node*)d->ident;

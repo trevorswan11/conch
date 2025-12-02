@@ -1,0 +1,54 @@
+#include <assert.h>
+
+#include "ast/statements/impl.h"
+
+TRY_STATUS
+impl_statement_create(Token                 start_token,
+                      IdentifierExpression* parent,
+                      BlockStatement*       implementation,
+                      ImplStatement**       impl_stmt,
+                      memory_alloc_fn       memory_alloc) {
+    assert(memory_alloc);
+    assert(implementation->statements.length > 0);
+
+    ImplStatement* impl = memory_alloc(sizeof(ImplStatement));
+    if (!impl) {
+        return ALLOCATION_FAILED;
+    }
+
+    *impl = (ImplStatement){
+        .base           = STATEMENT_INIT(IMPL_VTABLE, start_token),
+        .parent         = parent,
+        .implementation = implementation,
+    };
+
+    *impl_stmt = impl;
+    return SUCCESS;
+}
+
+void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+    ASSERT_NODE(node);
+    assert(free_alloc);
+
+    ImplStatement* impl = (ImplStatement*)node;
+    identifier_expression_destroy((Node*)impl->parent, free_alloc);
+    block_statement_destroy((Node*)impl->implementation, free_alloc);
+
+    free_alloc(impl);
+}
+
+TRY_STATUS impl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+    ASSERT_NODE(node);
+    if (!sb) {
+        return NULL_PARAMETER;
+    }
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "impl "));
+
+    ImplStatement* impl = (ImplStatement*)node;
+    PROPAGATE_IF_ERROR(identifier_expression_reconstruct((Node*)impl->parent, symbol_map, sb));
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)impl->implementation, symbol_map, sb));
+
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
+    return SUCCESS;
+}

@@ -12,6 +12,7 @@
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/single.h"
 #include "ast/expressions/string.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
@@ -150,45 +151,82 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             type_expression_create(
                 start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
             identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
-    } else if (parser_peek_token_is(p, FUNCTION)) {
+    } else {
         const Token type_start = p->current_token;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
-        bool            contains_default_param;
-        ArrayList       parameters;
-        TypeExpression* return_type;
-        PROPAGATE_IF_ERROR(
-            function_definition_parse(p, &parameters, &return_type, &contains_default_param));
+        switch (p->current_token.type) {
+        case FUNCTION: {
+            bool            contains_default_param;
+            ArrayList       parameters;
+            TypeExpression* return_type;
+            PROPAGATE_IF_ERROR(
+                function_definition_parse(p, &parameters, &return_type, &contains_default_param));
 
-        // Default values in function types make no sense to allow, but shouldn't halt parsing
-        if (contains_default_param) {
+            // Default values in function types make no sense to allow
+            if (contains_default_param) {
+                PROPAGATE_IF_ERROR_DO(
+                    parser_put_status_error(
+                        p, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
+                    {
+                        free_parameter_list(&parameters);
+                        type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                    });
+            }
+
+            explicit_union.explicit_type.tag     = EXPLICIT_FN;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .function_type =
+                    (ExplicitFunctionType){
+                        .fn_type_params = parameters,
+                        .return_type    = return_type,
+                    },
+            };
+
             PROPAGATE_IF_ERROR_DO(
-                parser_put_status_error(
-                    p, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
+                type_expression_create(
+                    start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
                 {
                     free_parameter_list(&parameters);
                     type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
                 });
+            break;
         }
+        case STRUCT: {
+            Expression* struct_expr;
+            PROPAGATE_IF_ERROR(struct_expression_parse(p, &struct_expr));
+            StructExpression* struct_type = (StructExpression*)struct_expr;
 
-        explicit_union.explicit_type.tag     = EXPLICIT_FN;
-        explicit_union.explicit_type.variant = (ExplicitTypeUnion){
-            .function_type =
-                (ExplicitFunctionType){
-                    .fn_type_params = parameters,
-                    .return_type    = return_type,
-                },
-        };
+            explicit_union.explicit_type.tag     = EXPLICIT_STRUCT;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .struct_type = struct_type,
+            };
 
-        PROPAGATE_IF_ERROR_DO(
-            type_expression_create(
-                start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
-            {
-                free_parameter_list(&parameters);
-                type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
-            });
-    } else {
-        return UNEXPECTED_TOKEN;
+            PROPAGATE_IF_ERROR_DO(
+                type_expression_create(
+                    start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
+                struct_expression_destroy((Node*)struct_type, p->allocator.free_alloc));
+            break;
+        }
+        case ENUM: {
+            Expression* enum_expr;
+            PROPAGATE_IF_ERROR(enum_expression_parse(p, &enum_expr));
+            EnumExpression* enum_type = (EnumExpression*)enum_expr;
+
+            explicit_union.explicit_type.tag     = EXPLICIT_ENUM;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .enum_type = enum_type,
+            };
+
+            PROPAGATE_IF_ERROR_DO(
+                type_expression_create(
+                    start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
+                enum_expression_destroy((Node*)enum_type, p->allocator.free_alloc));
+            break;
+        }
+        default:
+            return UNEXPECTED_TOKEN;
+        }
     }
 
     return SUCCESS;
@@ -219,8 +257,10 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
         return UNEXPECTED_TOKEN;
     }
 
-    // Advance again to prepare for rhs
-    PROPAGATE_IF_ERROR(parser_next_token(p));
+    // Try to advance again to prepare for rhs
+    if (p->lexer_index < p->lexer->token_accumulator.length) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
 
     *expression  = (Expression*)type;
     *initialized = is_default_initialized;
@@ -625,11 +665,10 @@ TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
                               free_enum_variant_list(&variants, p->allocator.free_alloc));
 
-        IdentifierExpression* ident;
-        PROPAGATE_IF_ERROR_DO(
-            identifier_expression_create(
-                p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc),
-            free_enum_variant_list(&variants, p->allocator.free_alloc));
+        Expression* ident_expr;
+        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident_expr),
+                              free_enum_variant_list(&variants, p->allocator.free_alloc));
+        IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
         Expression* value = NULL;
         if (parser_peek_token_is(p, ASSIGN)) {
@@ -678,5 +717,20 @@ TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
         free_enum_variant_list(&variants, p->allocator.free_alloc));
 
     *expression = (Expression*)enum_expr;
+    return SUCCESS;
+}
+
+TRY_STATUS nil_expression_parse(Parser* p, Expression** expression) {
+    NilExpression* nil;
+    PROPAGATE_IF_ERROR(nil_expression_create(p->current_token, &nil, p->allocator.memory_alloc));
+    *expression = (Expression*)nil;
+    return SUCCESS;
+}
+
+TRY_STATUS continue_expression_parse(Parser* p, Expression** expression) {
+    ContinueExpression* continue_expr;
+    PROPAGATE_IF_ERROR(
+        continue_expression_create(p->current_token, &continue_expr, p->allocator.memory_alloc));
+    *expression = (Expression*)continue_expr;
     return SUCCESS;
 }

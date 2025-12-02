@@ -1,6 +1,8 @@
 #include <assert.h>
-#include <stdio.h>
 
+#include "ast/expressions/expression.h"
+#include "ast/statements/block.h"
+#include "ast/statements/impl.h"
 #include "lexer/token.h"
 
 #include "ast/expressions/identifier.h"
@@ -9,13 +11,15 @@
 #include "parser/expression_parsers.h"
 #include "parser/statement_parsers.h"
 
+#include "parser/parser.h"
 #include "util/allocator.h"
+#include "util/status.h"
 
 TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
-    const Token start_token = p->current_token;
 
+    const Token start_token = p->current_token;
     PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
 
     IdentifierExpression* ident;
@@ -60,8 +64,8 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
 TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
-    const Token start_token = p->current_token;
 
+    const Token start_token = p->current_token;
     PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
 
     IdentifierExpression* ident;
@@ -175,5 +179,46 @@ TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
     }
 
     *stmt = block;
+    return SUCCESS;
+}
+
+TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
+
+    Expression* ident_expr;
+    PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
+    IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE),
+                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+
+    BlockStatement* block;
+    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &block),
+                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+
+    if (block->statements.length == 0) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, EMPTY_IMPL_BLOCK, start_token.line, start_token.column));
+
+        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        return EMPTY_IMPL_BLOCK;
+    }
+
+    ImplStatement* impl;
+    PROPAGATE_IF_ERROR_DO(
+        impl_statement_create(start_token, ident, block, &impl, p->allocator.memory_alloc), {
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        });
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *stmt = impl;
     return SUCCESS;
 }

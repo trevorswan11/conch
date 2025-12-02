@@ -21,7 +21,7 @@ typedef struct {
     Expression*           default_value;
 } StructMember;
 
-typedef struct {
+typedef struct StructExpression {
     Expression base;
     ArrayList  members;
 } StructExpression;

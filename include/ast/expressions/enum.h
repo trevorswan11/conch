@@ -19,7 +19,7 @@ typedef struct {
     Expression*           value;
 } EnumVariant;
 
-typedef struct {
+typedef struct EnumExpression {
     Expression base;
     ArrayList  variants;
 } EnumExpression;

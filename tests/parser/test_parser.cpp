@@ -27,11 +27,13 @@ extern "C" {
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+#include "ast/statements/impl.h"
 #include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
 #include "lexer/token.h"
 #include "util/containers/array_list.h"
+#include "util/mem.h"
 #include "util/status.h"
 }
 
@@ -661,7 +663,8 @@ TEST_CASE("Function literals") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
-    const auto test_parameters = [](ArrayList* actuals, std::vector<TestParameter> expecteds) {
+    const auto test_parameters = [](const ArrayList*           actuals,
+                                    std::vector<TestParameter> expecteds) {
         REQUIRE(actuals->length == expecteds.size());
         for (size_t i = 0; i < actuals->length; i++) {
             Parameter parameter;
@@ -737,9 +740,7 @@ TEST_CASE("Function literals") {
         SECTION("Incorrect declaration with missing return type") {
             const char*   input = "var add: fn(a: int, b: int):;";
             ParserFixture pf(input);
-            check_parse_errors(pf.parser(),
-                               {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 28]",
-                                "No prefix parse function for SEMICOLON found [Ln 1, Col 29]"});
+            check_parse_errors(pf.parser(), {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 28]"});
         }
 
         SECTION("Incorrect declaration with both default") {
@@ -855,6 +856,25 @@ TEST_CASE("Enum declarations") {
         std::optional<int64_t> expected_value = std::nullopt;
     };
 
+    const auto test_enum_variants = [](const ArrayList*                 variants,
+                                       std::vector<EnumVariantTestCase> expected_variants) {
+        REQUIRE(variants->length == expected_variants.size());
+        for (size_t i = 0; i < variants->length; i++) {
+            EnumVariant variant;
+            REQUIRE(STATUS_OK(array_list_get(variants, i, &variant)));
+            REQUIRE(variant.name);
+
+            EnumVariantTestCase expected = expected_variants[i];
+            REQUIRE(expected.expected_name == variant.name->name.ptr);
+
+            if (expected.expected_value.has_value()) {
+                test_number_expression<int64_t>(variant.value, expected.expected_value.value());
+            } else {
+                REQUIRE_FALSE(variant.value);
+            }
+        }
+    };
+
     SECTION("Correctly formed enums") {
         const char* inputs[] = {
             "enum { RED, BLUE, GREEN, }",
@@ -887,22 +907,36 @@ TEST_CASE("Enum declarations") {
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
             EnumExpression*      enum_expr = (EnumExpression*)expr_stmt->expression;
 
-            REQUIRE(enum_expr->variants.length == expected_variants.size());
-            for (size_t i = 0; i < enum_expr->variants.length; i++) {
-                EnumVariant variant;
-                REQUIRE(STATUS_OK(array_list_get(&enum_expr->variants, i, &variant)));
-                REQUIRE(variant.name);
-
-                EnumVariantTestCase expected = expected_variants[i];
-                REQUIRE(expected.expected_name == variant.name->name.ptr);
-
-                if (expected.expected_value.has_value()) {
-                    test_number_expression<int64_t>(variant.value, expected.expected_value.value());
-                } else {
-                    REQUIRE_FALSE(variant.value);
-                }
-            }
+            test_enum_variants(&enum_expr->variants, expected_variants);
         }
+    }
+
+    SECTION("Enums as types") {
+        const char*                            input = "var a: enum { RED, BLUE = 100, GREEN, };";
+        const std::vector<EnumVariantTestCase> expected_variants_list = {
+            {"RED"}, {"BLUE", 100}, {"GREEN"}};
+
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        test_decl_statement(stmt, false, "a");
+        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+
+        TypeExpression* type_expr = decl_stmt->type;
+        test_type_expression((Expression*)type_expr,
+                             false,
+                             false,
+                             TypeTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_ENUM,
+                             {});
+        EnumExpression* enum_type = type_expr->type.variant.explicit_type.variant.enum_type;
+
+        test_enum_variants(&enum_type->variants, expected_variants_list);
     }
 
     SECTION("Malformed enum expressions") {
@@ -948,17 +982,45 @@ TEST_CASE("Struct declarations") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
+    const auto test_struct_members = [](const ArrayList*                  members,
+                                        std::vector<StructMemberTestCase> expected_members) {
+        REQUIRE(members->length == expected_members.size());
+        for (size_t i = 0; i < members->length; i++) {
+            StructMember member;
+            REQUIRE(STATUS_OK(array_list_get(members, i, &member)));
+            REQUIRE(member.name);
+            REQUIRE(member.type);
+
+            StructMemberTestCase expected = expected_members[i];
+            test_identifier_expression((Expression*)member.name, expected.member_name);
+            test_type_expression((Expression*)member.type,
+                                 expected.nullable,
+                                 expected.primitive,
+                                 TypeTag::EXPLICIT,
+                                 ExplicitTypeTag::EXPLICIT_IDENT,
+                                 expected.type_name);
+
+            if (expected.default_value.has_value()) {
+                REQUIRE(member.default_value);
+                test_number_expression<int64_t>(member.default_value,
+                                                expected.default_value.value());
+            } else {
+                REQUIRE_FALSE(member.default_value);
+            }
+        }
+    };
+
     SECTION("Correctly formed structs") {
         const char* inputs[] = {
             "struct { a: int, }",
-            "struct { a: int, b: uint, }",
+            "struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
         };
 
         const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const std::vector<StructMemberTestCase> expected_member_lists[] = {
             {{"a", "int"}},
-            {{"a", "int"}, {"b", "uint"}},
+            {{"a", "int"}, {"b", "uint"}, {"c", "Woah", true, false}, {"d", "int", false, true, 1}},
         };
         const size_t expecteds_size =
             sizeof(expected_member_lists) / sizeof(expected_member_lists[0]);
@@ -979,31 +1041,36 @@ TEST_CASE("Struct declarations") {
             ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
             StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
 
-            REQUIRE(struct_expr->members.length == expected_members.size());
-            for (size_t i = 0; i < struct_expr->members.length; i++) {
-                StructMember member;
-                REQUIRE(STATUS_OK(array_list_get(&struct_expr->members, i, &member)));
-                REQUIRE(member.name);
-                REQUIRE(member.type);
-
-                StructMemberTestCase expected = expected_members[i];
-                test_identifier_expression((Expression*)member.name, expected.member_name);
-                test_type_expression((Expression*)member.type,
-                                     expected.nullable,
-                                     expected.primitive,
-                                     TypeTag::EXPLICIT,
-                                     ExplicitTypeTag::EXPLICIT_IDENT,
-                                     expected.type_name);
-
-                if (expected.default_value.has_value()) {
-                    REQUIRE(member.default_value);
-                    test_number_expression<int64_t>(member.default_value,
-                                                    expected.default_value.value());
-                } else {
-                    REQUIRE_FALSE(member.default_value);
-                }
-            }
+            test_struct_members(&struct_expr->members, expected_members);
         }
+    }
+
+    SECTION("Structs as types") {
+        const char*                             input = "var a: struct { a: int, b: ?uint, };";
+        const std::vector<StructMemberTestCase> expected_member_list = {{"a", "int"},
+                                                                        {"b", "uint", true}};
+
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        test_decl_statement(stmt, false, "a");
+        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+
+        TypeExpression* type_expr = decl_stmt->type;
+        test_type_expression((Expression*)type_expr,
+                             false,
+                             false,
+                             TypeTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_STRUCT,
+                             {});
+        StructExpression* struct_type = type_expr->type.variant.explicit_type.variant.struct_type;
+
+        test_struct_members(&struct_type->members, expected_member_list);
     }
 
     SECTION("Malformed struct expressions") {
@@ -1056,5 +1123,77 @@ TEST_CASE("Struct declarations") {
                                 "No prefix parse function for RBRACE found [Ln 1, Col 18]"},
                                false);
         }
+    }
+}
+
+TEST_CASE("Single-line expressions") {
+    SECTION("Nil expressions") {
+        const char*   input = "nil";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        Node* nil_node = (Node*)expr_stmt->expression;
+        REQUIRE(slice_equals_str_z(&nil_node->start_token.slice, "nil"));
+    }
+
+    SECTION("Continue expressions") {
+        const char*   input = "continue";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+
+        Node* continue_node = (Node*)expr_stmt->expression;
+        REQUIRE(slice_equals_str_z(&continue_node->start_token.slice, "continue"));
+    }
+}
+
+TEST_CASE("Impl statements") {
+    SECTION("Correct block") {
+        const char*   input = "impl Obj { const a := 1; }";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ImplStatement* impl_stmt = (ImplStatement*)stmt;
+
+        test_identifier_expression((Expression*)impl_stmt->parent, "Obj");
+
+        REQUIRE(impl_stmt->implementation->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&impl_stmt->implementation->statements, 0, &stmt)));
+        test_decl_statement(
+            stmt, true, "a", false, false, TypeTag::IMPLICIT, ExplicitTypeTag::EXPLICIT_IDENT, {});
+    }
+
+    SECTION("Missing ident") {
+        const char*   input = "impl { const a := 1; }";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(),
+                           {"Expected token IDENT, found LBRACE [Ln 1, Col 6]",
+                            "No prefix parse function for LBRACE found [Ln 1, Col 6]",
+                            "No prefix parse function for RBRACE found [Ln 1, Col 22]"},
+                           false);
+    }
+
+    SECTION("Empty implementation") {
+        const char*   input = "impl Obj {}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"}, false);
     }
 }

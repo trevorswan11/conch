@@ -1,7 +1,11 @@
 #include <assert.h>
 
+#include "ast/expressions/enum.h"
 #include "ast/expressions/function.h"
+#include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
+
+#include "util/status.h"
 
 TRY_STATUS
 type_expression_create(Token            start_token,
@@ -44,6 +48,18 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
             type_expression_destroy((Node*)function_type.return_type, free_alloc);
             break;
         }
+        case EXPLICIT_STRUCT: {
+            StructExpression* s = explicit_type.variant.struct_type;
+            struct_expression_destroy((Node*)s, free_alloc);
+            s = NULL;
+            break;
+        }
+        case EXPLICIT_ENUM: {
+            EnumExpression* e = explicit_type.variant.enum_type;
+            enum_expression_destroy((Node*)e, free_alloc);
+            e = NULL;
+            break;
+        }
         }
     }
 
@@ -80,8 +96,14 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
                 type_expression_reconstruct((Node*)function_type.return_type, symbol_map, sb));
             break;
         }
-        default:
-            UNREACHABLE;
+        case EXPLICIT_STRUCT:
+            PROPAGATE_IF_ERROR(struct_expression_reconstruct(
+                (Node*)explicit_type.variant.struct_type, symbol_map, sb));
+            break;
+        case EXPLICIT_ENUM:
+            PROPAGATE_IF_ERROR(enum_expression_reconstruct(
+                (Node*)explicit_type.variant.enum_type, symbol_map, sb));
+            break;
         }
     } else {
         PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " :"));
