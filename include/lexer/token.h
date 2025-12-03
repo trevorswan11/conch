@@ -40,7 +40,7 @@
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
         PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(FOR),   \
         PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
-        PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL),                                            \
+        PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE),                           \
                                                                                                   \
         PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(BYTE_TYPE), PROCESS(FLOAT_TYPE),           \
         PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),                             \
@@ -48,9 +48,8 @@
         PROCESS(ILLEGAL)
 
 // Tokens TODO:
-// - MATCH w/ FAT_ARROW
 // - FOR & WHILE loops
-// - IMPORT statements
+// - ARRAY literals
 
 typedef enum TokenType {
     FOREACH_TOKEN(ENUMERATE),

@@ -42,6 +42,7 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS enum_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS nil_expression_parse(Parser* p, Expression** expression);
 TRY_STATUS continue_expression_parse(Parser* p, Expression** expression);
+TRY_STATUS match_expression_parse(Parser* p, Expression** expression);
 
 typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
 typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -89,6 +90,7 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {ENUM, &enum_expression_parse},
     {NIL, &nil_expression_parse},
     {CONTINUE, &continue_expression_parse},
+    {MATCH, &match_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
@@ -153,4 +155,4 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {SHL_ASSIGN, &infix_expression_parse},   {SHR_ASSIGN, &infix_expression_parse},
     {NOT_ASSIGN, &infix_expression_parse},   {XOR_ASSIGN, &infix_expression_parse},
     {COMMA, &infix_expression_parse},        {COLON_COLON, &infix_expression_parse},
-};
+    {ORELSE, &infix_expression_parse}};

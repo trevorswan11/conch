@@ -18,6 +18,7 @@
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
+#include "ast/expressions/match.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/single.h"
 #include "ast/expressions/string.h"
@@ -733,5 +734,101 @@ TRY_STATUS continue_expression_parse(Parser* p, Expression** expression) {
     PROPAGATE_IF_ERROR(
         continue_expression_create(p->current_token, &continue_expr, p->allocator.memory_alloc));
     *expression = (Expression*)continue_expr;
+    return SUCCESS;
+}
+
+TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* match_cond_expr;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &match_cond_expr));
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE),
+                          NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc));
+
+    ArrayList arms;
+    PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&arms, 4, sizeof(MatchArm), p->allocator),
+                          NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc));
+    while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
+        // Current token which is either the LBRACE at the start or a comma before parsing
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        Expression* pattern;
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &pattern),
+                              NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc));
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, FAT_ARROW), {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+        });
+
+        // Guard the statement from being global/declaration based
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+        });
+
+        Statement* consequence;
+        switch (p->current_token.type) {
+        case VAR:
+        case CONST:
+        case TYPE:
+        case IMPL:
+        case IMPORT:
+            IGNORE_STATUS(parser_put_status_error(
+                p, ILLEGAL_MATCH_ARM, p->current_token.line, p->current_token.column));
+
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            return ILLEGAL_MATCH_ARM;
+        default:
+            // The statement can either be a jump, expression, or block statement
+            PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &consequence), {
+                NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            });
+            break;
+        }
+
+        // As per the rest of the language, commas are required as trailing tokens
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
+        });
+
+        MatchArm arm = (MatchArm){.pattern = pattern, .dispatch = consequence};
+        PROPAGATE_IF_ERROR_DO(array_list_push(&arms, &arm), {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
+        });
+    }
+
+    // Empty match statements aren't ever allowed
+    if (arms.length == 0) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, ARMLESS_MATCH_EXPR, start_token.line, start_token.column));
+
+        NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+        free_match_arm_list(&arms, p->allocator.free_alloc);
+        return ARMLESS_MATCH_EXPR;
+    }
+
+    MatchExpression* match;
+    PROPAGATE_IF_ERROR_DO(
+        match_expression_create(
+            start_token, match_cond_expr, arms, &match, p->allocator.memory_alloc),
+        {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
+        });
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
+                          match_expression_destroy((Node*)match, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *expression = (Expression*)match;
     return SUCCESS;
 }

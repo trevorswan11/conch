@@ -23,6 +23,7 @@ extern "C" {
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
+#include "ast/expressions/match.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
@@ -323,6 +324,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"0b10111u and 4u;", 0b10111ull, TokenType::BOOLEAN_AND, 4ull},
             {"0b10111u or 4u;", 0b10111ull, TokenType::BOOLEAN_OR, 4ull},
             {"0b10111u::4u;", 0b10111ull, TokenType::COLON_COLON, 4ull},
+            {"0b10111u orelse 4u;", 0b10111ull, TokenType::ORELSE, 4ull},
         };
 
         for (const auto& t : cases) {
@@ -1184,20 +1186,19 @@ TEST_CASE("Impl statements") {
             stmt, true, "a", false, false, TypeTag::IMPLICIT, ExplicitTypeTag::EXPLICIT_IDENT, {});
     }
 
-    SECTION("Missing ident") {
-        const char*   input = "impl { const a := 1; }";
-        ParserFixture pf(input);
-        check_parse_errors(pf.parser(),
-                           {"Expected token IDENT, found LBRACE [Ln 1, Col 6]",
-                            "No prefix parse function for LBRACE found [Ln 1, Col 6]",
-                            "No prefix parse function for RBRACE found [Ln 1, Col 22]"},
-                           false);
-    }
+    SECTION("Malformed impl blocks") {
+        SECTION("Missing ident") {
+            const char*   input = "impl { const a := 1; }";
+            ParserFixture pf(input);
+            check_parse_errors(
+                pf.parser(), {"Expected token IDENT, found LBRACE [Ln 1, Col 6]"}, false);
+        }
 
-    SECTION("Empty implementation") {
-        const char*   input = "impl Obj {}";
-        ParserFixture pf(input);
-        check_parse_errors(pf.parser(), {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"}, false);
+        SECTION("Empty implementation") {
+            const char*   input = "impl Obj {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"}, false);
+        }
     }
 }
 
@@ -1223,7 +1224,6 @@ TEST_CASE("Import Statements") {
         };
         const size_t expecteds_size = sizeof(expected_imports) / sizeof(expected_imports[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
         REQUIRE(inputs_size == expecteds_size);
         for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
             const char* input    = inputs[test_idx];
@@ -1254,5 +1254,116 @@ TEST_CASE("Import Statements") {
         const char*   input = "import 1";
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {"UNEXPECTED_TOKEN [Ln 1, Col 8]"}, false);
+    }
+}
+
+TEST_CASE("Match expressions") {
+    struct MatchArmTestCase {
+        int64_t  lhs;
+        uint64_t expected_return_value;
+    };
+
+    struct MatchTestCase {
+        std::string                   expected_expr_name;
+        std::vector<MatchArmTestCase> expected_arms;
+    };
+
+    SECTION("Correct match") {
+        const char* inputs[] = {
+            "match In { 1 => return 90u;, }",
+            "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
+        };
+
+        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+        const MatchTestCase expected_matches[] = {
+            {"In", {{1, 90ull}}},
+            {"Out", {{1, 90ull}, {2, 0b1011ull}}},
+        };
+        const size_t expecteds_size = sizeof(expected_matches) / sizeof(expected_matches[0]);
+
+        REQUIRE(inputs_size == expecteds_size);
+        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            const char* input    = inputs[test_idx];
+            const auto  expected = expected_matches[test_idx];
+
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
+            MatchExpression*     match_expr = (MatchExpression*)expr_stmt->expression;
+
+            test_identifier_expression(match_expr->expression, expected.expected_expr_name);
+            REQUIRE(match_expr->arms.length == expected.expected_arms.size());
+
+            MatchArm arm;
+            for (size_t arm_idx = 0; arm_idx < match_expr->arms.length; arm_idx++) {
+                MatchArmTestCase expected_arm = expected.expected_arms[arm_idx];
+
+                REQUIRE(STATUS_OK(array_list_get(&match_expr->arms, arm_idx, &arm)));
+                test_number_expression<int64_t>(arm.pattern, expected_arm.lhs);
+
+                JumpStatement* jump = (JumpStatement*)arm.dispatch;
+                test_number_expression<uint64_t>(jump->value, expected_arm.expected_return_value);
+            }
+        }
+    }
+
+    SECTION("Malformed match expressions") {
+        SECTION("No arms") {
+            const char*   input = "match Out { }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ARMLESS_MATCH_EXPR [Ln 1, Col 1]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 13]"},
+                               false);
+        }
+
+        SECTION("Standard declarations in arm") {
+            const char*   input = "match true { 1 => const a:= 1, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                                "No prefix parse function for WALRUS found [Ln 1, Col 26]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 30]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 32]"},
+                               false);
+        }
+
+        SECTION("Type declarations in arm") {
+            const char*   input = "match true { 1 => type a = Test, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                                "No prefix parse function for ASSIGN found [Ln 1, Col 26]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 32]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 34]"},
+                               false);
+        }
+
+        SECTION("Impl statements in arm") {
+            const char*   input = "match true { 1 => impl Obj { const a := 1; }, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 45]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 47]"},
+                               false);
+        }
+
+        SECTION("Type declarations in arm") {
+            const char*   input = "match true { 1 => import std, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 29]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 31]"},
+                               false);
+        }
     }
 }

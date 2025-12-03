@@ -9,6 +9,7 @@
 #include "parser/statement_parsers.h"
 
 #include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/impl.h"
@@ -358,6 +359,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
         break;
     case IMPORT:
         PROPAGATE_IF_ERROR(import_statement_parse(p, (ImportStatement**)stmt));
+        break;
+    case LBRACE:
+        PROPAGATE_IF_ERROR(block_statement_parse(p, (BlockStatement**)stmt));
         break;
     default:
         PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));

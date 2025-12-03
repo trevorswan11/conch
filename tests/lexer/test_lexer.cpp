@@ -283,7 +283,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
 TEST_CASE("Advanced next token") {
     SECTION("Keywords") {
-        const char* input = "struct true false and or enum nil is int uint float impl";
+        const char* input = "struct true false and or orelse enum nil is int uint float impl";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::STRUCT, "struct"},
@@ -291,6 +291,7 @@ TEST_CASE("Advanced next token") {
             {TokenType::FALSE, "false"},
             {TokenType::BOOLEAN_AND, "and"},
             {TokenType::BOOLEAN_OR, "or"},
+            {TokenType::ORELSE, "orelse"},
             {TokenType::ENUM, "enum"},
             {TokenType::NIL, "nil"},
             {TokenType::IS, "is"},
