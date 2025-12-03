@@ -11,7 +11,7 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IdentifierExpression {
     Expression base;
     MutSlice   name;
 } IdentifierExpression;

@@ -1,5 +1,7 @@
 #include <assert.h>
 
+#include "ast/expressions/identifier.h"
+#include "ast/statements/block.h"
 #include "ast/statements/impl.h"
 
 TRY_STATUS

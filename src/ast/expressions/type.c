@@ -2,6 +2,7 @@
 
 #include "ast/expressions/enum.h"
 #include "ast/expressions/function.h"
+#include "ast/expressions/identifier.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 

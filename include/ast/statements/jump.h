@@ -11,7 +11,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct JumpStatement {
     Statement   base;
     Expression* value;
 } JumpStatement;

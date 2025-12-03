@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
@@ -12,7 +10,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct NilExpression {
     Expression base;
 } NilExpression;
 
@@ -31,7 +29,7 @@ static const ExpressionVTable NIL_VTABLE = {
         },
 };
 
-typedef struct {
+typedef struct ContinueExpression {
     Expression base;
 } ContinueExpression;
 

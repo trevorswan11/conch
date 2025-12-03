@@ -11,7 +11,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct ExpressionStatement {
     Statement   base;
     Expression* expression;
 } ExpressionStatement;

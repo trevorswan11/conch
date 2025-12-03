@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include "ast/expressions/enum.h"
+#include "ast/expressions/identifier.h"
 
 void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     assert(variants);

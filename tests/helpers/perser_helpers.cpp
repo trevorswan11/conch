@@ -7,6 +7,7 @@
 extern "C" {
 #include "ast/expressions/bool.h"
 #include "ast/expressions/float.h"
+#include "ast/expressions/identifier.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/string.h"
 #include "ast/node.h"

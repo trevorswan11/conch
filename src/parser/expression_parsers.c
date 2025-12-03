@@ -1,5 +1,12 @@
 #include <assert.h>
 
+#include "lexer/token.h"
+
+#include "parser/expression_parsers.h"
+#include "parser/parser.h"
+#include "parser/precedence.h"
+#include "parser/statement_parsers.h"
+
 #include "ast/ast.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
@@ -19,12 +26,6 @@
 #include "ast/node.h"
 #include "ast/statements/block.h"
 #include "ast/statements/statement.h"
-
-#include "lexer/token.h"
-#include "parser/expression_parsers.h"
-#include "parser/parser.h"
-#include "parser/precedence.h"
-#include "parser/statement_parsers.h"
 
 #include "util/allocator.h"
 #include "util/alphanum.h"

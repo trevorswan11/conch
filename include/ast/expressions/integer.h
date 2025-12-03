@@ -12,7 +12,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IntegerLiteralExpression {
     Expression base;
     int64_t    value;
 } IntegerLiteralExpression;

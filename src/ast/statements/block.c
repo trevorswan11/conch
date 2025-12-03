@@ -37,7 +37,11 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 }
 
 TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
-    assert(node && symbol_map && sb);
+    ASSERT_NODE(node);
+    if (!sb) {
+        return NULL_PARAMETER;
+    }
+
     PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));
 
     BlockStatement* block = (BlockStatement*)node;

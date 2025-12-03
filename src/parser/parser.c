@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "ast/statements/impl.h"
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
 #include "parser/statement_parsers.h"
@@ -12,6 +11,8 @@
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+#include "ast/statements/impl.h"
+#include "ast/statements/import.h"
 #include "ast/statements/jump.h"
 
 #include "util/containers/string_builder.h"
@@ -354,6 +355,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
         break;
     case IMPL:
         PROPAGATE_IF_ERROR(impl_statement_parse(p, (ImplStatement**)stmt));
+        break;
+    case IMPORT:
+        PROPAGATE_IF_ERROR(import_statement_parse(p, (ImportStatement**)stmt));
         break;
     default:
         PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));

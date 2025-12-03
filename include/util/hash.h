@@ -6,7 +6,7 @@
 
 typedef uint64_t Hash;
 
-// Compares two null terminated strings lexigraphically.
+// Compares two null terminated strings lexicographically.
 //
 // Assumes that the string is null terminated, without checking.
 int compare_string_z(const void* a, const void* b);

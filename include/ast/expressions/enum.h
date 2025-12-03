@@ -1,11 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
-#include "ast/expressions/identifier.h"
 #include "ast/node.h"
 
 #include "util/allocator.h"
@@ -14,7 +11,9 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IdentifierExpression IdentifierExpression;
+
+typedef struct EnumVariant {
     IdentifierExpression* name;
     Expression*           value;
 } EnumVariant;

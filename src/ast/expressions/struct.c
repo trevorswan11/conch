@@ -1,4 +1,8 @@
+#include <assert.h>
+
+#include "ast/expressions/identifier.h"
 #include "ast/expressions/struct.h"
+#include "ast/expressions/type.h"
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);

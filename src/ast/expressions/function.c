@@ -3,6 +3,9 @@
 #include "parser/expression_parsers.h"
 
 #include "ast/expressions/function.h"
+#include "ast/expressions/identifier.h"
+#include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 
 TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param) {
     if (!p || !parameters) {

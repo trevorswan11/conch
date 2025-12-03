@@ -1,7 +1,5 @@
 #pragma once
 
-#include "ast/expressions/identifier.h"
-#include "ast/statements/block.h"
 #include "lexer/token.h"
 
 #include "ast/node.h"
@@ -12,7 +10,10 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IdentifierExpression IdentifierExpression;
+typedef struct BlockStatement       BlockStatement;
+
+typedef struct ImplStatement {
     Statement             base;
     IdentifierExpression* parent;
     BlockStatement*       implementation;

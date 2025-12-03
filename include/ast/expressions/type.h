@@ -1,12 +1,9 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "lexer/keywords.h"
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
-#include "ast/expressions/identifier.h"
 #include "ast/node.h"
 
 #include "util/allocator.h"
@@ -24,9 +21,10 @@ static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_VOID,
 };
 
-typedef struct TypeExpression   TypeExpression;
-typedef struct StructExpression StructExpression;
-typedef struct EnumExpression   EnumExpression;
+typedef struct IdentifierExpression IdentifierExpression;
+typedef struct TypeExpression       TypeExpression;
+typedef struct StructExpression     StructExpression;
+typedef struct EnumExpression       EnumExpression;
 
 typedef enum {
     EXPLICIT_IDENT,
@@ -35,7 +33,7 @@ typedef enum {
     EXPLICIT_ENUM,
 } ExplicitTypeTag;
 
-typedef struct {
+typedef struct ExplicitFunctionType {
     ArrayList       fn_type_params;
     TypeExpression* return_type;
 } ExplicitFunctionType;
@@ -47,14 +45,14 @@ typedef union {
     EnumExpression*       enum_type;
 } ExplicitTypeUnion;
 
-typedef struct {
+typedef struct ExplicitType {
     ExplicitTypeTag   tag;
     ExplicitTypeUnion variant;
     bool              nullable;
     bool              primitive;
 } ExplicitType;
 
-typedef struct {
+typedef struct ImplicitType {
     char _;
 } ImplicitType;
 
@@ -70,7 +68,7 @@ typedef union {
 
 static const TypeUnion IMPLICIT_TYPE = {.implicit_type = {'\0'}};
 
-typedef struct {
+typedef struct Type {
     TypeTag   tag;
     TypeUnion variant;
 } Type;

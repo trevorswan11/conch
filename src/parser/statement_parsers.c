@@ -1,17 +1,22 @@
 #include <assert.h>
 
-#include "ast/expressions/expression.h"
-#include "ast/statements/block.h"
-#include "ast/statements/impl.h"
 #include "lexer/token.h"
 
-#include "ast/expressions/identifier.h"
-#include "ast/expressions/type.h"
-
 #include "parser/expression_parsers.h"
+#include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
-#include "parser/parser.h"
+#include "ast/expressions/identifier.h"
+#include "ast/expressions/string.h"
+#include "ast/expressions/type.h"
+#include "ast/node.h"
+#include "ast/statements/block.h"
+#include "ast/statements/declarations.h"
+#include "ast/statements/expression.h"
+#include "ast/statements/impl.h"
+#include "ast/statements/import.h"
+#include "ast/statements/jump.h"
+
 #include "util/allocator.h"
 #include "util/status.h"
 
@@ -220,5 +225,52 @@ TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt) {
     }
 
     *stmt = impl;
+    return SUCCESS;
+}
+
+TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+
+    const Token start_token = p->current_token;
+    ImportTag   tag;
+    ImportUnion variant;
+    Expression* payload;
+
+    switch (p->peek_token.type) {
+    case IDENT: {
+        UNREACHABLE_IF_ERROR(parser_expect_peek(p, IDENT));
+        PROPAGATE_IF_ERROR(identifier_expression_parse(p, &payload));
+        IdentifierExpression* ident = (IdentifierExpression*)payload;
+
+        tag     = STANDARD;
+        variant = (ImportUnion){.standard_import = ident};
+        break;
+    }
+    case STRING: {
+        UNREACHABLE_IF_ERROR(parser_expect_peek(p, STRING));
+        PROPAGATE_IF_ERROR(string_expression_parse(p, &payload));
+        StringLiteralExpression* string = (StringLiteralExpression*)payload;
+
+        tag     = USER;
+        variant = (ImportUnion){.user_import = string};
+        break;
+    }
+    default:
+        IGNORE_STATUS(
+            parser_put_status_error(p, UNEXPECTED_TOKEN, p->peek_token.line, p->peek_token.column));
+        return UNEXPECTED_TOKEN;
+    }
+
+    ImportStatement* import;
+    PROPAGATE_IF_ERROR_DO(
+        import_statement_create(start_token, tag, variant, &import, p->allocator.memory_alloc),
+        NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *stmt = import;
     return SUCCESS;
 }

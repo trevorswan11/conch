@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
@@ -16,7 +13,7 @@
 
 typedef Expression* Argument;
 
-typedef struct {
+typedef struct CallExpression {
     Expression  base;
     Expression* function;
     ArrayList   arguments;

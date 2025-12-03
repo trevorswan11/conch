@@ -10,7 +10,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct PrefixExpression {
     Expression  base;
     Expression* rhs;
 } PrefixExpression;

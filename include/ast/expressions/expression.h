@@ -19,11 +19,11 @@
 typedef struct Expression       Expression;
 typedef struct ExpressionVTable ExpressionVTable;
 
-struct ExpressionVTable {
+typedef struct ExpressionVTable {
     NodeVTable base;
-};
+} ExpressionVTable;
 
-struct Expression {
+typedef struct Expression {
     Node                    base;
     const ExpressionVTable* vtable;
-};
+} Expression;

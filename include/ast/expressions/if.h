@@ -13,7 +13,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IfExpression {
     Expression  base;
     Expression* condition;
     Statement*  consequence;

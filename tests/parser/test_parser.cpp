@@ -20,14 +20,17 @@ extern "C" {
 #include "ast/expressions/enum.h"
 #include "ast/expressions/expression.h"
 #include "ast/expressions/function.h"
+#include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
+#include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/impl.h"
+#include "ast/statements/import.h"
 #include "ast/statements/jump.h"
 #include "ast/statements/statement.h"
 
@@ -1195,5 +1198,61 @@ TEST_CASE("Impl statements") {
         const char*   input = "impl Obj {}";
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"}, false);
+    }
+}
+
+TEST_CASE("Import Statements") {
+    struct ImportTestCase {
+        ImportTag   expected_tag;
+        std::string expected_literal;
+    };
+
+    SECTION("Correct imports") {
+        const char* inputs[] = {
+            "import std",
+            "import array;",
+            "import \"util/test.cch\"",
+        };
+
+        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+        const ImportTestCase expected_imports[] = {
+            {ImportTag::STANDARD, "std"},
+            {ImportTag::STANDARD, "array"},
+            {ImportTag::USER, "util/test.cch"},
+        };
+        const size_t expecteds_size = sizeof(expected_imports) / sizeof(expected_imports[0]);
+
+        REQUIRE(inputs_size == expecteds_size);
+        REQUIRE(inputs_size == expecteds_size);
+        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            const char* input    = inputs[test_idx];
+            const auto  expected = expected_imports[test_idx];
+
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ImportStatement* import_stmt = (ImportStatement*)stmt;
+
+            REQUIRE(import_stmt->tag == expected.expected_tag);
+            if (import_stmt->tag == ImportTag::STANDARD) {
+                test_identifier_expression((Expression*)import_stmt->variant.standard_import,
+                                           expected.expected_literal);
+            } else {
+                test_string_expression((Expression*)import_stmt->variant.user_import,
+                                       expected.expected_literal);
+            }
+        }
+    }
+
+    SECTION("Incorrect token") {
+        const char*   input = "import 1";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {"UNEXPECTED_TOKEN [Ln 1, Col 8]"}, false);
     }
 }

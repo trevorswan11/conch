@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <stdbool.h>
 
 #include "lexer/token.h"
 
@@ -12,7 +12,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct BoolLiteralExpression {
     Expression base;
     bool       value;
 } BoolLiteralExpression;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
@@ -13,7 +11,7 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct StringLiteralExpression {
     Expression base;
     MutSlice   slice;
 } StringLiteralExpression;

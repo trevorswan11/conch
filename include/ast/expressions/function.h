@@ -1,16 +1,13 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "lexer/token.h"
 
 #include "parser/parser.h"
 
 #include "ast/expressions/expression.h"
-#include "ast/expressions/type.h"
 #include "ast/node.h"
-#include "ast/statements/block.h"
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
@@ -18,7 +15,11 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef struct {
+typedef struct IdentifierExpression IdentifierExpression;
+typedef struct TypeExpression       TypeExpression;
+typedef struct BlockStatement       BlockStatement;
+
+typedef struct Parameter {
     IdentifierExpression* ident;
     TypeExpression*       type;
     Expression*           default_value;
@@ -30,7 +31,7 @@ void       free_parameter_list(ArrayList* parameters);
 TRY_STATUS
 reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
 
-typedef struct {
+typedef struct FunctionExpression {
     Expression      base;
     ArrayList       parameters;
     TypeExpression* return_type;

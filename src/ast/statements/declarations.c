@@ -1,5 +1,7 @@
 #include <assert.h>
 
+#include "ast/expressions/identifier.h"
+#include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
 
 TRY_STATUS decl_statement_create(Token                 start_token,

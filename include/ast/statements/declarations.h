@@ -2,8 +2,7 @@
 
 #include "lexer/token.h"
 
-#include "ast/expressions/identifier.h"
-#include "ast/expressions/type.h"
+#include "ast/expressions/expression.h"
 #include "ast/node.h"
 #include "ast/statements/statement.h"
 
@@ -12,8 +11,10 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-// TODO: Maybe use union for walrus vs typed assign
-typedef struct {
+typedef struct IdentifierExpression IdentifierExpression;
+typedef struct TypeExpression       TypeExpression;
+
+typedef struct DeclStatement {
     Statement             base;
     IdentifierExpression* ident;
     bool                  is_const;
@@ -39,7 +40,7 @@ static const StatementVTable DECL_VTABLE = {
         },
 };
 
-typedef struct {
+typedef struct TypeDeclStatement {
     Statement             base;
     IdentifierExpression* ident;
     Expression*           value;
