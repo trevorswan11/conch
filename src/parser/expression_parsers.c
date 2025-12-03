@@ -759,12 +759,14 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, FAT_ARROW), {
             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
         });
 
         // Guard the statement from being global/declaration based
         PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
         });
 
         Statement* consequence;
@@ -779,12 +781,14 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
 
             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
             return ILLEGAL_MATCH_ARM;
         default:
             // The statement can either be a jump, expression, or block statement
             PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &consequence), {
                 NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
                 NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
+                free_match_arm_list(&arms, p->allocator.free_alloc);
             });
             break;
         }
@@ -794,6 +798,7 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
         });
 
         MatchArm arm = (MatchArm){.pattern = pattern, .dispatch = consequence};
@@ -801,6 +806,7 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
         });
     }
 

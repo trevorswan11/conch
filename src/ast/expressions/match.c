@@ -3,7 +3,7 @@
 #include "ast/expressions/match.h"
 
 void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
-    assert(arms && arms->data && arms->item_size == sizeof(MatchArm));
+    assert(arms && arms->item_size == sizeof(MatchArm));
     assert(free_alloc);
 
     MatchArm arm;
