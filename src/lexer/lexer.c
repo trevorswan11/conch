@@ -119,14 +119,11 @@ TRY_STATUS lexer_consume(Lexer* l) {
     lexer_read_char(l);
     array_list_clear_retaining_capacity(&l->token_accumulator);
 
-    while (true) {
-        const Token token = lexer_next_token(l);
+    Token token;
+    do {
+        token = lexer_next_token(l);
         PROPAGATE_IF_ERROR(array_list_push(&l->token_accumulator, &token));
-
-        if (token.type == END) {
-            break;
-        }
-    }
+    } while (token.type != END);
 
     return array_list_shrink_to_fit(&l->token_accumulator);
 }

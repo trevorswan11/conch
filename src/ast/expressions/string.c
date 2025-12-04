@@ -44,6 +44,11 @@ string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Str
     }
     MAYBE_UNUSED(symbol_map);
 
+    // The tokenizer drops the start of multiline strings so we have to reconstruct here
+    if (node->start_token.type == MULTILINE_STRING) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "\\\\"));
+    }
+
     PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }

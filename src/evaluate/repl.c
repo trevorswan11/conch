@@ -9,6 +9,7 @@
 
 #include "util/allocator.h"
 #include "util/containers/string_builder.h"
+#include "util/status.h"
 
 static volatile sig_atomic_t interrupted = 0;
 
@@ -90,26 +91,48 @@ TRY_STATUS repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_
             return READ_ERROR;
         }
 
-        const size_t n        = strlen(stream_buffer);
-        const size_t required = stream_receiver->length + n;
-        PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(stream_receiver, required));
+        // Trim any platform line endings from the end of the buffer
+        // A chunk may not contain a line ending, indicating it exceeds BUF SIZE
+        size_t n = strlen(stream_buffer);
+        bool   chunk_includes_newline =
+            (n > 0 && (stream_buffer[n - 1] == '\n' || stream_buffer[n - 1] == '\r'));
+        while (n > 0 && (stream_buffer[n - 1] == '\n' || stream_buffer[n - 1] == '\r')) {
+            stream_buffer[n - 1] = '\0';
+            n -= 1;
+        }
 
-        memcpy((char*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
-        stream_receiver->length += n;
+        // We only need to do this appendage if there was something real read
+        if (n > 0) {
+            size_t needed = stream_receiver->length + n;
+            PROPAGATE_IF_ERROR(array_list_ensure_total_capacity(stream_receiver, needed));
+            memcpy((char*)stream_receiver->data + stream_receiver->length, stream_buffer, n);
+            stream_receiver->length += n;
+        }
 
-        // Check for a continuation character and reread if needed
-        if (n >= 2 && stream_buffer[n - 2] == '\\') {
-            ((char*)stream_receiver->data)[stream_receiver->length - 2] = '\n';
+        if (n == 0) {
+            break;
+        } else if (!chunk_includes_newline) {
+            continue;
+        }
+
+        // A line consisting only of double backslash means that its a multiline continuation
+        if (n == 2 && stream_buffer[0] == '\\' && stream_buffer[1] == '\\') {
+            break;
+        }
+
+        // At this point, we saw a newline and have to check for line continuation
+        if (n >= 1 && stream_buffer[n - 1] == '\\') {
+            ((char*)stream_receiver->data)[stream_receiver->length - 1] = '\n';
+
             fprintf(io->out, CONTINUATION_PROMPT);
             fflush(io->out);
 
             continue;
         }
 
-        if (stream_buffer[n - 1] == '\n' || feof(io->in)) {
-            break;
-        }
+        break;
     }
 
+    // The inner loop should handle the null terminator, this is defensive
     return array_list_push(stream_receiver, &null);
 }

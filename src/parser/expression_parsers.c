@@ -653,7 +653,9 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
 
     ArrayList members;
     PROPAGATE_IF_ERROR(array_list_init_allocator(&members, 4, sizeof(StructMember), p->allocator));
-    while (true) {
+
+    // We only handle members here as methods are in impl blocks
+    while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
                               free_struct_member_list(&members, p->allocator.free_alloc));
 
@@ -716,22 +718,18 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
             free_struct_member_list(&members, p->allocator.free_alloc);
             return MISSING_TRAILING_COMMA;
         }
-
-        // We only handle members here as methods are in impl blocks
-        if (parser_peek_token_is(p, RBRACE)) {
-            UNREACHABLE_IF_ERROR(parser_next_token(p));
-            if (parser_peek_token_is(p, SEMICOLON)) {
-                UNREACHABLE_IF_ERROR(parser_next_token(p));
-            }
-
-            break;
-        }
     }
 
     StructExpression* struct_expr;
     PROPAGATE_IF_ERROR_DO(
         struct_expression_create(start_token, members, &struct_expr, p->allocator.memory_alloc),
         free_struct_member_list(&members, p->allocator.free_alloc));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
+                          struct_expression_destroy((Node*)struct_expr, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
 
     *expression = (Expression*)struct_expr;
     return SUCCESS;
@@ -743,7 +741,7 @@ TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
 
     ArrayList variants;
     PROPAGATE_IF_ERROR(array_list_init_allocator(&variants, 4, sizeof(EnumVariant), p->allocator));
-    while (true) {
+    while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
                               free_enum_variant_list(&variants, p->allocator.free_alloc));
 
@@ -781,22 +779,18 @@ TRY_STATUS enum_expression_parse(Parser* p, Expression** expression) {
             free_enum_variant_list(&variants, p->allocator.free_alloc);
             return MISSING_TRAILING_COMMA;
         }
-
-        // A terminal delimiter ends the enum, and can be followed by a semicolon
-        if (parser_peek_token_is(p, RBRACE)) {
-            UNREACHABLE_IF_ERROR(parser_next_token(p));
-            if (parser_peek_token_is(p, SEMICOLON)) {
-                UNREACHABLE_IF_ERROR(parser_next_token(p));
-            }
-
-            break;
-        }
     }
 
     EnumExpression* enum_expr;
     PROPAGATE_IF_ERROR_DO(
         enum_expression_create(start_token, variants, &enum_expr, p->allocator.memory_alloc),
         free_enum_variant_list(&variants, p->allocator.free_alloc));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
+                          enum_expression_destroy((Node*)enum_expr, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
 
     *expression = (Expression*)enum_expr;
     return SUCCESS;
