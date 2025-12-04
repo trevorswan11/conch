@@ -49,6 +49,9 @@ bool misc_token_type_from_char(char c, TokenType* t) {
     case ']':
         *t = RBRACKET;
         return true;
+    case '_':
+        *t = UNDERSCORE;
+        return true;
     default:
         return false;
     }
@@ -121,4 +124,24 @@ TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocato
     PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, slice),
                           string_builder_deinit(&builder));
     return SUCCESS;
+}
+
+Base integer_token_to_base(TokenType type) {
+    switch (type) {
+    case INT_2:
+    case UINT_2:
+        return BINARY;
+    case INT_8:
+    case UINT_8:
+        return OCTAL;
+    case INT_10:
+    case UINT_10:
+        return DECIMAL;
+    case INT_16:
+    case UINT_16:
+        return HEXADECIMAL;
+    default:
+        UNREACHABLE_IF(!token_is_integer(type));
+        return UNKNOWN;
+    }
 }

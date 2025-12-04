@@ -9,7 +9,7 @@ TRY_STATUS call_expression_create(Token            start_token,
                                   CallExpression** call_expr,
                                   memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
-    assert(arguments.item_size == sizeof(Argument));
+    assert(arguments.item_size == sizeof(Expression*));
 
     CallExpression* call = memory_alloc(sizeof(CallExpression));
     if (!call) {

@@ -17,7 +17,7 @@ static inline bool is_digit(char byte) {
 static inline bool is_letter(char byte) {
     const bool lower = 'a' <= byte && byte <= 'z';
     const bool upper = 'A' <= byte && byte <= 'Z';
-    return lower || upper || byte == '_';
+    return lower || upper;
 }
 
 // Checks if the given byte is a whitespace character.

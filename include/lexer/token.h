@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "util/alphanum.h"
 #include "util/hash.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -34,7 +35,7 @@
         PROCESS(LPAREN), PROCESS(RPAREN), PROCESS(LBRACE), PROCESS(RBRACE), PROCESS(LBRACKET),    \
         PROCESS(RBRACKET),                                                                        \
                                                                                                   \
-        PROCESS(SINGLE_QUOTE),                                                                    \
+        PROCESS(SINGLE_QUOTE), PROCESS(UNDERSCORE),                                               \
                                                                                                   \
         PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STRUCT), PROCESS(ENUM),          \
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
@@ -94,3 +95,5 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 //
 // The returned memory is owned by the caller and must be freed.
 TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocator);
+
+Base integer_token_to_base(TokenType type);

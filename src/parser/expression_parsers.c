@@ -8,6 +8,7 @@
 #include "parser/statement_parsers.h"
 
 #include "ast/ast.h"
+#include "ast/expressions/array.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
@@ -115,14 +116,70 @@ TRY_STATUS function_definition_parse(Parser*          p,
 }
 
 TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** type) {
-    // Check for a question mark to allow nil
+    // Check for a question mark and to allow nil
     bool is_nullable = false;
     if (parser_peek_token_is(p, WHAT)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         is_nullable = true;
     }
 
-    // Check for primitive before creating an identifier
+    // Arrays are a little weird especially with the function signature
+    ArrayList dim_array;
+    dim_array.data              = NULL;
+    bool is_array_type          = false;
+    bool is_inner_type_nullable = false;
+
+    if (parser_peek_token_is(p, LBRACKET)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        PROPAGATE_IF_ERROR(
+            array_list_init_allocator(&dim_array, 1, sizeof(uint64_t), p->allocator));
+
+        while (!parser_peek_token_is(p, RBRACKET) && !parser_peek_token_is(p, END)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            const Token integer_token = p->current_token;
+
+            if (!token_is_unsigned_integer(integer_token.type)) {
+                PROPAGATE_IF_ERROR_DO(
+                    parser_put_status_error(
+                        p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column),
+                    array_list_deinit(&dim_array));
+                return UNEXPECTED_ARRAY_SIZE_TOKEN;
+            }
+
+            uint64_t dim;
+            PROPAGATE_IF_ERROR_DO(strntoull(integer_token.slice.ptr,
+                                            integer_token.slice.length - 1,
+                                            integer_token_to_base(integer_token.type),
+                                            &dim),
+                                  array_list_deinit(&dim_array));
+
+            PROPAGATE_IF_ERROR_DO(array_list_push(&dim_array, &dim), array_list_deinit(&dim_array));
+
+            if (parser_peek_token_is(p, COMMA)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+            }
+        }
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACKET), array_list_deinit(&dim_array));
+        if (dim_array.length == 0) {
+            array_list_deinit(&dim_array);
+            IGNORE_STATUS(parser_put_status_error(
+                p, MISSING_ARRAY_SIZE_TOKEN, start_token.line, start_token.column));
+            return MISSING_ARRAY_SIZE_TOKEN;
+        }
+        is_array_type = true;
+
+        if (parser_peek_token_is(p, WHAT)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            is_inner_type_nullable = true;
+        }
+    } else {
+        // If we don;t have an array, the inner type is just the normal type and needs to be set
+        is_inner_type_nullable = is_nullable;
+    }
+
+    // Check for primitive before parsing the real type
     const bool is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
     TypeUnion  explicit_union = (TypeUnion){
          .explicit_type =
@@ -132,7 +189,7 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
                     (ExplicitTypeUnion){
                          .ident_type_name = NULL,
                     },
-                 .nullable  = is_nullable,
+                 .nullable  = is_inner_type_nullable,
                  .primitive = is_primitive,
             },
     };
@@ -141,7 +198,8 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
         Expression* ident_expr;
-        PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
+        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident_expr),
+                              array_list_deinit(&dim_array));
         IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
         explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
@@ -152,7 +210,10 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
         PROPAGATE_IF_ERROR_DO(
             type_expression_create(
                 start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
-            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc));
+            {
+                identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+                array_list_deinit(&dim_array);
+            });
     } else {
         const Token type_start = p->current_token;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -162,8 +223,9 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             bool            contains_default_param;
             ArrayList       parameters;
             TypeExpression* return_type;
-            PROPAGATE_IF_ERROR(
-                function_definition_parse(p, &parameters, &return_type, &contains_default_param));
+            PROPAGATE_IF_ERROR_DO(
+                function_definition_parse(p, &parameters, &return_type, &contains_default_param),
+                array_list_deinit(&dim_array););
 
             // Default values in function types make no sense to allow
             if (contains_default_param) {
@@ -173,6 +235,7 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
                     {
                         free_parameter_list(&parameters);
                         type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                        array_list_deinit(&dim_array);
                     });
             }
 
@@ -191,12 +254,14 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
                 {
                     free_parameter_list(&parameters);
                     type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                    array_list_deinit(&dim_array);
                 });
             break;
         }
         case STRUCT: {
             Expression* struct_expr;
-            PROPAGATE_IF_ERROR(struct_expression_parse(p, &struct_expr));
+            PROPAGATE_IF_ERROR_DO(struct_expression_parse(p, &struct_expr),
+                                  array_list_deinit(&dim_array));
             StructExpression* struct_type = (StructExpression*)struct_expr;
 
             explicit_union.explicit_type.tag     = EXPLICIT_STRUCT;
@@ -207,12 +272,16 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             PROPAGATE_IF_ERROR_DO(
                 type_expression_create(
                     start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
-                struct_expression_destroy((Node*)struct_type, p->allocator.free_alloc));
+                {
+                    struct_expression_destroy((Node*)struct_type, p->allocator.free_alloc);
+                    array_list_deinit(&dim_array);
+                });
             break;
         }
         case ENUM: {
             Expression* enum_expr;
-            PROPAGATE_IF_ERROR(enum_expression_parse(p, &enum_expr));
+            PROPAGATE_IF_ERROR_DO(enum_expression_parse(p, &enum_expr),
+                                  array_list_deinit(&dim_array));
             EnumExpression* enum_type = (EnumExpression*)enum_expr;
 
             explicit_union.explicit_type.tag     = EXPLICIT_ENUM;
@@ -223,12 +292,45 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             PROPAGATE_IF_ERROR_DO(
                 type_expression_create(
                     start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
-                enum_expression_destroy((Node*)enum_type, p->allocator.free_alloc));
+                {
+                    enum_expression_destroy((Node*)enum_type, p->allocator.free_alloc);
+                    array_list_deinit(&dim_array);
+                });
             break;
         }
         default:
+            array_list_deinit(&dim_array);
             return UNEXPECTED_TOKEN;
         }
+    }
+
+    // If we parsed an array type at the start, then the actual type is nested
+    if (is_array_type) {
+        TypeUnion array_type_union = (TypeUnion){
+            .explicit_type =
+                (ExplicitType){
+                    .tag = EXPLICIT_ARRAY,
+                    .variant =
+                        (ExplicitTypeUnion){
+                            .array_type =
+                                (ExplicitArrayType){
+                                    .inner_type = *type,
+                                    .dimensions = dim_array,
+                                },
+                        },
+                    .nullable  = is_nullable,
+                    .primitive = false,
+                },
+        };
+
+        // Reassign the pointer's pointer, but the actual memory is owned by the new union here
+        PROPAGATE_IF_ERROR_DO(
+            type_expression_create(
+                start_token, EXPLICIT, array_type_union, type, p->allocator.memory_alloc),
+            {
+                array_list_deinit(&dim_array);
+                type_expression_destroy((Node*)*type, p->allocator.free_alloc);
+            });
     }
 
     return SUCCESS;
@@ -269,26 +371,6 @@ TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initi
     return SUCCESS;
 }
 
-static inline Base integer_token_to_base(TokenType type) {
-    switch (type) {
-    case INT_2:
-    case UINT_2:
-        return BINARY;
-    case INT_8:
-    case UINT_8:
-        return OCTAL;
-    case INT_10:
-    case UINT_10:
-        return DECIMAL;
-    case INT_16:
-    case UINT_16:
-        return HEXADECIMAL;
-    default:
-        UNREACHABLE_IF(!token_is_integer(type));
-        return UNKNOWN;
-    }
-}
-
 TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     assert(start_token.slice.length > 0);
@@ -325,7 +407,6 @@ TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression) 
 
         *expression = (Expression*)integer;
     } else {
-        UNREACHABLE;
         return UNEXPECTED_TOKEN;
     }
 
@@ -836,5 +917,92 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
     }
 
     *expression = (Expression*)match;
+    return SUCCESS;
+}
+
+TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    uint64_t array_size;
+    if (p->current_token.type == UNDERSCORE) {
+        array_size = 0;
+    } else {
+        const Token integer_token = p->current_token;
+
+        // Before parsing, check if we even have a type here
+        if (parser_current_token_is(p, RBRACKET)) {
+            IGNORE_STATUS(parser_put_status_error(
+                p, MISSING_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
+            return MISSING_ARRAY_SIZE_TOKEN;
+        }
+
+        if (!token_is_unsigned_integer(integer_token.type)) {
+            PROPAGATE_IF_ERROR(parser_put_status_error(
+                p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
+            return UNEXPECTED_ARRAY_SIZE_TOKEN;
+        }
+
+        PROPAGATE_IF_ERROR(strntoull(integer_token.slice.ptr,
+                                     integer_token.slice.length - 1,
+                                     integer_token_to_base(integer_token.type),
+                                     &array_size));
+    }
+
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, RBRACKET));
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LBRACE));
+
+    ArrayList items;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(
+        &items, array_size == 0 ? 4 : array_size, sizeof(Expression*), p->allocator));
+
+    while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
+        // Current token which is either the LBRACE at the start or a comma before parsing
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        Expression* item;
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &item), {
+            clear_expression_list(&items, p->allocator.free_alloc);
+            array_list_deinit(&items);
+        });
+
+        // Add to the array list and expect a comma to align with language philosophy
+        PROPAGATE_IF_ERROR_DO(array_list_push(&items, &item), {
+            NODE_VIRTUAL_FREE(item, p->allocator.free_alloc);
+            clear_expression_list(&items, p->allocator.free_alloc);
+            array_list_deinit(&items);
+        });
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
+            clear_expression_list(&items, p->allocator.free_alloc);
+            array_list_deinit(&items);
+        });
+    }
+
+    const bool inferred_size = array_size == 0;
+    if (!inferred_size && items.length != array_size) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, INCORRECT_EXPLICIT_ARRAY_SIZE, start_token.line, start_token.column));
+
+        clear_expression_list(&items, p->allocator.free_alloc);
+        array_list_deinit(&items);
+        return INCORRECT_EXPLICIT_ARRAY_SIZE;
+    }
+
+    ArrayLiteralExpression* array;
+    PROPAGATE_IF_ERROR_DO(array_literal_expression_create(
+                              start_token, inferred_size, items, &array, p->allocator.memory_alloc),
+                          {
+                              clear_expression_list(&items, p->allocator.free_alloc);
+                              array_list_deinit(&items);
+                          });
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
+                          array_literal_expression_destroy((Node*)array, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *expression = (Expression*)array;
     return SUCCESS;
 }

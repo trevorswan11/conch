@@ -22,7 +22,7 @@ TEST_CASE("Character utils") {
     REQUIRE(is_letter('A'));
     REQUIRE(is_letter('J'));
     REQUIRE(is_letter('Z'));
-    REQUIRE(is_letter('_'));
+    REQUIRE_FALSE(is_letter('_'));
     REQUIRE_FALSE(is_letter('1'));
     REQUIRE_FALSE(is_letter(0));
 

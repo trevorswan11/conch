@@ -15,6 +15,7 @@
 
 extern "C" {
 #include "ast/ast.h"
+#include "ast/expressions/array.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
@@ -1214,7 +1215,6 @@ TEST_CASE("Import Statements") {
             "import array;",
             "import \"util/test.cch\"",
         };
-
         const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const ImportTestCase expected_imports[] = {
@@ -1273,7 +1273,6 @@ TEST_CASE("Match expressions") {
             "match In { 1 => return 90u;, }",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
         };
-
         const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const MatchTestCase expected_matches[] = {
@@ -1363,6 +1362,207 @@ TEST_CASE("Match expressions") {
                                {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
                                 "No prefix parse function for COMMA found [Ln 1, Col 29]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 31]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("Array expressions") {
+    struct ArrayTestCase {
+        std::optional<uint64_t> expected_size;
+        std::vector<int64_t>    expected_items;
+    };
+
+    SECTION("Correct int arrays") {
+        const char* inputs[] = {
+            "[1u]{1,}",
+            "[0b11u]{1, 2, 3, }",
+            "[_]{1, 2, }",
+        };
+        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+        const ArrayTestCase expected_arrays[] = {
+            {1, {1}},
+            {0b11, {1, 2, 3}},
+            {std::nullopt, {1, 2}},
+        };
+        const size_t expecteds_size = sizeof(expected_arrays) / sizeof(expected_arrays[0]);
+
+        REQUIRE(inputs_size == expecteds_size);
+        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            const char* input    = inputs[test_idx];
+            const auto  expected = expected_arrays[test_idx];
+
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement*    expr_stmt  = (ExpressionStatement*)stmt;
+            ArrayLiteralExpression* array_expr = (ArrayLiteralExpression*)expr_stmt->expression;
+
+            if (array_expr->inferred_size) {
+                REQUIRE_FALSE(expected.expected_size.has_value());
+            } else {
+                REQUIRE(array_expr->items.length == expected.expected_size.value());
+            }
+            REQUIRE(array_expr->items.length == expected.expected_items.size());
+
+            Expression* item;
+            for (size_t i = 0; i < array_expr->items.length; i++) {
+                REQUIRE(STATUS_OK(array_list_get(&array_expr->items, i, &item)));
+                test_number_expression(item, expected.expected_items[i]);
+            }
+        }
+    }
+
+    SECTION("Arrays as types") {
+        struct ArrayTypeTestCase {
+            std::string           decl_name;
+            std::vector<uint64_t> expected_dims;
+            bool                  array_nullable;
+            bool                  inner_nullable;
+        };
+
+        SECTION("Correct array types") {
+            const char* inputs[] = {
+                "var a: [1u]int;",
+                "var a: [1u, 2u]int;",
+                "var a: ?[1u, 2u]int;",
+                "var a: [1u, 2u]?int;",
+                "var a: ?[1u, 2u]?int;",
+            };
+            const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
+
+            const ArrayTypeTestCase expected_dims[] = {
+                {"a", {1}, false, false},
+                {"a", {1, 2}, false, false},
+                {"a", {1, 2}, true, false},
+                {"a", {1, 2}, false, true},
+                {"a", {1, 2}, true, true},
+            };
+            const size_t expecteds_size = sizeof(expected_dims) / sizeof(expected_dims[0]);
+
+            REQUIRE(inputs_size == expecteds_size);
+            for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+                const char* input    = inputs[test_idx];
+                const auto  expected = expected_dims[test_idx];
+
+                ParserFixture pf(input);
+                check_parse_errors(pf.parser(), {}, true);
+
+                auto ast = pf.ast();
+                REQUIRE(ast->statements.length == 1);
+
+                Statement* stmt;
+                REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+                test_decl_statement(stmt, false, expected.decl_name);
+                DeclStatement* decl_stmt = (DeclStatement*)stmt;
+
+                Type decl_type = decl_stmt->type->type;
+                REQUIRE(decl_type.tag == TypeTag::EXPLICIT);
+                ExplicitType explicit_type = decl_type.variant.explicit_type;
+                REQUIRE(explicit_type.nullable == expected.array_nullable);
+                REQUIRE_FALSE(explicit_type.primitive);
+                REQUIRE(explicit_type.tag == ExplicitTypeTag::EXPLICIT_ARRAY);
+                ExplicitArrayType explicit_array = explicit_type.variant.array_type;
+
+                REQUIRE(explicit_array.dimensions.length == expected.expected_dims.size());
+                for (size_t i = 0; i < explicit_array.dimensions.length; i++) {
+                    uint64_t dim;
+                    REQUIRE(STATUS_OK(array_list_get(&explicit_array.dimensions, i, &dim)));
+                    REQUIRE(dim == expected.expected_dims[i]);
+                }
+
+                test_type_expression((Expression*)explicit_array.inner_type,
+                                     expected.inner_nullable,
+                                     true,
+                                     TypeTag::EXPLICIT,
+                                     ExplicitTypeTag::EXPLICIT_IDENT,
+                                     "int");
+            }
+        }
+
+        SECTION("Malformed array types") {
+            SECTION("Missing size token") {
+                const char*   input = "var a: []int";
+                ParserFixture pf(input);
+                check_parse_errors(pf.parser(),
+                                   {"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 5]",
+                                    "No prefix parse function for INT_TYPE found [Ln 1, Col 10]"},
+                                   false);
+            }
+
+            SECTION("Incorrect token type") {
+                const char*   input = "var a: [\"wrong\"]int";
+                ParserFixture pf(input);
+                check_parse_errors(pf.parser(),
+                                   {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
+                                    "No prefix parse function for RBRACKET found [Ln 1, Col 16]",
+                                    "No prefix parse function for INT_TYPE found [Ln 1, Col 17]"},
+                                   false);
+            }
+
+            SECTION("Incorrect token integer type") {
+                const char*   input = "var a: [0b11]int";
+                ParserFixture pf(input);
+                check_parse_errors(pf.parser(),
+                                   {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
+                                    "No prefix parse function for RBRACKET found [Ln 1, Col 13]",
+                                    "No prefix parse function for INT_TYPE found [Ln 1, Col 14]"},
+                                   false);
+            }
+        }
+    }
+
+    SECTION("Malformed array expressions") {
+        SECTION("Missing size token") {
+            const char*   input = "[]{1, 2, 3, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 5]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 8]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 11]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 13]"},
+                               false);
+        }
+
+        SECTION("Incorrect token type") {
+            const char*   input = "[\"wrong\"]{1, 2, 3, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                                "No prefix parse function for RBRACKET found [Ln 1, Col 9]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 12]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 15]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 18]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 20]"},
+                               false);
+        }
+
+        SECTION("Incorrect token integer type") {
+            const char*   input = "[0b11]{1, 2, 3, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                                "No prefix parse function for RBRACKET found [Ln 1, Col 6]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 9]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 12]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 15]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
+                               false);
+        }
+
+        SECTION("Incorrect token value") {
+            const char*   input = "[23u]{1, 2, 3, }";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
                                false);
         }
     }

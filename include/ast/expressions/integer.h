@@ -34,7 +34,7 @@ static const ExpressionVTable INTEGER_VTABLE = {
         },
 };
 
-typedef struct {
+typedef struct UnsignedIntegerLiteralExpression {
     Expression base;
     uint64_t   value;
 } UnsignedIntegerLiteralExpression;

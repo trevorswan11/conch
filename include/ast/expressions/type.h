@@ -21,16 +21,18 @@ static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_VOID,
 };
 
-typedef struct IdentifierExpression IdentifierExpression;
-typedef struct TypeExpression       TypeExpression;
-typedef struct StructExpression     StructExpression;
-typedef struct EnumExpression       EnumExpression;
+typedef struct IdentifierExpression   IdentifierExpression;
+typedef struct TypeExpression         TypeExpression;
+typedef struct StructExpression       StructExpression;
+typedef struct EnumExpression         EnumExpression;
+typedef struct ArrayLiteralExpression ArrayLiteralExpression;
 
 typedef enum {
     EXPLICIT_IDENT,
     EXPLICIT_FN,
     EXPLICIT_STRUCT,
     EXPLICIT_ENUM,
+    EXPLICIT_ARRAY,
 } ExplicitTypeTag;
 
 typedef struct ExplicitFunctionType {
@@ -38,11 +40,17 @@ typedef struct ExplicitFunctionType {
     TypeExpression* return_type;
 } ExplicitFunctionType;
 
+typedef struct ExplicitArrayType {
+    ArrayList       dimensions;
+    TypeExpression* inner_type;
+} ExplicitArrayType;
+
 typedef union {
     IdentifierExpression* ident_type_name;
     ExplicitFunctionType  function_type;
     StructExpression*     struct_type;
     EnumExpression*       enum_type;
+    ExplicitArrayType     array_type;
 } ExplicitTypeUnion;
 
 typedef struct ExplicitType {
@@ -96,3 +104,6 @@ static const ExpressionVTable TYPE_VTABLE = {
             .reconstruct = type_expression_reconstruct,
         },
 };
+
+TRY_STATUS
+explicit_type_reconstruct(ExplicitType explicit_type, const HashMap* symbol_map, StringBuilder* sb);

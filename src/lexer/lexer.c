@@ -261,7 +261,7 @@ Token lexer_read_operator(Lexer* l) {
 
 Slice lexer_read_identifier(Lexer* l) {
     const size_t start = l->position;
-    while (is_letter(l->current_byte)) {
+    while (is_letter(l->current_byte) || l->current_byte == '_') {
         lexer_read_char(l);
     }
 

@@ -11,8 +11,6 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-typedef Expression* Argument;
-
 typedef struct CallExpression {
     Expression  base;
     Expression* function;

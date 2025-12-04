@@ -18,26 +18,15 @@ using ExpectedToken = std::pair<TokenType, const char*>;
 
 TEST_CASE("Basic next token and lexer consuming") {
     SECTION("Symbols Only") {
-        const char* input = "=+(){}[],;: !-/*<>";
+        const char* input = "=+(){}[],;: !-/*<>_";
 
         std::vector<ExpectedToken> expecteds = {
-            {TokenType::ASSIGN, "="},
-            {TokenType::PLUS, "+"},
-            {TokenType::LPAREN, "("},
-            {TokenType::RPAREN, ")"},
-            {TokenType::LBRACE, "{"},
-            {TokenType::RBRACE, "}"},
-            {TokenType::LBRACKET, "["},
-            {TokenType::RBRACKET, "]"},
-            {TokenType::COMMA, ","},
-            {TokenType::SEMICOLON, ";"},
-            {TokenType::COLON, ":"},
-            {TokenType::BANG, "!"},
-            {TokenType::MINUS, "-"},
-            {TokenType::SLASH, "/"},
-            {TokenType::STAR, "*"},
-            {TokenType::LT, "<"},
-            {TokenType::GT, ">"},
+            {TokenType::ASSIGN, "="},    {TokenType::PLUS, "+"},     {TokenType::LPAREN, "("},
+            {TokenType::RPAREN, ")"},    {TokenType::LBRACE, "{"},   {TokenType::RBRACE, "}"},
+            {TokenType::LBRACKET, "["},  {TokenType::RBRACKET, "]"}, {TokenType::COMMA, ","},
+            {TokenType::SEMICOLON, ";"}, {TokenType::COLON, ":"},    {TokenType::BANG, "!"},
+            {TokenType::MINUS, "-"},     {TokenType::SLASH, "/"},    {TokenType::STAR, "*"},
+            {TokenType::LT, "<"},        {TokenType::GT, ">"},       {TokenType::UNDERSCORE, "_"},
             {TokenType::END, ""},
         };
 

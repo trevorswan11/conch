@@ -6,8 +6,6 @@
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 
-#include "util/status.h"
-
 TRY_STATUS
 type_expression_create(Token            start_token,
                        TypeTag          tag,
@@ -61,6 +59,13 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
             e = NULL;
             break;
         }
+        case EXPLICIT_ARRAY: {
+            TypeExpression* inner = explicit_type.variant.array_type.inner_type;
+            array_list_deinit(&explicit_type.variant.array_type.dimensions);
+            type_expression_destroy((Node*)inner, free_alloc);
+            inner = NULL;
+            break;
+        }
         }
     }
 
@@ -82,32 +87,71 @@ type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
             PROPAGATE_IF_ERROR(string_builder_append(sb, '?'));
         }
 
-        switch (explicit_type.tag) {
-        case EXPLICIT_IDENT:
-            PROPAGATE_IF_ERROR(
-                string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
-            break;
-        case EXPLICIT_FN: {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn("));
-            ExplicitFunctionType function_type = explicit_type.variant.function_type;
-            PROPAGATE_IF_ERROR(
-                reconstruct_parameter_list(&function_type.fn_type_params, symbol_map, sb));
-            PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
-            PROPAGATE_IF_ERROR(
-                type_expression_reconstruct((Node*)function_type.return_type, symbol_map, sb));
-            break;
-        }
-        case EXPLICIT_STRUCT:
-            PROPAGATE_IF_ERROR(struct_expression_reconstruct(
-                (Node*)explicit_type.variant.struct_type, symbol_map, sb));
-            break;
-        case EXPLICIT_ENUM:
-            PROPAGATE_IF_ERROR(enum_expression_reconstruct(
-                (Node*)explicit_type.variant.enum_type, symbol_map, sb));
-            break;
-        }
+        PROPAGATE_IF_ERROR(explicit_type_reconstruct(explicit_type, symbol_map, sb));
     } else {
         PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " :"));
     }
+    return SUCCESS;
+}
+
+TRY_STATUS
+explicit_type_reconstruct(ExplicitType   explicit_type,
+                          const HashMap* symbol_map,
+                          StringBuilder* sb) {
+    switch (explicit_type.tag) {
+    case EXPLICIT_IDENT:
+        PROPAGATE_IF_ERROR(
+            string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
+        break;
+    case EXPLICIT_FN: {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn("));
+        ExplicitFunctionType function_type = explicit_type.variant.function_type;
+        PROPAGATE_IF_ERROR(
+            reconstruct_parameter_list(&function_type.fn_type_params, symbol_map, sb));
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+        PROPAGATE_IF_ERROR(
+            type_expression_reconstruct((Node*)function_type.return_type, symbol_map, sb));
+        break;
+    }
+    case EXPLICIT_STRUCT:
+        PROPAGATE_IF_ERROR(struct_expression_reconstruct(
+            (Node*)explicit_type.variant.struct_type, symbol_map, sb));
+        break;
+    case EXPLICIT_ENUM:
+        PROPAGATE_IF_ERROR(
+            enum_expression_reconstruct((Node*)explicit_type.variant.enum_type, symbol_map, sb));
+        break;
+    case EXPLICIT_ARRAY:
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '['));
+
+        uint64_t dim;
+        if (explicit_type.variant.array_type.dimensions.length > 0) {
+            for (size_t i = 0; i < explicit_type.variant.array_type.dimensions.length; i++) {
+                UNREACHABLE_IF_ERROR(
+                    array_list_get(&explicit_type.variant.array_type.dimensions, i, &dim));
+                PROPAGATE_IF_ERROR(string_builder_append_unsigned(sb, dim));
+
+                PROPAGATE_IF_ERROR(string_builder_append(sb, 'u'));
+                if (i != explicit_type.variant.array_type.dimensions.length - 1) {
+                    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+                }
+            }
+        } else {
+            UNREACHABLE;
+        }
+
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ']'));
+
+        TypeExpression* inner_type = explicit_type.variant.array_type.inner_type;
+        assert(inner_type->type.tag == EXPLICIT);
+
+        ExplicitType inner_explicit_type = inner_type->type.variant.explicit_type;
+        if (inner_explicit_type.nullable) {
+            PROPAGATE_IF_ERROR(string_builder_append(sb, '?'));
+        }
+        PROPAGATE_IF_ERROR(explicit_type_reconstruct(inner_explicit_type, symbol_map, sb));
+        break;
+    }
+
     return SUCCESS;
 }
