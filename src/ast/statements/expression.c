@@ -28,10 +28,9 @@ TRY_STATUS expression_statement_create(Token                 start_token,
 void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    ExpressionStatement* e = (ExpressionStatement*)node;
 
+    ExpressionStatement* e = (ExpressionStatement*)node;
     NODE_VIRTUAL_FREE(e->expression, free_alloc);
-    e->expression = NULL;
 
     free_alloc(e);
 }

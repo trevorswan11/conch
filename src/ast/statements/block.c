@@ -28,10 +28,9 @@ block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator
 void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    BlockStatement* block = (BlockStatement*)node;
 
-    clear_statement_list(&block->statements, free_alloc);
-    array_list_deinit(&block->statements);
+    BlockStatement* block = (BlockStatement*)node;
+    free_statement_list(&block->statements, free_alloc);
 
     free_alloc(block);
 }

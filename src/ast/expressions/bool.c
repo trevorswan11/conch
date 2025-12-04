@@ -24,6 +24,7 @@ TRY_STATUS bool_literal_expression_create(Token                   start_token,
 void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
     free_alloc(bool_expr);
 }

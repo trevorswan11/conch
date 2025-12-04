@@ -25,6 +25,7 @@ TRY_STATUS float_literal_expression_create(Token                    start_token,
 void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
     free_alloc(float_expr);
 }

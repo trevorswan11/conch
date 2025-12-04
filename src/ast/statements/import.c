@@ -34,13 +34,11 @@ void import_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ImportStatement* import = (ImportStatement*)node;
     switch (import->tag) {
     case STANDARD:
-        identifier_expression_destroy((Node*)import->variant.standard_import, free_alloc);
+        NODE_VIRTUAL_FREE(import->variant.standard_import, free_alloc);
         break;
     case USER:
-        string_literal_expression_destroy((Node*)import->variant.user_import, free_alloc);
+        NODE_VIRTUAL_FREE(import->variant.user_import, free_alloc);
         break;
-    default:
-        UNREACHABLE;
     }
 
     free_alloc(import);

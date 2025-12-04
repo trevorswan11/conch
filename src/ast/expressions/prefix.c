@@ -30,10 +30,9 @@ TRY_STATUS prefix_expression_create(Token              start_token,
 void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    PrefixExpression* prefix = (PrefixExpression*)node;
 
+    PrefixExpression* prefix = (PrefixExpression*)node;
     NODE_VIRTUAL_FREE(prefix->rhs, free_alloc);
-    prefix->rhs = NULL;
 
     free_alloc(prefix);
 }

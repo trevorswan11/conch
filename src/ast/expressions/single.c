@@ -18,6 +18,7 @@ nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_
 void nil_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     NilExpression* nil = (NilExpression*)node;
     free_alloc(nil);
 }
@@ -51,6 +52,7 @@ TRY_STATUS continue_expression_create(Token                start_token,
 void continue_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     ContinueExpression* continue_expr = (ContinueExpression*)node;
     free_alloc(continue_expr);
 }

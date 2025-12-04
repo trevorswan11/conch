@@ -27,8 +27,8 @@ TRY_STATUS string_literal_expression_create(Token                     start_toke
 void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
 
+    StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
     if (string_expr->slice.ptr) {
         free_alloc(string_expr->slice.ptr);
     }

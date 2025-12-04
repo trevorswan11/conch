@@ -32,16 +32,11 @@ TRY_STATUS if_expression_create(Token           start_token,
 void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     IfExpression* if_expr = (IfExpression*)node;
-
     NODE_VIRTUAL_FREE(if_expr->condition, free_alloc);
-    if_expr->condition = NULL;
-
     NODE_VIRTUAL_FREE(if_expr->consequence, free_alloc);
-    if_expr->consequence = NULL;
-
     NODE_VIRTUAL_FREE(if_expr->alternate, free_alloc);
-    if_expr->alternate = NULL;
 
     free_alloc(if_expr);
 }

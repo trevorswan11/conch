@@ -354,7 +354,7 @@ TEST_CASE("Advanced next token") {
     }
 
     SECTION("Control flow keywords") {
-        const char* input = "if else match return for while continue break";
+        const char* input = "if else match return for while do continue break";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::IF, "if"},
@@ -363,6 +363,7 @@ TEST_CASE("Advanced next token") {
             {TokenType::RETURN, "return"},
             {TokenType::FOR, "for"},
             {TokenType::WHILE, "while"},
+            {TokenType::DO, "do"},
             {TokenType::CONTINUE, "continue"},
             {TokenType::BREAK, "break"},
             {TokenType::END, ""},

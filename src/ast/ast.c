@@ -8,6 +8,7 @@
 
 #include "lexer/keywords.h"
 #include "lexer/operators.h"
+#include "util/containers/array_list.h"
 
 TRY_STATUS ast_init(AST* ast, Allocator allocator) {
     if (!ast) {
@@ -56,8 +57,7 @@ void ast_deinit(AST* ast) {
     }
     ASSERT_ALLOCATOR(ast->allocator);
 
-    clear_statement_list(&ast->statements, ast->allocator.free_alloc);
-    array_list_deinit(&ast->statements);
+    free_statement_list(&ast->statements, ast->allocator.free_alloc);
     hash_map_deinit(&ast->token_type_symbols);
 }
 
@@ -117,4 +117,24 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     }
 
     array_list_clear_retaining_capacity(expressions);
+}
+
+void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
+    assert(free_alloc);
+    if (!statements || !statements->data) {
+        return;
+    }
+
+    clear_statement_list(statements, free_alloc);
+    array_list_deinit(statements);
+}
+
+void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
+    assert(free_alloc);
+    if (!expressions || !expressions->data) {
+        return;
+    }
+
+    clear_expression_list(expressions, free_alloc);
+    array_list_deinit(expressions);
 }

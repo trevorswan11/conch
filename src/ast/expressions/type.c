@@ -37,33 +37,29 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
             IdentifierExpression* ident = explicit_type.variant.ident_type_name;
-            identifier_expression_destroy((Node*)ident, free_alloc);
-            ident = NULL;
+            NODE_VIRTUAL_FREE(ident, free_alloc);
             break;
         }
         case EXPLICIT_FN: {
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
             free_parameter_list(&function_type.fn_type_params);
-            type_expression_destroy((Node*)function_type.return_type, free_alloc);
+            NODE_VIRTUAL_FREE(function_type.return_type, free_alloc);
             break;
         }
         case EXPLICIT_STRUCT: {
             StructExpression* s = explicit_type.variant.struct_type;
-            struct_expression_destroy((Node*)s, free_alloc);
-            s = NULL;
+            NODE_VIRTUAL_FREE(s, free_alloc);
             break;
         }
         case EXPLICIT_ENUM: {
             EnumExpression* e = explicit_type.variant.enum_type;
-            enum_expression_destroy((Node*)e, free_alloc);
-            e = NULL;
+            NODE_VIRTUAL_FREE(e, free_alloc);
             break;
         }
         case EXPLICIT_ARRAY: {
             TypeExpression* inner = explicit_type.variant.array_type.inner_type;
             array_list_deinit(&explicit_type.variant.array_type.dimensions);
-            type_expression_destroy((Node*)inner, free_alloc);
-            inner = NULL;
+            NODE_VIRTUAL_FREE(inner, free_alloc);
             break;
         }
         }

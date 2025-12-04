@@ -33,13 +33,10 @@ TRY_STATUS infix_expression_create(Token             start_token,
 void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     InfixExpression* infix = (InfixExpression*)node;
-
     NODE_VIRTUAL_FREE(infix->lhs, free_alloc);
-    infix->lhs = NULL;
-
     NODE_VIRTUAL_FREE(infix->rhs, free_alloc);
-    infix->rhs = NULL;
 
     free_alloc(infix);
 }

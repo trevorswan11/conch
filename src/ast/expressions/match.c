@@ -53,9 +53,8 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
     MatchExpression* match = (MatchExpression*)node;
     NODE_VIRTUAL_FREE(match->expression, free_alloc);
-    match->expression = NULL;
-
     free_match_arm_list(&match->arms, free_alloc);
+
     free_alloc(match);
 }
 

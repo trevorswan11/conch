@@ -48,22 +48,13 @@ TRY_STATUS decl_statement_create(Token                 start_token,
 void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    DeclStatement* d = (DeclStatement*)node;
 
-    if (d->ident) {
-        identifier_expression_destroy((Node*)d->ident, free_alloc);
-        d->ident = NULL;
-    }
+    DeclStatement* decl = (DeclStatement*)node;
+    NODE_VIRTUAL_FREE(decl->ident, free_alloc);
+    NODE_VIRTUAL_FREE(decl->type, free_alloc);
+    NODE_VIRTUAL_FREE(decl->value, free_alloc);
 
-    if (d->type) {
-        type_expression_destroy((Node*)d->type, free_alloc);
-        d->type = NULL;
-    }
-
-    NODE_VIRTUAL_FREE(d->value, free_alloc);
-    d->value = NULL;
-
-    free_alloc(d);
+    free_alloc(decl);
 }
 
 TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
@@ -128,15 +119,12 @@ TRY_STATUS type_decl_statement_create(Token                 start_token,
 void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    TypeDeclStatement* d = (TypeDeclStatement*)node;
 
-    if (d->ident) {
-        identifier_expression_destroy((Node*)d->ident, free_alloc);
-        d->ident = NULL;
-    }
+    TypeDeclStatement* type_decl = (TypeDeclStatement*)node;
+    NODE_VIRTUAL_FREE(type_decl->ident, free_alloc);
+    NODE_VIRTUAL_FREE(type_decl->value, free_alloc);
 
-    NODE_VIRTUAL_FREE(d->value, free_alloc);
-    d->value = NULL;
+    free_alloc(type_decl);
 }
 
 TRY_STATUS

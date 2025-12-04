@@ -25,6 +25,7 @@ TRY_STATUS integer_literal_expression_create(Token                      start_to
 void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     IntegerLiteralExpression* integer = (IntegerLiteralExpression*)node;
     free_alloc(integer);
 }

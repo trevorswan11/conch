@@ -29,10 +29,10 @@ TRY_STATUS array_literal_expression_create(Token                    start_token,
 void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
 
-    clear_expression_list(&array->items, free_alloc);
-    array_list_deinit(&array->items);
+    ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
+    free_expression_list(&array->items, free_alloc);
+
     free_alloc(array);
 }
 

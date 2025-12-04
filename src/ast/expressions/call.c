@@ -29,13 +29,10 @@ TRY_STATUS call_expression_create(Token            start_token,
 void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     CallExpression* call = (CallExpression*)node;
-
     NODE_VIRTUAL_FREE(call->function, free_alloc);
-    call->function = NULL;
-
-    clear_expression_list(&call->arguments, free_alloc);
-    array_list_deinit(&call->arguments);
+    free_expression_list(&call->arguments, free_alloc);
 
     free_alloc(call);
 }

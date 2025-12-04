@@ -35,6 +35,7 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
     free_alloc(ident->name.ptr);
+
     free_alloc(ident);
 }
 

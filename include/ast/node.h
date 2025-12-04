@@ -11,12 +11,14 @@
     assert(node->vtable); \
     assert(node->start_token.slice.ptr);
 
-#define NODE_VIRTUAL_FREE(node, free_alloc)                                  \
-    do {                                                                     \
-        Node* _node_obfuscated = (Node*)node;                                \
-        if (node && _node_obfuscated) {                                      \
-            _node_obfuscated->vtable->destroy(_node_obfuscated, free_alloc); \
-        }                                                                    \
+// Casts the input pointer to a node, calls is virtual destructor, and nulls the pointer
+#define NODE_VIRTUAL_FREE(node_ptr_to_cast_and_free, free_alloc)                     \
+    do {                                                                             \
+        Node* _node_obfuscated_nvf = (Node*)node_ptr_to_cast_and_free;               \
+        if (node_ptr_to_cast_and_free && _node_obfuscated_nvf) {                     \
+            _node_obfuscated_nvf->vtable->destroy(_node_obfuscated_nvf, free_alloc); \
+        }                                                                            \
+        node_ptr_to_cast_and_free = NULL;                                            \
     } while (0);
 
 typedef struct Node       Node;

@@ -19,6 +19,7 @@
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
+#include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/single.h"
@@ -613,35 +614,24 @@ TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** e
         // Add the rest of the comma separated argument list
         while (parser_peek_token_is(p, COMMA)) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
-            PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
-                clear_expression_list(&arguments, p->allocator.free_alloc);
-                array_list_deinit(&arguments);
-            });
+            PROPAGATE_IF_ERROR_DO(parser_next_token(p),
+                                  free_expression_list(&arguments, p->allocator.free_alloc));
 
-            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument), {
-                clear_expression_list(&arguments, p->allocator.free_alloc);
-                array_list_deinit(&arguments);
-            });
+            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument),
+                                  free_expression_list(&arguments, p->allocator.free_alloc));
 
-            PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument), {
-                clear_expression_list(&arguments, p->allocator.free_alloc);
-                array_list_deinit(&arguments);
-            });
+            PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument),
+                                  free_expression_list(&arguments, p->allocator.free_alloc));
         }
 
-        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
-            clear_expression_list(&arguments, p->allocator.free_alloc);
-            array_list_deinit(&arguments);
-        });
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
+                              free_expression_list(&arguments, p->allocator.free_alloc));
     }
 
     CallExpression* call;
     PROPAGATE_IF_ERROR_DO(
         call_expression_create(start_token, function, arguments, &call, p->allocator.memory_alloc),
-        {
-            clear_expression_list(&arguments, p->allocator.free_alloc);
-            array_list_deinit(&arguments);
-        });
+        free_expression_list(&arguments, p->allocator.free_alloc));
 
     *expression = (Expression*)call;
     return SUCCESS;
@@ -954,22 +944,17 @@ TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
         Expression* item;
-        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &item), {
-            clear_expression_list(&items, p->allocator.free_alloc);
-            array_list_deinit(&items);
-        });
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &item),
+                              free_expression_list(&items, p->allocator.free_alloc));
 
         // Add to the array list and expect a comma to align with language philosophy
         PROPAGATE_IF_ERROR_DO(array_list_push(&items, &item), {
             NODE_VIRTUAL_FREE(item, p->allocator.free_alloc);
-            clear_expression_list(&items, p->allocator.free_alloc);
-            array_list_deinit(&items);
+            free_expression_list(&items, p->allocator.free_alloc);
         });
 
-        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
-            clear_expression_list(&items, p->allocator.free_alloc);
-            array_list_deinit(&items);
-        });
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA),
+                              free_expression_list(&items, p->allocator.free_alloc));
     }
 
     const bool inferred_size = array_size == 0;
@@ -977,18 +962,14 @@ TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression) {
         IGNORE_STATUS(parser_put_status_error(
             p, INCORRECT_EXPLICIT_ARRAY_SIZE, start_token.line, start_token.column));
 
-        clear_expression_list(&items, p->allocator.free_alloc);
-        array_list_deinit(&items);
+        free_expression_list(&items, p->allocator.free_alloc);
         return INCORRECT_EXPLICIT_ARRAY_SIZE;
     }
 
     ArrayLiteralExpression* array;
     PROPAGATE_IF_ERROR_DO(array_literal_expression_create(
                               start_token, inferred_size, items, &array, p->allocator.memory_alloc),
-                          {
-                              clear_expression_list(&items, p->allocator.free_alloc);
-                              array_list_deinit(&items);
-                          });
+                          free_expression_list(&items, p->allocator.free_alloc));
 
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
                           array_literal_expression_destroy((Node*)array, p->allocator.free_alloc));
@@ -998,4 +979,22 @@ TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression) {
 
     *expression = (Expression*)array;
     return SUCCESS;
+}
+
+TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
+}
+
+TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression) {
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
+}
+
+TRY_STATUS do_while_loop_expression_parse(Parser* p, Expression** expression) {
+    MAYBE_UNUSED(p);
+    MAYBE_UNUSED(expression);
+    return NOT_IMPLEMENTED;
 }

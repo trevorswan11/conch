@@ -28,10 +28,9 @@ TRY_STATUS jump_statement_create(Token           start_token,
 void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-    JumpStatement* j = (JumpStatement*)node;
 
+    JumpStatement* j = (JumpStatement*)node;
     NODE_VIRTUAL_FREE(j->value, free_alloc);
-    j->value = NULL;
 
     free_alloc(j);
 }

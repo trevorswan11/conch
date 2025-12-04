@@ -180,14 +180,11 @@ TRY_STATUS function_expression_create(Token                start_token,
 void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+
     FunctionExpression* func = (FunctionExpression*)node;
     free_parameter_list(&func->parameters);
-
-    block_statement_destroy((Node*)func->body, free_alloc);
-    func->body = NULL;
-
-    type_expression_destroy((Node*)func->return_type, free_alloc);
-    func->return_type = NULL;
+    NODE_VIRTUAL_FREE(func->body, free_alloc);
+    NODE_VIRTUAL_FREE(func->return_type, free_alloc);
 
     free_alloc(func);
 }

@@ -33,8 +33,8 @@ void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
 
     ImplStatement* impl = (ImplStatement*)node;
-    identifier_expression_destroy((Node*)impl->parent, free_alloc);
-    block_statement_destroy((Node*)impl->implementation, free_alloc);
+    NODE_VIRTUAL_FREE(impl->parent, free_alloc);
+    NODE_VIRTUAL_FREE(impl->implementation, free_alloc);
 
     free_alloc(impl);
 }
