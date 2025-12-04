@@ -140,10 +140,9 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             const Token integer_token = p->current_token;
 
             if (!token_is_unsigned_integer(integer_token.type)) {
-                PROPAGATE_IF_ERROR_DO(
-                    parser_put_status_error(
-                        p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column),
-                    array_list_deinit(&dim_array));
+                IGNORE_STATUS(parser_put_status_error(
+                    p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
+                array_list_deinit(&dim_array);
                 return UNEXPECTED_ARRAY_SIZE_TOKEN;
             }
 
