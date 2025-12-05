@@ -2,69 +2,61 @@
 
 #include "ast/expressions/single.h"
 
-TRY_STATUS
-nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
-    NilExpression* nil = memory_alloc(sizeof(NilExpression));
-    if (!nil) {
-        return ALLOCATION_FAILED;
-    }
-
-    *nil      = (NilExpression){EXPRESSION_INIT(NIL_VTABLE, start_token)};
-    *nil_expr = nil;
+#define SINGLE_STMT_CREATE(type, custom_vtab, out_expr)            \
+    assert(memory_alloc);                                          \
+    type* temp = memory_alloc(sizeof(type));                       \
+    if (!temp) {                                                   \
+        return ALLOCATION_FAILED;                                  \
+    }                                                              \
+                                                                   \
+    *temp     = (type){EXPRESSION_INIT(custom_vtab, start_token)}; \
+    *out_expr = temp;                                              \
     return SUCCESS;
-}
 
-void nil_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+#define SINGLE_STMT_RECONSTRUCT(string)                         \
+    if (!sb) {                                                  \
+        return NULL_PARAMETER;                                  \
+    }                                                           \
+    MAYBE_UNUSED(node);                                         \
+    MAYBE_UNUSED(symbol_map);                                   \
+                                                                \
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "nil")); \
+    return SUCCESS;
+
+void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
+    free_alloc(node);
+}
 
-    NilExpression* nil = (NilExpression*)node;
-    free_alloc(nil);
+TRY_STATUS
+nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc) {
+    SINGLE_STMT_CREATE(NilExpression, NIL_VTABLE, nil_expr);
 }
 
 TRY_STATUS
 nil_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(symbol_map);
-
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "nil"));
-    return SUCCESS;
+    SINGLE_STMT_RECONSTRUCT("nil");
 }
 
 TRY_STATUS continue_expression_create(Token                start_token,
                                       ContinueExpression** continue_expr,
                                       memory_alloc_fn      memory_alloc) {
-    assert(memory_alloc);
-    ContinueExpression* continue_local = memory_alloc(sizeof(ContinueExpression));
-    if (!continue_local) {
-        return ALLOCATION_FAILED;
-    }
-
-    *continue_local = (ContinueExpression){EXPRESSION_INIT(CONTINUE_VTABLE, start_token)};
-    *continue_expr  = continue_local;
-    return SUCCESS;
-}
-
-void continue_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
-    assert(free_alloc);
-
-    ContinueExpression* continue_expr = (ContinueExpression*)node;
-    free_alloc(continue_expr);
+    SINGLE_STMT_CREATE(ContinueExpression, CONTINUE_VTABLE, continue_expr);
 }
 
 TRY_STATUS
 continue_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(symbol_map);
+    SINGLE_STMT_RECONSTRUCT("continue");
+}
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "continue"));
-    return SUCCESS;
+TRY_STATUS ignore_expression_create(Token              start_token,
+                                    IgnoreExpression** ignore_expr,
+                                    memory_alloc_fn    memory_alloc) {
+    SINGLE_STMT_CREATE(IgnoreExpression, IGNORE_VTABLE, ignore_expr);
+}
+
+TRY_STATUS
+ignore_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+    SINGLE_STMT_RECONSTRUCT("_");
 }

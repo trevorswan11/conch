@@ -29,10 +29,10 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
 
-    JumpStatement* j = (JumpStatement*)node;
-    NODE_VIRTUAL_FREE(j->value, free_alloc);
+    JumpStatement* jump = (JumpStatement*)node;
+    NODE_VIRTUAL_FREE(jump->value, free_alloc);
 
-    free_alloc(j);
+    free_alloc(jump);
 }
 
 TRY_STATUS jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
@@ -49,10 +49,10 @@ TRY_STATUS jump_statement_reconstruct(Node* node, const HashMap* symbol_map, Str
         UNREACHABLE;
     }
 
-    JumpStatement* j = (JumpStatement*)node;
-    if (j->value) {
+    JumpStatement* jump = (JumpStatement*)node;
+    if (jump->value) {
         PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
-        Node* value_node = (Node*)j->value;
+        Node* value_node = (Node*)jump->value;
         PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }
 

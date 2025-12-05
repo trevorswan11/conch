@@ -503,21 +503,25 @@ TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression) {
 }
 
 static inline TRY_STATUS _if_expression_parse_branch(Parser* p, Statement** stmt) {
-    if (parser_peek_token_is(p, LBRACE)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    PROPAGATE_IF_ERROR(parser_next_token(p));
 
-        BlockStatement* alt_block;
-        PROPAGATE_IF_ERROR(block_statement_parse(p, &alt_block));
-
-        *stmt = (Statement*)alt_block;
-    } else {
-        PROPAGATE_IF_ERROR(parser_next_token(p));
-
-        Statement* alt_stmt;
-        PROPAGATE_IF_ERROR(parser_parse_statement(p, &alt_stmt));
-        *stmt = alt_stmt;
+    Statement* alternate;
+    switch (p->current_token.type) {
+    case VAR:
+    case CONST:
+    case TYPE:
+    case IMPL:
+    case IMPORT:
+    case UNDERSCORE:
+        IGNORE_STATUS(parser_put_status_error(
+            p, ILLEGAL_IF_BRANCH, p->current_token.line, p->current_token.column));
+        return ILLEGAL_IF_BRANCH;
+    default:
+        PROPAGATE_IF_ERROR(parser_parse_statement(p, &alternate));
+        break;
     }
 
+    *stmt = alternate;
     return SUCCESS;
 }
 
@@ -840,6 +844,7 @@ TRY_STATUS match_expression_parse(Parser* p, Expression** expression) {
         case TYPE:
         case IMPL:
         case IMPORT:
+        case UNDERSCORE:
             IGNORE_STATUS(parser_put_status_error(
                 p, ILLEGAL_MATCH_ARM, p->current_token.line, p->current_token.column));
 
@@ -982,19 +987,331 @@ TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression) {
 }
 
 TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
-    MAYBE_UNUSED(p);
-    MAYBE_UNUSED(expression);
-    return NOT_IMPLEMENTED;
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+
+    ArrayList iterables;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&iterables, 2, sizeof(Expression*), p->allocator));
+    while (!parser_peek_token_is(p, RPAREN) && !parser_peek_token_is(p, END)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        Expression* iterable;
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &iterable),
+                              free_expression_list(&iterables, p->allocator.free_alloc));
+
+        PROPAGATE_IF_ERROR_DO(array_list_push(&iterables, &iterable),
+                              free_expression_list(&iterables, p->allocator.free_alloc));
+
+        // Only check for the comma after confirming we aren't at the end of the iterables
+        if (!parser_peek_token_is(p, RPAREN)) {
+            PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA),
+                                  free_expression_list(&iterables, p->allocator.free_alloc));
+        }
+    }
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
+                          free_expression_list(&iterables, p->allocator.free_alloc));
+
+    if (iterables.length == 0) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, FOR_MISSING_ITERABLES, start_token.line, start_token.column));
+
+        free_expression_list(&iterables, p->allocator.free_alloc);
+        return FOR_MISSING_ITERABLES;
+    }
+
+    // Captures are technically optional, but they are allocated anyways
+    ArrayList captures;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&captures, 2, sizeof(Expression*), p->allocator));
+
+    bool expect_captures = false;
+    if (parser_peek_token_is(p, COLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN), {
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_expression_list(&captures, p->allocator.free_alloc);
+        });
+
+        while (!parser_peek_token_is(p, RPAREN) && !parser_peek_token_is(p, END)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+            Expression* capture;
+            if (parser_current_token_is(p, UNDERSCORE)) {
+                IgnoreExpression* ignore;
+                PROPAGATE_IF_ERROR_DO(
+                    ignore_expression_create(p->current_token, &ignore, p->allocator.memory_alloc),
+                    {
+                        free_expression_list(&iterables, p->allocator.free_alloc);
+                        free_expression_list(&captures, p->allocator.free_alloc);
+                    });
+                capture = (Expression*)ignore;
+            } else {
+                PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &capture), {
+                    free_expression_list(&iterables, p->allocator.free_alloc);
+                    free_expression_list(&captures, p->allocator.free_alloc);
+                });
+            }
+
+            PROPAGATE_IF_ERROR_DO(array_list_push(&captures, &capture), {
+                free_expression_list(&iterables, p->allocator.free_alloc);
+                free_expression_list(&captures, p->allocator.free_alloc);
+            });
+
+            // Only check for the close bar if we have more captures
+            if (!parser_peek_token_is(p, RPAREN)) {
+                PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
+                    free_expression_list(&iterables, p->allocator.free_alloc);
+                    free_expression_list(&captures, p->allocator.free_alloc);
+                });
+            }
+        }
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_expression_list(&captures, p->allocator.free_alloc);
+        });
+
+        expect_captures = true;
+    }
+
+    // The number of captures must align with the number of iterables
+    if (expect_captures && iterables.length != captures.length) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, FOR_ITERABLE_CAPTURE_MISMATCH, start_token.line, start_token.column));
+
+        free_expression_list(&iterables, p->allocator.free_alloc);
+        free_expression_list(&captures, p->allocator.free_alloc);
+        return FOR_ITERABLE_CAPTURE_MISMATCH;
+    }
+
+    // Now we can parse the block statement as usual
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), {
+        free_expression_list(&iterables, p->allocator.free_alloc);
+        free_expression_list(&captures, p->allocator.free_alloc);
+    });
+    BlockStatement* block;
+    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &block), {
+        free_expression_list(&iterables, p->allocator.free_alloc);
+        free_expression_list(&captures, p->allocator.free_alloc);
+    });
+
+    // There is nothing that can be done in an empty for loop so we prevent it here
+    if (block->statements.length == 0) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, EMPTY_FOR_LOOP, start_token.line, start_token.column));
+
+        free_expression_list(&iterables, p->allocator.free_alloc);
+        free_expression_list(&captures, p->allocator.free_alloc);
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        return EMPTY_FOR_LOOP;
+    }
+
+    // Finally, we should try to parse the non break clause
+    Statement* non_break = NULL;
+    if (parser_peek_token_is(p, ELSE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_expression_list(&captures, p->allocator.free_alloc);
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        });
+
+        // This logic follows the same restrictions as if branches and match arms
+        switch (p->current_token.type) {
+        case VAR:
+        case CONST:
+        case TYPE:
+        case IMPL:
+        case IMPORT:
+        case UNDERSCORE:
+            IGNORE_STATUS(parser_put_status_error(
+                p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
+
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_expression_list(&captures, p->allocator.free_alloc);
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            return ILLEGAL_LOOP_NON_BREAK;
+        default:
+            PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &non_break), {
+                free_expression_list(&iterables, p->allocator.free_alloc);
+                free_expression_list(&captures, p->allocator.free_alloc);
+                block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            });
+            break;
+        }
+    }
+
+    // We're now ready to construct the actual object and transfer ownership
+    ForLoopExpression* for_loop;
+    PROPAGATE_IF_ERROR_DO(for_loop_expression_create(start_token,
+                                                     iterables,
+                                                     captures,
+                                                     block,
+                                                     non_break,
+                                                     &for_loop,
+                                                     p->allocator.memory_alloc),
+                          {
+                              free_expression_list(&iterables, p->allocator.free_alloc);
+                              free_expression_list(&captures, p->allocator.free_alloc);
+                              block_statement_destroy((Node*)block, p->allocator.free_alloc);
+                              NODE_VIRTUAL_FREE(non_break, p->allocator.free_alloc);
+                          });
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *expression = (Expression*)for_loop;
+    return SUCCESS;
 }
 
 TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression) {
-    MAYBE_UNUSED(p);
-    MAYBE_UNUSED(expression);
-    return NOT_IMPLEMENTED;
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* condition;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &condition));
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
+                          NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
+
+    // The continuation expression is optional but is parsed similar to captures
+    Expression* continuation = NULL;
+    if (parser_peek_token_is(p, COLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN),
+                              NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
+
+        // We have to consume again since we're looking at the LPAREN here
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p),
+                              NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &continuation),
+                              NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+        });
+    }
+
+    // Now we can parse the block statement now since it has to be here
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), {
+        NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+    });
+
+    BlockStatement* block;
+    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &block), {
+        NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+    });
+
+    // We need at least a continuation or block
+    if (!continuation && block->statements.length == 0) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, EMPTY_WHILE_LOOP, start_token.line, start_token.column));
+
+        NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        return EMPTY_WHILE_LOOP;
+    }
+
+    // Finally, we should try to parse the non break clause
+    Statement* non_break = NULL;
+    if (parser_peek_token_is(p, ELSE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        });
+
+        // This logic follows the same restrictions as if branches and match arms
+        switch (p->current_token.type) {
+        case VAR:
+        case CONST:
+        case TYPE:
+        case IMPL:
+        case IMPORT:
+            IGNORE_STATUS(parser_put_status_error(
+                p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
+            return ILLEGAL_LOOP_NON_BREAK;
+        default:
+            PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &non_break), {
+                NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+                block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            });
+            break;
+        }
+    }
+
+    // Ownership transfer time
+    WhileLoopExpression* while_loop;
+    PROPAGATE_IF_ERROR_DO(while_loop_expression_create(start_token,
+                                                       condition,
+                                                       continuation,
+                                                       block,
+                                                       non_break,
+                                                       &while_loop,
+                                                       p->allocator.memory_alloc),
+                          {
+                              NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+                              NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+                              block_statement_destroy((Node*)block, p->allocator.free_alloc);
+                          });
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *expression = (Expression*)while_loop;
+    return SUCCESS;
 }
 
 TRY_STATUS do_while_loop_expression_parse(Parser* p, Expression** expression) {
-    MAYBE_UNUSED(p);
-    MAYBE_UNUSED(expression);
-    return NOT_IMPLEMENTED;
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, LBRACE));
+
+    // Parse the block statement which must do some work
+    BlockStatement* block;
+    PROPAGATE_IF_ERROR(block_statement_parse(p, &block));
+
+    if (block->statements.length == 0) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, EMPTY_WHILE_LOOP, start_token.line, start_token.column));
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        return EMPTY_WHILE_LOOP;
+    }
+
+    // We have to consume the while token, the open paren, and enter the expression
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, WHILE),
+                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN),
+                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
+    PROPAGATE_IF_ERROR_DO(parser_next_token(p),
+                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
+
+    // There's no continuation or non break clause so this is easy :)
+    Expression* condition;
+    PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &condition),
+                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
+
+    // Ownership transfer time
+    DoWhileLoopExpression* do_while_loop;
+    PROPAGATE_IF_ERROR_DO(
+        do_while_loop_expression_create(
+            start_token, block, condition, &do_while_loop, p->allocator.memory_alloc),
+        {
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+        });
+
+    PROPAGATE_IF_ERROR_DO(
+        parser_expect_peek(p, RPAREN),
+        do_while_loop_expression_destroy((Node*)do_while_loop, p->allocator.free_alloc));
+
+    *expression = (Expression*)do_while_loop;
+    return SUCCESS;
 }

@@ -12,11 +12,13 @@
 #include "ast/node.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/discard.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/impl.h"
 #include "ast/statements/import.h"
 #include "ast/statements/jump.h"
 
+#include "parser/precedence.h"
 #include "util/allocator.h"
 #include "util/status.h"
 
@@ -165,13 +167,13 @@ TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
-    const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_next_token(p));
-
+    const Token     start_token = p->current_token;
     BlockStatement* block;
     PROPAGATE_IF_ERROR(block_statement_create(start_token, &block, p->allocator));
 
-    while (!parser_current_token_is(p, RBRACE) && !parser_current_token_is(p, END)) {
+    while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
         Statement* inner_stmt;
         PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &inner_stmt),
                               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc););
@@ -180,8 +182,10 @@ TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
             NODE_VIRTUAL_FREE(inner_stmt, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         });
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
+                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
 
     *stmt = block;
     return SUCCESS;
@@ -272,5 +276,29 @@ TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
     }
 
     *stmt = import;
+    return SUCCESS;
+}
+
+TRY_STATUS discard_statement_parse(Parser* p, DiscardStatement** stmt) {
+    assert(p);
+    ASSERT_ALLOCATOR(p->allocator);
+
+    const Token start_token = p->current_token;
+    PROPAGATE_IF_ERROR(parser_expect_peek(p, ASSIGN));
+    PROPAGATE_IF_ERROR(parser_next_token(p));
+
+    Expression* to_discard;
+    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &to_discard));
+
+    DiscardStatement* discard;
+    PROPAGATE_IF_ERROR_DO(
+        discard_statement_create(start_token, to_discard, &discard, p->allocator.memory_alloc),
+        NODE_VIRTUAL_FREE(to_discard, p->allocator.free_alloc));
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    }
+
+    *stmt = discard;
     return SUCCESS;
 }

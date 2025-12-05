@@ -29,10 +29,10 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
 
-    ExpressionStatement* e = (ExpressionStatement*)node;
-    NODE_VIRTUAL_FREE(e->expression, free_alloc);
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
+    NODE_VIRTUAL_FREE(expr_stmt->expression, free_alloc);
 
-    free_alloc(e);
+    free_alloc(expr_stmt);
 }
 
 TRY_STATUS
@@ -42,11 +42,9 @@ expression_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBu
         return NULL_PARAMETER;
     }
 
-    ExpressionStatement* e = (ExpressionStatement*)node;
-    if (e->expression) {
-        Node* value_node = (Node*)e->expression;
-        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
-    }
+    ExpressionStatement* expr_stmt  = (ExpressionStatement*)node;
+    Node*                value_node = (Node*)expr_stmt->expression;
+    PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
 
     return SUCCESS;
 }

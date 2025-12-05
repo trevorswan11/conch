@@ -15,9 +15,7 @@ TRY_STATUS for_loop_expression_create(Token               start_token,
     assert(iterables.item_size == sizeof(Expression*));
     assert(captures.item_size == sizeof(Expression*));
 
-    if (iterables.length == 0) {
-        return FOR_MISSING_ITERABLES;
-    } else if (!block) {
+    if (!block) {
         return LOOP_MISSING_BODY;
     }
 
@@ -58,9 +56,51 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
         return NULL_PARAMETER;
     }
 
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(symbol_map);
-    return NOT_IMPLEMENTED;
+    ForLoopExpression* for_loop = (ForLoopExpression*)node;
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "for ("));
+
+    // All for loops have an iterables clause
+    for (size_t i = 0; i < for_loop->iterables.length; i++) {
+        Expression* iterable;
+        UNREACHABLE_IF_ERROR(array_list_get(&for_loop->iterables, i, &iterable));
+        Node* iter_node = (Node*)iterable;
+        PROPAGATE_IF_ERROR(iter_node->vtable->reconstruct(iter_node, symbol_map, sb));
+
+        if (i != for_loop->iterables.length - 1) {
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+        }
+    }
+
+    // A for loop may not have captures if it means to discard its iterables
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    if (for_loop->captures.length > 0) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " : ("));
+
+        for (size_t i = 0; i < for_loop->captures.length; i++) {
+            Expression* capture;
+            UNREACHABLE_IF_ERROR(array_list_get(&for_loop->captures, i, &capture));
+            Node* capture_node = (Node*)capture;
+            PROPAGATE_IF_ERROR(capture_node->vtable->reconstruct(capture_node, symbol_map, sb));
+
+            if (i != for_loop->captures.length - 1) {
+                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+            }
+        }
+
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    }
+
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)for_loop->block, symbol_map, sb));
+
+    // The non break clause is optional but uses an else clause like a condition
+    if (for_loop->non_break) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " else "));
+        Node* non_break = (Node*)for_loop->non_break;
+        PROPAGATE_IF_ERROR(non_break->vtable->reconstruct(non_break, symbol_map, sb));
+    }
+
+    return SUCCESS;
 }
 
 TRY_STATUS while_loop_expression_create(Token                 start_token,
@@ -84,7 +124,7 @@ TRY_STATUS while_loop_expression_create(Token                 start_token,
     }
 
     *while_loop = (WhileLoopExpression){
-        .base         = EXPRESSION_INIT(FOR_VTABLE, start_token),
+        .base         = EXPRESSION_INIT(WHILE_VTABLE, start_token),
         .condition    = condition,
         .continuation = continuation,
         .block        = block,
@@ -115,9 +155,32 @@ while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringB
         return NULL_PARAMETER;
     }
 
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(symbol_map);
-    return NOT_IMPLEMENTED;
+    WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "while ("));
+
+    Node* cond_node = (Node*)while_loop->condition;
+    PROPAGATE_IF_ERROR(cond_node->vtable->reconstruct(cond_node, symbol_map, sb));
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+
+    // A continuation runs after every loop and is optional
+    if (while_loop->continuation) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " : ("));
+        Node* cont_node = (Node*)while_loop->continuation;
+        PROPAGATE_IF_ERROR(cont_node->vtable->reconstruct(cont_node, symbol_map, sb));
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    }
+
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)while_loop->block, symbol_map, sb));
+
+    // While loops also have a non break clause
+    if (while_loop->non_break) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " else "));
+        Node* non_break = (Node*)while_loop->non_break;
+        PROPAGATE_IF_ERROR(non_break->vtable->reconstruct(non_break, symbol_map, sb));
+    }
+
+    return SUCCESS;
 }
 
 TRY_STATUS do_while_loop_expression_create(Token                   start_token,
@@ -139,7 +202,7 @@ TRY_STATUS do_while_loop_expression_create(Token                   start_token,
     }
 
     *do_while_loop = (DoWhileLoopExpression){
-        .base      = EXPRESSION_INIT(FOR_VTABLE, start_token),
+        .base      = EXPRESSION_INIT(DO_WHILE_VTABLE, start_token),
         .condition = condition,
         .block     = block,
     };
@@ -166,7 +229,14 @@ do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
         return NULL_PARAMETER;
     }
 
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(symbol_map);
-    return NOT_IMPLEMENTED;
+    DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)node;
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "do "));
+    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)do_while_loop->block, symbol_map, sb));
+
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " while ("));
+    Node* cond_node = (Node*)do_while_loop->condition;
+    PROPAGATE_IF_ERROR(cond_node->vtable->reconstruct(cond_node, symbol_map, sb));
+    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+
+    return SUCCESS;
 }

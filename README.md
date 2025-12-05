@@ -18,16 +18,20 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 # Getting Started
 System dependencies:
 1. CMake (3.20 or later)
-2. The Clang toolchain (including clang-format)
+2. Any mainstream C compiler (Clang is recommended for maximum compatibility)
+3. Clang-format
 
 Once these are installed, building conch is as easy as running:
 ```sh
 git clone https://github.com/trevorswan11/conch
 cd conch
-make -j4 dist
+mkdir build
+cd build
+cmake ..
+cmake --build . --target dist
 ```
 
-This builds the `dist` configuration, enabling maximum optimization and disabling assertions and debug symbols. For more targets, run `make help`.
+This builds the `dist` configuration, enabling maximum optimization and disabling assertions and debug symbols. 
 
 # Correctness & Availability
 [Catch2](https://github.com/catchorg/Catch2) is used with [C++20](https://en.cppreference.com/w/cpp/20.html) to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness in the C code. 

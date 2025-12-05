@@ -24,12 +24,14 @@ extern "C" {
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
+#include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/discard.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/impl.h"
 #include "ast/statements/import.h"
@@ -1563,6 +1565,208 @@ TEST_CASE("Array expressions") {
             check_parse_errors(pf.parser(),
                                {"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("Discard statements") {
+    SECTION("Correct discards") {
+        const char*   input = "_ = 90";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        DiscardStatement* discard_stmt = (DiscardStatement*)stmt;
+        test_number_expression<int64_t>(discard_stmt->to_discard, 90);
+    }
+
+    SECTION("Incorrect discards") {
+        const char*   input = "_ = const a := 2";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(),
+                           {"No prefix parse function for CONST found [Ln 1, Col 5]",
+                            "No prefix parse function for WALRUS found [Ln 1, Col 13]"},
+                           false);
+    }
+}
+
+TEST_CASE("For loops") {
+    SECTION("Iterable only") {
+        const char*   input = "for (1) {1}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+        REQUIRE(for_loop->iterables.length == 1);
+        REQUIRE(for_loop->captures.length == 0);
+        REQUIRE(for_loop->block->statements.length == 1);
+        REQUIRE_FALSE(for_loop->non_break);
+
+        Expression* iterable;
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+        test_number_expression<int64_t>(iterable, 1);
+
+        Statement* statement;
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
+        expr_stmt = (ExpressionStatement*)statement;
+        test_number_expression<int64_t>(expr_stmt->expression, 1);
+    }
+
+    SECTION("Iterable and capture only") {
+        SECTION("Aligned captures") {
+            const char*   input = "for (1) : (name) {1}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+            REQUIRE(for_loop->iterables.length == 1);
+            REQUIRE(for_loop->captures.length == 1);
+            REQUIRE(for_loop->block->statements.length == 1);
+            REQUIRE_FALSE(for_loop->non_break);
+
+            Expression* iterable;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+            test_number_expression<int64_t>(iterable, 1);
+
+            Expression* capture;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
+            test_identifier_expression(capture, "name");
+
+            Statement* statement;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+        }
+
+        SECTION("Ignored capture") {
+            const char*   input = "for (1, 2) : (name, _) {1}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+            REQUIRE(for_loop->iterables.length == 2);
+            REQUIRE(for_loop->captures.length == 2);
+            REQUIRE(for_loop->block->statements.length == 1);
+            REQUIRE_FALSE(for_loop->non_break);
+
+            Expression* capture;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
+            test_identifier_expression(capture, "name");
+        }
+    }
+
+    SECTION("Full for loops") {
+        SECTION("With else block statement") {
+            const char*   input = "for (1, 2) : (name, word) {1} else {1}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+            REQUIRE(for_loop->iterables.length == 2);
+            REQUIRE(for_loop->captures.length == 2);
+            REQUIRE(for_loop->block->statements.length == 1);
+            REQUIRE(for_loop->non_break);
+
+            Expression* iterable;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+            test_number_expression<int64_t>(iterable, 1);
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 1, &iterable)));
+            test_number_expression<int64_t>(iterable, 2);
+
+            Expression* capture;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
+            test_identifier_expression(capture, "name");
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 1, &capture)));
+            test_identifier_expression(capture, "word");
+
+            Statement* statement;
+            REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+
+            BlockStatement* non_break = (BlockStatement*)for_loop->non_break;
+            REQUIRE(non_break->statements.length == 1);
+            REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+        }
+
+        SECTION("With expression else") {
+            const char*   input = "for (1, 2) : (name, word) {1} else 1";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+            ExpressionStatement* non_break_expr_stmt = (ExpressionStatement*)for_loop->non_break;
+            test_number_expression<int64_t>(non_break_expr_stmt->expression, 1);
+        }
+    }
+
+    SECTION("Malformed for loops") {
+        SECTION("Missing iterables") {
+            const char*   input = "for () {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"FOR_MISSING_ITERABLES [Ln 1, Col 1]"}, false);
+        }
+
+        SECTION("Capture mismatch") {
+            const char*   input = "for (1) : () {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"FOR_ITERABLE_CAPTURE_MISMATCH [Ln 1, Col 1]"}, false);
+        }
+
+        SECTION("Missing body") {
+            const char*   input = "for (1) {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"EMPTY_FOR_LOOP [Ln 1, Col 1]"}, false);
+        }
+
+        SECTION("Improper non break clause") {
+            const char*   input = "for (1) : (1) {1} else const a := 2;";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]",
+                                "No prefix parse function for WALRUS found [Ln 1, Col 32]"},
                                false);
         }
     }

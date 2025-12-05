@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "lexer/token.h"
 #include "parser/expression_parsers.h"
 #include "parser/parser.h"
 #include "parser/statement_parsers.h"
@@ -11,6 +12,7 @@
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
+#include "ast/statements/discard.h"
 #include "ast/statements/expression.h"
 #include "ast/statements/impl.h"
 #include "ast/statements/import.h"
@@ -362,6 +364,9 @@ TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt) {
         break;
     case LBRACE:
         PROPAGATE_IF_ERROR(block_statement_parse(p, (BlockStatement**)stmt));
+        break;
+    case UNDERSCORE:
+        PROPAGATE_IF_ERROR(discard_statement_parse(p, (DiscardStatement**)stmt));
         break;
     default:
         PROPAGATE_IF_ERROR(expression_statement_parse(p, (ExpressionStatement**)stmt));
