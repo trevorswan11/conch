@@ -13,14 +13,14 @@
     *out_expr = temp;                                              \
     return SUCCESS;
 
-#define SINGLE_STMT_RECONSTRUCT(string)                         \
-    if (!sb) {                                                  \
-        return NULL_PARAMETER;                                  \
-    }                                                           \
-    MAYBE_UNUSED(node);                                         \
-    MAYBE_UNUSED(symbol_map);                                   \
-                                                                \
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "nil")); \
+#define SINGLE_STMT_RECONSTRUCT(string)                          \
+    if (!sb) {                                                   \
+        return NULL_PARAMETER;                                   \
+    }                                                            \
+    MAYBE_UNUSED(node);                                          \
+    MAYBE_UNUSED(symbol_map);                                    \
+                                                                 \
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, string)); \
     return SUCCESS;
 
 void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {

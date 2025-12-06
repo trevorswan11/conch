@@ -36,6 +36,7 @@ typedef enum {
 } ExplicitTypeTag;
 
 typedef struct ExplicitFunctionType {
+    ArrayList       fn_generics;
     ArrayList       fn_type_params;
     TypeExpression* return_type;
 } ExplicitFunctionType;

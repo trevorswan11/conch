@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
@@ -19,6 +20,7 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
 }
 
 TRY_STATUS struct_expression_create(Token              start_token,
+                                    ArrayList          generics,
                                     ArrayList          members,
                                     StructExpression** struct_expr,
                                     memory_alloc_fn    memory_alloc) {
@@ -35,8 +37,9 @@ TRY_STATUS struct_expression_create(Token              start_token,
     }
 
     *struct_local = (StructExpression){
-        .base    = EXPRESSION_INIT(STRUCT_VTABLE, start_token),
-        .members = members,
+        .base     = EXPRESSION_INIT(STRUCT_VTABLE, start_token),
+        .generics = generics,
+        .members  = members,
     };
 
     *struct_expr = struct_local;
@@ -48,6 +51,7 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     assert(free_alloc);
 
     StructExpression* struct_expr = (StructExpression*)node;
+    free_expression_list(&struct_expr->generics, free_alloc);
     free_struct_member_list(&struct_expr->members, free_alloc);
 
     free_alloc(struct_expr);
@@ -61,7 +65,27 @@ struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuild
     }
 
     StructExpression* s = (StructExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "struct { "));
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "struct"));
+
+    if (s->generics.length > 0) {
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
+
+        for (size_t i = 0; i < s->generics.length; i++) {
+            Expression* generic;
+            UNREACHABLE_IF_ERROR(array_list_get(&s->generics, i, &generic));
+            Node* generic_node = (Node*)generic;
+            PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
+
+            if (i != s->generics.length - 1) {
+                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+            }
+        }
+
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
+    } else {
+        PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    }
+    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));
 
     StructMember member;
     for (size_t i = 0; i < s->members.length; i++) {

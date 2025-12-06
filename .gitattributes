@@ -1,5 +1,4 @@
 tests/test_framework/** linguist-vendored
-Makefile linguist-vendored
 
 * text eol=lf
 

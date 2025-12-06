@@ -33,6 +33,7 @@
 #include "util/allocator.h"
 #include "util/alphanum.h"
 #include "util/containers/array_list.h"
+#include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
@@ -81,36 +82,76 @@ TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_e
         }
 
         PROPAGATE_IF_ERROR(parser_next_token(p));
-        PROPAGATE_IF_ERROR(infix.infix_parse(p, *lhs_expression, lhs_expression));
+        PROPAGATE_IF_ERROR_DO(infix.infix_parse(p, *lhs_expression, lhs_expression),
+                              NODE_VIRTUAL_FREE(*lhs_expression, p->allocator.free_alloc));
     }
 
     return SUCCESS;
 }
 
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
+    if (start_token.type != IDENT && !hash_set_contains(&p->primitives, &start_token.type)) {
+        IGNORE_STATUS(
+            parser_put_status_error(p, ILLEGAL_IDENTIFIER, start_token.line, start_token.column));
+        return ILLEGAL_IDENTIFIER;
+    }
+
     IdentifierExpression* ident;
     PROPAGATE_IF_ERROR(identifier_expression_create(
-        p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+        start_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
     *expression = (Expression*)ident;
     return SUCCESS;
 }
 
 TRY_STATUS function_definition_parse(Parser*          p,
+                                     ArrayList*       generics,
                                      ArrayList*       parameters,
                                      TypeExpression** return_type,
                                      bool*            contains_default_param) {
     assert(parser_current_token_is(p, FUNCTION));
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, LPAREN));
+    PROPAGATE_IF_ERROR(array_list_init_allocator(generics, 1, sizeof(Expression*), p->allocator));
+    if (parser_peek_token_is(p, LT)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
 
-    PROPAGATE_IF_ERROR(allocate_parameter_list(p, parameters, contains_default_param));
+        while (!parser_peek_token_is(p, GT) && !parser_peek_token_is(p, END)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
 
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COLON), free_parameter_list(parameters));
+            Expression* ident;
+            PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident),
+                                  free_expression_list(generics, p->allocator.free_alloc));
+
+            PROPAGATE_IF_ERROR_DO(array_list_push(generics, &ident), {
+                free_expression_list(generics, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+            });
+
+            if (!parser_peek_token_is(p, GT)) {
+                PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA),
+                                      free_expression_list(generics, p->allocator.free_alloc));
+            }
+        }
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, GT),
+                              free_expression_list(generics, p->allocator.free_alloc));
+    }
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN),
+                          free_expression_list(generics, p->allocator.free_alloc));
+    PROPAGATE_IF_ERROR_DO(allocate_parameter_list(p, parameters, contains_default_param),
+                          free_expression_list(generics, p->allocator.free_alloc));
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COLON), {
+        free_parameter_list(parameters, p->allocator.free_alloc);
+        free_expression_list(generics, p->allocator.free_alloc);
+    });
     const Token type_token_start = p->current_token;
 
     PROPAGATE_IF_ERROR_DO(explicit_type_parse(p, type_token_start, return_type), {
         IGNORE_STATUS(parser_put_status_error(
             p, MALFORMED_FUNCTION_LITERAL, type_token_start.line, type_token_start.column));
-        free_parameter_list(parameters);
+        free_parameter_list(parameters, p->allocator.free_alloc);
+        free_expression_list(generics, p->allocator.free_alloc);
     });
 
     return SUCCESS;
@@ -221,11 +262,13 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
         switch (p->current_token.type) {
         case FUNCTION: {
             bool            contains_default_param;
+            ArrayList       generics;
             ArrayList       parameters;
             TypeExpression* return_type;
             PROPAGATE_IF_ERROR_DO(
-                function_definition_parse(p, &parameters, &return_type, &contains_default_param),
-                array_list_deinit(&dim_array););
+                function_definition_parse(
+                    p, &generics, &parameters, &return_type, &contains_default_param),
+                array_list_deinit(&dim_array));
 
             // Default values in function types make no sense to allow
             if (contains_default_param) {
@@ -233,7 +276,8 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
                     parser_put_status_error(
                         p, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
                     {
-                        free_parameter_list(&parameters);
+                        free_expression_list(&generics, p->allocator.free_alloc);
+                        free_parameter_list(&parameters, p->allocator.free_alloc);
                         type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
                         array_list_deinit(&dim_array);
                     });
@@ -243,6 +287,7 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
             explicit_union.explicit_type.variant = (ExplicitTypeUnion){
                 .function_type =
                     (ExplicitFunctionType){
+                        .fn_generics    = generics,
                         .fn_type_params = parameters,
                         .return_type    = return_type,
                     },
@@ -252,7 +297,8 @@ TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** ty
                 type_expression_create(
                     start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
                 {
-                    free_parameter_list(&parameters);
+                    free_expression_list(&generics, p->allocator.free_alloc);
+                    free_parameter_list(&parameters, p->allocator.free_alloc);
                     type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
                     array_list_deinit(&dim_array);
                 });
@@ -565,30 +611,38 @@ TRY_STATUS if_expression_parse(Parser* p, Expression** expression) {
 
 TRY_STATUS function_expression_parse(Parser* p, Expression** expression) {
     const Token     start_token = p->current_token;
+    ArrayList       generics;
     ArrayList       parameters;
     TypeExpression* return_type;
 
-    PROPAGATE_IF_ERROR(function_definition_parse(p, &parameters, &return_type, NULL));
+    PROPAGATE_IF_ERROR(function_definition_parse(p, &generics, &parameters, &return_type, NULL));
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), {
-        free_parameter_list(&parameters);
+        free_expression_list(&generics, p->allocator.free_alloc);
+        free_parameter_list(&parameters, p->allocator.free_alloc);
         type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
     });
 
     BlockStatement* body;
     PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &body), {
-        free_parameter_list(&parameters);
+        free_expression_list(&generics, p->allocator.free_alloc);
+        free_parameter_list(&parameters, p->allocator.free_alloc);
         type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
     });
 
     FunctionExpression* function;
-    PROPAGATE_IF_ERROR_DO(
-        function_expression_create(
-            start_token, parameters, return_type, body, &function, p->allocator.memory_alloc),
-        {
-            type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
-            free_parameter_list(&parameters);
-            block_statement_destroy((Node*)body, p->allocator.free_alloc);
-        });
+    PROPAGATE_IF_ERROR_DO(function_expression_create(start_token,
+                                                     generics,
+                                                     parameters,
+                                                     return_type,
+                                                     body,
+                                                     &function,
+                                                     p->allocator.memory_alloc),
+                          {
+                              free_expression_list(&generics, p->allocator.free_alloc);
+                              type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                              free_parameter_list(&parameters, p->allocator.free_alloc);
+                              block_statement_destroy((Node*)body, p->allocator.free_alloc);
+                          });
 
     *expression = (Expression*)function;
     return SUCCESS;
@@ -598,44 +652,60 @@ TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** e
     const Token start_token = p->current_token;
 
     ArrayList arguments;
-    PROPAGATE_IF_ERROR(array_list_init_allocator(&arguments, 2, sizeof(Expression*), p->allocator));
+    PROPAGATE_IF_ERROR(
+        array_list_init_allocator(&arguments, 2, sizeof(CallArgument), p->allocator));
 
     if (parser_peek_token_is(p, RPAREN)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     } else {
+        bool is_ref_argument = false;
+        if (parser_peek_token_is(p, REF)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+            is_ref_argument = true;
+        }
+
         PROPAGATE_IF_ERROR_DO(parser_next_token(p), array_list_deinit(&arguments));
 
         // Append the first argument to prepare for comma peeking
-        Expression* argument;
-        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument),
+        Expression* argument_expr;
+        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument_expr),
                               array_list_deinit(&arguments));
 
+        CallArgument argument =
+            (CallArgument){.is_ref = is_ref_argument, .argument = argument_expr};
         PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument), {
-            NODE_VIRTUAL_FREE(argument, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(argument_expr, p->allocator.free_alloc);
             array_list_deinit(&arguments);
         });
 
         // Add the rest of the comma separated argument list
         while (parser_peek_token_is(p, COMMA)) {
+            is_ref_argument = false;
             UNREACHABLE_IF_ERROR(parser_next_token(p));
+            if (parser_peek_token_is(p, REF)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+                is_ref_argument = true;
+            }
+
             PROPAGATE_IF_ERROR_DO(parser_next_token(p),
-                                  free_expression_list(&arguments, p->allocator.free_alloc));
+                                  free_call_expression_list(&arguments, p->allocator.free_alloc));
 
-            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument),
-                                  free_expression_list(&arguments, p->allocator.free_alloc));
+            PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &argument_expr),
+                                  free_call_expression_list(&arguments, p->allocator.free_alloc));
 
+            argument = (CallArgument){.is_ref = is_ref_argument, .argument = argument_expr};
             PROPAGATE_IF_ERROR_DO(array_list_push(&arguments, &argument),
-                                  free_expression_list(&arguments, p->allocator.free_alloc));
+                                  free_call_expression_list(&arguments, p->allocator.free_alloc));
         }
 
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
-                              free_expression_list(&arguments, p->allocator.free_alloc));
+                              free_call_expression_list(&arguments, p->allocator.free_alloc));
     }
 
     CallExpression* call;
     PROPAGATE_IF_ERROR_DO(
         call_expression_create(start_token, function, arguments, &call, p->allocator.memory_alloc),
-        free_expression_list(&arguments, p->allocator.free_alloc));
+        free_call_expression_list(&arguments, p->allocator.free_alloc));
 
     *expression = (Expression*)call;
     return SUCCESS;
@@ -643,25 +713,61 @@ TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** e
 
 TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, LBRACE));
+    ArrayList   generics;
+    PROPAGATE_IF_ERROR(array_list_init_allocator(&generics, 1, sizeof(Expression*), p->allocator));
+
+    if (parser_peek_token_is(p, LT)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+        while (!parser_peek_token_is(p, GT) && !parser_peek_token_is(p, END)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
+
+            Expression* ident;
+            PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident),
+                                  free_expression_list(&generics, p->allocator.free_alloc));
+
+            PROPAGATE_IF_ERROR_DO(array_list_push(&generics, &ident), {
+                free_expression_list(&generics, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+            });
+
+            if (!parser_peek_token_is(p, GT)) {
+                PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA),
+                                      free_expression_list(&generics, p->allocator.free_alloc));
+            }
+        }
+
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, GT),
+                              free_expression_list(&generics, p->allocator.free_alloc));
+    }
+
+    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE),
+                          free_expression_list(&generics, p->allocator.free_alloc));
 
     ArrayList members;
-    PROPAGATE_IF_ERROR(array_list_init_allocator(&members, 4, sizeof(StructMember), p->allocator));
+    PROPAGATE_IF_ERROR_DO(
+        array_list_init_allocator(&members, 4, sizeof(StructMember), p->allocator),
+        free_expression_list(&generics, p->allocator.free_alloc));
 
     // We only handle members here as methods are in impl blocks
     while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
-        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT),
-                              free_struct_member_list(&members, p->allocator.free_alloc));
+        PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, IDENT), {
+            free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
+        });
 
         Expression* ident_expr;
-        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident_expr),
-                              free_struct_member_list(&members, p->allocator.free_alloc));
+        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &ident_expr), {
+            free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
+        });
 
         Expression* type_expr;
         bool        has_default_value;
         PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &has_default_value), {
             identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
             free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
         });
 
         // Struct members must have explicit type declarations
@@ -674,6 +780,7 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
             identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
             type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
             free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
 
             return STRUCT_MEMBER_NOT_EXPLICIT;
         }
@@ -685,6 +792,7 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
                 identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
                 type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
                 free_struct_member_list(&members, p->allocator.free_alloc);
+                free_expression_list(&generics, p->allocator.free_alloc);
             });
         }
 
@@ -700,6 +808,7 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
             type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
             free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
         });
 
         // All members require a trailing comma!
@@ -710,14 +819,20 @@ TRY_STATUS struct_expression_parse(Parser* p, Expression** expression) {
             IGNORE_STATUS(parser_put_status_error(
                 p, MISSING_TRAILING_COMMA, error_token.line, error_token.column));
             free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
+
             return MISSING_TRAILING_COMMA;
         }
     }
 
     StructExpression* struct_expr;
     PROPAGATE_IF_ERROR_DO(
-        struct_expression_create(start_token, members, &struct_expr, p->allocator.memory_alloc),
-        free_struct_member_list(&members, p->allocator.free_alloc));
+        struct_expression_create(
+            start_token, generics, members, &struct_expr, p->allocator.memory_alloc),
+        {
+            free_struct_member_list(&members, p->allocator.free_alloc);
+            free_expression_list(&generics, p->allocator.free_alloc);
+        });
 
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
                           struct_expression_destroy((Node*)struct_expr, p->allocator.free_alloc));
@@ -1022,53 +1137,61 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
 
     // Captures are technically optional, but they are allocated anyways
     ArrayList captures;
-    PROPAGATE_IF_ERROR(array_list_init_allocator(&captures, 2, sizeof(Expression*), p->allocator));
+    PROPAGATE_IF_ERROR(
+        array_list_init_allocator(&captures, 2, sizeof(ForLoopCapture), p->allocator));
 
     bool expect_captures = false;
     if (parser_peek_token_is(p, COLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN), {
             free_expression_list(&iterables, p->allocator.free_alloc);
-            free_expression_list(&captures, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
         });
 
         while (!parser_peek_token_is(p, RPAREN) && !parser_peek_token_is(p, END)) {
+            bool is_ref_argument = false;
+            if (parser_peek_token_is(p, REF)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+                is_ref_argument = true;
+            }
             UNREACHABLE_IF_ERROR(parser_next_token(p));
 
-            Expression* capture;
+            ForLoopCapture capture;
             if (parser_current_token_is(p, UNDERSCORE)) {
                 IgnoreExpression* ignore;
                 PROPAGATE_IF_ERROR_DO(
                     ignore_expression_create(p->current_token, &ignore, p->allocator.memory_alloc),
                     {
                         free_expression_list(&iterables, p->allocator.free_alloc);
-                        free_expression_list(&captures, p->allocator.free_alloc);
+                        free_for_capture_list(&captures, p->allocator.free_alloc);
                     });
-                capture = (Expression*)ignore;
+                capture = (ForLoopCapture){.is_ref = false, .capture = (Expression*)ignore};
             } else {
-                PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &capture), {
+                Expression* capture_expr;
+                PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &capture_expr), {
                     free_expression_list(&iterables, p->allocator.free_alloc);
-                    free_expression_list(&captures, p->allocator.free_alloc);
+                    free_for_capture_list(&captures, p->allocator.free_alloc);
                 });
+                capture = (ForLoopCapture){.is_ref = is_ref_argument, .capture = capture_expr};
             }
 
             PROPAGATE_IF_ERROR_DO(array_list_push(&captures, &capture), {
                 free_expression_list(&iterables, p->allocator.free_alloc);
-                free_expression_list(&captures, p->allocator.free_alloc);
+                free_for_capture_list(&captures, p->allocator.free_alloc);
             });
 
             // Only check for the close bar if we have more captures
             if (!parser_peek_token_is(p, RPAREN)) {
                 PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, COMMA), {
                     free_expression_list(&iterables, p->allocator.free_alloc);
-                    free_expression_list(&captures, p->allocator.free_alloc);
+                    free_for_capture_list(&captures, p->allocator.free_alloc);
                 });
             }
         }
 
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN), {
             free_expression_list(&iterables, p->allocator.free_alloc);
-            free_expression_list(&captures, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
         });
 
         expect_captures = true;
@@ -1080,19 +1203,19 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
             p, FOR_ITERABLE_CAPTURE_MISMATCH, start_token.line, start_token.column));
 
         free_expression_list(&iterables, p->allocator.free_alloc);
-        free_expression_list(&captures, p->allocator.free_alloc);
+        free_for_capture_list(&captures, p->allocator.free_alloc);
         return FOR_ITERABLE_CAPTURE_MISMATCH;
     }
 
     // Now we can parse the block statement as usual
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE), {
         free_expression_list(&iterables, p->allocator.free_alloc);
-        free_expression_list(&captures, p->allocator.free_alloc);
+        free_for_capture_list(&captures, p->allocator.free_alloc);
     });
     BlockStatement* block;
     PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &block), {
         free_expression_list(&iterables, p->allocator.free_alloc);
-        free_expression_list(&captures, p->allocator.free_alloc);
+        free_for_capture_list(&captures, p->allocator.free_alloc);
     });
 
     // There is nothing that can be done in an empty for loop so we prevent it here
@@ -1101,7 +1224,7 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
             parser_put_status_error(p, EMPTY_FOR_LOOP, start_token.line, start_token.column));
 
         free_expression_list(&iterables, p->allocator.free_alloc);
-        free_expression_list(&captures, p->allocator.free_alloc);
+        free_for_capture_list(&captures, p->allocator.free_alloc);
         block_statement_destroy((Node*)block, p->allocator.free_alloc);
         return EMPTY_FOR_LOOP;
     }
@@ -1112,7 +1235,7 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
             free_expression_list(&iterables, p->allocator.free_alloc);
-            free_expression_list(&captures, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
             block_statement_destroy((Node*)block, p->allocator.free_alloc);
         });
 
@@ -1128,13 +1251,13 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
                 p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
 
             free_expression_list(&iterables, p->allocator.free_alloc);
-            free_expression_list(&captures, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
             block_statement_destroy((Node*)block, p->allocator.free_alloc);
             return ILLEGAL_LOOP_NON_BREAK;
         default:
             PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &non_break), {
                 free_expression_list(&iterables, p->allocator.free_alloc);
-                free_expression_list(&captures, p->allocator.free_alloc);
+                free_for_capture_list(&captures, p->allocator.free_alloc);
                 block_statement_destroy((Node*)block, p->allocator.free_alloc);
             });
             break;
@@ -1152,7 +1275,7 @@ TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression) {
                                                      p->allocator.memory_alloc),
                           {
                               free_expression_list(&iterables, p->allocator.free_alloc);
-                              free_expression_list(&captures, p->allocator.free_alloc);
+                              free_for_capture_list(&captures, p->allocator.free_alloc);
                               block_statement_destroy((Node*)block, p->allocator.free_alloc);
                               NODE_VIRTUAL_FREE(non_break, p->allocator.free_alloc);
                           });
@@ -1171,13 +1294,20 @@ TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression) {
     PROPAGATE_IF_ERROR(parser_next_token(p));
 
     Expression* condition;
+    if (parser_current_token_is(p, RPAREN)) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, WHILE_MISSING_CONDITION, p->current_token.line, p->current_token.column));
+        return WHILE_MISSING_CONDITION;
+    }
     PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &condition));
+
     PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RPAREN),
                           NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     // The continuation expression is optional but is parsed similar to captures
     Expression* continuation = NULL;
     if (parser_peek_token_is(p, COLON)) {
+        const Token continuation_start = p->current_token;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LPAREN),
                               NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
@@ -1185,6 +1315,15 @@ TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression) {
         // We have to consume again since we're looking at the LPAREN here
         PROPAGATE_IF_ERROR_DO(parser_next_token(p),
                               NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
+        if (parser_current_token_is(p, RPAREN)) {
+            IGNORE_STATUS(parser_put_status_error(p,
+                                                  IMPROPER_WHILE_CONTINUATION,
+                                                  continuation_start.line,
+                                                  continuation_start.column));
+
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            return IMPROPER_WHILE_CONTINUATION;
+        }
         PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &continuation),
                               NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
@@ -1236,6 +1375,10 @@ TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression) {
         case IMPORT:
             IGNORE_STATUS(parser_put_status_error(
                 p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
+
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+            block_statement_destroy((Node*)block, p->allocator.free_alloc);
             return ILLEGAL_LOOP_NON_BREAK;
         default:
             PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &non_break), {
@@ -1295,6 +1438,13 @@ TRY_STATUS do_while_loop_expression_parse(Parser* p, Expression** expression) {
 
     // There's no continuation or non break clause so this is easy :)
     Expression* condition;
+    if (parser_current_token_is(p, RPAREN)) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, WHILE_MISSING_CONDITION, p->current_token.line, p->current_token.column));
+
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        return WHILE_MISSING_CONDITION;
+    }
     PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &condition),
                           block_statement_destroy((Node*)block, p->allocator.free_alloc));
 

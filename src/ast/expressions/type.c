@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "ast/ast.h"
 #include "ast/expressions/enum.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
@@ -42,7 +43,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
         }
         case EXPLICIT_FN: {
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
-            free_parameter_list(&function_type.fn_type_params);
+            free_expression_list(&function_type.fn_generics, free_alloc);
+            free_parameter_list(&function_type.fn_type_params, free_alloc);
             NODE_VIRTUAL_FREE(function_type.return_type, free_alloc);
             break;
         }
@@ -100,8 +102,26 @@ explicit_type_reconstruct(ExplicitType   explicit_type,
             string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
         break;
     case EXPLICIT_FN: {
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn("));
         ExplicitFunctionType function_type = explicit_type.variant.function_type;
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn"));
+        if (function_type.fn_generics.length > 0) {
+            PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
+
+            for (size_t i = 0; i < function_type.fn_generics.length; i++) {
+                Expression* generic;
+                UNREACHABLE_IF_ERROR(array_list_get(&function_type.fn_generics, i, &generic));
+                Node* generic_node = (Node*)generic;
+                PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
+
+                if (i != function_type.fn_generics.length - 1) {
+                    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+                }
+            }
+
+            PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
+        }
+
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
         PROPAGATE_IF_ERROR(
             reconstruct_parameter_list(&function_type.fn_type_params, symbol_map, sb));
         PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));

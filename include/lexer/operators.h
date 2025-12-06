@@ -55,6 +55,7 @@ typedef struct {
 #define OPERATOR_FAT_ARROW OP("=>", FAT_ARROW)
 #define OPERATOR_COMMENT OP("//", COMMENT)
 #define OPERATOR_MULTILINE_STRING OP("\\\\", MULTILINE_STRING)
+#define OPERATOR_REF OP("ref", REF)
 
 static const Operator ALL_OPERATORS[] = {
     OPERATOR_ASSIGN,
@@ -100,4 +101,5 @@ static const Operator ALL_OPERATORS[] = {
     OPERATOR_FAT_ARROW,
     OPERATOR_COMMENT,
     OPERATOR_MULTILINE_STRING,
+    OPERATOR_REF,
 };

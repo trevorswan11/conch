@@ -20,6 +20,7 @@ TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
 
 // Parses a function definition, assuming the current token is a function
 TRY_STATUS function_definition_parse(Parser*          p,
+                                     ArrayList*       generics,
                                      ArrayList*       parameters,
                                      TypeExpression** return_type,
                                      bool*            contains_default_param);

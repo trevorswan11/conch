@@ -22,12 +22,14 @@ typedef struct StructMember {
 
 typedef struct StructExpression {
     Expression base;
+    ArrayList  generics;
     ArrayList  members;
 } StructExpression;
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc);
 
 TRY_STATUS struct_expression_create(Token              start_token,
+                                    ArrayList          generics,
                                     ArrayList          members,
                                     StructExpression** struct_expr,
                                     memory_alloc_fn    memory_alloc);

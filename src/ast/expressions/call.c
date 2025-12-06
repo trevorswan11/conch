@@ -1,7 +1,19 @@
 #include <assert.h>
 
-#include "ast/ast.h"
 #include "ast/expressions/call.h"
+
+void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
+    assert(arguments && arguments->data);
+    assert(free_alloc);
+
+    CallArgument argument;
+    for (size_t i = 0; i < arguments->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(arguments, i, &argument));
+        NODE_VIRTUAL_FREE(argument.argument, free_alloc);
+    }
+
+    array_list_deinit(arguments);
+}
 
 TRY_STATUS call_expression_create(Token            start_token,
                                   Expression*      function,
@@ -9,7 +21,7 @@ TRY_STATUS call_expression_create(Token            start_token,
                                   CallExpression** call_expr,
                                   memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
-    assert(arguments.item_size == sizeof(Expression*));
+    assert(arguments.item_size == sizeof(CallArgument));
 
     CallExpression* call = memory_alloc(sizeof(CallExpression));
     if (!call) {
@@ -32,7 +44,7 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
     CallExpression* call = (CallExpression*)node;
     NODE_VIRTUAL_FREE(call->function, free_alloc);
-    free_expression_list(&call->arguments, free_alloc);
+    free_call_expression_list(&call->arguments, free_alloc);
 
     free_alloc(call);
 }
@@ -49,10 +61,13 @@ call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
     PROPAGATE_IF_ERROR(function->vtable->reconstruct(function, symbol_map, sb));
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
 
-    Expression* argument;
+    CallArgument argument;
     for (size_t i = 0; i < call->arguments.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&call->arguments, i, &argument));
-        Node* arg_node = (Node*)argument;
+        if (argument.is_ref) {
+            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "ref "));
+        }
+        Node* arg_node = (Node*)argument.argument;
         PROPAGATE_IF_ERROR(arg_node->vtable->reconstruct(arg_node, symbol_map, sb));
 
         if (i != call->arguments.length - 1) {

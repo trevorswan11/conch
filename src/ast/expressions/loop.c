@@ -4,6 +4,19 @@
 #include "ast/expressions/loop.h"
 #include "ast/statements/block.h"
 
+void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
+    assert(captures && captures->data);
+    assert(free_alloc);
+
+    ForLoopCapture capture;
+    for (size_t i = 0; i < captures->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(captures, i, &capture));
+        NODE_VIRTUAL_FREE(capture.capture, free_alloc);
+    }
+
+    array_list_deinit(captures);
+}
+
 TRY_STATUS for_loop_expression_create(Token               start_token,
                                       ArrayList           iterables,
                                       ArrayList           captures,
@@ -13,11 +26,7 @@ TRY_STATUS for_loop_expression_create(Token               start_token,
                                       memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     assert(iterables.item_size == sizeof(Expression*));
-    assert(captures.item_size == sizeof(Expression*));
-
-    if (!block) {
-        return LOOP_MISSING_BODY;
-    }
+    assert(captures.item_size == sizeof(ForLoopCapture));
 
     ForLoopExpression* for_loop = memory_alloc(sizeof(ForLoopExpression));
     if (!for_loop) {
@@ -42,7 +51,7 @@ void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 
     ForLoopExpression* for_loop = (ForLoopExpression*)node;
     free_expression_list(&for_loop->iterables, free_alloc);
-    free_expression_list(&for_loop->captures, free_alloc);
+    free_for_capture_list(&for_loop->captures, free_alloc);
     NODE_VIRTUAL_FREE(for_loop->block, free_alloc);
     NODE_VIRTUAL_FREE(for_loop->non_break, free_alloc);
 
@@ -77,9 +86,13 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
         PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " : ("));
 
         for (size_t i = 0; i < for_loop->captures.length; i++) {
-            Expression* capture;
+            ForLoopCapture capture;
             UNREACHABLE_IF_ERROR(array_list_get(&for_loop->captures, i, &capture));
-            Node* capture_node = (Node*)capture;
+            if (capture.is_ref) {
+                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "ref "));
+            }
+
+            Node* capture_node = (Node*)capture.capture;
             PROPAGATE_IF_ERROR(capture_node->vtable->reconstruct(capture_node, symbol_map, sb));
 
             if (i != for_loop->captures.length - 1) {
@@ -111,12 +124,6 @@ TRY_STATUS while_loop_expression_create(Token                 start_token,
                                         WhileLoopExpression** while_expr,
                                         memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
-
-    if (!condition) {
-        return WHILE_MISSING_CONDITION;
-    } else if (!block) {
-        return LOOP_MISSING_BODY;
-    }
 
     WhileLoopExpression* while_loop = memory_alloc(sizeof(WhileLoopExpression));
     if (!while_loop) {
@@ -189,12 +196,6 @@ TRY_STATUS do_while_loop_expression_create(Token                   start_token,
                                            DoWhileLoopExpression** do_while_expr,
                                            memory_alloc_fn         memory_alloc) {
     assert(memory_alloc);
-
-    if (!block) {
-        return LOOP_MISSING_BODY;
-    } else if (!condition) {
-        return WHILE_MISSING_CONDITION;
-    }
 
     DoWhileLoopExpression* do_while_loop = memory_alloc(sizeof(DoWhileLoopExpression));
     if (!do_while_loop) {

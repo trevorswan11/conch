@@ -14,6 +14,11 @@
 
 typedef struct BlockStatement BlockStatement;
 
+typedef struct ForLoopCapture {
+    bool        is_ref;
+    Expression* capture;
+} ForLoopCapture;
+
 typedef struct ForLoopExpression {
     Expression      base;
     ArrayList       iterables;
@@ -21,6 +26,8 @@ typedef struct ForLoopExpression {
     BlockStatement* block;
     Statement*      non_break;
 } ForLoopExpression;
+
+void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc);
 
 TRY_STATUS for_loop_expression_create(Token               start_token,
                                       ArrayList           iterables,

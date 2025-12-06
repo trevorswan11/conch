@@ -64,3 +64,4 @@ Makefile
 .vscode
 .vs
 .zed
+.DS_Store

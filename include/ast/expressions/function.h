@@ -20,6 +20,7 @@ typedef struct TypeExpression       TypeExpression;
 typedef struct BlockStatement       BlockStatement;
 
 typedef struct Parameter {
+    bool                  is_ref;
     IdentifierExpression* ident;
     TypeExpression*       type;
     Expression*           default_value;
@@ -27,18 +28,20 @@ typedef struct Parameter {
 
 // Allocates all function parameters and consumes them from the parser.
 TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param);
-void       free_parameter_list(ArrayList* parameters);
+void       free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
 TRY_STATUS
 reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
 
 typedef struct FunctionExpression {
     Expression      base;
+    ArrayList       generics;
     ArrayList       parameters;
     TypeExpression* return_type;
     BlockStatement* body;
 } FunctionExpression;
 
 TRY_STATUS function_expression_create(Token                start_token,
+                                      ArrayList            generics,
                                       ArrayList            parameters,
                                       TypeExpression*      return_type,
                                       BlockStatement*      body,

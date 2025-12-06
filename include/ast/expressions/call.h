@@ -11,11 +11,18 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
+typedef struct CallArgument {
+    bool        is_ref;
+    Expression* argument;
+} CallArgument;
+
 typedef struct CallExpression {
     Expression  base;
     Expression* function;
     ArrayList   arguments;
 } CallExpression;
+
+void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc);
 
 TRY_STATUS call_expression_create(Token            start_token,
                                   Expression*      function,

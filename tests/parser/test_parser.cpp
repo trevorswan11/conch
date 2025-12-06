@@ -663,6 +663,7 @@ TEST_CASE("Function literals") {
     struct TestParameter {
         std::string name;
 
+        bool        is_ref    = false;
         bool        nullable  = false;
         bool        primitive = true;
         TypeTag     tag       = TypeTag::EXPLICIT;
@@ -679,6 +680,7 @@ TEST_CASE("Function literals") {
             REQUIRE(STATUS_OK(array_list_get(actuals, i, &parameter)));
             TestParameter expected_parameter = expecteds[i];
 
+            REQUIRE(parameter.is_ref == expected_parameter.is_ref);
             test_identifier_expression((Expression*)parameter.ident, expected_parameter.name);
             test_type_expression((Expression*)parameter.type,
                                  expected_parameter.nullable,
@@ -699,9 +701,10 @@ TEST_CASE("Function literals") {
 
     SECTION("Functions as types") {
         SECTION("Correct declaration") {
-            std::vector<TestParameter> expected_params = {TestParameter{"a"}, TestParameter{"b"}};
+            std::vector<TestParameter> expected_params = {TestParameter{"a", true},
+                                                          TestParameter{"b"}};
 
-            const char*   input = "var add: fn(a: int, b: int): int;";
+            const char*   input = "var add: fn(ref a: int, b: int): int;";
             ParserFixture pf(input);
             check_parse_errors(pf.parser(), {}, true);
             auto ast = pf.ast();
@@ -779,9 +782,9 @@ TEST_CASE("Function literals") {
             {"fn(x: int, y: int, z: int): int {};",
              {TestParameter{"x"}, TestParameter{"y"}, TestParameter{"z"}},
              {"int", false, true}},
-            {"fn(x: int, y: int = 2, z: int): ?Sock {};",
+            {"fn(x: int, ref y: int = 2, z: int): ?Sock {};",
              {TestParameter{"x"},
-              TestParameter{.name = "y", .default_value = 2},
+              TestParameter{.name = "y", .is_ref = true, .default_value = 2},
               TestParameter{"z"}},
              {"Sock", true, false}},
             {"fn(x: int, y: int, z: int = 3): ?uint {};",
@@ -817,7 +820,7 @@ TEST_CASE("Function literals") {
     }
 
     SECTION("Call expression with identifier function") {
-        const char*   input = "add(1, 2 * 3, 4 + 5);";
+        const char*   input = "add(1, 2 * 3, ref w, 4 + 5);";
         ParserFixture pf(input);
         check_parse_errors(pf.parser(), {}, true);
 
@@ -835,23 +838,31 @@ TEST_CASE("Function literals") {
         REQUIRE(expected_function_name == function->name.ptr);
 
         ArrayList arguments = call->arguments;
-        REQUIRE(arguments.length == 3);
+        REQUIRE(arguments.length == 4);
 
         // Verify arguments
-        Expression* first;
+        CallArgument first;
         REQUIRE(STATUS_OK(array_list_get(&arguments, 0, &first)));
-        test_number_expression<int64_t>(first, 1);
+        REQUIRE_FALSE(first.is_ref);
+        test_number_expression<int64_t>(first.argument, 1);
 
-        Expression* second;
+        CallArgument second;
         REQUIRE(STATUS_OK(array_list_get(&arguments, 1, &second)));
-        InfixExpression* argument = (InfixExpression*)second;
+        REQUIRE_FALSE(second.is_ref);
+        InfixExpression* argument = (InfixExpression*)second.argument;
         test_number_expression<int64_t>(argument->lhs, 2);
         REQUIRE(argument->op == TokenType::STAR);
         test_number_expression<int64_t>(argument->rhs, 3);
 
-        Expression* third;
+        CallArgument third;
         REQUIRE(STATUS_OK(array_list_get(&arguments, 2, &third)));
-        argument = (InfixExpression*)third;
+        REQUIRE(third.is_ref);
+        test_identifier_expression(third.argument, "w");
+
+        CallArgument fourth;
+        REQUIRE(STATUS_OK(array_list_get(&arguments, 3, &fourth)));
+        REQUIRE_FALSE(fourth.is_ref);
+        argument = (InfixExpression*)fourth.argument;
         test_number_expression<int64_t>(argument->lhs, 4);
         REQUIRE(argument->op == TokenType::PLUS);
         test_number_expression<int64_t>(argument->rhs, 5);
@@ -1647,9 +1658,10 @@ TEST_CASE("For loops") {
             REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
             test_number_expression<int64_t>(iterable, 1);
 
-            Expression* capture;
+            ForLoopCapture capture;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
-            test_identifier_expression(capture, "name");
+            REQUIRE_FALSE(capture.is_ref);
+            test_identifier_expression(capture.capture, "name");
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
@@ -1675,9 +1687,10 @@ TEST_CASE("For loops") {
             REQUIRE(for_loop->block->statements.length == 1);
             REQUIRE_FALSE(for_loop->non_break);
 
-            Expression* capture;
+            ForLoopCapture capture;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
-            test_identifier_expression(capture, "name");
+            REQUIRE_FALSE(capture.is_ref);
+            test_identifier_expression(capture.capture, "name");
         }
     }
 
@@ -1706,11 +1719,13 @@ TEST_CASE("For loops") {
             REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 1, &iterable)));
             test_number_expression<int64_t>(iterable, 2);
 
-            Expression* capture;
+            ForLoopCapture capture;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
-            test_identifier_expression(capture, "name");
+            REQUIRE_FALSE(capture.is_ref);
+            test_identifier_expression(capture.capture, "name");
             REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 1, &capture)));
-            test_identifier_expression(capture, "word");
+            REQUIRE_FALSE(capture.is_ref);
+            test_identifier_expression(capture.capture, "word");
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
@@ -1742,6 +1757,31 @@ TEST_CASE("For loops") {
         }
     }
 
+    SECTION("Capture refs") {
+        const char*   input = "for (1, 2, 3) : (name, ref hey, word) {1}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+
+        ForLoopCapture capture;
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
+        REQUIRE_FALSE(capture.is_ref);
+        test_identifier_expression(capture.capture, "name");
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 1, &capture)));
+        REQUIRE(capture.is_ref);
+        test_identifier_expression(capture.capture, "hey");
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 2, &capture)));
+        REQUIRE_FALSE(capture.is_ref);
+        test_identifier_expression(capture.capture, "word");
+    }
+
     SECTION("Malformed for loops") {
         SECTION("Missing iterables") {
             const char*   input = "for () {}";
@@ -1767,6 +1807,293 @@ TEST_CASE("For loops") {
             check_parse_errors(pf.parser(),
                                {"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]",
                                 "No prefix parse function for WALRUS found [Ln 1, Col 32]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("While loops") {
+    SECTION("Condition only") {
+        const char*   input = "while (1) {1}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
+        WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+
+        REQUIRE(while_loop->condition);
+        REQUIRE_FALSE(while_loop->continuation);
+        REQUIRE(while_loop->block->statements.length == 1);
+        REQUIRE_FALSE(while_loop->non_break);
+
+        test_number_expression<int64_t>(while_loop->condition, 1);
+
+        Statement* statement;
+        REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
+        expr_stmt = (ExpressionStatement*)statement;
+        test_number_expression<int64_t>(expr_stmt->expression, 1);
+    }
+
+    SECTION("Condition and continuation only") {
+        const char*   input = "while (1) : (1) {1}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
+        WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+
+        REQUIRE(while_loop->condition);
+        REQUIRE(while_loop->continuation);
+        REQUIRE(while_loop->block->statements.length == 1);
+        REQUIRE_FALSE(while_loop->non_break);
+
+        test_number_expression<int64_t>(while_loop->condition, 1);
+        test_number_expression<int64_t>(while_loop->continuation, 1);
+
+        Statement* statement;
+        REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
+        expr_stmt = (ExpressionStatement*)statement;
+        test_number_expression<int64_t>(expr_stmt->expression, 1);
+    }
+
+    SECTION("Full while loops") {
+        SECTION("With block else") {
+            const char*   input = "while (1) : (1) {1} else {1}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
+            WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+
+            REQUIRE(while_loop->condition);
+            REQUIRE(while_loop->continuation);
+            REQUIRE(while_loop->block->statements.length == 1);
+            REQUIRE(while_loop->non_break);
+
+            test_number_expression<int64_t>(while_loop->condition, 1);
+            test_number_expression<int64_t>(while_loop->continuation, 1);
+
+            Statement* statement;
+            REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+
+            BlockStatement* non_break = (BlockStatement*)while_loop->non_break;
+            REQUIRE(non_break->statements.length == 1);
+            REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+        }
+
+        SECTION("With expression else") {
+            const char*   input = "while (1) : (1) {1} else 1u";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
+            WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+
+            REQUIRE(while_loop->condition);
+            REQUIRE(while_loop->continuation);
+            REQUIRE(while_loop->block->statements.length == 1);
+            REQUIRE(while_loop->non_break);
+
+            test_number_expression<int64_t>(while_loop->condition, 1);
+            test_number_expression<int64_t>(while_loop->continuation, 1);
+
+            Statement* statement;
+            REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
+            expr_stmt = (ExpressionStatement*)statement;
+            test_number_expression<int64_t>(expr_stmt->expression, 1);
+
+            ExpressionStatement* non_break = (ExpressionStatement*)while_loop->non_break;
+            test_number_expression<uint64_t>(non_break->expression, 1);
+        }
+    }
+
+    SECTION("Malformed while loops") {
+        SECTION("Missing condition") {
+            const char*   input = "while () {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"WHILE_MISSING_CONDITION [Ln 1, Col 8]"}, false);
+        }
+
+        SECTION("Empty continuation") {
+            const char*   input = "while (1) : () {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"IMPROPER_WHILE_CONTINUATION [Ln 1, Col 9]"}, false);
+        }
+
+        SECTION("Missing body") {
+            const char*   input = "while (1) {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"EMPTY_WHILE_LOOP [Ln 1, Col 1]"}, false);
+        }
+
+        SECTION("Improper non break clause") {
+            const char*   input = "while (1) : (1) {1} else const a := 2;";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 26]",
+                                "No prefix parse function for WALRUS found [Ln 1, Col 34]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("Do while loops") {
+    SECTION("Full do while loops") {
+        const char*   input = "do {1} while (1)";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement*   expr_stmt     = (ExpressionStatement*)stmt;
+        DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)expr_stmt->expression;
+
+        REQUIRE(do_while_loop->block->statements.length == 1);
+        REQUIRE(do_while_loop->condition);
+
+        Statement* statement;
+        REQUIRE(STATUS_OK(array_list_get(&do_while_loop->block->statements, 0, &statement)));
+        expr_stmt = (ExpressionStatement*)statement;
+        test_number_expression<int64_t>(expr_stmt->expression, 1);
+
+        test_number_expression<int64_t>(do_while_loop->condition, 1);
+    }
+
+    SECTION("Malformed do while loops") {
+        SECTION("Missing condition") {
+            const char*   input = "do {1} while ()";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"WHILE_MISSING_CONDITION [Ln 1, Col 15]"}, false);
+        }
+
+        SECTION("Missing body") {
+            const char*   input = "do {} while (1)";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"EMPTY_WHILE_LOOP [Ln 1, Col 1]",
+                                "Expected token LBRACE, found END [Ln 1, Col 16]"},
+                               false);
+        }
+    }
+}
+
+TEST_CASE("Generics") {
+    SECTION("Function definition generics") {
+        const char*   input = "fn<T, B>(a: int): int {}";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        FunctionExpression*  function  = (FunctionExpression*)expr_stmt->expression;
+
+        REQUIRE(function->generics.length == 2);
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&function->generics, 0, &generic)));
+        test_identifier_expression(generic, "T");
+        REQUIRE(STATUS_OK(array_list_get(&function->generics, 1, &generic)));
+        test_identifier_expression(generic, "B");
+    }
+
+    SECTION("Function type generics") {
+        const char*   input = "var a: fn<T>(b: int): int;";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        test_decl_statement(
+            stmt, false, "a", false, false, TypeTag::EXPLICIT, ExplicitTypeTag::EXPLICIT_FN, {});
+
+        DeclStatement*       decl_stmt = (DeclStatement*)stmt;
+        ExplicitFunctionType explicit_fn =
+            decl_stmt->type->type.variant.explicit_type.variant.function_type;
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&explicit_fn.fn_generics, 0, &generic)));
+        test_identifier_expression(generic, "T");
+    }
+
+    SECTION("Struct generics") {
+        const char*   input = "struct<T, E>{a: int, }";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
+        StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
+        test_identifier_expression(generic, "T");
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, &generic)));
+        test_identifier_expression(generic, "E");
+    }
+
+    SECTION("Malformed generics") {
+        SECTION("Incorrect generic tokens") {
+            const char*   input = "struct<1>{a: int,}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
+                                "No prefix parse function for GT found [Ln 1, Col 9]",
+                                "No prefix parse function for COLON found [Ln 1, Col 12]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 14]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 17]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 18]"},
+                               false);
+        }
+
+        SECTION("Incorrect generic expression") {
+            const char*   input = "struct<\"2\" + 2>{a: int,}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
+                                "No prefix parse function for PLUS found [Ln 1, Col 12]",
+                                "No prefix parse function for LBRACE found [Ln 1, Col 16]",
+                                "No prefix parse function for COLON found [Ln 1, Col 18]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 23]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 24]"},
                                false);
         }
     }

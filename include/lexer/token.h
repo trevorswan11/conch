@@ -35,7 +35,7 @@
         PROCESS(LPAREN), PROCESS(RPAREN), PROCESS(LBRACE), PROCESS(RBRACE), PROCESS(LBRACKET),    \
         PROCESS(RBRACKET),                                                                        \
                                                                                                   \
-        PROCESS(SINGLE_QUOTE), PROCESS(UNDERSCORE),                                               \
+        PROCESS(SINGLE_QUOTE), PROCESS(UNDERSCORE), PROCESS(REF),                                 \
                                                                                                   \
         PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STRUCT), PROCESS(ENUM),          \
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
