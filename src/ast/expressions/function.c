@@ -213,24 +213,7 @@ function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
 
     FunctionExpression* func = (FunctionExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn"));
-
-    if (func->generics.length > 0) {
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
-
-        for (size_t i = 0; i < func->generics.length; i++) {
-            Expression* generic;
-            UNREACHABLE_IF_ERROR(array_list_get(&func->generics, i, &generic));
-            Node* generic_node = (Node*)generic;
-            PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
-
-            if (i != func->generics.length - 1) {
-                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
-            }
-        }
-
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
-    }
-
+    PROPAGATE_IF_ERROR(generics_reconstruct(&func->generics, symbol_map, sb));
     PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
     PROPAGATE_IF_ERROR(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
 

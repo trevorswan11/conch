@@ -20,6 +20,7 @@ typedef struct CallExpression {
     Expression  base;
     Expression* function;
     ArrayList   arguments;
+    ArrayList   generics;
 } CallExpression;
 
 void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc);
@@ -27,6 +28,7 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc);
 TRY_STATUS call_expression_create(Token            start_token,
                                   Expression*      function,
                                   ArrayList        arguments,
+                                  ArrayList        generics,
                                   CallExpression** call_expr,
                                   memory_alloc_fn  memory_alloc);
 

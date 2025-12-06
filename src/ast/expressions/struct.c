@@ -67,22 +67,9 @@ struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuild
     StructExpression* s = (StructExpression*)node;
     PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "struct"));
 
-    if (s->generics.length > 0) {
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
-
-        for (size_t i = 0; i < s->generics.length; i++) {
-            Expression* generic;
-            UNREACHABLE_IF_ERROR(array_list_get(&s->generics, i, &generic));
-            Node* generic_node = (Node*)generic;
-            PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
-
-            if (i != s->generics.length - 1) {
-                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
-            }
-        }
-
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
-    } else {
+    // Struct generics introduce slightly different spacing
+    PROPAGATE_IF_ERROR(generics_reconstruct(&s->generics, symbol_map, sb));
+    if (s->generics.length == 0) {
         PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
     }
     PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));

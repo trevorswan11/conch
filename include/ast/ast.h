@@ -33,3 +33,8 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
 
 void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
 void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
+
+// Handles the reconstruction of generic lists.
+//
+// While the generics pointer must be valid, this is a no-op for empty lists.
+TRY_STATUS generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb);

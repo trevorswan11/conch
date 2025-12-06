@@ -8,7 +8,6 @@
 
 #include "lexer/keywords.h"
 #include "lexer/operators.h"
-#include "util/containers/array_list.h"
 
 TRY_STATUS ast_init(AST* ast, Allocator allocator) {
     if (!ast) {
@@ -137,4 +136,30 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
 
     clear_expression_list(expressions, free_alloc);
     array_list_deinit(expressions);
+}
+
+TRY_STATUS generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb) {
+    if (!generics || !sb) {
+        return NULL_PARAMETER;
+    }
+
+    if (generics->length > 0) {
+        assert(generics->data);
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
+
+        for (size_t i = 0; i < generics->length; i++) {
+            Expression* generic;
+            UNREACHABLE_IF_ERROR(array_list_get(generics, i, &generic));
+            Node* generic_node = (Node*)generic;
+            PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
+
+            if (i != generics->length - 1) {
+                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+            }
+        }
+
+        PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
+    }
+
+    return SUCCESS;
 }

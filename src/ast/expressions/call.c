@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "ast/ast.h"
 #include "ast/expressions/call.h"
 
 void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
@@ -18,6 +19,7 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
 TRY_STATUS call_expression_create(Token            start_token,
                                   Expression*      function,
                                   ArrayList        arguments,
+                                  ArrayList        generics,
                                   CallExpression** call_expr,
                                   memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
@@ -32,6 +34,7 @@ TRY_STATUS call_expression_create(Token            start_token,
         .base      = EXPRESSION_INIT(CALL_VTABLE, start_token),
         .function  = function,
         .arguments = arguments,
+        .generics  = generics,
     };
 
     *call_expr = call;
@@ -45,6 +48,7 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     CallExpression* call = (CallExpression*)node;
     NODE_VIRTUAL_FREE(call->function, free_alloc);
     free_call_expression_list(&call->arguments, free_alloc);
+    free_expression_list(&call->generics, free_alloc);
 
     free_alloc(call);
 }
@@ -76,6 +80,11 @@ call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
     }
 
     PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+
+    if (call->generics.length > 0) {
+        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " with "));
+    }
+    PROPAGATE_IF_ERROR(generics_reconstruct(&call->generics, symbol_map, sb));
 
     return SUCCESS;
 }

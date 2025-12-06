@@ -2069,6 +2069,24 @@ TEST_CASE("Generics") {
         test_identifier_expression(generic, "E");
     }
 
+    SECTION("Call generics") {
+        const char*   input = "func(1, 2) with <int>";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        CallExpression*      call_expr = (CallExpression*)expr_stmt->expression;
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&call_expr->generics, 0, &generic)));
+        test_identifier_expression(generic, "int", TokenType::INT_TYPE);
+    }
+
     SECTION("Malformed generics") {
         SECTION("Incorrect generic tokens") {
             const char*   input = "struct<1>{a: int,}";
@@ -2094,6 +2112,24 @@ TEST_CASE("Generics") {
                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
                                 "No prefix parse function for COMMA found [Ln 1, Col 23]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 24]"},
+                               false);
+        }
+
+        SECTION("Missing with clause") {
+            const char*   input = "func(1, 2) <int>";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
+                                "No prefix parse function for GT found [Ln 1, Col 16]"},
+                               false);
+        }
+
+        SECTION("With clause with wrong tokens") {
+            const char*   input = "func(1, 2) with <int, \"2\" + 2>";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"ILLEGAL_IDENTIFIER [Ln 1, Col 23]",
+                                "No prefix parse function for PLUS found [Ln 1, Col 27]"},
                                false);
         }
     }

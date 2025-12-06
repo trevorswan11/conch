@@ -18,7 +18,13 @@ typedef struct TypeExpression TypeExpression;
 TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
 
-// Parses a function definition, assuming the current token is a function
+// Parses a generic list, including the opening and closing delimiters.
+//
+// The generics are necessarily allocated internally, but can be empty.
+// If generics are not present for parsing, this only allocates the generics.
+TRY_STATUS generics_parse(Parser* p, ArrayList* generics);
+
+// Parses a function definition, assuming the current token is a function.
 TRY_STATUS function_definition_parse(Parser*          p,
                                      ArrayList*       generics,
                                      ArrayList*       parameters,
