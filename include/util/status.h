@@ -6,11 +6,6 @@
 #define ENUMERATE(ENUM) ENUM
 #define STRINGIFY(STRING) #STRING
 
-#define TRY_PROPAGATE_ERROR(E) \
-    if (E != SUCCESS) {        \
-        return E;              \
-    }
-
 #define PROPAGATE_IF_ERROR(expr)                  \
     do {                                          \
         const Status _stat_obfuscated_pie = expr; \

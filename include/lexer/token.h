@@ -48,10 +48,6 @@
                                                                                                   \
         PROCESS(ILLEGAL)
 
-// Tokens TODO:
-// - FOR & WHILE loops
-// - ARRAY literals
-
 typedef enum TokenType {
     FOREACH_TOKEN(ENUMERATE),
 } TokenType;
