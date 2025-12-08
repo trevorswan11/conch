@@ -10,7 +10,21 @@ extern "C" {
 
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+
+#include "util/containers/string_builder.h"
 }
+
+class SBFixture {
+  public:
+    SBFixture(size_t initial_length);
+    ~SBFixture() { free(builder.buffer.data); }
+
+    StringBuilder* sb() { return &builder; }
+    char*          to_string();
+
+  private:
+    StringBuilder builder;
+};
 
 class ParserFixture {
   public:
@@ -22,17 +36,9 @@ class ParserFixture {
         lexer_deinit(&l);
     }
 
-    Parser* parser() {
-        return &p;
-    }
-
-    AST* ast() {
-        return &a;
-    }
-
-    Lexer* lexer() {
-        return &l;
-    }
+    Parser* parser() { return &p; }
+    AST*    ast() { return &a; }
+    Lexer*  lexer() { return &l; }
 
   private:
     Parser p;

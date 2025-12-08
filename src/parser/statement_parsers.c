@@ -22,26 +22,26 @@
 #include "util/allocator.h"
 #include "util/status.h"
 
-TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
+NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
+    TRY(parser_expect_peek(p, IDENT));
 
     IdentifierExpression* ident;
-    PROPAGATE_IF_ERROR(identifier_expression_create(
+    TRY(identifier_expression_create(
         p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
 
     Expression* type_expr;
     bool        value_initialized;
-    PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &value_initialized),
-                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(type_expression_parse(p, &type_expr, &value_initialized),
+           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
     TypeExpression* type = (TypeExpression*)type_expr;
 
     Expression* value = NULL;
     if (value_initialized) {
-        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value), {
+        TRY_DO(expression_parse(p, LOWEST, &value), {
             identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
             type_expression_destroy((Node*)type, p->allocator.free_alloc);
         });
@@ -68,19 +68,19 @@ TRY_STATUS decl_statement_parse(Parser* p, DeclStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
+NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
+    TRY(parser_expect_peek(p, IDENT));
 
     IdentifierExpression* ident;
-    PROPAGATE_IF_ERROR(identifier_expression_create(
+    TRY(identifier_expression_create(
         p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
 
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, ASSIGN),
-                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, ASSIGN),
+           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON) || parser_peek_token_is(p, END)) {
         identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
@@ -88,15 +88,17 @@ TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     }
 
     Expression* value;
-    UNREACHABLE_IF_ERROR(parser_next_token(p));
-    bool is_primitive_alias = false;
+    bool        is_primitive_alias = false;
     if (hash_set_contains(&p->primitives, &p->current_token.type)) {
         is_primitive_alias = true;
-        PROPAGATE_IF_ERROR_DO(identifier_expression_parse(p, &value),
-                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        TRY_DO(identifier_expression_parse(p, &value),
+               identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
     } else {
-        PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &value),
-                              identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+        TypeExpression* type;
+        TRY_DO(explicit_type_parse(p, p->current_token, &type),
+               identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+        value = (Expression*)type;
     }
 
     if (parser_peek_token_is(p, SEMICOLON)) {
@@ -104,7 +106,7 @@ TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     }
 
     TypeDeclStatement* type_decl;
-    PROPAGATE_IF_ERROR_DO(
+    TRY_DO(
         type_decl_statement_create(
             start_token, ident, value, is_primitive_alias, &type_decl, p->allocator.memory_alloc),
         {
@@ -116,22 +118,24 @@ TRY_STATUS type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS jump_statement_parse(Parser* p, JumpStatement** stmt) {
+NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    UNREACHABLE_IF_ERROR(parser_next_token(p));
+    Expression* value       = NULL;
 
-    Expression* value = NULL;
-    if (!parser_current_token_is(p, SEMICOLON)) {
-        PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &value));
+    if (start_token.type != CONTINUE && !parser_peek_token_is(p, END)) {
+        TRY(parser_next_token(p));
+
+        if (!parser_current_token_is(p, SEMICOLON)) {
+            TRY(expression_parse(p, LOWEST, &value));
+        }
     }
 
     JumpStatement* jump_stmt;
-    PROPAGATE_IF_ERROR_DO(
-        jump_statement_create(start_token, value, &jump_stmt, p->allocator.memory_alloc),
-        NODE_VIRTUAL_FREE(value, p->allocator.free_alloc));
+    TRY_DO(jump_statement_create(start_token, value, &jump_stmt, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(value, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -141,72 +145,70 @@ TRY_STATUS jump_statement_parse(Parser* p, JumpStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
+NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
     const Token start_token = p->current_token;
 
     Expression* lhs;
-    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &lhs));
+    TRY(expression_parse(p, LOWEST, &lhs));
 
     ExpressionStatement* expr_stmt;
-    PROPAGATE_IF_ERROR_DO(
-        expression_statement_create(start_token, lhs, &expr_stmt, p->allocator.memory_alloc),
-        NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
+    TRY_DO(expression_statement_create(start_token, lhs, &expr_stmt, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
-        PROPAGATE_IF_ERROR_DO(parser_next_token(p),
-                              NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
+        TRY_DO(parser_next_token(p), NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
     }
 
     *stmt = expr_stmt;
     return SUCCESS;
 }
 
-TRY_STATUS block_statement_parse(Parser* p, BlockStatement** stmt) {
+NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token     start_token = p->current_token;
     BlockStatement* block;
-    PROPAGATE_IF_ERROR(block_statement_create(start_token, &block, p->allocator));
+    TRY(block_statement_create(start_token, &block, p->allocator));
 
     while (!parser_peek_token_is(p, RBRACE) && !parser_peek_token_is(p, END)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
         Statement* inner_stmt;
-        PROPAGATE_IF_ERROR_DO(parser_parse_statement(p, &inner_stmt),
-                              NODE_VIRTUAL_FREE(block, p->allocator.free_alloc););
+        TRY_DO(parser_parse_statement(p, &inner_stmt),
+               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc););
 
-        PROPAGATE_IF_ERROR_DO(block_statement_append(block, inner_stmt), {
+        TRY_DO(block_statement_append(block, inner_stmt), {
             NODE_VIRTUAL_FREE(inner_stmt, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         });
     }
 
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, RBRACE),
-                          block_statement_destroy((Node*)block, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, RBRACE),
+           block_statement_destroy((Node*)block, p->allocator.free_alloc));
 
     *stmt = block;
     return SUCCESS;
 }
 
-TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt) {
+NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, IDENT));
+    TRY(parser_expect_peek(p, IDENT));
 
     Expression* ident_expr;
-    PROPAGATE_IF_ERROR(identifier_expression_parse(p, &ident_expr));
+    TRY(identifier_expression_parse(p, &ident_expr));
     IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
-    PROPAGATE_IF_ERROR_DO(parser_expect_peek(p, LBRACE),
-                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, LBRACE),
+           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
 
     BlockStatement* block;
-    PROPAGATE_IF_ERROR_DO(block_statement_parse(p, &block),
-                          identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(block_statement_parse(p, &block),
+           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
 
     if (block->statements.length == 0) {
         IGNORE_STATUS(
@@ -218,11 +220,10 @@ TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt) {
     }
 
     ImplStatement* impl;
-    PROPAGATE_IF_ERROR_DO(
-        impl_statement_create(start_token, ident, block, &impl, p->allocator.memory_alloc), {
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-            block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        });
+    TRY_DO(impl_statement_create(start_token, ident, block, &impl, p->allocator.memory_alloc), {
+        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+    });
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -232,7 +233,7 @@ TRY_STATUS impl_statement_parse(Parser* p, ImplStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
+NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -244,7 +245,7 @@ TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
     switch (p->peek_token.type) {
     case IDENT: {
         UNREACHABLE_IF_ERROR(parser_expect_peek(p, IDENT));
-        PROPAGATE_IF_ERROR(identifier_expression_parse(p, &payload));
+        TRY(identifier_expression_parse(p, &payload));
         IdentifierExpression* ident = (IdentifierExpression*)payload;
 
         tag     = STANDARD;
@@ -253,7 +254,7 @@ TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
     }
     case STRING: {
         UNREACHABLE_IF_ERROR(parser_expect_peek(p, STRING));
-        PROPAGATE_IF_ERROR(string_expression_parse(p, &payload));
+        TRY(string_expression_parse(p, &payload));
         StringLiteralExpression* string = (StringLiteralExpression*)payload;
 
         tag     = USER;
@@ -267,9 +268,8 @@ TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
     }
 
     ImportStatement* import;
-    PROPAGATE_IF_ERROR_DO(
-        import_statement_create(start_token, tag, variant, &import, p->allocator.memory_alloc),
-        NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
+    TRY_DO(import_statement_create(start_token, tag, variant, &import, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -279,21 +279,20 @@ TRY_STATUS import_statement_parse(Parser* p, ImportStatement** stmt) {
     return SUCCESS;
 }
 
-TRY_STATUS discard_statement_parse(Parser* p, DiscardStatement** stmt) {
+NODISCARD Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    PROPAGATE_IF_ERROR(parser_expect_peek(p, ASSIGN));
-    PROPAGATE_IF_ERROR(parser_next_token(p));
+    TRY(parser_expect_peek(p, ASSIGN));
+    TRY(parser_next_token(p));
 
     Expression* to_discard;
-    PROPAGATE_IF_ERROR(expression_parse(p, LOWEST, &to_discard));
+    TRY(expression_parse(p, LOWEST, &to_discard));
 
     DiscardStatement* discard;
-    PROPAGATE_IF_ERROR_DO(
-        discard_statement_create(start_token, to_discard, &discard, p->allocator.memory_alloc),
-        NODE_VIRTUAL_FREE(to_discard, p->allocator.free_alloc));
+    TRY_DO(discard_statement_create(start_token, to_discard, &discard, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(to_discard, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));

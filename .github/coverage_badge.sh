@@ -1,6 +1,18 @@
-#!/bin/sh
-SUMMARY="$1"
-OUT="$2"
+#!/bin/bash
+LLVM_COV="$1"
+CONCH_BINARY="$2"
+COV_DIR="$3"
+CMAKE_SRC_DIR="$4"
+
+SUMMARY=$COV_DIR/coverage_summary.txt
+OUT=$COV_DIR/coverage.svg
+
+IGNORES="$CMAKE_SRC_DIR/tests/.*|status\.h|status\.c|hash\.h"
+
+$LLVM_COV report $CONCH_BINARY \
+    -instr-profile=$COV_DIR/default.profdata \
+    -ignore-filename-regex="($IGNORES)" \
+    > $SUMMARY
 
 PERCENT=$(awk '/TOTAL/ {print int($10)}' "$SUMMARY")
 echo "Total Coverage: $PERCENT%"

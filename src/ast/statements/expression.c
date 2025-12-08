@@ -2,14 +2,12 @@
 
 #include "ast/statements/expression.h"
 
-TRY_STATUS expression_statement_create(Token                 start_token,
-                                       Expression*           expression,
-                                       ExpressionStatement** expr_stmt,
-                                       memory_alloc_fn       memory_alloc) {
+NODISCARD Status expression_statement_create(Token                 start_token,
+                                             Expression*           expression,
+                                             ExpressionStatement** expr_stmt,
+                                             memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
-    if (!expression) {
-        return NULL_PARAMETER;
-    }
+    assert(expression);
 
     ExpressionStatement* expr = memory_alloc(sizeof(ExpressionStatement));
     if (!expr) {
@@ -35,16 +33,15 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(expr_stmt);
 }
 
-TRY_STATUS
-expression_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status expression_statement_reconstruct(Node*          node,
+                                                  const HashMap* symbol_map,
+                                                  StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     ExpressionStatement* expr_stmt  = (ExpressionStatement*)node;
     Node*                value_node = (Node*)expr_stmt->expression;
-    PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+    TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
 
     return SUCCESS;
 }

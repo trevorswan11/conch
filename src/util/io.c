@@ -11,7 +11,7 @@ FileIO file_io_std(void) {
     };
 }
 
-TRY_STATUS file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
+NODISCARD Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
     if (!io || !in || !out || !err) {
         return NULL_PARAMETER;
     }

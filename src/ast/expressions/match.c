@@ -19,18 +19,15 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     array_list_deinit(arms);
 }
 
-TRY_STATUS match_expression_create(Token             start_token,
-                                   Expression*       expression,
-                                   ArrayList         arms,
-                                   MatchExpression** match_expr,
-                                   memory_alloc_fn   memory_alloc) {
+NODISCARD Status match_expression_create(Token             start_token,
+                                         Expression*       expression,
+                                         ArrayList         arms,
+                                         MatchExpression** match_expr,
+                                         memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     assert(arms.item_size == sizeof(MatchArm));
     assert(arms.length > 0);
-
-    if (!expression) {
-        return NULL_PARAMETER;
-    }
+    assert(expression);
 
     MatchExpression* match = memory_alloc(sizeof(MatchExpression));
     if (!match) {
@@ -58,35 +55,34 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(match);
 }
 
-TRY_STATUS
-match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status match_expression_reconstruct(Node*          node,
+                                              const HashMap* symbol_map,
+                                              StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "match "));
+    TRY(string_builder_append_str_z(sb, "match "));
 
     MatchExpression* match      = (MatchExpression*)node;
     Node*            match_expr = (Node*)match->expression;
-    PROPAGATE_IF_ERROR(match_expr->vtable->reconstruct(match_expr, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " { "));
+    TRY(match_expr->vtable->reconstruct(match_expr, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, " { "));
 
     MatchArm arm;
     for (size_t i = 0; i < match->arms.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&match->arms, i, &arm));
 
         Node* arm_pat = (Node*)arm.pattern;
-        PROPAGATE_IF_ERROR(arm_pat->vtable->reconstruct(arm_pat, symbol_map, sb));
+        TRY(arm_pat->vtable->reconstruct(arm_pat, symbol_map, sb));
 
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " => "));
+        TRY(string_builder_append_str_z(sb, " => "));
 
         Node* arm_dis = (Node*)arm.dispatch;
-        PROPAGATE_IF_ERROR(arm_dis->vtable->reconstruct(arm_dis, symbol_map, sb));
+        TRY(arm_dis->vtable->reconstruct(arm_dis, symbol_map, sb));
 
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+        TRY(string_builder_append_str_z(sb, ", "));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "}"));
+    TRY(string_builder_append_str_z(sb, "}"));
     return SUCCESS;
 }

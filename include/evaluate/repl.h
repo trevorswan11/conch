@@ -10,6 +10,6 @@
 #define WELCOME_MESSAGE "Welcome to Conch REPL! Type 'exit' to quit."
 #define EXIT_TOKEN "exit"
 
-TRY_STATUS repl_start(void);
-TRY_STATUS repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
-TRY_STATUS repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
+NODISCARD Status repl_start(void);
+NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
+NODISCARD Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);

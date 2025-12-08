@@ -17,10 +17,10 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     array_list_deinit(variants);
 }
 
-TRY_STATUS enum_expression_create(Token            start_token,
-                                  ArrayList        variants,
-                                  EnumExpression** enum_expr,
-                                  memory_alloc_fn  memory_alloc) {
+NODISCARD Status enum_expression_create(Token            start_token,
+                                        ArrayList        variants,
+                                        EnumExpression** enum_expr,
+                                        memory_alloc_fn  memory_alloc) {
     assert(variants.item_size == sizeof(EnumVariant));
     assert(memory_alloc);
 
@@ -52,30 +52,29 @@ void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(e);
 }
 
-TRY_STATUS
-enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status enum_expression_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     EnumExpression* e = (EnumExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "enum { "));
+    TRY(string_builder_append_str_z(sb, "enum { "));
 
     EnumVariant variant;
     for (size_t i = 0; i < e->variants.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&e->variants, i, &variant));
 
-        PROPAGATE_IF_ERROR(identifier_expression_reconstruct((Node*)variant.name, symbol_map, sb));
+        TRY(identifier_expression_reconstruct((Node*)variant.name, symbol_map, sb));
         if (variant.value) {
             Node* value_node = (Node*)variant.value;
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
-            PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+            TRY(string_builder_append_str_z(sb, " = "));
+            TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
         }
 
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+        TRY(string_builder_append_str_z(sb, ", "));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '}'));
+    TRY(string_builder_append(sb, '}'));
     return SUCCESS;
 }

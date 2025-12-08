@@ -33,35 +33,25 @@ static inline bool metadata_equal(Metadata a, Metadata b) {
     return a.fingerprint == b.fingerprint && a.used == b.used;
 }
 
-static inline bool metadata_used(Metadata m) {
-    return m.used == 1;
-}
+static inline bool metadata_used(Metadata m) { return m.used == 1; }
 
 static inline bool metadata_tombstone(Metadata m) {
     return metadata_equal(m, METADATA_SLOT_TOMBSTONE);
 }
 
-static inline bool metadata_open(Metadata m) {
-    return metadata_equal(m, METADATA_SLOT_OPEN);
-}
+static inline bool metadata_open(Metadata m) { return metadata_equal(m, METADATA_SLOT_OPEN); }
 
 static inline void metadata_fill(Metadata* m, uint8_t fp) {
     m->fingerprint = FINGERPRINT_MASK & fp;
     m->used        = 1;
 }
 
-static inline void metadata_clear(Metadata* m) {
-    *m = METADATA_SLOT_OPEN;
-}
+static inline void metadata_clear(Metadata* m) { *m = METADATA_SLOT_OPEN; }
 
-static inline void metadata_remove(Metadata* m) {
-    *m = METADATA_SLOT_TOMBSTONE;
-}
+static inline void metadata_remove(Metadata* m) { *m = METADATA_SLOT_TOMBSTONE; }
 
 // Only the 7 most significant bits of the result are relevant
-static inline uint8_t take_fingerprint(Hash hash) {
-    return FINGERPRINT_MASK & (hash >> (64 - 7));
-}
+static inline uint8_t take_fingerprint(Hash hash) { return FINGERPRINT_MASK & (hash >> (64 - 7)); }
 
 // A pair of mutable pointers into the table.
 //
@@ -128,15 +118,15 @@ typedef struct {
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Heavily inspired by Zig's unmanaged HashMap.
-TRY_STATUS hash_map_init_allocator(HashMap* hm,
-                                   size_t   capacity,
-                                   size_t   key_size,
-                                   size_t   key_align,
-                                   size_t   value_size,
-                                   size_t   value_align,
-                                   Hash (*hash)(const void*),
-                                   int (*compare)(const void*, const void*),
-                                   Allocator allocator);
+NODISCARD Status hash_map_init_allocator(HashMap* hm,
+                                         size_t   capacity,
+                                         size_t   key_size,
+                                         size_t   key_align,
+                                         size_t   value_size,
+                                         size_t   value_align,
+                                         Hash (*hash)(const void*),
+                                         int (*compare)(const void*, const void*),
+                                         Allocator allocator);
 
 // Creates a HashMap with the given properties.
 //
@@ -148,22 +138,22 @@ TRY_STATUS hash_map_init_allocator(HashMap* hm,
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Heavily inspired by Zig's unmanaged HashMap.
-TRY_STATUS hash_map_init(HashMap* hm,
-                         size_t   capacity,
-                         size_t   key_size,
-                         size_t   key_align,
-                         size_t   value_size,
-                         size_t   value_align,
-                         Hash (*hash)(const void*),
-                         int (*compare)(const void*, const void*));
-void       hash_map_deinit(HashMap* hm);
+NODISCARD Status hash_map_init(HashMap* hm,
+                               size_t   capacity,
+                               size_t   key_size,
+                               size_t   key_align,
+                               size_t   value_size,
+                               size_t   value_align,
+                               Hash (*hash)(const void*),
+                               int (*compare)(const void*, const void*));
+void             hash_map_deinit(HashMap* hm);
 
 size_t hash_map_capacity(const HashMap* hm);
 size_t hash_map_count(const HashMap* hm);
 
-void       hash_map_clear_retaining_capacity(HashMap* hm);
-TRY_STATUS hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
-TRY_STATUS hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
+void             hash_map_clear_retaining_capacity(HashMap* hm);
+NODISCARD Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
+NODISCARD Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 
 // Rehash the map, in-place.
 //
@@ -179,23 +169,23 @@ TRY_STATUS hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 void hash_map_rehash(HashMap* hm);
 
 // Inserts an entry into the map, assuming it is not present and no growth is needed.
-void       hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
-TRY_STATUS hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
+void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
+NODISCARD Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
 
 MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
-TRY_STATUS        hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
+NODISCARD Status  hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
 void              hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
-TRY_STATUS        hash_map_put(HashMap* hm, const void* key, const void* value);
+NODISCARD Status  hash_map_put(HashMap* hm, const void* key, const void* value);
 
-bool       hash_map_contains(const HashMap* hm, const void* key);
-TRY_STATUS hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
-TRY_STATUS hash_map_get_value(const HashMap* hm, const void* key, void* value);
-TRY_STATUS hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
+bool             hash_map_contains(const HashMap* hm, const void* key);
+NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
+NODISCARD Status hash_map_get_value(const HashMap* hm, const void* key, void* value);
+NODISCARD Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-TRY_STATUS hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
+NODISCARD Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
 
-TRY_STATUS hash_map_remove(HashMap* hm, const void* key);
+NODISCARD Status hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
 bool            hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next);

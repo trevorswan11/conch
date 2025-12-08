@@ -22,15 +22,17 @@ typedef struct DeclStatement {
     Expression*           value;
 } DeclStatement;
 
-TRY_STATUS decl_statement_create(Token                 start_token,
-                                 IdentifierExpression* ident,
-                                 TypeExpression*       type,
-                                 Expression*           value,
-                                 DeclStatement**       decl_stmt,
-                                 memory_alloc_fn       memory_alloc);
+NODISCARD Status decl_statement_create(Token                 start_token,
+                                       IdentifierExpression* ident,
+                                       TypeExpression*       type,
+                                       Expression*           value,
+                                       DeclStatement**       decl_stmt,
+                                       memory_alloc_fn       memory_alloc);
 
-void       decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status decl_statement_reconstruct(Node*          node,
+                                            const HashMap* symbol_map,
+                                            StringBuilder* sb);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
@@ -47,16 +49,17 @@ typedef struct TypeDeclStatement {
     bool                  primitive_alias;
 } TypeDeclStatement;
 
-TRY_STATUS type_decl_statement_create(Token                 start_token,
-                                      IdentifierExpression* ident,
-                                      Expression*           value,
-                                      bool                  primitive_alias,
-                                      TypeDeclStatement**   type_decl_stmt,
-                                      memory_alloc_fn       memory_alloc);
+NODISCARD Status type_decl_statement_create(Token                 start_token,
+                                            IdentifierExpression* ident,
+                                            Expression*           value,
+                                            bool                  primitive_alias,
+                                            TypeDeclStatement**   type_decl_stmt,
+                                            memory_alloc_fn       memory_alloc);
 
-void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status type_decl_statement_reconstruct(Node*          node,
+                                                 const HashMap* symbol_map,
+                                                 StringBuilder* sb);
 
 static const StatementVTable TYPE_DECL_VTABLE = {
     .base =

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "lexer/token.h"
 
 #include "util/allocator.h"
@@ -9,19 +11,25 @@
 #include "util/mem.h"
 #include "util/status.h"
 
+// A global flag that determines how prefix and infix expressions are printed.
+//
+// When true, parenthesis are generously added to reconstructions.
+// This can be useful for verifying operator precedence, but is disabled by default.
+extern bool group_expressions;
+
 typedef struct {
     ArrayList statements;
     HashMap   token_type_symbols;
     Allocator allocator;
 } AST;
 
-TRY_STATUS ast_init(AST* ast, Allocator allocator);
-void       ast_deinit(AST* ast);
+NODISCARD Status ast_init(AST* ast, Allocator allocator);
+void             ast_deinit(AST* ast);
 
 // Reconstructs the original source code from the AST.
 //
 // The builder is cleared on entry, and freed on error.
-TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb);
+NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb);
 
 // Tries to get the symbol for the given token type.
 //
@@ -37,4 +45,6 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
 // Handles the reconstruction of generic lists.
 //
 // While the generics pointer must be valid, this is a no-op for empty lists.
-TRY_STATUS generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb);
+NODISCARD Status generics_reconstruct(ArrayList*     generics,
+                                      const HashMap* symbol_map,
+                                      StringBuilder* sb);

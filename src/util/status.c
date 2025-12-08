@@ -16,10 +16,6 @@ void debug_print(const char* format, ...) {
 #endif
 }
 
-const char* status_name(Status status) {
-    return STATUS_TYPE_NAMES[status];
-}
+const char* status_name(Status status) { return STATUS_TYPE_NAMES[status]; }
 
-void status_ignore(Status status) {
-    MAYBE_UNUSED(status);
-}
+void status_ignore(Status status) { MAYBE_UNUSED(status); }

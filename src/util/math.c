@@ -48,9 +48,7 @@ size_t ceil_power_of_two_size(size_t size) {
 #endif
 }
 
-bool is_power_of_two(size_t n) {
-    return (n > 0) && ((n & (n - 1)) == 0);
-}
+bool is_power_of_two(size_t n) { return (n > 0) && ((n & (n - 1)) == 0); }
 
 bool approx_eq_float(float x, float y, float tolerance) {
     return approx_eq_double(x, y, tolerance);
@@ -68,6 +66,4 @@ bool approx_eq_double(double x, double y, double tolerance) {
     }
 }
 
-int rand_in_range(int min, int max) {
-    return rand() % (max + 1 - min) + min;
-}
+int rand_in_range(int min, int max) { return rand() % (max + 1 - min) + min; }

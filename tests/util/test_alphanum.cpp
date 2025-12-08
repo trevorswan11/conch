@@ -78,3 +78,38 @@ TEST_CASE("Double from string") {
     REQUIRE(STATUS_OK(strntod("1023.234612e234", 15, &test_value, malloc, free)));
     REQUIRE(approx_eq_double(test_value, 1023.234612e234, EPSILON));
 }
+
+TEST_CASE("Malformed numbers") {
+    const uint64_t start = 42;
+    SECTION("Signing integers") {
+        int64_t v = start;
+        REQUIRE(strntoll("0b2", 3, Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoll("0b2", 3, Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoll("0xG", 3, Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoll("0oG", 3, Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+    }
+
+    SECTION("Unsigned integers") {
+        uint64_t v = start;
+        REQUIRE(strntoull("0b2", 3, Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoull("0b2", 3, Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoull("0xG", 3, Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+        REQUIRE(strntoull("0oG", 3, Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(v == start);
+    }
+
+    SECTION("Floating points") {
+        double v = start;
+        REQUIRE(strntod("1023.234612e2340", 16, &v, malloc, free) == Status::FLOAT_OVERFLOW);
+        REQUIRE(approx_eq_double(start, v, EPSILON));
+        REQUIRE(strntod("1023.23R612e234", 15, &v, malloc, free) == Status::MALFORMED_FLOAT_STR);
+        REQUIRE(approx_eq_double(start, v, EPSILON));
+    }
+}

@@ -17,14 +17,15 @@ typedef struct IntegerLiteralExpression {
     int64_t    value;
 } IntegerLiteralExpression;
 
-TRY_STATUS integer_literal_expression_create(Token                      start_token,
-                                             int64_t                    value,
-                                             IntegerLiteralExpression** int_expr,
-                                             memory_alloc_fn            memory_alloc);
+NODISCARD Status integer_literal_expression_create(Token                      start_token,
+                                                   int64_t                    value,
+                                                   IntegerLiteralExpression** int_expr,
+                                                   memory_alloc_fn            memory_alloc);
 
-void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-integer_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status integer_literal_expression_reconstruct(Node*          node,
+                                                        const HashMap* symbol_map,
+                                                        StringBuilder* sb);
 
 static const ExpressionVTable INTEGER_VTABLE = {
     .base =
@@ -39,10 +40,10 @@ typedef struct UnsignedIntegerLiteralExpression {
     uint64_t   value;
 } UnsignedIntegerLiteralExpression;
 
-TRY_STATUS uinteger_literal_expression_create(Token                              start_token,
-                                              uint64_t                           value,
-                                              UnsignedIntegerLiteralExpression** int_expr,
-                                              memory_alloc_fn                    memory_alloc);
+NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
+                                                    uint64_t                           value,
+                                                    UnsignedIntegerLiteralExpression** int_expr,
+                                                    memory_alloc_fn memory_alloc);
 
 void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
 

@@ -26,7 +26,7 @@ typedef struct NodeVTable NodeVTable;
 
 struct NodeVTable {
     void (*destroy)(Node*, free_alloc_fn);
-    TRY_STATUS (*reconstruct)(Node*, const HashMap*, StringBuilder*);
+    NODISCARD Status (*reconstruct)(Node*, const HashMap*, StringBuilder*);
 };
 
 struct Node {

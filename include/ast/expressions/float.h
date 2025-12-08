@@ -15,14 +15,15 @@ typedef struct {
     double     value;
 } FloatLiteralExpression;
 
-TRY_STATUS float_literal_expression_create(Token                    start_token,
-                                           double                   value,
-                                           FloatLiteralExpression** float_expr,
-                                           memory_alloc_fn          memory_alloc);
+NODISCARD Status float_literal_expression_create(Token                    start_token,
+                                                 double                   value,
+                                                 FloatLiteralExpression** float_expr,
+                                                 memory_alloc_fn          memory_alloc);
 
-void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status float_literal_expression_reconstruct(Node*          node,
+                                                      const HashMap* symbol_map,
+                                                      StringBuilder* sb);
 
 static const ExpressionVTable FLOAT_VTABLE = {
     .base =

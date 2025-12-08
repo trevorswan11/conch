@@ -20,16 +20,17 @@ typedef struct IfExpression {
     Statement*  alternate;
 } IfExpression;
 
-TRY_STATUS if_expression_create(Token           start_token,
-                                Expression*     condition,
-                                Statement*      consequence,
-                                Statement*      alternate,
-                                IfExpression**  if_expr,
-                                memory_alloc_fn memory_alloc);
+NODISCARD Status if_expression_create(Token           start_token,
+                                      Expression*     condition,
+                                      Statement*      consequence,
+                                      Statement*      alternate,
+                                      IfExpression**  if_expr,
+                                      memory_alloc_fn memory_alloc);
 
-void if_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             if_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status if_expression_reconstruct(Node*          node,
+                                           const HashMap* symbol_map,
+                                           StringBuilder* sb);
 
 static const ExpressionVTable IF_VTABLE = {
     .base =

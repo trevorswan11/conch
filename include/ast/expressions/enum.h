@@ -25,14 +25,15 @@ typedef struct EnumExpression {
 
 void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc);
 
-TRY_STATUS enum_expression_create(Token            start_token,
-                                  ArrayList        variants,
-                                  EnumExpression** enum_expr,
-                                  memory_alloc_fn  memory_alloc);
+NODISCARD Status enum_expression_create(Token            start_token,
+                                        ArrayList        variants,
+                                        EnumExpression** enum_expr,
+                                        memory_alloc_fn  memory_alloc);
 
-void enum_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             enum_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status enum_expression_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb);
 
 static const ExpressionVTable ENUM_VTABLE = {
     .base =

@@ -8,21 +8,21 @@
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 
-TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param) {
-    if (!p || !parameters) {
-        return NULL_PARAMETER;
-    }
+NODISCARD Status allocate_parameter_list(Parser*    p,
+                                         ArrayList* parameters,
+                                         bool*      contains_default_param) {
+    assert(p && parameters);
     ASSERT_ALLOCATOR(p->allocator);
     Allocator allocator = p->allocator;
 
     ArrayList list;
-    PROPAGATE_IF_ERROR(array_list_init_allocator(&list, 2, sizeof(Parameter), allocator));
+    TRY(array_list_init_allocator(&list, 2, sizeof(Parameter), allocator));
 
     bool some_initialized = false;
     if (parser_peek_token_is(p, RPAREN)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     } else {
-        PROPAGATE_IF_ERROR_DO(parser_next_token(p), array_list_deinit(&list));
+        TRY_DO(parser_next_token(p), array_list_deinit(&list));
         while (!parser_current_token_is(p, RPAREN)) {
             bool is_ref_argument = false;
             if (parser_current_token_is(p, REF)) {
@@ -32,14 +32,13 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
 
             // Every parameter must have an identifier and a type
             IdentifierExpression* ident;
-            PROPAGATE_IF_ERROR_DO(
-                identifier_expression_create(
-                    p->current_token, &ident, allocator.memory_alloc, allocator.free_alloc),
-                free_parameter_list(&list, p->allocator.free_alloc));
+            TRY_DO(identifier_expression_create(
+                       p->current_token, &ident, allocator.memory_alloc, allocator.free_alloc),
+                   free_parameter_list(&list, p->allocator.free_alloc));
 
             Expression* type_expr;
             bool        initalized;
-            PROPAGATE_IF_ERROR_DO(type_expression_parse(p, &type_expr, &initalized), {
+            TRY_DO(type_expression_parse(p, &type_expr, &initalized), {
                 identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                 free_parameter_list(&list, p->allocator.free_alloc);
             });
@@ -57,14 +56,14 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
             if (initalized) {
                 some_initialized = some_initialized || initalized;
 
-                PROPAGATE_IF_ERROR_DO(expression_parse(p, LOWEST, &default_value), {
+                TRY_DO(expression_parse(p, LOWEST, &default_value), {
                     identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                     type_expression_destroy((Node*)type, allocator.free_alloc);
                     free_parameter_list(&list, p->allocator.free_alloc);
                 });
 
                 // Expression parsing moves up to the end of the expression, so pass it
-                PROPAGATE_IF_ERROR_DO(parser_next_token(p), {
+                TRY_DO(parser_next_token(p), {
                     identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                     type_expression_destroy((Node*)type, allocator.free_alloc);
                     NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
@@ -79,7 +78,7 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
                 .default_value = default_value,
             };
 
-            PROPAGATE_IF_ERROR_DO(array_list_push(&list, &parameter), {
+            TRY_DO(array_list_push(&list, &parameter), {
                 identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                 type_expression_destroy((Node*)type, allocator.free_alloc);
                 NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
@@ -92,8 +91,8 @@ TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* conta
             }
 
             // Consume the comma and advance past it if theres not a closing delim
-            PROPAGATE_IF_ERROR_DO(parser_expect_current(p, COMMA),
-                                  free_parameter_list(&list, p->allocator.free_alloc));
+            TRY_DO(parser_expect_current(p, COMMA),
+                   free_parameter_list(&list, p->allocator.free_alloc));
         }
     }
 
@@ -130,47 +129,44 @@ void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc) {
     array_list_deinit(parameters);
 }
 
-TRY_STATUS
-reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb) {
-    if (!parameters || !symbol_map || !sb) {
-        return NULL_PARAMETER;
-    }
+NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
+                                            const HashMap* symbol_map,
+                                            StringBuilder* sb) {
+    assert(parameters && symbol_map && sb);
 
     for (size_t i = 0; i < parameters->length; i++) {
         Parameter parameter;
         UNREACHABLE_IF_ERROR(array_list_get(parameters, i, &parameter));
 
         if (parameter.is_ref) {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "ref "));
+            TRY(string_builder_append_str_z(sb, "ref "));
         }
 
         assert(parameter.ident);
-        PROPAGATE_IF_ERROR(
-            identifier_expression_reconstruct((Node*)parameter.ident, symbol_map, sb));
+        TRY(identifier_expression_reconstruct((Node*)parameter.ident, symbol_map, sb));
+        TRY(string_builder_append_str_z(sb, ": "));
 
         assert(parameter.type);
-        PROPAGATE_IF_ERROR(type_expression_reconstruct((Node*)parameter.type, symbol_map, sb));
+        TRY(type_expression_reconstruct((Node*)parameter.type, symbol_map, sb));
 
         if (parameter.default_value) {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
+            TRY(string_builder_append_str_z(sb, " = "));
             Node* default_value = (Node*)parameter.default_value;
-            PROPAGATE_IF_ERROR(default_value->vtable->reconstruct(default_value, symbol_map, sb));
+            TRY(default_value->vtable->reconstruct(default_value, symbol_map, sb));
         }
     }
 
     return SUCCESS;
 }
 
-TRY_STATUS function_expression_create(Token                start_token,
-                                      ArrayList            generics,
-                                      ArrayList            parameters,
-                                      TypeExpression*      return_type,
-                                      BlockStatement*      body,
-                                      FunctionExpression** function_expr,
-                                      memory_alloc_fn      memory_alloc) {
-    if (!body) {
-        return NULL_PARAMETER;
-    }
+NODISCARD Status function_expression_create(Token                start_token,
+                                            ArrayList            generics,
+                                            ArrayList            parameters,
+                                            TypeExpression*      return_type,
+                                            BlockStatement*      body,
+                                            FunctionExpression** function_expr,
+                                            memory_alloc_fn      memory_alloc) {
+    assert(return_type && body);
     assert(parameters.item_size == sizeof(Parameter));
 
     assert(memory_alloc);
@@ -204,21 +200,20 @@ void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(func);
 }
 
-TRY_STATUS
-function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status function_expression_reconstruct(Node*          node,
+                                                 const HashMap* symbol_map,
+                                                 StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     FunctionExpression* func = (FunctionExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "fn"));
-    PROPAGATE_IF_ERROR(generics_reconstruct(&func->generics, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
-    PROPAGATE_IF_ERROR(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, "fn"));
+    TRY(generics_reconstruct(&func->generics, symbol_map, sb));
+    TRY(string_builder_append(sb, '('));
+    TRY(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ") "));
-    PROPAGATE_IF_ERROR(block_statement_reconstruct((Node*)func->body, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, ") "));
+    TRY(block_statement_reconstruct((Node*)func->body, symbol_map, sb));
 
     return SUCCESS;
 }

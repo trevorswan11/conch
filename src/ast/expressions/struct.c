@@ -19,11 +19,11 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     array_list_deinit(members);
 }
 
-TRY_STATUS struct_expression_create(Token              start_token,
-                                    ArrayList          generics,
-                                    ArrayList          members,
-                                    StructExpression** struct_expr,
-                                    memory_alloc_fn    memory_alloc) {
+NODISCARD Status struct_expression_create(Token              start_token,
+                                          ArrayList          generics,
+                                          ArrayList          members,
+                                          StructExpression** struct_expr,
+                                          memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
 
@@ -57,41 +57,41 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(struct_expr);
 }
 
-TRY_STATUS
-struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status struct_expression_reconstruct(Node*          node,
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     StructExpression* s = (StructExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "struct"));
+    TRY(string_builder_append_str_z(sb, "struct"));
 
     // Struct generics introduce slightly different spacing
-    PROPAGATE_IF_ERROR(generics_reconstruct(&s->generics, symbol_map, sb));
+    TRY(generics_reconstruct(&s->generics, symbol_map, sb));
     if (s->generics.length == 0) {
-        PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+        TRY(string_builder_append(sb, ' '));
     }
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));
+    TRY(string_builder_append_str_z(sb, "{ "));
 
     StructMember member;
     for (size_t i = 0; i < s->members.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&s->members, i, &member));
 
         Node* member_name = (Node*)member.name;
-        PROPAGATE_IF_ERROR(member_name->vtable->reconstruct(member_name, symbol_map, sb));
+        TRY(member_name->vtable->reconstruct(member_name, symbol_map, sb));
+        TRY(string_builder_append_str_z(sb, ": "));
 
         Node* member_type = (Node*)member.type;
-        PROPAGATE_IF_ERROR(member_type->vtable->reconstruct(member_type, symbol_map, sb));
+        TRY(member_type->vtable->reconstruct(member_type, symbol_map, sb));
 
         if (member.default_value) {
             Node* member_default = (Node*)member.default_value;
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
-            PROPAGATE_IF_ERROR(member_default->vtable->reconstruct(member_default, symbol_map, sb));
+            TRY(string_builder_append_str_z(sb, " = "));
+            TRY(member_default->vtable->reconstruct(member_default, symbol_map, sb));
         }
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+        TRY(string_builder_append_str_z(sb, ", "));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '}'));
+    TRY(string_builder_append(sb, '}'));
     return SUCCESS;
 }

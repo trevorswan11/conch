@@ -20,13 +20,13 @@ static inline size_t _hash_set_capacity_for_size(size_t size) {
 }
 
 // Grows the set to the new capacity, rehashing along the way.
-static inline TRY_STATUS _hash_set_grow(HashSet* hs, size_t new_capacity) {
+static inline NODISCARD Status _hash_set_grow(HashSet* hs, size_t new_capacity) {
     new_capacity = max_size_t(2, new_capacity, HASH_SET_MINIMUM_CAPACITY);
     assert(new_capacity > hs->header->capacity);
     assert(is_power_of_two(new_capacity));
 
     HashSet set;
-    PROPAGATE_IF_ERROR(hash_set_init(
+    TRY(hash_set_init(
         &set, new_capacity, hs->header->key_size, hs->header->key_align, hs->hash, hs->compare));
 
     // Append all data to the set without checking sizes
@@ -53,14 +53,14 @@ static inline TRY_STATUS _hash_set_grow(HashSet* hs, size_t new_capacity) {
 }
 
 // Only grows if the requested count exceeds the current number of available slots.
-static inline TRY_STATUS _hash_set_grow_if_needed(HashSet* hs, size_t new_count) {
+static inline NODISCARD Status _hash_set_grow_if_needed(HashSet* hs, size_t new_count) {
     const size_t max_load = (hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100;
     if (hs->size + new_count <= max_load) {
         return SUCCESS;
     }
 
     const size_t desired = _hash_set_capacity_for_size(hs->size + new_count);
-    PROPAGATE_IF_ERROR(_hash_set_grow(hs, desired));
+    TRY(_hash_set_grow(hs, desired));
     return SUCCESS;
 }
 
@@ -70,13 +70,13 @@ static inline void _hash_set_init_metadatas(HashSet* hs) {
     memset(hs->metadata, 0, sizeof(Metadata) * hs->header->capacity);
 }
 
-TRY_STATUS hash_set_init_allocator(HashSet* hs,
-                                   size_t   capacity,
-                                   size_t   key_size,
-                                   size_t   key_align,
-                                   Hash (*hash)(const void*),
-                                   int (*compare)(const void*, const void*),
-                                   Allocator allocator) {
+NODISCARD Status hash_set_init_allocator(HashSet* hs,
+                                         size_t   capacity,
+                                         size_t   key_size,
+                                         size_t   key_align,
+                                         Hash (*hash)(const void*),
+                                         int (*compare)(const void*, const void*),
+                                         Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     if (!hs || !hash || !compare) {
         return NULL_PARAMETER;
@@ -144,12 +144,12 @@ TRY_STATUS hash_set_init_allocator(HashSet* hs,
     return SUCCESS;
 }
 
-TRY_STATUS hash_set_init(HashSet* hs,
-                         size_t   capacity,
-                         size_t   key_size,
-                         size_t   key_align,
-                         Hash (*hash)(const void*),
-                         int (*compare)(const void*, const void*)) {
+NODISCARD Status hash_set_init(HashSet* hs,
+                               size_t   capacity,
+                               size_t   key_size,
+                               size_t   key_align,
+                               Hash (*hash)(const void*),
+                               int (*compare)(const void*, const void*)) {
     return hash_set_init_allocator(
         hs, capacity, key_size, key_align, hash, compare, standard_allocator);
 }
@@ -184,18 +184,18 @@ void hash_set_clear_retaining_capacity(HashSet* hs) {
     hs->available = (hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100;
 }
 
-TRY_STATUS hash_set_ensure_total_capacity(HashSet* hs, size_t new_size) {
+NODISCARD Status hash_set_ensure_total_capacity(HashSet* hs, size_t new_size) {
     if (!hs || !hs->buffer) {
         return NULL_PARAMETER;
     }
 
     if (new_size > hs->size) {
-        PROPAGATE_IF_ERROR_IS(_hash_set_grow_if_needed(hs, new_size - hs->size), ALLOCATION_FAILED);
+        TRY_IS(_hash_set_grow_if_needed(hs, new_size - hs->size), ALLOCATION_FAILED);
     }
     return SUCCESS;
 }
 
-TRY_STATUS hash_set_ensure_unused_capacity(HashSet* hs, size_t additional_size) {
+NODISCARD Status hash_set_ensure_unused_capacity(HashSet* hs, size_t additional_size) {
     return hash_set_ensure_total_capacity(hs, hs->size + additional_size);
 }
 
@@ -317,8 +317,8 @@ void hash_set_put_assume_capacity_no_clobber(HashSet* hs, const void* key) {
     hs->size += 1;
 }
 
-TRY_STATUS hash_set_put_no_clobber(HashSet* hs, const void* key) {
-    PROPAGATE_IF_ERROR_IS(_hash_set_grow_if_needed(hs, 1), ALLOCATION_FAILED);
+NODISCARD Status hash_set_put_no_clobber(HashSet* hs, const void* key) {
+    TRY_IS(_hash_set_grow_if_needed(hs, 1), ALLOCATION_FAILED);
 
     hash_set_put_assume_capacity_no_clobber(hs, key);
     return true;
@@ -373,7 +373,7 @@ SetGetOrPutResult hash_set_get_or_put_assume_capacity(HashSet* hs, const void* k
     };
 }
 
-TRY_STATUS hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutResult* result) {
+NODISCARD Status hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutResult* result) {
     assert(hs && hs->buffer && key);
 
     // If we fail to grow, still try to find the key
@@ -384,7 +384,7 @@ TRY_STATUS hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutResult* 
         }
 
         size_t index;
-        PROPAGATE_IF_ERROR(hash_set_get_index(hs, key, &index));
+        TRY(hash_set_get_index(hs, key, &index));
 
         *result = (SetGetOrPutResult){
             .key_ptr        = ptr_offset(hs->header->keys, index * hs->header->key_size),
@@ -404,10 +404,10 @@ void hash_set_put_assume_capacity(HashSet* hs, const void* key) {
     memcpy(gop.key_ptr, key, hs->header->key_size);
 }
 
-TRY_STATUS hash_set_put(HashSet* hs, const void* key) {
+NODISCARD Status hash_set_put(HashSet* hs, const void* key) {
     assert(hs && hs->buffer && key);
     SetGetOrPutResult gop;
-    PROPAGATE_IF_ERROR(hash_set_get_or_put(hs, key, &gop));
+    TRY(hash_set_get_or_put(hs, key, &gop));
 
     memcpy(gop.key_ptr, key, hs->header->key_size);
     return SUCCESS;
@@ -418,7 +418,7 @@ bool hash_set_contains(const HashSet* hs, const void* key) {
     return STATUS_OK(hash_set_get_index(hs, key, NULL));
 }
 
-TRY_STATUS hash_set_get_index(const HashSet* hs, const void* key, size_t* index) {
+NODISCARD Status hash_set_get_index(const HashSet* hs, const void* key, size_t* index) {
     assert(hs && hs->buffer && key);
     if (hs->size == 0) {
         return EMPTY;
@@ -454,10 +454,10 @@ TRY_STATUS hash_set_get_index(const HashSet* hs, const void* key, size_t* index)
     return ELEMENT_MISSING;
 }
 
-TRY_STATUS hash_set_get_entry(HashSet* hs, const void* key, SetEntry* e) {
+NODISCARD Status hash_set_get_entry(HashSet* hs, const void* key, SetEntry* e) {
     assert(hs && hs->buffer && key);
     size_t index;
-    PROPAGATE_IF_ERROR(hash_set_get_index(hs, key, &index));
+    TRY(hash_set_get_index(hs, key, &index));
 
     *e = (SetEntry){
         .key_ptr = ptr_offset(hs->header->keys, index * hs->header->key_size),
@@ -465,10 +465,10 @@ TRY_STATUS hash_set_get_entry(HashSet* hs, const void* key, SetEntry* e) {
     return SUCCESS;
 }
 
-TRY_STATUS hash_set_remove(HashSet* hs, const void* key) {
+NODISCARD Status hash_set_remove(HashSet* hs, const void* key) {
     assert(hs && hs->buffer && key);
     size_t index;
-    PROPAGATE_IF_ERROR(hash_set_get_index(hs, key, &index));
+    TRY(hash_set_get_index(hs, key, &index));
 
     metadata_remove(&hs->metadata[index]);
     hs->size -= 1;

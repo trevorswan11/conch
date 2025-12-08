@@ -13,17 +13,17 @@
 #include "util/alphanum.h"
 #include "util/hash.h"
 
-static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocator) {
+static inline NODISCARD Status _init_keywords(HashMap* keyword_map, Allocator allocator) {
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
-    PROPAGATE_IF_ERROR(hash_map_init_allocator(keyword_map,
-                                               num_keywords,
-                                               sizeof(Slice),
-                                               alignof(Slice),
-                                               sizeof(TokenType),
-                                               alignof(TokenType),
-                                               hash_slice,
-                                               compare_slices,
-                                               allocator));
+    TRY(hash_map_init_allocator(keyword_map,
+                                num_keywords,
+                                sizeof(Slice),
+                                alignof(Slice),
+                                sizeof(TokenType),
+                                alignof(TokenType),
+                                hash_slice,
+                                compare_slices,
+                                allocator));
 
     for (size_t i = 0; i < num_keywords; i++) {
         const Keyword keyword = ALL_KEYWORDS[i];
@@ -33,17 +33,17 @@ static inline TRY_STATUS _init_keywords(HashMap* keyword_map, Allocator allocato
     return SUCCESS;
 }
 
-static inline TRY_STATUS _init_operators(HashMap* operator_map, Allocator allocator) {
+static inline NODISCARD Status _init_operators(HashMap* operator_map, Allocator allocator) {
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
-    PROPAGATE_IF_ERROR(hash_map_init_allocator(operator_map,
-                                               num_operators,
-                                               sizeof(Slice),
-                                               alignof(Slice),
-                                               sizeof(TokenType),
-                                               alignof(TokenType),
-                                               hash_slice,
-                                               compare_slices,
-                                               allocator));
+    TRY(hash_map_init_allocator(operator_map,
+                                num_operators,
+                                sizeof(Slice),
+                                alignof(Slice),
+                                sizeof(TokenType),
+                                alignof(TokenType),
+                                hash_slice,
+                                compare_slices,
+                                allocator));
 
     for (size_t i = 0; i < num_operators; i++) {
         const Operator op = ALL_OPERATORS[i];
@@ -53,11 +53,9 @@ static inline TRY_STATUS _init_operators(HashMap* operator_map, Allocator alloca
     return SUCCESS;
 }
 
-TRY_STATUS lexer_init(Lexer* l, const char* input, Allocator allocator) {
-    if (!input) {
-        return NULL_PARAMETER;
-    }
-    PROPAGATE_IF_ERROR(lexer_null_init(l, allocator));
+NODISCARD Status lexer_init(Lexer* l, const char* input, Allocator allocator) {
+    assert(input);
+    TRY(lexer_null_init(l, allocator));
 
     l->input        = input;
     l->input_length = strlen(input);
@@ -66,20 +64,18 @@ TRY_STATUS lexer_init(Lexer* l, const char* input, Allocator allocator) {
     return SUCCESS;
 }
 
-TRY_STATUS lexer_null_init(Lexer* l, Allocator allocator) {
-    if (!l) {
-        return NULL_PARAMETER;
-    }
+NODISCARD Status lexer_null_init(Lexer* l, Allocator allocator) {
+    assert(l);
     ASSERT_ALLOCATOR(allocator);
 
     HashMap keywords;
-    PROPAGATE_IF_ERROR(_init_keywords(&keywords, allocator));
+    TRY(_init_keywords(&keywords, allocator));
 
     HashMap operators;
-    PROPAGATE_IF_ERROR_DO(_init_operators(&operators, allocator), hash_map_deinit(&keywords));
+    TRY_DO(_init_operators(&operators, allocator), hash_map_deinit(&keywords));
 
     ArrayList accumulator;
-    PROPAGATE_IF_ERROR_DO(array_list_init(&accumulator, 32, sizeof(Token)), {
+    TRY_DO(array_list_init(&accumulator, 32, sizeof(Token)), {
         hash_map_deinit(&keywords);
         hash_map_deinit(&operators);
     });
@@ -111,7 +107,7 @@ void lexer_deinit(Lexer* l) {
     array_list_deinit(&l->token_accumulator);
 }
 
-TRY_STATUS lexer_consume(Lexer* l) {
+NODISCARD Status lexer_consume(Lexer* l) {
     l->peek_position = 0;
     l->line_no       = 1;
     l->col_no        = 0;
@@ -122,7 +118,7 @@ TRY_STATUS lexer_consume(Lexer* l) {
     Token token;
     do {
         token = lexer_next_token(l);
-        PROPAGATE_IF_ERROR(array_list_push(&l->token_accumulator, &token));
+        TRY(array_list_push(&l->token_accumulator, &token));
     } while (token.type != END);
 
     return array_list_shrink_to_fit(&l->token_accumulator);
@@ -210,21 +206,21 @@ TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     return value;
 }
 
-TRY_STATUS lexer_print_tokens(FileIO* io, Lexer* l) {
+NODISCARD Status lexer_print_tokens(FileIO* io, Lexer* l) {
     assert(l);
     ArrayList*   list        = &l->token_accumulator;
     const size_t accumulated = array_list_length(list);
 
     Token out;
     for (size_t i = 0; i < accumulated; i++) {
-        PROPAGATE_IF_ERROR(array_list_get(list, i, &out));
-        PROPAGATE_IF_IO_ERROR(fprintf(io->out,
-                                      "%s(%.*s) [%zu, %zu]\n",
-                                      token_type_name(out.type),
-                                      (int)out.slice.length,
-                                      out.slice.ptr,
-                                      out.line,
-                                      out.column));
+        TRY(array_list_get(list, i, &out));
+        TRY_IO(fprintf(io->out,
+                       "%s(%.*s) [%zu, %zu]\n",
+                       token_type_name(out.type),
+                       (int)out.slice.length,
+                       out.slice.ptr,
+                       out.line,
+                       out.column));
     }
     return SUCCESS;
 }

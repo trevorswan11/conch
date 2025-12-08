@@ -16,13 +16,14 @@ typedef struct StringLiteralExpression {
     MutSlice   slice;
 } StringLiteralExpression;
 
-TRY_STATUS string_literal_expression_create(Token                     start_token,
-                                            StringLiteralExpression** string_expr,
-                                            Allocator                 allocator);
+NODISCARD Status string_literal_expression_create(Token                     start_token,
+                                                  StringLiteralExpression** string_expr,
+                                                  Allocator                 allocator);
 
-void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status string_literal_expression_reconstruct(Node*          node,
+                                                       const HashMap* symbol_map,
+                                                       StringBuilder* sb);
 
 static const ExpressionVTable STRING_VTABLE = {
     .base =

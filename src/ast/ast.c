@@ -9,28 +9,28 @@
 #include "lexer/keywords.h"
 #include "lexer/operators.h"
 
-TRY_STATUS ast_init(AST* ast, Allocator allocator) {
-    if (!ast) {
-        return NULL_PARAMETER;
-    }
+bool group_expressions = false;
+
+NODISCARD Status ast_init(AST* ast, Allocator allocator) {
+    assert(ast);
     ASSERT_ALLOCATOR(allocator);
 
     ArrayList statements;
-    PROPAGATE_IF_ERROR(array_list_init_allocator(&statements, 64, sizeof(Statement*), allocator));
+    TRY(array_list_init_allocator(&statements, 64, sizeof(Statement*), allocator));
 
     HashMap      tt_symbols;
     const size_t num_keywords  = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     const size_t total_symbols = num_keywords + num_operators;
-    PROPAGATE_IF_ERROR_DO(hash_map_init(&tt_symbols,
-                                        total_symbols,
-                                        sizeof(TokenType),
-                                        alignof(TokenType),
-                                        sizeof(Slice),
-                                        alignof(Slice),
-                                        hash_token_type,
-                                        compare_token_type),
-                          array_list_deinit(&statements));
+    TRY_DO(hash_map_init(&tt_symbols,
+                         total_symbols,
+                         sizeof(TokenType),
+                         alignof(TokenType),
+                         sizeof(Slice),
+                         alignof(Slice),
+                         hash_token_type,
+                         compare_token_type),
+           array_list_deinit(&statements));
 
     for (size_t i = 0; i < num_keywords; i++) {
         const Keyword keyword = ALL_KEYWORDS[i];
@@ -60,7 +60,7 @@ void ast_deinit(AST* ast) {
     hash_map_deinit(&ast->token_type_symbols);
 }
 
-TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb) {
+NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb) {
     assert(ast && ast->statements.data);
     assert(sb && sb->buffer.data);
 
@@ -72,8 +72,8 @@ TRY_STATUS ast_reconstruct(AST* ast, StringBuilder* sb) {
         ASSERT_STATEMENT(stmt);
         Node* node = (Node*)stmt;
         ASSERT_NODE(node);
-        PROPAGATE_IF_ERROR_DO(node->vtable->reconstruct(node, &ast->token_type_symbols, sb),
-                              string_builder_deinit(sb));
+        TRY_DO(node->vtable->reconstruct(node, &ast->token_type_symbols, sb),
+               string_builder_deinit(sb));
     }
     return SUCCESS;
 }
@@ -138,27 +138,27 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     array_list_deinit(expressions);
 }
 
-TRY_STATUS generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb) {
-    if (!generics || !sb) {
-        return NULL_PARAMETER;
-    }
+NODISCARD Status generics_reconstruct(ArrayList*     generics,
+                                      const HashMap* symbol_map,
+                                      StringBuilder* sb) {
+    assert(generics && symbol_map && sb);
 
     if (generics->length > 0) {
         assert(generics->data);
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '<'));
+        TRY(string_builder_append(sb, '<'));
 
         for (size_t i = 0; i < generics->length; i++) {
             Expression* generic;
             UNREACHABLE_IF_ERROR(array_list_get(generics, i, &generic));
             Node* generic_node = (Node*)generic;
-            PROPAGATE_IF_ERROR(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
+            TRY(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
 
             if (i != generics->length - 1) {
-                PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+                TRY(string_builder_append_str_z(sb, ", "));
             }
         }
 
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '>'));
+        TRY(string_builder_append(sb, '>'));
     }
 
     return SUCCESS;

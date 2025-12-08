@@ -16,14 +16,15 @@ typedef struct IdentifierExpression {
     MutSlice   name;
 } IdentifierExpression;
 
-TRY_STATUS identifier_expression_create(Token                  start_token,
-                                        IdentifierExpression** ident_expr,
-                                        memory_alloc_fn        memory_alloc,
-                                        free_alloc_fn          free_alloc);
+NODISCARD Status identifier_expression_create(Token                  start_token,
+                                              IdentifierExpression** ident_expr,
+                                              memory_alloc_fn        memory_alloc,
+                                              free_alloc_fn          free_alloc);
 
-void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status identifier_expression_reconstruct(Node*          node,
+                                                   const HashMap* symbol_map,
+                                                   StringBuilder* sb);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =

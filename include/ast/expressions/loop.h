@@ -29,17 +29,18 @@ typedef struct ForLoopExpression {
 
 void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc);
 
-TRY_STATUS for_loop_expression_create(Token               start_token,
-                                      ArrayList           iterables,
-                                      ArrayList           captures,
-                                      BlockStatement*     block,
-                                      Statement*          non_break,
-                                      ForLoopExpression** for_expr,
-                                      memory_alloc_fn     memory_alloc);
+NODISCARD Status for_loop_expression_create(Token               start_token,
+                                            ArrayList           iterables,
+                                            ArrayList           captures,
+                                            BlockStatement*     block,
+                                            Statement*          non_break,
+                                            ForLoopExpression** for_expr,
+                                            memory_alloc_fn     memory_alloc);
 
-void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status for_loop_expression_reconstruct(Node*          node,
+                                                 const HashMap* symbol_map,
+                                                 StringBuilder* sb);
 
 static const ExpressionVTable FOR_VTABLE = {
     .base =
@@ -57,17 +58,18 @@ typedef struct WhileLoopExpression {
     Statement*      non_break;
 } WhileLoopExpression;
 
-TRY_STATUS while_loop_expression_create(Token                 start_token,
-                                        Expression*           condition,
-                                        Expression*           continuation,
-                                        BlockStatement*       block,
-                                        Statement*            non_break,
-                                        WhileLoopExpression** while_expr,
-                                        memory_alloc_fn       memory_alloc);
+NODISCARD Status while_loop_expression_create(Token                 start_token,
+                                              Expression*           condition,
+                                              Expression*           continuation,
+                                              BlockStatement*       block,
+                                              Statement*            non_break,
+                                              WhileLoopExpression** while_expr,
+                                              memory_alloc_fn       memory_alloc);
 
-void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status while_loop_expression_reconstruct(Node*          node,
+                                                   const HashMap* symbol_map,
+                                                   StringBuilder* sb);
 
 static const ExpressionVTable WHILE_VTABLE = {
     .base =
@@ -83,15 +85,16 @@ typedef struct DoWhileLoopExpression {
     Expression*     condition;
 } DoWhileLoopExpression;
 
-TRY_STATUS do_while_loop_expression_create(Token                   start_token,
-                                           BlockStatement*         block,
-                                           Expression*             condition,
-                                           DoWhileLoopExpression** do_while_expr,
-                                           memory_alloc_fn         memory_alloc);
+NODISCARD Status do_while_loop_expression_create(Token                   start_token,
+                                                 BlockStatement*         block,
+                                                 Expression*             condition,
+                                                 DoWhileLoopExpression** do_while_expr,
+                                                 memory_alloc_fn         memory_alloc);
 
-void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
+                                                      const HashMap* symbol_map,
+                                                      StringBuilder* sb);
 
 static const ExpressionVTable DO_WHILE_VTABLE = {
     .base =

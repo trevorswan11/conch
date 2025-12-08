@@ -13,6 +13,18 @@ extern "C" {
 #include "ast/node.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
+
+#include "util/mem.h"
+}
+
+SBFixture::SBFixture(size_t initial_length) {
+    REQUIRE(STATUS_OK(string_builder_init(&builder, initial_length)));
+}
+
+char* SBFixture::to_string() {
+    MutSlice out;
+    REQUIRE(STATUS_OK(string_builder_to_string(&builder, &out)));
+    return out.ptr;
 }
 
 ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {

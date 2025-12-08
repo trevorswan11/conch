@@ -30,19 +30,19 @@ typedef struct {
     Allocator allocator;
 } Lexer;
 
-TRY_STATUS lexer_init(Lexer* l, const char* input, Allocator allocator);
-TRY_STATUS lexer_null_init(Lexer* l, Allocator allocator);
-void       lexer_deinit(Lexer* l);
+NODISCARD Status lexer_init(Lexer* l, const char* input, Allocator allocator);
+NODISCARD Status lexer_null_init(Lexer* l, Allocator allocator);
+void             lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.
 //
 // Will always refresh the internal list and start position when called.
-TRY_STATUS lexer_consume(Lexer* l);
-void       lexer_read_char(Lexer* l);
-Token      lexer_next_token(Lexer* l);
-void       lexer_skip_whitespace(Lexer* l);
-TokenType  lexer_lookup_identifier(Lexer* l, const Slice* literal);
-TRY_STATUS lexer_print_tokens(FileIO* io, Lexer* l);
+NODISCARD Status lexer_consume(Lexer* l);
+void             lexer_read_char(Lexer* l);
+Token            lexer_next_token(Lexer* l);
+void             lexer_skip_whitespace(Lexer* l);
+TokenType        lexer_lookup_identifier(Lexer* l, const Slice* literal);
+NODISCARD Status lexer_print_tokens(FileIO* io, Lexer* l);
 
 Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);

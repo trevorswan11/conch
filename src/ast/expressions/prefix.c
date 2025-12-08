@@ -3,15 +3,13 @@
 #include "ast/ast.h"
 #include "ast/expressions/prefix.h"
 
-TRY_STATUS prefix_expression_create(Token              start_token,
-                                    Expression*        rhs,
-                                    PrefixExpression** prefix_expr,
-                                    memory_alloc_fn    memory_alloc) {
+NODISCARD Status prefix_expression_create(Token              start_token,
+                                          Expression*        rhs,
+                                          PrefixExpression** prefix_expr,
+                                          memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
-    if (!rhs) {
-        return NULL_PARAMETER;
-    }
+    assert(rhs);
 
     PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
     if (!prefix) {
@@ -37,21 +35,25 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(prefix);
 }
 
-TRY_STATUS prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status prefix_expression_reconstruct(Node*          node,
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     Slice             op     = poll_tt_symbol(symbol_map, node->start_token.type);
     PrefixExpression* prefix = (PrefixExpression*)node;
     assert(prefix->rhs);
     Node* rhs = (Node*)prefix->rhs;
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, op));
-    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    if (group_expressions) {
+        TRY(string_builder_append(sb, '('));
+    }
+    TRY(string_builder_append_slice(sb, op));
+    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
+    if (group_expressions) {
+        TRY(string_builder_append(sb, ')'));
+    }
 
     return SUCCESS;
 }

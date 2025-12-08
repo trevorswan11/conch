@@ -3,16 +3,14 @@
 #include "ast/ast.h"
 #include "ast/expressions/infix.h"
 
-TRY_STATUS infix_expression_create(Token             start_token,
-                                   Expression*       lhs,
-                                   TokenType         op,
-                                   Expression*       rhs,
-                                   InfixExpression** infix_expr,
-                                   memory_alloc_fn   memory_alloc) {
+NODISCARD Status infix_expression_create(Token             start_token,
+                                         Expression*       lhs,
+                                         TokenType         op,
+                                         Expression*       rhs,
+                                         InfixExpression** infix_expr,
+                                         memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
-    if (!lhs || !rhs) {
-        return NULL_PARAMETER;
-    }
+    assert(lhs && rhs);
 
     InfixExpression* infix = memory_alloc(sizeof(InfixExpression));
     if (!infix) {
@@ -41,11 +39,11 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(infix);
 }
 
-TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status infix_expression_reconstruct(Node*          node,
+                                              const HashMap* symbol_map,
+                                              StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     InfixExpression* infix = (InfixExpression*)node;
     assert(infix->lhs && infix->rhs);
@@ -54,15 +52,19 @@ TRY_STATUS infix_expression_reconstruct(Node* node, const HashMap* symbol_map, S
     Slice op  = poll_tt_symbol(symbol_map, infix->op);
     Node* rhs = (Node*)infix->rhs;
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
-    PROPAGATE_IF_ERROR(lhs->vtable->reconstruct(lhs, symbol_map, sb));
+    if (group_expressions) {
+        TRY(string_builder_append(sb, '('));
+    }
+    TRY(lhs->vtable->reconstruct(lhs, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, op));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    TRY(string_builder_append(sb, ' '));
+    TRY(string_builder_append_slice(sb, op));
+    TRY(string_builder_append(sb, ' '));
 
-    PROPAGATE_IF_ERROR(rhs->vtable->reconstruct(rhs, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
+    if (group_expressions) {
+        TRY(string_builder_append(sb, ')'));
+    }
 
     return SUCCESS;
 }

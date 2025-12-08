@@ -3,13 +3,14 @@
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/declarations.h"
+#include "util/containers/string_builder.h"
 
-TRY_STATUS decl_statement_create(Token                 start_token,
-                                 IdentifierExpression* ident,
-                                 TypeExpression*       type,
-                                 Expression*           value,
-                                 DeclStatement**       decl_stmt,
-                                 memory_alloc_fn       memory_alloc) {
+NODISCARD Status decl_statement_create(Token                 start_token,
+                                       IdentifierExpression* ident,
+                                       TypeExpression*       type,
+                                       Expression*           value,
+                                       DeclStatement**       decl_stmt,
+                                       memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
 
@@ -57,48 +58,48 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(decl);
 }
 
-TRY_STATUS decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status decl_statement_reconstruct(Node*          node,
+                                            const HashMap* symbol_map,
+                                            StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
-    PROPAGATE_IF_ERROR(string_builder_append_slice(sb, node->start_token.slice));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ' '));
+    TRY(string_builder_append_slice(sb, node->start_token.slice));
+    TRY(string_builder_append(sb, ' '));
 
     DeclStatement* d          = (DeclStatement*)node;
     Node*          ident_node = (Node*)d->ident;
-    PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
+    TRY(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
+    if (d->type->type.tag == EXPLICIT) {
+        TRY(string_builder_append_str_z(sb, ": "));
+    }
 
     Node* type_node = (Node*)d->type;
-    PROPAGATE_IF_ERROR(type_node->vtable->reconstruct(type_node, symbol_map, sb));
+    TRY(type_node->vtable->reconstruct(type_node, symbol_map, sb));
 
     if (d->value) {
         if (d->type->type.tag == EXPLICIT) {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
+            TRY(string_builder_append_str_z(sb, " = "));
         } else {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "= "));
+            TRY(string_builder_append_str_z(sb, "= "));
         }
         Node* value_node = (Node*)d->value;
-        PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+        TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
+    TRY(string_builder_append(sb, ';'));
     return SUCCESS;
 }
 
-TRY_STATUS type_decl_statement_create(Token                 start_token,
-                                      IdentifierExpression* ident,
-                                      Expression*           value,
-                                      bool                  primitive_alias,
-                                      TypeDeclStatement**   type_decl_stmt,
-                                      memory_alloc_fn       memory_alloc) {
+NODISCARD Status type_decl_statement_create(Token                 start_token,
+                                            IdentifierExpression* ident,
+                                            Expression*           value,
+                                            bool                  primitive_alias,
+                                            TypeDeclStatement**   type_decl_stmt,
+                                            memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
-
-    if (!ident || !value) {
-        return NULL_PARAMETER;
-    }
+    assert(ident && value);
 
     TypeDeclStatement* declaration = memory_alloc(sizeof(TypeDeclStatement));
     if (!declaration) {
@@ -127,22 +128,22 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type_decl);
 }
 
-TRY_STATUS
-type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status type_decl_statement_reconstruct(Node*          node,
+                                                 const HashMap* symbol_map,
+                                                 StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "type "));
+    assert(sb);
+
+    TRY(string_builder_append_str_z(sb, "type "));
 
     TypeDeclStatement* d          = (TypeDeclStatement*)node;
     Node*              ident_node = (Node*)d->ident;
-    PROPAGATE_IF_ERROR(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
+    TRY(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " = "));
+    TRY(string_builder_append_str_z(sb, " = "));
     Node* value_node = (Node*)d->value;
-    PROPAGATE_IF_ERROR(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+    TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
+    TRY(string_builder_append(sb, ';'));
     return SUCCESS;
 }

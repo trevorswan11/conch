@@ -16,11 +16,14 @@ typedef struct BlockStatement {
     ArrayList statements;
 } BlockStatement;
 
-TRY_STATUS
-block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator);
+NODISCARD Status block_statement_create(Token            start_token,
+                                        BlockStatement** block_stmt,
+                                        Allocator        allocator);
 
-void       block_statement_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             block_statement_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status block_statement_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb);
 
 static const StatementVTable BLOCK_VTABLE = {
     .base =
@@ -30,4 +33,4 @@ static const StatementVTable BLOCK_VTABLE = {
         },
 };
 
-TRY_STATUS block_statement_append(BlockStatement* block_stmt, Statement* stmt);
+NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt);

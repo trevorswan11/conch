@@ -27,15 +27,16 @@ typedef struct MatchExpression {
 
 void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc);
 
-TRY_STATUS match_expression_create(Token             start_token,
-                                   Expression*       expression,
-                                   ArrayList         arms,
-                                   MatchExpression** match_expr,
-                                   memory_alloc_fn   memory_alloc);
+NODISCARD Status match_expression_create(Token             start_token,
+                                         Expression*       expression,
+                                         ArrayList         arms,
+                                         MatchExpression** match_expr,
+                                         memory_alloc_fn   memory_alloc);
 
-void match_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             match_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status match_expression_reconstruct(Node*          node,
+                                              const HashMap* symbol_map,
+                                              StringBuilder* sb);
 
 static const ExpressionVTable MATCH_VTABLE = {
     .base =

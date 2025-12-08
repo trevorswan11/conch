@@ -27,10 +27,13 @@ typedef struct Parameter {
 } Parameter;
 
 // Allocates all function parameters and consumes them from the parser.
-TRY_STATUS allocate_parameter_list(Parser* p, ArrayList* parameters, bool* contains_default_param);
-void       free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
-TRY_STATUS
-reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
+NODISCARD Status allocate_parameter_list(Parser*    p,
+                                         ArrayList* parameters,
+                                         bool*      contains_default_param);
+void             free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
+NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
+                                            const HashMap* symbol_map,
+                                            StringBuilder* sb);
 
 typedef struct FunctionExpression {
     Expression      base;
@@ -40,17 +43,18 @@ typedef struct FunctionExpression {
     BlockStatement* body;
 } FunctionExpression;
 
-TRY_STATUS function_expression_create(Token                start_token,
-                                      ArrayList            generics,
-                                      ArrayList            parameters,
-                                      TypeExpression*      return_type,
-                                      BlockStatement*      body,
-                                      FunctionExpression** function_expr,
-                                      memory_alloc_fn      memory_alloc);
+NODISCARD Status function_expression_create(Token                start_token,
+                                            ArrayList            generics,
+                                            ArrayList            parameters,
+                                            TypeExpression*      return_type,
+                                            BlockStatement*      body,
+                                            FunctionExpression** function_expr,
+                                            memory_alloc_fn      memory_alloc);
 
-void function_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             function_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status function_expression_reconstruct(Node*          node,
+                                                 const HashMap* symbol_map,
+                                                 StringBuilder* sb);
 
 static const ExpressionVTable FUNCTION_VTABLE = {
     .base =

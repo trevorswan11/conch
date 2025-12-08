@@ -20,8 +20,8 @@ typedef struct {
     Allocator     allocator;
 } Program;
 
-TRY_STATUS program_init(Program* program, FileIO* io, Allocator allocator);
-void       program_deinit(Program* program);
+NODISCARD Status program_init(Program* program, FileIO* io, Allocator allocator);
+void             program_deinit(Program* program);
 
-TRY_STATUS program_run(Program* program, Slice input_line);
-TRY_STATUS program_print_parse_errors(Program* program);
+NODISCARD Status program_run(Program* program, Slice input);
+NODISCARD Status program_print_parse_errors(Program* program);

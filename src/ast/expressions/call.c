@@ -16,12 +16,12 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     array_list_deinit(arguments);
 }
 
-TRY_STATUS call_expression_create(Token            start_token,
-                                  Expression*      function,
-                                  ArrayList        arguments,
-                                  ArrayList        generics,
-                                  CallExpression** call_expr,
-                                  memory_alloc_fn  memory_alloc) {
+NODISCARD Status call_expression_create(Token            start_token,
+                                        Expression*      function,
+                                        ArrayList        arguments,
+                                        ArrayList        generics,
+                                        CallExpression** call_expr,
+                                        memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
     assert(arguments.item_size == sizeof(CallArgument));
 
@@ -53,38 +53,37 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(call);
 }
 
-TRY_STATUS
-call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status call_expression_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     CallExpression* call     = (CallExpression*)node;
     Node*           function = (Node*)call->function;
-    PROPAGATE_IF_ERROR(function->vtable->reconstruct(function, symbol_map, sb));
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '('));
+    TRY(function->vtable->reconstruct(function, symbol_map, sb));
+    TRY(string_builder_append(sb, '('));
 
     CallArgument argument;
     for (size_t i = 0; i < call->arguments.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&call->arguments, i, &argument));
         if (argument.is_ref) {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "ref "));
+            TRY(string_builder_append_str_z(sb, "ref "));
         }
         Node* arg_node = (Node*)argument.argument;
-        PROPAGATE_IF_ERROR(arg_node->vtable->reconstruct(arg_node, symbol_map, sb));
+        TRY(arg_node->vtable->reconstruct(arg_node, symbol_map, sb));
 
         if (i != call->arguments.length - 1) {
-            PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+            TRY(string_builder_append_str_z(sb, ", "));
         }
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ')'));
+    TRY(string_builder_append(sb, ')'));
 
     if (call->generics.length > 0) {
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " with "));
+        TRY(string_builder_append_str_z(sb, " with "));
     }
-    PROPAGATE_IF_ERROR(generics_reconstruct(&call->generics, symbol_map, sb));
+    TRY(generics_reconstruct(&call->generics, symbol_map, sb));
 
     return SUCCESS;
 }

@@ -7,25 +7,94 @@
 
 extern "C" {
 #include "ast/ast.h"
-#include "util/containers/string_builder.h"
-#include "util/mem.h"
 #include "util/status.h"
 }
 
 void test_reconstruction(const char* input, std::string expected) {
+    if (!input || expected.empty()) {
+        return;
+    }
+
+    group_expressions = false;
     ParserFixture pf(input);
     check_parse_errors(pf.parser(), {}, true);
 
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, expected.size())));
-    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), &sb)));
-
-    MutSlice actual;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &actual)));
-    REQUIRE(expected == actual.ptr);
-    free(actual.ptr);
+    SBFixture sb(expected.size());
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+    REQUIRE(expected == sb.to_string());
 }
 
 TEST_CASE("Declaration reconstructions") {
-    test_reconstruction("var my_var := another_var", "var my_var := another_var;");
+    SECTION("Simple") {
+        test_reconstruction("var my_var := another_var", "var my_var := another_var;");
+        test_reconstruction("const a: int = 2", "const a: int = 2;");
+    }
+
+    SECTION("Function types") {
+        test_reconstruction("const a: fn(b: int): int = 2;", "const a: fn(b: int): int = 2;");
+        test_reconstruction("var a: fn<T>(b: int): Walker", "var a: fn<T>(b: int): Walker;");
+        test_reconstruction("var a: fn<T, E>(b: int): Walker", "var a: fn<T, E>(b: int): Walker;");
+    }
+
+    SECTION("Struct types") {
+        test_reconstruction("var a: struct {b: int, }", "var a: struct { b: int, };");
+        test_reconstruction("var a: struct<T>{b: int, }", "var a: struct<T>{ b: int, };");
+        test_reconstruction("var a: struct<T, E>{b: int, }", "var a: struct<T, E>{ b: int, };");
+    }
+
+    SECTION("Enum types") {
+        test_reconstruction("var a: enum {ONE, TWO, THREE, }", "var a: enum { ONE, TWO, THREE, };");
+        test_reconstruction("const a: enum { ONE, TWO, THREE, } = ONE",
+                            "const a: enum { ONE, TWO, THREE, } = ONE;");
+    }
+
+    SECTION("Array types") {
+        test_reconstruction("var a: [2u]int;", "var a: [2u]int;");
+        test_reconstruction("var a: [2u]int = [_]{};", "var a: [2u]int = [_]{ };");
+        test_reconstruction("var a: [2u]int = [0b10u]{2, 3, };", "var a: [2u]int = [2u]{ 2, 3, };");
+    }
+
+    SECTION("Type declarations") {
+        test_reconstruction("type a = fn(a: int): int", "type a = fn(a: int): int;");
+        test_reconstruction("type a = fn<T>(a: int): int", "type a = fn<T>(a: int): int;");
+        test_reconstruction("type a = fn<T, E>(a: int): int", "type a = fn<T, E>(a: int): int;");
+
+        test_reconstruction("type a = struct { b: int, }", "type a = struct { b: int, };");
+        test_reconstruction("type a = struct<T>{ b: int, }", "type a = struct<T>{ b: int, };");
+        test_reconstruction("type a = struct<T, E>{ b: int, }",
+                            "type a = struct<T, E>{ b: int, };");
+
+        test_reconstruction("type Colors = enum {RED, GREEN, BLUE, }",
+                            "type Colors = enum { RED, GREEN, BLUE, };");
+    }
+}
+
+TEST_CASE("Numbers") {
+    test_reconstruction("const a := 12", "const a := 12;");
+    test_reconstruction("const a := 12u", "const a := 12u;");
+    test_reconstruction("const a := 12u", "const a := 12u;");
+    test_reconstruction("const a := -12", "const a := -12;");
+    test_reconstruction("const a := 1.236", "const a := 1.236;");
+    test_reconstruction("const a := 1.236e2", "const a := 1.236e2;");
+}
+
+TEST_CASE("Short statements") {
+    SECTION("Jump statements") {
+        test_reconstruction("return", "return;");
+        test_reconstruction("return nil", "return nil;");
+        test_reconstruction("break", "break;");
+        test_reconstruction("break -5.48e3", "break -5.48e3;");
+        test_reconstruction("continue", "continue;");
+    }
+
+    SECTION("Import statements") {
+        test_reconstruction("import std", "import std;");
+        test_reconstruction("import \"array\"", "import \"array\";");
+    }
+
+    SECTION("Discard statements") {
+        test_reconstruction("_ = 2", "_ = 2;");
+        test_reconstruction("_ = [_]{}", "_ = [_]{ };");
+    }
 }

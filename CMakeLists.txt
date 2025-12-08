@@ -33,13 +33,13 @@ if(MSVC)
 
     # MSVC has configurations, but dist needs to be manually populated
     set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
-	set(CMAKE_C_FLAGS_DIST          "")
+    set(CMAKE_C_FLAGS_DIST          "")
     set(CMAKE_CXX_FLAGS_DIST        "")
     set(CMAKE_EXE_LINKER_FLAGS_DIST "")
     set(CMAKE_SHARED_LINKER_FLAGS_DIST "")
     set(CMAKE_MODULE_LINKER_FLAGS_DIST "")
 
-	# Set common flags for unix-faithful building
+    # Set common flags for unix-faithful building
     set(BASE_FLAGS "/W4" "/WX" "/wd4232")
     set(WARNING_IGNORE "/W0")
 
@@ -56,14 +56,18 @@ else()
 endif()
 
 # Source file collection
-file(GLOB_RECURSE ALL_SOURCES "src/*.c")
-file(GLOB_RECURSE HEADERS "include/*.h")
+set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+file(GLOB_RECURSE ALL_SOURCES "${SRC_DIR}/*.c")
+set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
+file(GLOB_RECURSE HEADERS "${INCLUDE_DIR}/*.h")
 
 set(LIB_SOURCES ${ALL_SOURCES})
-list(FILTER LIB_SOURCES EXCLUDE REGEX ".*main\\.c$")
+list(FILTER LIB_SOURCES EXCLUDE REGEX "main\\.c$")
 
-file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp")
-list(FILTER TEST_SOURCES EXCLUDE REGEX "catch_amalgamated.cpp")
+set(TEST_DIR "${CMAKE_SOURCE_DIR}/tests")
+file(GLOB_RECURSE TEST_SOURCES "${TEST_DIR}/*.cpp")
+set(FRAMEWORK_REGEX "test_framework/*")
+list(FILTER TEST_SOURCES EXCLUDE REGEX ${FRAMEWORK_REGEX})
 
 function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     add_library(conch_core_${TARGET_NAME} STATIC ${LIB_SOURCES})
@@ -189,24 +193,18 @@ if(NOT WIN32 AND (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STR
 
         if(LLVM_PROFDATA AND LLVM_COV)
             add_custom_target(coverage-report
-                COMMAND ${LLVM_PROFDATA} merge -sparse ${COV_DIR}/default.profraw -o ${COV_DIR}/default.profdata
-                COMMAND ${LLVM_COV} show $<TARGET_FILE:conch_tests_cov>
-                    -instr-profile=${COV_DIR}/default.profdata
-                    -format=html
-                    -output-dir=${COV_DIR}/coverage_report
-                    -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*'
+                COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_report.sh
+                    ${LLVM_PROFDATA} ${LLVM_COV} $<TARGET_FILE:conch_tests_cov> ${COV_DIR} ${CMAKE_SOURCE_DIR}
                 DEPENDS coverage
             )
 
             add_custom_target(coverage-badge
-                COMMAND ${LLVM_COV} report $<TARGET_FILE:conch_tests_cov>
-                    -instr-profile=${COV_DIR}/default.profdata
-                    -ignore-filename-regex='${CMAKE_SOURCE_DIR}/tests/.*' > ${COV_DIR}/coverage_summary.txt
-                COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_badge.sh ${COV_DIR}/coverage_summary.txt ${COV_DIR}/coverage.svg
+                COMMAND ${CMAKE_SOURCE_DIR}/.github/coverage_badge.sh
+                    ${LLVM_COV} $<TARGET_FILE:conch_tests_cov> ${COV_DIR} ${CMAKE_SOURCE_DIR}
                 DEPENDS coverage-report
             )
         else()
-            message(WARNING 
+            message(WARNING
                     "Failed to locate llvm-profdata and llvm-cov binaries.\n"
                     "   Targets 'coverage-report' and 'coverage-badge' are not available with this configuration."
             )
@@ -219,13 +217,20 @@ elseif(NOT WIN32)
             "    CC=clang CXX=clang++ cmake ..")
 endif()
 
+# Tooling
+file(GLOB_RECURSE TOOLING_SOURCES ${SRC_DIR}/*.c ${INCLUDE_DIR}/*.h ${TEST_DIR}/*.cpp ${TEST_DIR}/*.hpp)
+list(FILTER TOOLING_SOURCES EXCLUDE REGEX ${FRAMEWORK_REGEX})
+
+# Lines of code
+find_program(CLOC cloc)
+if (CLOC)
+    add_custom_target(cloc COMMAND ${CLOC} ${SRC_DIR} ${INCLUDE_DIR})
+    add_custom_target(cloc-all COMMAND ${CLOC} ${TOOLING_SOURCES})
+endif()
+
 # Formatting
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
-    file(GLOB_RECURSE FMT_SOURCES src/*.c include/*.h tests/*.cpp tests/*.hpp)
-    list(FILTER FMT_SOURCES EXCLUDE REGEX "catch_amalgamated.cpp")
-    list(FILTER FMT_SOURCES EXCLUDE REGEX "catch_amalgamated.hpp")
-
-    add_custom_target(fmt COMMAND ${CLANG_FORMAT} -i ${FMT_SOURCES})
-    add_custom_target(fmt-check COMMAND ${CLANG_FORMAT} --dry-run --Werror ${FMT_SOURCES})
+    add_custom_target(fmt COMMAND ${CLANG_FORMAT} -i ${TOOLING_SOURCES})
+    add_custom_target(fmt-check COMMAND ${CLANG_FORMAT} --dry-run --Werror ${TOOLING_SOURCES})
 endif()

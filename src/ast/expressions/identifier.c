@@ -2,10 +2,10 @@
 
 #include "ast/expressions/identifier.h"
 
-TRY_STATUS identifier_expression_create(Token                  start_token,
-                                        IdentifierExpression** ident_expr,
-                                        memory_alloc_fn        memory_alloc,
-                                        free_alloc_fn          free_alloc) {
+NODISCARD Status identifier_expression_create(Token                  start_token,
+                                              IdentifierExpression** ident_expr,
+                                              memory_alloc_fn        memory_alloc,
+                                              free_alloc_fn          free_alloc) {
     assert(memory_alloc && free_alloc);
     assert(start_token.slice.ptr);
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
@@ -39,15 +39,15 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(ident);
 }
 
-TRY_STATUS
-identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status identifier_expression_reconstruct(Node*          node,
+                                                   const HashMap* symbol_map,
+                                                   StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
+
     MAYBE_UNUSED(symbol_map);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append_mut_slice(sb, ident->name));
+    TRY(string_builder_append_mut_slice(sb, ident->name));
     return SUCCESS;
 }

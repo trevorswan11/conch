@@ -7,9 +7,7 @@
 #include "util/allocator.h"
 #include "util/status.h"
 
-static inline bool is_digit(char byte) {
-    return '0' <= byte && byte <= '9';
-}
+static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }
 
 // Checks if the given byte is a letter.
 //
@@ -42,7 +40,7 @@ typedef enum {
 // - The characters are valid for the given base.
 // - The requested integer is not a negative value.
 // - Non-decimal digits have their prefix.
-TRY_STATUS strntoll(const char* str, size_t n, Base base, int64_t* value);
+NODISCARD Status strntoll(const char* str, size_t n, Base base, int64_t* value);
 
 // Returns the unsigned integer form of the input string. Case insensitive.
 //
@@ -51,11 +49,11 @@ TRY_STATUS strntoll(const char* str, size_t n, Base base, int64_t* value);
 // - The characters are valid for the given base.
 // - The requested integer is not a negative value.
 // - Non-decimal digits have their prefix.
-TRY_STATUS strntoull(const char* str, size_t n, Base base, uint64_t* value);
+NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value);
 
 // Returns the double precision floating point form of the input string.
-TRY_STATUS strntod(const char*     str,
-                   size_t          n,
-                   double*         value,
-                   memory_alloc_fn memory_alloc,
-                   free_alloc_fn   free_alloc);
+NODISCARD Status strntod(const char*     str,
+                         size_t          n,
+                         double*         value,
+                         memory_alloc_fn memory_alloc,
+                         free_alloc_fn   free_alloc);

@@ -16,9 +16,7 @@ int compare_token_type(const void* a, const void* b) {
     return (int)tok_a - (int)tok_b;
 }
 
-const char* token_type_name(TokenType type) {
-    return TOKEN_TYPE_NAMES[type];
-}
+const char* token_type_name(TokenType type) { return TOKEN_TYPE_NAMES[type]; }
 
 bool misc_token_type_from_char(char c, TokenType* t) {
     switch (c) {
@@ -61,13 +59,9 @@ bool token_is_integer(TokenType t) {
     return token_is_signed_integer(t) || token_is_unsigned_integer(t);
 }
 
-bool token_is_signed_integer(TokenType t) {
-    return INT_2 <= t && t <= INT_16;
-}
+bool token_is_signed_integer(TokenType t) { return INT_2 <= t && t <= INT_16; }
 
-bool token_is_unsigned_integer(TokenType t) {
-    return UINT_2 <= t && t <= UINT_16;
-}
+bool token_is_unsigned_integer(TokenType t) { return UINT_2 <= t && t <= UINT_16; }
 
 Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col) {
     return (Token){
@@ -78,13 +72,13 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
     };
 }
 
-TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocator) {
+NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator allocator) {
     if (token.type != STRING && token.type != MULTILINE_STRING) {
         return TYPE_MISMATCH;
     }
 
     StringBuilder builder;
-    PROPAGATE_IF_ERROR(string_builder_init_allocator(&builder, token.slice.length + 1, allocator));
+    TRY(string_builder_init_allocator(&builder, token.slice.length + 1, allocator));
 
     if (token.type == STRING) {
         if (token.slice.length < 2) {
@@ -95,9 +89,8 @@ TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocato
             const char*  skipped_quote  = token.slice.ptr + 1;
             const size_t skipped_length = token.slice.length - 2;
 
-            PROPAGATE_IF_ERROR_DO(
-                string_builder_append_many(&builder, skipped_quote, skipped_length),
-                string_builder_deinit(&builder));
+            TRY_DO(string_builder_append_many(&builder, skipped_quote, skipped_length),
+                   string_builder_deinit(&builder));
         }
     } else if (token.type == MULTILINE_STRING && token.slice.length > 0) {
         bool at_line_start = true;
@@ -113,16 +106,14 @@ TRY_STATUS promote_token_string(Token token, MutSlice* slice, Allocator allocato
                 at_line_start = false;
             }
 
-            PROPAGATE_IF_ERROR_DO(string_builder_append(&builder, c),
-                                  string_builder_deinit(&builder));
+            TRY_DO(string_builder_append(&builder, c), string_builder_deinit(&builder));
             if (c == '\n') {
                 at_line_start = true;
             }
         }
     }
 
-    PROPAGATE_IF_ERROR_DO(string_builder_to_string(&builder, slice),
-                          string_builder_deinit(&builder));
+    TRY_DO(string_builder_to_string(&builder, slice), string_builder_deinit(&builder));
     return SUCCESS;
 }
 

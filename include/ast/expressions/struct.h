@@ -28,15 +28,16 @@ typedef struct StructExpression {
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc);
 
-TRY_STATUS struct_expression_create(Token              start_token,
-                                    ArrayList          generics,
-                                    ArrayList          members,
-                                    StructExpression** struct_expr,
-                                    memory_alloc_fn    memory_alloc);
+NODISCARD Status struct_expression_create(Token              start_token,
+                                          ArrayList          generics,
+                                          ArrayList          members,
+                                          StructExpression** struct_expr,
+                                          memory_alloc_fn    memory_alloc);
 
-void struct_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             struct_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status struct_expression_reconstruct(Node*          node,
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb);
 
 static const ExpressionVTable STRUCT_VTABLE = {
     .base =

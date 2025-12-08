@@ -2,14 +2,12 @@
 
 #include "ast/statements/discard.h"
 
-TRY_STATUS discard_statement_create(Token              start_token,
-                                    Expression*        to_discard,
-                                    DiscardStatement** discard_stmt,
-                                    memory_alloc_fn    memory_alloc) {
+NODISCARD Status discard_statement_create(Token              start_token,
+                                          Expression*        to_discard,
+                                          DiscardStatement** discard_stmt,
+                                          memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
-    if (!to_discard) {
-        return NULL_PARAMETER;
-    }
+    assert(to_discard);
 
     DiscardStatement* discard = memory_alloc(sizeof(DiscardStatement));
     if (!discard) {
@@ -35,19 +33,18 @@ void discard_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(discard);
 }
 
-TRY_STATUS
-discard_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status discard_statement_reconstruct(Node*          node,
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "_ = "));
+    TRY(string_builder_append_str_z(sb, "_ = "));
 
     DiscardStatement* discard    = (DiscardStatement*)node;
     Node*             to_discard = (Node*)discard->to_discard;
-    PROPAGATE_IF_ERROR(to_discard->vtable->reconstruct(to_discard, symbol_map, sb));
+    TRY(to_discard->vtable->reconstruct(to_discard, symbol_map, sb));
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, ';'));
+    TRY(string_builder_append(sb, ';'));
     return SUCCESS;
 }

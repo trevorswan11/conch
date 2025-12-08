@@ -4,9 +4,7 @@
 #include "util/math.h"
 #include "util/mem.h"
 
-Slice slice_from_str_z(const char* start) {
-    return slice_from_str_s(start, strlen(start));
-}
+Slice slice_from_str_z(const char* start) { return slice_from_str_s(start, strlen(start)); }
 
 Slice slice_from_str_s(const char* start, size_t size) {
     return (Slice){.ptr = start, .length = size};
@@ -35,9 +33,7 @@ bool slice_equals_str_s(const Slice* slice, const char* str, size_t size) {
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
-MutSlice mut_slice_from_str_z(char* start) {
-    return mut_slice_from_str_s(start, strlen(start));
-}
+MutSlice mut_slice_from_str_z(char* start) { return mut_slice_from_str_s(start, strlen(start)); }
 
 MutSlice mut_slice_from_str_s(char* start, size_t size) {
     return (MutSlice){.ptr = start, .length = size};
@@ -66,22 +62,16 @@ bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size)
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
 
-Slice slice_from_mut(const MutSlice* slice) {
-    return slice_from_str_s(slice->ptr, slice->length);
-}
+Slice slice_from_mut(const MutSlice* slice) { return slice_from_str_s(slice->ptr, slice->length); }
 
 uintptr_t align_up(uintptr_t ptr, size_t alignment) {
     assert(is_power_of_two(alignment));
     return (ptr + (alignment - 1)) & ~(alignment - 1);
 }
 
-void* align_ptr(void* ptr, size_t alignment) {
-    return (void*)align_up((uintptr_t)ptr, alignment);
-}
+void* align_ptr(void* ptr, size_t alignment) { return (void*)align_up((uintptr_t)ptr, alignment); }
 
-void* ptr_offset(void* p, size_t offset) {
-    return (void*)((uintptr_t)p + offset);
-}
+void* ptr_offset(void* p, size_t offset) { return (void*)((uintptr_t)p + offset); }
 
 void swap(void* a, void* b, size_t size) {
     if (!a || !b) {
@@ -105,9 +95,7 @@ char* strdup_z_allocator(const char* str, memory_alloc_fn alloc) {
     return strdup_s_allocator(str, strlen(str), alloc);
 }
 
-char* strdup_z(const char* str) {
-    return strdup_z_allocator(str, standard_allocator.memory_alloc);
-}
+char* strdup_z(const char* str) { return strdup_z_allocator(str, standard_allocator.memory_alloc); }
 
 char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc) {
     if (!str) {

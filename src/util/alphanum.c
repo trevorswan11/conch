@@ -43,21 +43,21 @@
     }                                                   \
                                                         \
     *value = result;                                    \
-    return SUCCESS;
+    return SUCCESS
 
-TRY_STATUS strntoll(const char* str, size_t n, Base base, int64_t* value) {
+NODISCARD Status strntoll(const char* str, size_t n, Base base, int64_t* value) {
     PARSE_INT_STR(int64_t, INT64_MAX, SIGNED_INTEGER_OVERFLOW);
 }
 
-TRY_STATUS strntoull(const char* str, size_t n, Base base, uint64_t* value) {
+NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value) {
     PARSE_INT_STR(uint64_t, UINT64_MAX, UNSIGNED_INTEGER_OVERFLOW);
 }
 
-TRY_STATUS strntod(const char*     str,
-                   size_t          n,
-                   double*         value,
-                   memory_alloc_fn memory_alloc,
-                   free_alloc_fn   free_alloc) {
+NODISCARD Status strntod(const char*     str,
+                         size_t          n,
+                         double*         value,
+                         memory_alloc_fn memory_alloc,
+                         free_alloc_fn   free_alloc) {
     setlocale(LC_NUMERIC, "C");
 
     assert(memory_alloc && free_alloc);

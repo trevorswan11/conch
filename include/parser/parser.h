@@ -37,33 +37,33 @@ typedef struct Parser {
     Allocator allocator;
 } Parser;
 
-TRY_STATUS parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator);
-TRY_STATUS parser_null_init(Parser* p, FileIO* io, Allocator allocator);
+NODISCARD Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator);
+NODISCARD Status parser_null_init(Parser* p, FileIO* io, Allocator allocator);
 
 // Reinitializes the parser without reallocating internal resources.
-TRY_STATUS parser_reset(Parser* p, Lexer* l);
+NODISCARD Status parser_reset(Parser* p, Lexer* l);
 
 // Deinitializes the parser, freeing only its personally allocated data.
 void parser_deinit(Parser* p);
 
 // Consumes all tokens and parses them into an Abstract Syntax Tree.
-TRY_STATUS parser_consume(Parser* p, AST* ast);
-TRY_STATUS parser_next_token(Parser* p);
+NODISCARD Status parser_consume(Parser* p, AST* ast);
+NODISCARD Status parser_next_token(Parser* p);
 
-bool       parser_current_token_is(const Parser* p, TokenType t);
-bool       parser_peek_token_is(const Parser* p, TokenType t);
-TRY_STATUS parser_expect_current(Parser* p, TokenType t);
-TRY_STATUS parser_expect_peek(Parser* p, TokenType t);
-TRY_STATUS parser_current_error(Parser* p, TokenType t);
-TRY_STATUS parser_peek_error(Parser* p, TokenType t);
+bool             parser_current_token_is(const Parser* p, TokenType t);
+bool             parser_peek_token_is(const Parser* p, TokenType t);
+NODISCARD Status parser_expect_current(Parser* p, TokenType t);
+NODISCARD Status parser_expect_peek(Parser* p, TokenType t);
+NODISCARD Status parser_current_error(Parser* p, TokenType t);
+NODISCARD Status parser_peek_error(Parser* p, TokenType t);
 
 Precedence parser_current_precedence(Parser* p);
 Precedence parser_peek_precedence(Parser* p);
 
-TRY_STATUS parser_parse_statement(Parser* p, Statement** stmt);
+NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt);
 
 // Adds an error message to the parser detailing an error from a status code.
-TRY_STATUS parser_put_status_error(Parser* p, Status status, size_t line, size_t col);
+NODISCARD Status parser_put_status_error(Parser* p, Status status, size_t line, size_t col);
 
 // Appends " [Ln <>, Col <>]" to the given builder.
-TRY_STATUS error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
+NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);

@@ -17,13 +17,14 @@ typedef struct BoolLiteralExpression {
     bool       value;
 } BoolLiteralExpression;
 
-TRY_STATUS bool_literal_expression_create(Token                   start_token,
-                                          BoolLiteralExpression** bool_expr,
-                                          memory_alloc_fn         memory_alloc);
+NODISCARD Status bool_literal_expression_create(Token                   start_token,
+                                                BoolLiteralExpression** bool_expr,
+                                                memory_alloc_fn         memory_alloc);
 
-void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-TRY_STATUS
-bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+void             bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
+                                                     const HashMap* symbol_map,
+                                                     StringBuilder* sb);
 
 static const ExpressionVTable BOOL_VTABLE = {
     .base =

@@ -3,11 +3,11 @@
 #include "ast/ast.h"
 #include "ast/expressions/array.h"
 
-TRY_STATUS array_literal_expression_create(Token                    start_token,
-                                           bool                     inferred_size,
-                                           ArrayList                items,
-                                           ArrayLiteralExpression** array_expr,
-                                           memory_alloc_fn          memory_alloc) {
+NODISCARD Status array_literal_expression_create(Token                    start_token,
+                                                 bool                     inferred_size,
+                                                 ArrayList                items,
+                                                 ArrayLiteralExpression** array_expr,
+                                                 memory_alloc_fn          memory_alloc) {
     assert(memory_alloc);
     assert(items.item_size == sizeof(Expression*));
 
@@ -36,32 +36,31 @@ void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(array);
 }
 
-TRY_STATUS
-array_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status array_literal_expression_reconstruct(Node*          node,
+                                                      const HashMap* symbol_map,
+                                                      StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '['));
+    TRY(string_builder_append(sb, '['));
     if (array->inferred_size) {
-        PROPAGATE_IF_ERROR(string_builder_append(sb, '_'));
+        TRY(string_builder_append(sb, '_'));
     } else {
-        PROPAGATE_IF_ERROR(string_builder_append_unsigned(sb, (uint64_t)array->items.length));
-        PROPAGATE_IF_ERROR(string_builder_append(sb, 'u'));
+        TRY(string_builder_append_unsigned(sb, (uint64_t)array->items.length));
+        TRY(string_builder_append(sb, 'u'));
     }
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "]{ "));
+    TRY(string_builder_append_str_z(sb, "]{ "));
 
     Expression* item;
     for (size_t i = 0; i < array->items.length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(&array->items, i, &item));
 
         Node* item_node = (Node*)item;
-        PROPAGATE_IF_ERROR(item_node->vtable->reconstruct(item_node, symbol_map, sb));
-        PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, ", "));
+        TRY(item_node->vtable->reconstruct(item_node, symbol_map, sb));
+        TRY(string_builder_append_str_z(sb, ", "));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append(sb, '}'));
+    TRY(string_builder_append(sb, '}'));
     return SUCCESS;
 }

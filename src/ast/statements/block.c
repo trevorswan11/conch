@@ -3,8 +3,9 @@
 #include "ast/ast.h"
 #include "ast/statements/block.h"
 
-TRY_STATUS
-block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {
+NODISCARD Status block_statement_create(Token            start_token,
+                                        BlockStatement** block_stmt,
+                                        Allocator        allocator) {
     ASSERT_ALLOCATOR(allocator);
 
     BlockStatement* block = allocator.memory_alloc(sizeof(BlockStatement));
@@ -13,8 +14,8 @@ block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator
     }
 
     ArrayList statements;
-    PROPAGATE_IF_ERROR_DO(array_list_init_allocator(&statements, 8, sizeof(Statement*), allocator),
-                          allocator.free_alloc(block));
+    TRY_DO(array_list_init_allocator(&statements, 8, sizeof(Statement*), allocator),
+           allocator.free_alloc(block));
 
     *block = (BlockStatement){
         .base       = STATEMENT_INIT(BLOCK_VTABLE, start_token),
@@ -35,13 +36,13 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(block);
 }
 
-TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+NODISCARD Status block_statement_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb) {
     ASSERT_NODE(node);
-    if (!sb) {
-        return NULL_PARAMETER;
-    }
+    assert(sb);
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, "{ "));
+    TRY(string_builder_append_str_z(sb, "{ "));
 
     BlockStatement* block = (BlockStatement*)node;
     for (size_t i = 0; i < block->statements.length; i++) {
@@ -50,15 +51,15 @@ TRY_STATUS block_statement_reconstruct(Node* node, const HashMap* symbol_map, St
         ASSERT_STATEMENT(stmt);
 
         Node* stmt_node = (Node*)stmt;
-        PROPAGATE_IF_ERROR(stmt_node->vtable->reconstruct(stmt_node, symbol_map, sb));
+        TRY(stmt_node->vtable->reconstruct(stmt_node, symbol_map, sb));
     }
 
-    PROPAGATE_IF_ERROR(string_builder_append_str_z(sb, " }"));
+    TRY(string_builder_append_str_z(sb, " }"));
     return SUCCESS;
 }
 
-TRY_STATUS block_statement_append(BlockStatement* block_stmt, Statement* stmt) {
+NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt) {
     assert(block_stmt && block_stmt->statements.data && stmt);
-    PROPAGATE_IF_ERROR(array_list_push(&block_stmt->statements, &stmt));
+    TRY(array_list_push(&block_stmt->statements, &stmt));
     return SUCCESS;
 }

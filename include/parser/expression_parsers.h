@@ -15,48 +15,47 @@
 
 typedef struct TypeExpression TypeExpression;
 
-TRY_STATUS expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
-TRY_STATUS identifier_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
+NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression);
 
 // Parses a generic list, including the opening and closing delimiters.
 //
 // The generics are necessarily allocated internally, but can be empty.
 // If generics are not present for parsing, this only allocates the generics.
-TRY_STATUS generics_parse(Parser* p, ArrayList* generics);
+NODISCARD Status generics_parse(Parser* p, ArrayList* generics);
 
 // Parses a function definition, assuming the current token is a function.
-TRY_STATUS function_definition_parse(Parser*          p,
-                                     ArrayList*       generics,
-                                     ArrayList*       parameters,
-                                     TypeExpression** return_type,
-                                     bool*            contains_default_param);
+NODISCARD Status function_definition_parse(Parser*          p,
+                                           ArrayList*       generics,
+                                           ArrayList*       parameters,
+                                           TypeExpression** return_type,
+                                           bool*            contains_default_param);
 
 // Parses an explicit type without considering colon or assignment presence
-TRY_STATUS explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
+NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
 
-TRY_STATUS type_expression_parse(Parser* p, Expression** expression, bool* initialized);
-TRY_STATUS integer_literal_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS float_literal_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS prefix_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS infix_expression_parse(Parser* p, Expression* left, Expression** expression);
-TRY_STATUS bool_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS string_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS grouped_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS if_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS function_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS call_expression_parse(Parser* p, Expression* function, Expression** expression);
-TRY_STATUS struct_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS enum_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS nil_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS continue_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS match_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS array_literal_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS for_loop_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS while_loop_expression_parse(Parser* p, Expression** expression);
-TRY_STATUS do_while_loop_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool* initialized);
+NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status infix_expression_parse(Parser* p, Expression* left, Expression** expression);
+NODISCARD Status bool_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status string_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status if_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status function_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expression** expression);
+NODISCARD Status struct_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status enum_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status nil_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status match_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
 
-typedef TRY_STATUS (*prefix_parse_fn)(Parser*, Expression**);
-typedef TRY_STATUS (*infix_parse_fn)(Parser*, Expression*, Expression**);
+typedef NODISCARD Status (*prefix_parse_fn)(Parser*, Expression**);
+typedef NODISCARD Status (*infix_parse_fn)(Parser*, Expression*, Expression**);
 
 typedef struct PrefixFn {
     TokenType       token_key;
@@ -100,7 +99,6 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {STRUCT, &struct_expression_parse},
     {ENUM, &enum_expression_parse},
     {NIL, &nil_expression_parse},
-    {CONTINUE, &continue_expression_parse},
     {MATCH, &match_expression_parse},
     {LBRACKET, &array_literal_expression_parse},
     {FOR, &for_loop_expression_parse},

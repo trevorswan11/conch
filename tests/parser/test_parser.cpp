@@ -199,6 +199,38 @@ TEST_CASE("Jump statements") {
         PrefixExpression* prefix    = (PrefixExpression*)jump_stmt->value;
         test_number_expression<int64_t>(prefix->rhs, 5);
     }
+
+    SECTION("Continue jumps") {
+        SECTION("Correctly without value") {
+            const char*   input = "continue";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+            auto ast = pf.ast();
+
+            REQUIRE(ast->statements.length == 1);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            JumpStatement* jump_stmt = (JumpStatement*)stmt;
+            REQUIRE_FALSE(jump_stmt->value);
+        }
+
+        SECTION("Incorrectly with value") {
+            const char*   input = "continue 2";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+            auto ast = pf.ast();
+
+            REQUIRE(ast->statements.length == 2);
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            JumpStatement* jump_stmt = (JumpStatement*)stmt;
+            REQUIRE_FALSE(jump_stmt->value);
+
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 1, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            test_number_expression<int64_t>(expr_stmt->expression, 2);
+        }
+    }
 }
 
 TEST_CASE("Identifier Expressions") {
@@ -393,17 +425,13 @@ TEST_CASE("Basic prefix / infix expressions") {
         };
 
         for (const auto& t : cases) {
+            group_expressions = true;
             ParserFixture pf(t.input);
             check_parse_errors(pf.parser(), {}, true);
 
-            StringBuilder actual_builder;
-            REQUIRE(STATUS_OK(string_builder_init(&actual_builder, t.expected.length())));
-            REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), &actual_builder)));
-
-            MutSlice actual;
-            REQUIRE(STATUS_OK(string_builder_to_string(&actual_builder, &actual)));
-            REQUIRE(t.expected == actual.ptr);
-            free(actual.ptr);
+            SBFixture sb(t.expected.length());
+            REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+            REQUIRE(t.expected == sb.to_string());
         }
     }
 }
@@ -1145,38 +1173,20 @@ TEST_CASE("Struct declarations") {
     }
 }
 
-TEST_CASE("Single-line expressions") {
-    SECTION("Nil expressions") {
-        const char*   input = "nil";
-        ParserFixture pf(input);
-        check_parse_errors(pf.parser(), {}, true);
+TEST_CASE("Nil expressions") {
+    const char*   input = "nil";
+    ParserFixture pf(input);
+    check_parse_errors(pf.parser(), {}, true);
 
-        auto ast = pf.ast();
-        REQUIRE(ast->statements.length == 1);
+    auto ast = pf.ast();
+    REQUIRE(ast->statements.length == 1);
 
-        Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+    Statement* stmt;
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
 
-        Node* nil_node = (Node*)expr_stmt->expression;
-        REQUIRE(slice_equals_str_z(&nil_node->start_token.slice, "nil"));
-    }
-
-    SECTION("Continue expressions") {
-        const char*   input = "continue";
-        ParserFixture pf(input);
-        check_parse_errors(pf.parser(), {}, true);
-
-        auto ast = pf.ast();
-        REQUIRE(ast->statements.length == 1);
-
-        Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-
-        Node* continue_node = (Node*)expr_stmt->expression;
-        REQUIRE(slice_equals_str_z(&continue_node->start_token.slice, "continue"));
-    }
+    Node* nil_node = (Node*)expr_stmt->expression;
+    REQUIRE(slice_equals_str_z(&nil_node->start_token.slice, "nil"));
 }
 
 TEST_CASE("Impl statements") {
@@ -2101,6 +2111,19 @@ TEST_CASE("Generics") {
                                false);
         }
 
+        SECTION("Empty generic list in structs") {
+            const char*   input = "struct<>{a: int,}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"EMPTY_GENERIC_LIST [Ln 1, Col 7]",
+                                "No prefix parse function for GT found [Ln 1, Col 8]",
+                                "No prefix parse function for COLON found [Ln 1, Col 11]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
+                                "No prefix parse function for COMMA found [Ln 1, Col 16]",
+                                "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
+                               false);
+        }
+
         SECTION("Incorrect generic expression") {
             const char*   input = "struct<\"2\" + 2>{a: int,}";
             ParserFixture pf(input);
@@ -2115,12 +2138,36 @@ TEST_CASE("Generics") {
                                false);
         }
 
+        SECTION("Empty generic list in functions") {
+            const char*   input = "var a: fn<>(a: int): int";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"EMPTY_GENERIC_LIST [Ln 1, Col 10]",
+                                "No prefix parse function for GT found [Ln 1, Col 11]",
+                                "Expected token RPAREN, found COLON [Ln 1, Col 14]",
+                                "No prefix parse function for COLON found [Ln 1, Col 14]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 16]",
+                                "No prefix parse function for RPAREN found [Ln 1, Col 19]",
+                                "No prefix parse function for COLON found [Ln 1, Col 20]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 22]"},
+                               false);
+        }
+
         SECTION("Missing with clause") {
             const char*   input = "func(1, 2) <int>";
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
                                {"No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
                                 "No prefix parse function for GT found [Ln 1, Col 16]"},
+                               false);
+        }
+
+        SECTION("Empty generic list in calls") {
+            const char*   input = "func(1, 2) with <>";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"EMPTY_GENERIC_LIST [Ln 1, Col 17]",
+                                "No prefix parse function for GT found [Ln 1, Col 18]"},
                                false);
         }
 
