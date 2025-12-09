@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "util/alphanum.h"
+#include "util/status.h"
 
 #define PARSE_INT_STR(T, max, overflow_err)             \
     assert(base != UNKNOWN);                            \
@@ -83,5 +84,47 @@ NODISCARD Status strntod(const char*     str,
     }
 
     *value = result;
+    return SUCCESS;
+}
+
+NODISCARD Status strntochr(const char* str, size_t n, uint8_t* out) {
+    if (n != 3 && n != 4) {
+        return MALFORMED_CHARATCER_LITERAL;
+    }
+
+    if (str[1] != '\\') {
+        *out = (uint8_t)str[1];
+        return SUCCESS;
+    }
+
+    // Check the escaped character and default to a single char
+    const uint8_t escaped = str[2];
+    switch (escaped) {
+    case 'n':
+        *out = '\n';
+        break;
+    case 'r':
+        *out = '\r';
+        break;
+    case 't':
+        *out = '\t';
+        break;
+    case '\\':
+        *out = '\\';
+        break;
+    case '\'':
+        *out = '\'';
+        break;
+    case '"':
+        *out = '"';
+        break;
+    case '0':
+        *out = '\0';
+        break;
+    default:
+        *out = (uint8_t)escaped;
+        break;
+    }
+
     return SUCCESS;
 }

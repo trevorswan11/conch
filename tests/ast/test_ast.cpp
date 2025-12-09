@@ -35,6 +35,8 @@ TEST_CASE("Declaration reconstructions") {
         test_reconstruction("const a: fn(b: int): int = 2;", "const a: fn(b: int): int = 2;");
         test_reconstruction("var a: fn<T>(b: int): Walker", "var a: fn<T>(b: int): Walker;");
         test_reconstruction("var a: fn<T, E>(b: int): Walker", "var a: fn<T, E>(b: int): Walker;");
+        test_reconstruction("var a: fn<T, E>(ref b: int): Walker",
+                            "var a: fn<T, E>(ref b: int): Walker;");
     }
 
     SECTION("Struct types") {
@@ -96,5 +98,69 @@ TEST_CASE("Short statements") {
     SECTION("Discard statements") {
         test_reconstruction("_ = 2", "_ = 2;");
         test_reconstruction("_ = [_]{}", "_ = [_]{ };");
+    }
+
+    SECTION("Impl statements") {
+        test_reconstruction("impl Obj { const a := 1; }", "impl Obj { const a := 1; };");
+    }
+}
+
+TEST_CASE("Conditionals") {
+    SECTION("If expressions") {
+        test_reconstruction("const a := if (x < 20) 2.345 else -2.3456e23",
+                            "const a := if (x < 20) 2.345 else -2.3456e23;");
+        test_reconstruction("return if (x + 2 == 30) { struct { a: int, b: int, } } else if (x < "
+                            "2) { 4 } else { 4 }",
+                            "return if (x + 2 == 30) { struct { a: int, b: int, } } else if (x < "
+                            "2) { 4 } else { 4 };");
+    }
+
+    SECTION("Match expressions") {
+        test_reconstruction("match Out { 1 => return 90u;, 2 => return 0b1011u, };",
+                            "match Out { 1 => return 90u;, 2 => return 0b1011u;, }");
+        test_reconstruction("match Out { 1 => { return first }, 2 => { return second }, }",
+                            "match Out { 1 => { return first; }, 2 => { return second; }, }");
+    }
+}
+
+TEST_CASE("Loops") {
+    SECTION("For loops") {
+        test_reconstruction("for (1) {1}", "for (1) { 1 }");
+        test_reconstruction("for (1) : (name) {1}", "for (1) : (name) { 1 }");
+        test_reconstruction("for (1, 2) : (name, _) {1}", "for (1, 2) : (name, _) { 1 }");
+        test_reconstruction("for (1, 2) : (name, word) {1} else {1}",
+                            "for (1, 2) : (name, word) { 1 } else { 1 }");
+        test_reconstruction("for (1, 2) : (name, word) {1} else 1",
+                            "for (1, 2) : (name, word) { 1 } else 1");
+        test_reconstruction("for (1, 2, 3) : (name, ref hey, word) {1}",
+                            "for (1, 2, 3) : (name, ref hey, word) { 1 }");
+    }
+
+    SECTION("While loops") {
+        test_reconstruction("while (1) {1}", "while (1) { 1 }");
+        test_reconstruction("while (i <= 20) : (i += 2) { i -= 1; }",
+                            "while (i <= 20) : (i += 2) { i -= 1 }");
+        test_reconstruction("while (c != '3') : (c *= 2) {1} else {1}",
+                            "while (c != '3') : (c *= 2) { 1 } else { 1 }");
+        test_reconstruction("while (1) : (1) {1} else 1u", "while (1) : (1) { 1 } else 1u");
+    }
+
+    SECTION("Do-while loops") {
+        test_reconstruction("do { print(\"Hello, World!\") } while (true)",
+                            "do { print(\"Hello, World!\") } while (true)");
+    }
+}
+
+TEST_CASE("Complex expressions") {
+    SECTION("Function expressions") {
+        test_reconstruction("fn(x: int, y: int, z: int): int {}",
+                            "fn(x: int, y: int, z: int) {  }");
+        test_reconstruction("fn<T>(x: int, y: int, z: int = 2): int { if (x + y == z) return z; }",
+                            "fn<T>(x: int, y: int, z: int = 2) { if (x + y == z) return z; }");
+    }
+
+    SECTION("Struct expressions") {
+        test_reconstruction("struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
+                            "struct { a: int, b: uint, c: ?Woah, d: int = 1, }");
     }
 }

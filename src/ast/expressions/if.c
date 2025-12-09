@@ -49,8 +49,10 @@ NODISCARD Status if_expression_reconstruct(Node*          node,
     TRY(string_builder_append_str_z(sb, "if "));
 
     assert(if_expr->condition);
+    TRY(string_builder_append(sb, '('));
     Node* condition_node = (Node*)if_expr->condition;
     TRY(condition_node->vtable->reconstruct(condition_node, symbol_map, sb));
+    TRY(string_builder_append(sb, ')'));
 
     TRY(string_builder_append(sb, ' '));
 

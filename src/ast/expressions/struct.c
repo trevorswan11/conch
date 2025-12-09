@@ -27,10 +27,6 @@ NODISCARD Status struct_expression_create(Token              start_token,
     assert(memory_alloc);
     assert(start_token.slice.ptr);
 
-    if (members.length == 0) {
-        return STRUCT_MISSING_MEMBERS;
-    }
-
     StructExpression* struct_local = memory_alloc(sizeof(StructExpression));
     if (!struct_local) {
         return ALLOCATION_FAILED;

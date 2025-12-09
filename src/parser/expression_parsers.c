@@ -451,6 +451,18 @@ NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expres
     return SUCCESS;
 }
 
+NODISCARD Status byte_literal_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
+    uint8_t     value;
+    TRY(strntochr(start_token.slice.ptr, start_token.slice.length, &value));
+
+    ByteLiteralExpression* byte;
+    TRY(byte_literal_expression_create(start_token, value, &byte, p->allocator.memory_alloc));
+
+    *expression = (Expression*)byte;
+    return SUCCESS;
+}
+
 NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     assert(start_token.slice.length > 0);
@@ -715,6 +727,13 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
     TRY(generics_parse(p, &generics));
 
     TRY_DO(parser_expect_peek(p, LBRACE), free_expression_list(&generics, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, RBRACE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        IGNORE_STATUS(parser_put_status_error(
+            p, STRUCT_MISSING_MEMBERS, start_token.line, start_token.column));
+        free_expression_list(&generics, p->allocator.free_alloc);
+        return STRUCT_MISSING_MEMBERS;
+    }
 
     ArrayList members;
     TRY_DO(array_list_init_allocator(&members, 4, sizeof(StructMember), p->allocator),

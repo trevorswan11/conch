@@ -45,10 +45,13 @@ NODISCARD Status allocate_parameter_list(Parser*    p,
 
             TypeExpression* type = (TypeExpression*)type_expr;
             if (type->type.tag == IMPLICIT) {
+                IGNORE_STATUS(parser_put_status_error(
+                    p, IMPLICIT_FN_PARAM_TYPE, p->current_token.line, p->current_token.column));
+
                 identifier_expression_destroy((Node*)ident, allocator.free_alloc);
                 type_expression_destroy((Node*)type, allocator.free_alloc);
                 free_parameter_list(&list, p->allocator.free_alloc);
-                return UNEXPECTED_TOKEN;
+                return IMPLICIT_FN_PARAM_TYPE;
             }
 
             // Parse the default value based on the types knowledge of it
@@ -153,6 +156,10 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
             TRY(string_builder_append_str_z(sb, " = "));
             Node* default_value = (Node*)parameter.default_value;
             TRY(default_value->vtable->reconstruct(default_value, symbol_map, sb));
+        }
+
+        if (i != parameters->length - 1) {
+            TRY(string_builder_append_str_z(sb, ", "));
         }
     }
 

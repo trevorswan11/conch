@@ -36,6 +36,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
 NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool* initialized);
 NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status byte_literal_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status infix_expression_parse(Parser* p, Expression* left, Expression** expression);
@@ -84,6 +85,7 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {UINT_8, &integer_literal_expression_parse},
     {UINT_10, &integer_literal_expression_parse},
     {UINT_16, &integer_literal_expression_parse},
+    {CHARACTER, &byte_literal_expression_parse},
     {FLOAT, &float_literal_expression_parse},
     {BANG, &prefix_expression_parse},
     {NOT, &prefix_expression_parse},

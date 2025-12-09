@@ -2,37 +2,31 @@
 
 #include "ast/expressions/integer.h"
 
-NODISCARD Status integer_literal_expression_create(Token                      start_token,
-                                                   int64_t                    value,
-                                                   IntegerLiteralExpression** int_expr,
-                                                   memory_alloc_fn            memory_alloc) {
-    assert(memory_alloc);
-    assert(start_token.slice.ptr);
-    IntegerLiteralExpression* integer = memory_alloc(sizeof(IntegerLiteralExpression));
-    if (!integer) {
-        return ALLOCATION_FAILED;
-    }
+#define INTEGER_EXPR_CREATE(type, custom_vtab, out_expr)    \
+    assert(memory_alloc);                                   \
+    assert(start_token.slice.ptr);                          \
+    type* integer = memory_alloc(sizeof(type));             \
+    if (!integer) {                                         \
+        return ALLOCATION_FAILED;                           \
+    }                                                       \
+                                                            \
+    *integer = (type){                                      \
+        .base  = EXPRESSION_INIT(custom_vtab, start_token), \
+        .value = value,                                     \
+    };                                                      \
+                                                            \
+    *out_expr = integer;                                    \
+    return SUCCESS
 
-    *integer = (IntegerLiteralExpression){
-        .base  = EXPRESSION_INIT(INTEGER_VTABLE, start_token),
-        .value = value,
-    };
-
-    *int_expr = integer;
-    return SUCCESS;
-}
-
-void integer_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     ASSERT_NODE(node);
     assert(free_alloc);
-
-    IntegerLiteralExpression* integer = (IntegerLiteralExpression*)node;
-    free_alloc(integer);
+    free_alloc(node);
 }
 
-NODISCARD Status integer_literal_expression_reconstruct(Node*          node,
-                                                        const HashMap* symbol_map,
-                                                        StringBuilder* sb) {
+NODISCARD Status integer_expression_reconstruct(Node*          node,
+                                                const HashMap* symbol_map,
+                                                StringBuilder* sb) {
     ASSERT_NODE(node);
     assert(sb);
 
@@ -42,29 +36,23 @@ NODISCARD Status integer_literal_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
+NODISCARD Status integer_literal_expression_create(Token                      start_token,
+                                                   int64_t                    value,
+                                                   IntegerLiteralExpression** int_expr,
+                                                   memory_alloc_fn            memory_alloc) {
+    INTEGER_EXPR_CREATE(IntegerLiteralExpression, INTEGER_VTABLE, int_expr);
+}
+
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
                                                     uint64_t                           value,
                                                     UnsignedIntegerLiteralExpression** int_expr,
                                                     memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
-    UnsignedIntegerLiteralExpression* integer =
-        memory_alloc(sizeof(UnsignedIntegerLiteralExpression));
-    if (!integer) {
-        return ALLOCATION_FAILED;
-    }
-
-    *integer = (UnsignedIntegerLiteralExpression){
-        .base  = EXPRESSION_INIT(UNSIGNED_INTEGER_VTABLE, start_token),
-        .value = value,
-    };
-
-    *int_expr = integer;
-    return SUCCESS;
+    INTEGER_EXPR_CREATE(UnsignedIntegerLiteralExpression, INTEGER_VTABLE, int_expr);
 }
 
-void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
-    assert(free_alloc);
-    UnsignedIntegerLiteralExpression* integer = (UnsignedIntegerLiteralExpression*)node;
-    free_alloc(integer);
+NODISCARD Status byte_literal_expression_create(Token                   start_token,
+                                                uint8_t                 value,
+                                                ByteLiteralExpression** byte_expr,
+                                                memory_alloc_fn         memory_alloc) {
+    INTEGER_EXPR_CREATE(ByteLiteralExpression, INTEGER_VTABLE, byte_expr);
 }

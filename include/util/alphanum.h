@@ -57,3 +57,8 @@ NODISCARD Status strntod(const char*     str,
                          double*         value,
                          memory_alloc_fn memory_alloc,
                          free_alloc_fn   free_alloc);
+
+// Returns the byte representation of a character.
+//
+// Asserts that the input is surrounded by single quotes and is a single logical ASCII character.
+NODISCARD Status strntochr(const char* str, size_t n, uint8_t* out);

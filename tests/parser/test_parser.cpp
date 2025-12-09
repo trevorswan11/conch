@@ -24,6 +24,7 @@ extern "C" {
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
 #include "ast/expressions/infix.h"
+#include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
 #include "ast/expressions/prefix.h"
@@ -271,6 +272,26 @@ TEST_CASE("Number-based expressions") {
         test_number_expression<uint64_t>("0xFF8a91du;", 0xFF8a91d);
 
         test_number_expression<uint64_t>("0xFFFFFFFFFFFFFFFFu;", 0xFFFFFFFFFFFFFFFF);
+    }
+
+    SECTION("Bytes") {
+        const auto test_byte_expression = [](const char* input, uint8_t expected) {
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {}, true);
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement*   expr_stmt = (ExpressionStatement*)stmt;
+            ByteLiteralExpression* byte      = (ByteLiteralExpression*)expr_stmt->expression;
+
+            REQUIRE(byte->value == expected);
+        };
+
+        test_byte_expression("'3'", '3');
+        test_byte_expression("'\\0'", '\0');
     }
 
     SECTION("Unsigned integer overflow") {
@@ -845,6 +866,17 @@ TEST_CASE("Function literals") {
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  t.expected_return.type_name);
         }
+
+        SECTION("Implicit parameter type") {
+            const char*   input = "fn(a := 2): int";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(),
+                               {"IMPLICIT_FN_PARAM_TYPE [Ln 1, Col 9]",
+                                "No prefix parse function for RPAREN found [Ln 1, Col 10]",
+                                "No prefix parse function for COLON found [Ln 1, Col 11]",
+                                "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"},
+                               false);
+        }
     }
 
     SECTION("Call expression with identifier function") {
@@ -1121,6 +1153,12 @@ TEST_CASE("Struct declarations") {
     }
 
     SECTION("Malformed struct expressions") {
+        SECTION("Empty struct body") {
+            const char*   input = "struct {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"STRUCT_MISSING_MEMBERS [Ln 1, Col 1]"}, false);
+        }
+
         SECTION("Missing trailing comma") {
             const char*   input = "struct { a: int, b: int }";
             ParserFixture pf(input);
@@ -1378,7 +1416,7 @@ TEST_CASE("Match expressions") {
                                false);
         }
 
-        SECTION("Type declarations in arm") {
+        SECTION("Import declarations in arm") {
             const char*   input = "match true { 1 => import std, }";
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
