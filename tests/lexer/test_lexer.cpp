@@ -3,13 +3,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
+
+#include "file_helpers.hpp"
 
 extern "C" {
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "util/allocator.h"
+#include "util/io.h"
 #include "util/mem.h"
 #include "util/status.h"
 }
@@ -668,4 +673,53 @@ TEST_CASE("Advanced literals") {
             free(promoted_string.ptr);
         }
     }
+}
+
+TEST_CASE("Token dumping") {
+    const char* input = "true false and or orelse";
+    Lexer       l;
+    REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+    REQUIRE(STATUS_OK(lexer_consume(&l)));
+
+    TempFile temp_out("TMP_token_dump_out"), temp_err("TMP_token_dump_err");
+
+    FILE* out = temp_out.open("wb");
+    FILE* err = temp_err.open("wb");
+
+    FileIO io;
+    REQUIRE(STATUS_OK(file_io_init(&io, NULL, out, err)));
+
+    REQUIRE(STATUS_OK(lexer_print_tokens(&l, &io)));
+    std::ifstream out_fs(temp_out.m_Path, std::ios::binary);
+    std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
+                             std::istreambuf_iterator<char>());
+
+    std::vector<std::string> expected_lines = {
+        "TRUE(true) [1, 1]",
+        "FALSE(false) [1, 6]",
+        "BOOLEAN_AND(and) [1, 12]",
+        "BOOLEAN_OR(or) [1, 16]",
+        "ORELSE(orelse) [1, 19]",
+        "END() [1, 25]",
+    };
+
+    std::vector<std::string> actual_lines;
+    std::istringstream       stream(captured_out);
+    std::string              line;
+
+    while (std::getline(stream, line)) {
+        if (line.length() > 0) {
+            actual_lines.push_back(line);
+        }
+    }
+
+    REQUIRE(expected_lines.size() == actual_lines.size());
+    for (size_t i = 0; i < expected_lines.size(); i++) {
+        const auto& expected = expected_lines[i];
+        const auto& actual   = actual_lines[i];
+        REQUIRE(expected == actual);
+    }
+
+    lexer_deinit(&l);
+    file_io_deinit(&io);
 }

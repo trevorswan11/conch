@@ -189,7 +189,9 @@ NODISCARD Status parser_reset(Parser* p, Lexer* l) {
 }
 
 void parser_deinit(Parser* p) {
-    assert(p);
+    if (!p) {
+        return;
+    }
     ASSERT_ALLOCATOR(p->allocator);
 
     clear_error_list(&p->errors, p->allocator.free_alloc);

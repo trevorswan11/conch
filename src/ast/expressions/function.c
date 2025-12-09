@@ -31,10 +31,10 @@ NODISCARD Status allocate_parameter_list(Parser*    p,
             }
 
             // Every parameter must have an identifier and a type
-            IdentifierExpression* ident;
-            TRY_DO(identifier_expression_create(
-                       p->current_token, &ident, allocator.memory_alloc, allocator.free_alloc),
+            Expression* ident_expr;
+            TRY_DO(identifier_expression_parse(p, &ident_expr),
                    free_parameter_list(&list, p->allocator.free_alloc));
+            IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
             Expression* type_expr;
             bool        initalized;

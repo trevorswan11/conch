@@ -206,7 +206,7 @@ TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     return value;
 }
 
-NODISCARD Status lexer_print_tokens(FileIO* io, Lexer* l) {
+NODISCARD Status lexer_print_tokens(Lexer* l, FileIO* io) {
     assert(l);
     ArrayList*   list        = &l->token_accumulator;
     const size_t accumulated = array_list_length(list);
@@ -222,6 +222,8 @@ NODISCARD Status lexer_print_tokens(FileIO* io, Lexer* l) {
                        out.line,
                        out.column));
     }
+
+    TRY(fflush(io->out));
     return SUCCESS;
 }
 

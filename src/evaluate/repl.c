@@ -36,6 +36,7 @@ NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_rec
     assert(stream_buffer && stream_receiver);
     if (stream_receiver->item_size != sizeof(char)) {
         TRY_IO(fprintf(io->err, "ArrayList must be initialized for bytes\n"));
+        TRY_IO(fflush(io->err));
         return TYPE_MISMATCH;
     }
 

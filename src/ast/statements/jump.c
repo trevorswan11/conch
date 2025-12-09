@@ -1,20 +1,14 @@
 #include <assert.h>
 
 #include "ast/statements/jump.h"
+#include "lexer/token.h"
 
 NODISCARD Status jump_statement_create(Token           start_token,
                                        Expression*     value,
                                        JumpStatement** jump_stmt,
                                        memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
-    switch (start_token.type) {
-    case RETURN:
-    case BREAK:
-    case CONTINUE:
-        break;
-    default:
-        return UNEXPECTED_TOKEN;
-    }
+    assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
     JumpStatement* jump = memory_alloc(sizeof(JumpStatement));
     if (!jump) {
@@ -46,19 +40,13 @@ NODISCARD Status jump_statement_reconstruct(Node*          node,
     ASSERT_NODE(node);
     assert(sb);
 
-    switch (node->start_token.type) {
-    case RETURN:
+    const TokenType start_token_type = node->start_token.type;
+    if (start_token_type == RETURN) {
         TRY(string_builder_append_str_z(sb, "return"));
-        break;
-    case BREAK:
+    } else if (start_token_type == BREAK) {
         TRY(string_builder_append_str_z(sb, "break"));
-        break;
-    case CONTINUE:
+    } else if (start_token_type == CONTINUE) {
         TRY(string_builder_append_str_z(sb, "continue"));
-        break;
-    default:
-        UNREACHABLE;
-        break;
     }
 
     JumpStatement* jump = (JumpStatement*)node;

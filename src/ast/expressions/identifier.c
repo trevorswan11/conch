@@ -3,26 +3,19 @@
 #include "ast/expressions/identifier.h"
 
 NODISCARD Status identifier_expression_create(Token                  start_token,
+                                              MutSlice               name,
                                               IdentifierExpression** ident_expr,
-                                              memory_alloc_fn        memory_alloc,
-                                              free_alloc_fn          free_alloc) {
-    assert(memory_alloc && free_alloc);
+                                              memory_alloc_fn        memory_alloc) {
+    assert(memory_alloc);
     assert(start_token.slice.ptr);
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
     if (!ident) {
         return ALLOCATION_FAILED;
     }
 
-    char* mut_name =
-        strdup_s_allocator(start_token.slice.ptr, start_token.slice.length, memory_alloc);
-    if (!mut_name) {
-        free_alloc(ident);
-        return ALLOCATION_FAILED;
-    }
-
     *ident = (IdentifierExpression){
         .base = EXPRESSION_INIT(IDENTIFIER_VTABLE, start_token),
-        .name = mut_slice_from_str_z(mut_name),
+        .name = name,
     };
 
     *ident_expr = ident;

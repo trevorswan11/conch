@@ -22,11 +22,8 @@ NODISCARD Status enum_expression_create(Token            start_token,
                                         EnumExpression** enum_expr,
                                         memory_alloc_fn  memory_alloc) {
     assert(variants.item_size == sizeof(EnumVariant));
+    assert(variants.length > 0);
     assert(memory_alloc);
-
-    if (variants.length == 0) {
-        return ENUM_MISSING_VARIANTS;
-    }
 
     EnumExpression* enum_local = memory_alloc(sizeof(EnumExpression));
     if (!enum_local) {

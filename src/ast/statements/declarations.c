@@ -13,14 +13,10 @@ NODISCARD Status decl_statement_create(Token                 start_token,
                                        memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
+    assert(type);
+    assert(start_token.type == CONST || start_token.type == VAR);
 
-    if (!type) {
-        return DECL_MISSING_TYPE;
-    } else if (start_token.type != CONST && start_token.type != VAR) {
-        return UNEXPECTED_TOKEN;
-    }
-
-    // There's some behavior to check for wit uninitialized decls
+    // There's some behavior to check for with uninitialized decls
     if (!value) {
         if (start_token.type == CONST) {
             return CONST_DECL_MISSING_VALUE;

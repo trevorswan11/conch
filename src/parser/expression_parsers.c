@@ -92,9 +92,16 @@ NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression)
         return ILLEGAL_IDENTIFIER;
     }
 
+    char* mut_name = strdup_s_allocator(
+        start_token.slice.ptr, start_token.slice.length, p->allocator.memory_alloc);
+    if (!mut_name) {
+        return ALLOCATION_FAILED;
+    }
+    MutSlice name = mut_slice_from_str_z(mut_name);
+
     IdentifierExpression* ident;
-    TRY(identifier_expression_create(
-        start_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+    TRY_DO(identifier_expression_create(start_token, name, &ident, p->allocator.memory_alloc),
+           p->allocator.free_alloc(name.ptr));
     *expression = (Expression*)ident;
     return SUCCESS;
 }
@@ -836,6 +843,12 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
 NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LBRACE));
+    if (parser_peek_token_is(p, RBRACE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        IGNORE_STATUS(parser_put_status_error(
+            p, ENUM_MISSING_VARIANTS, start_token.line, start_token.column));
+        return ENUM_MISSING_VARIANTS;
+    }
 
     ArrayList variants;
     TRY(array_list_init_allocator(&variants, 4, sizeof(EnumVariant), p->allocator));

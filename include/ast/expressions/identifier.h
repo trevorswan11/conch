@@ -17,9 +17,9 @@ typedef struct IdentifierExpression {
 } IdentifierExpression;
 
 NODISCARD Status identifier_expression_create(Token                  start_token,
+                                              MutSlice               name,
                                               IdentifierExpression** ident_expr,
-                                              memory_alloc_fn        memory_alloc,
-                                              free_alloc_fn          free_alloc);
+                                              memory_alloc_fn        memory_alloc);
 
 void             identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status identifier_expression_reconstruct(Node*          node,

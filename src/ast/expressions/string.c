@@ -48,5 +48,8 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
     }
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
+    if (node->start_token.type == MULTILINE_STRING) {
+        TRY(string_builder_append(sb, '\n'));
+    }
     return SUCCESS;
 }

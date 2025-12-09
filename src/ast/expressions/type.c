@@ -132,22 +132,19 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         TRY(enum_expression_reconstruct((Node*)explicit_type.variant.enum_type, symbol_map, sb));
         break;
     case EXPLICIT_ARRAY:
+        assert(explicit_type.variant.array_type.dimensions.length > 0);
         TRY(string_builder_append(sb, '['));
 
         uint64_t dim;
-        if (explicit_type.variant.array_type.dimensions.length > 0) {
-            for (size_t i = 0; i < explicit_type.variant.array_type.dimensions.length; i++) {
-                UNREACHABLE_IF_ERROR(
-                    array_list_get(&explicit_type.variant.array_type.dimensions, i, &dim));
-                TRY(string_builder_append_unsigned(sb, dim));
+        for (size_t i = 0; i < explicit_type.variant.array_type.dimensions.length; i++) {
+            UNREACHABLE_IF_ERROR(
+                array_list_get(&explicit_type.variant.array_type.dimensions, i, &dim));
+            TRY(string_builder_append_unsigned(sb, dim));
 
-                TRY(string_builder_append(sb, 'u'));
-                if (i != explicit_type.variant.array_type.dimensions.length - 1) {
-                    TRY(string_builder_append_str_z(sb, ", "));
-                }
+            TRY(string_builder_append(sb, 'u'));
+            if (i != explicit_type.variant.array_type.dimensions.length - 1) {
+                TRY(string_builder_append_str_z(sb, ", "));
             }
-        } else {
-            UNREACHABLE;
         }
 
         TRY(string_builder_append(sb, ']'));

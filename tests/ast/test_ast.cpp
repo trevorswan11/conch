@@ -49,11 +49,16 @@ TEST_CASE("Declaration reconstructions") {
         test_reconstruction("var a: enum {ONE, TWO, THREE, }", "var a: enum { ONE, TWO, THREE, };");
         test_reconstruction("const a: enum { ONE, TWO, THREE, } = ONE",
                             "const a: enum { ONE, TWO, THREE, } = ONE;");
+        test_reconstruction("const a: enum { ONE = 3, TWO, THREE, } = ONE",
+                            "const a: enum { ONE = 3, TWO, THREE, } = ONE;");
     }
 
     SECTION("Array types") {
         test_reconstruction("var a: [2u]int;", "var a: [2u]int;");
         test_reconstruction("var a: [2u]int = [_]{};", "var a: [2u]int = [_]{ };");
+        test_reconstruction("var a: ?[2u]int = [_]{};", "var a: ?[2u]int = [_]{ };");
+        test_reconstruction("var a: [2u]?int = [_]{};", "var a: [2u]?int = [_]{ };");
+        test_reconstruction("var a: [2u, 2u]int = [_]{};", "var a: [2u, 2u]int = [_]{ };");
         test_reconstruction("var a: [2u]int = [0b10u]{2, 3, };", "var a: [2u]int = [2u]{ 2, 3, };");
     }
 
@@ -159,8 +164,29 @@ TEST_CASE("Complex expressions") {
                             "fn<T>(x: int, y: int, z: int = 2) { if (x + y == z) return z; }");
     }
 
+    SECTION("Call expressions") {
+        test_reconstruction("add(1, 2)", "add(1, 2)");
+        test_reconstruction("add(1, 2, ref result)", "add(1, 2, ref result)");
+        test_reconstruction("add(0xFF, 2.0, ref result) with <uint, float>",
+                            "add(0xFF, 2.0, ref result) with <uint, float>");
+    }
+
     SECTION("Struct expressions") {
         test_reconstruction("struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
                             "struct { a: int, b: uint, c: ?Woah, d: int = 1, }");
+    }
+}
+
+TEST_CASE("String literals") {
+    SECTION("Standard strings") {
+        test_reconstruction("const a := \"Hello, World!\"", "const a := \"Hello, World!\";");
+        test_reconstruction("const a: string = \"Hey!\"", "const a: string = \"Hey!\";");
+    }
+
+    SECTION("Multiline strings") {
+        test_reconstruction("var str := \\\\Multiline stringing\n\\\\\n",
+                            "var str := \\\\Multiline stringing\n\\\\\n;");
+        test_reconstruction("var str := \\\\Multiline stringing\n\\\\Continuation\n",
+                            "var str := \\\\Multiline stringing\n\\\\Continuation\n;");
     }
 }

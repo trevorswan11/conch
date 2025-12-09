@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -12,9 +13,7 @@ FileIO file_io_std(void) {
 }
 
 NODISCARD Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
-    if (!io || !in || !out || !err) {
-        return NULL_PARAMETER;
-    }
+    assert(io && out && err);
 
     *io = (FileIO){
         .in  = in,
@@ -25,7 +24,13 @@ NODISCARD Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
 }
 
 void file_io_deinit(FileIO* io) {
-    fclose(io->in);
+    if (!io) {
+        return;
+    }
+
+    if (io->in) {
+        fclose(io->in);
+    }
     fclose(io->out);
     fclose(io->err);
 }

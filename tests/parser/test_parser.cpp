@@ -1019,6 +1019,12 @@ TEST_CASE("Enum declarations") {
     }
 
     SECTION("Malformed enum expressions") {
+        SECTION("Empty enum body") {
+            const char*   input = "enum {}";
+            ParserFixture pf(input);
+            check_parse_errors(pf.parser(), {"ENUM_MISSING_VARIANTS [Ln 1, Col 1]"}, false);
+        }
+
         SECTION("Missing trailing comma") {
             const char*   input = "enum { a, b, c }";
             ParserFixture pf(input);

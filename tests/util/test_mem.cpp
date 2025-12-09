@@ -1,4 +1,5 @@
 #include "catch_amalgamated.hpp"
+#include "util/allocator.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -65,6 +66,16 @@ TEST_CASE("Mutable Slice creation and equality") {
     REQUIRE_FALSE(mut_slice_equals_slice(&s2, &const_slice1));
 }
 
+TEST_CASE("Slice edge cases") {
+    MutSlice empty_mut = {NULL, 0};
+    REQUIRE(mut_slice_equals_str_z(&empty_mut, NULL));
+    REQUIRE(mut_slice_equals_str_s(&empty_mut, NULL, 0));
+
+    Slice empty = slice_from_mut(&empty_mut);
+    REQUIRE(slice_equals_str_z(&empty, NULL));
+    REQUIRE(slice_equals_str_s(&empty, NULL, 0));
+}
+
 TEST_CASE("Align up integer pointer values") {
     REQUIRE(align_up(0, 8) == 0);
     REQUIRE(align_up(1, 8) == 8);
@@ -101,6 +112,11 @@ TEST_CASE("Swap swaps memory content correctly") {
     int a = 10, b = 20;
     swap(&a, &b, sizeof(int));
     REQUIRE(a == 20);
+    REQUIRE(b == 10);
+
+    swap(&a, NULL, sizeof(int));
+    REQUIRE(a == 20);
+    swap(NULL, &b, sizeof(int));
     REQUIRE(b == 10);
 
     double x = 1.23, y = 9.87;
@@ -156,5 +172,10 @@ TEST_CASE("String duplication") {
         REQUIRE(copy_s);
         REQUIRE(strcmp(copy_s, "") == 0);
         free(copy_s);
+    }
+
+    SECTION("Null string") {
+        REQUIRE_FALSE(strdup_z_allocator(NULL, standard_allocator.memory_alloc));
+        REQUIRE_FALSE(strdup_s_allocator(NULL, 0, standard_allocator.memory_alloc));
     }
 }

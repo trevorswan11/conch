@@ -98,10 +98,10 @@ char* strdup_z_allocator(const char* str, memory_alloc_fn alloc) {
 char* strdup_z(const char* str) { return strdup_z_allocator(str, standard_allocator.memory_alloc); }
 
 char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc) {
+    assert(alloc);
     if (!str) {
         return NULL;
     }
-    assert(alloc);
 
     char* copy = alloc(size + 1);
     if (!copy) {

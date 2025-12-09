@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stddef.h>
-#include <stdint.h>
 
 #include "lexer/token.h"
 
@@ -42,7 +41,7 @@ void             lexer_read_char(Lexer* l);
 Token            lexer_next_token(Lexer* l);
 void             lexer_skip_whitespace(Lexer* l);
 TokenType        lexer_lookup_identifier(Lexer* l, const Slice* literal);
-NODISCARD Status lexer_print_tokens(FileIO* io, Lexer* l);
+NODISCARD Status lexer_print_tokens(Lexer* l, FileIO* io);
 
 Token lexer_read_operator(Lexer* l);
 Slice lexer_read_identifier(Lexer* l);

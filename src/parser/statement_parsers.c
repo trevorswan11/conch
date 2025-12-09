@@ -29,9 +29,9 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, IDENT));
 
-    IdentifierExpression* ident;
-    TRY(identifier_expression_create(
-        p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+    Expression* ident_expr;
+    TRY(identifier_expression_parse(p, &ident_expr));
+    IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
     Expression* type_expr;
     bool        value_initialized;
@@ -75,9 +75,9 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, IDENT));
 
-    IdentifierExpression* ident;
-    TRY(identifier_expression_create(
-        p->current_token, &ident, p->allocator.memory_alloc, p->allocator.free_alloc));
+    Expression* ident_expr;
+    TRY(identifier_expression_parse(p, &ident_expr));
+    IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
     TRY_DO(parser_expect_peek(p, ASSIGN),
            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
