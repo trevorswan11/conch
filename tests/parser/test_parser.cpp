@@ -27,6 +27,7 @@ extern "C" {
 #include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
+#include "ast/expressions/narrow.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
@@ -379,7 +380,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"0b10111u in 4u;", 0b10111ull, TokenType::IN, 4ull},
             {"0b10111u and 4u;", 0b10111ull, TokenType::BOOLEAN_AND, 4ull},
             {"0b10111u or 4u;", 0b10111ull, TokenType::BOOLEAN_OR, 4ull},
-            {"0b10111u::4u;", 0b10111ull, TokenType::COLON_COLON, 4ull},
+            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull},
             {"0b10111u orelse 4u;", 0b10111ull, TokenType::ORELSE, 4ull},
         };
 
@@ -413,6 +414,22 @@ TEST_CASE("Basic prefix / infix expressions") {
                 }
             }
         }
+    }
+
+    SECTION("Namespace / narrow expressions") {
+        ParserFixture pf("Outer::inner");
+        check_parse_errors(pf.parser(), {}, true);
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        NarrowExpression*    narrow    = (NarrowExpression*)expr_stmt->expression;
+
+        test_identifier_expression(narrow->outer, "Outer");
+        test_identifier_expression((Expression*)narrow->inner, "inner");
     }
 
     SECTION("Operator precedence parsing") {
@@ -1272,22 +1289,25 @@ TEST_CASE("Impl statements") {
 
 TEST_CASE("Import Statements") {
     struct ImportTestCase {
-        ImportTag   expected_tag;
-        std::string expected_literal;
+        ImportTag                  expected_tag;
+        std::string                expected_literal;
+        std::optional<std::string> expected_alias = std::nullopt;
     };
 
     SECTION("Correct imports") {
         const char* inputs[] = {
             "import std",
             "import array;",
-            "import \"util/test.cch\"",
+            "import \"util/test.cch\" as test",
+            "import hash as Hash",
         };
         const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const ImportTestCase expected_imports[] = {
             {ImportTag::STANDARD, "std"},
             {ImportTag::STANDARD, "array"},
-            {ImportTag::USER, "util/test.cch"},
+            {ImportTag::USER, "util/test.cch", "test"},
+            {ImportTag::STANDARD, "hash", "Hash"},
         };
         const size_t expecteds_size = sizeof(expected_imports) / sizeof(expected_imports[0]);
 
@@ -1314,13 +1334,27 @@ TEST_CASE("Import Statements") {
                 test_string_expression((Expression*)import_stmt->variant.user_import,
                                        expected.expected_literal);
             }
+
+            if (import_stmt->alias) {
+                REQUIRE(expected.expected_alias.has_value());
+                test_identifier_expression((Expression*)import_stmt->alias,
+                                           expected.expected_alias.value());
+            } else {
+                REQUIRE_FALSE(expected.expected_alias.has_value());
+            }
         }
     }
 
     SECTION("Incorrect token") {
         const char*   input = "import 1";
         ParserFixture pf(input);
-        check_parse_errors(pf.parser(), {"UNEXPECTED_TOKEN [Ln 1, Col 8]"}, false);
+        check_parse_errors(pf.parser(), {"UNEXPECTED_TOKEN [Ln 1, Col 8]"});
+    }
+
+    SECTION("User import without alias") {
+        const char*   input = "import \"some_file.cch\"";
+        ParserFixture pf(input);
+        check_parse_errors(pf.parser(), {"USER_IMPORT_MISSING_ALIAS [Ln 1, Col 1]"});
     }
 }
 
@@ -1406,7 +1440,6 @@ TEST_CASE("Match expressions") {
             ParserFixture pf(input);
             check_parse_errors(pf.parser(),
                                {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                                "No prefix parse function for ASSIGN found [Ln 1, Col 26]",
                                 "No prefix parse function for COMMA found [Ln 1, Col 32]",
                                 "No prefix parse function for RBRACE found [Ln 1, Col 34]"},
                                false);

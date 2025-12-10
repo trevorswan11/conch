@@ -21,6 +21,7 @@
 #include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
+#include "ast/expressions/narrow.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/single.h"
 #include "ast/expressions/string.h"
@@ -1448,5 +1449,23 @@ NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expressi
            do_while_loop_expression_destroy((Node*)do_while_loop, p->allocator.free_alloc));
 
     *expression = (Expression*)do_while_loop;
+    return SUCCESS;
+}
+
+NODISCARD Status narrow_expression_parse(Parser* p, Expression* outer, Expression** expression) {
+    ASSERT_EXPRESSION(outer);
+    TRY(parser_expect_peek(p, IDENT));
+
+    Expression* ident_expr;
+    TRY(identifier_expression_parse(p, &ident_expr));
+    IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
+
+    Node*             outer_node = (Node*)outer;
+    NarrowExpression* narrow;
+    TRY_DO(narrow_expression_create(
+               outer_node->start_token, outer, ident, &narrow, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
+
+    *expression = (Expression*)narrow;
     return SUCCESS;
 }

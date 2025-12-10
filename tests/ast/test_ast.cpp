@@ -97,7 +97,7 @@ TEST_CASE("Short statements") {
 
     SECTION("Import statements") {
         test_reconstruction("import std", "import std;");
-        test_reconstruction("import \"array\"", "import \"array\";");
+        test_reconstruction("import \"array\" as array", "import \"array\" as array;");
     }
 
     SECTION("Discard statements") {
@@ -174,6 +174,14 @@ TEST_CASE("Complex expressions") {
     SECTION("Struct expressions") {
         test_reconstruction("struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
                             "struct { a: int, b: uint, c: ?Woah, d: int = 1, }");
+    }
+
+    SECTION("Narrowed expressions") {
+        test_reconstruction("Outer::inner", "Outer::inner");
+        test_reconstruction("Outer::inner(45)", "Outer::inner(45)");
+        test_reconstruction("Outer::inner(45, ref something) with <Other>",
+                            "Outer::inner(45, ref something) with <Other>");
+        test_reconstruction("Outer::inner = 45", "Outer::inner = 45");
     }
 }
 

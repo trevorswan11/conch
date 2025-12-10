@@ -4,7 +4,9 @@
 
 #include "util/mem.h"
 
+// clang-format off
 #define KW(str, tok) {{str, sizeof(str) - 1}, tok}
+// clang-format on
 
 typedef struct {
     Slice     slice;
@@ -45,6 +47,7 @@ typedef struct {
 #define KEYWORD_VOID KW("void", VOID_TYPE)
 #define KEYWORD_TYPE KW("type", TYPE)
 #define KEYWORD_WITH KW("with", WITH)
+#define KEYWORD_AS KW("as", AS)
 
 static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_FN,    KEYWORD_VAR,    KEYWORD_CONST,       KEYWORD_STRUCT,     KEYWORD_ENUM,
@@ -53,5 +56,5 @@ static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_MATCH, KEYWORD_RETURN, KEYWORD_FOR,         KEYWORD_WHILE,      KEYWORD_CONTINUE,
     KEYWORD_BREAK, KEYWORD_NIL,    KEYWORD_TYPEOF,      KEYWORD_IMPL,       KEYWORD_IMPORT,
     KEYWORD_INT,   KEYWORD_UINT,   KEYWORD_FLOAT,       KEYWORD_BYTE,       KEYWORD_STRING,
-    KEYWORD_BOOL,  KEYWORD_VOID,   KEYWORD_TYPE,        KEYWORD_WITH,
+    KEYWORD_BOOL,  KEYWORD_VOID,   KEYWORD_TYPE,        KEYWORD_WITH,       KEYWORD_AS,
 };

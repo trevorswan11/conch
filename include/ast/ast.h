@@ -17,7 +17,7 @@
 // This can be useful for verifying operator precedence, but is disabled by default.
 extern bool group_expressions;
 
-typedef struct {
+typedef struct AST {
     ArrayList statements;
     HashMap   token_type_symbols;
     Allocator allocator;

@@ -267,8 +267,25 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
         return UNEXPECTED_TOKEN;
     }
 
+    IdentifierExpression* alias = NULL;
+    if (parser_peek_token_is(p, AS)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        TRY_DO(parser_expect_peek(p, IDENT), NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
+
+        Expression* ident;
+        TRY_DO(identifier_expression_parse(p, &ident),
+               NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
+        alias = (IdentifierExpression*)ident;
+    } else if (tag == USER) {
+        IGNORE_STATUS(parser_put_status_error(
+            p, USER_IMPORT_MISSING_ALIAS, start_token.line, start_token.column));
+        NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc);
+        return USER_IMPORT_MISSING_ALIAS;
+    }
+
     ImportStatement* import;
-    TRY_DO(import_statement_create(start_token, tag, variant, &import, p->allocator.memory_alloc),
+    TRY_DO(import_statement_create(
+               start_token, tag, variant, alias, &import, p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON)) {

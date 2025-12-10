@@ -24,16 +24,18 @@ typedef union {
 } ImportUnion;
 
 typedef struct ImportStatement {
-    Statement   base;
-    ImportTag   tag;
-    ImportUnion variant;
+    Statement             base;
+    ImportTag             tag;
+    ImportUnion           variant;
+    IdentifierExpression* alias;
 } ImportStatement;
 
-NODISCARD Status import_statement_create(Token             start_token,
-                                         ImportTag         tag,
-                                         ImportUnion       variant,
-                                         ImportStatement** import_stmt,
-                                         memory_alloc_fn   memory_alloc);
+NODISCARD Status import_statement_create(Token                 start_token,
+                                         ImportTag             tag,
+                                         ImportUnion           variant,
+                                         IdentifierExpression* alias,
+                                         ImportStatement**     import_stmt,
+                                         memory_alloc_fn       memory_alloc);
 
 void             import_statement_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status import_statement_reconstruct(Node*          node,
