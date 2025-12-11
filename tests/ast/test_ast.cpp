@@ -198,3 +198,24 @@ TEST_CASE("String literals") {
                             "var str := \\\\Multiline stringing\n\\\\Continuation\n;");
     }
 }
+
+TEST_CASE("Assignment") {
+    SECTION("Simple assignment") {
+        test_reconstruction("something = 2", "something = 2");
+        test_reconstruction("something = 2 * 23 / 2", "something = 2 * 23 / 2");
+    }
+
+    SECTION("Compound assignment") {
+        test_reconstruction("something += 2 + 0o237 & 6", "something += 2 + 0o237 & 6");
+        test_reconstruction("something -= 2 + 0o237 & 6", "something -= 2 + 0o237 & 6");
+        test_reconstruction("something *= 2 + 0o237 & 6", "something *= 2 + 0o237 & 6");
+        test_reconstruction("something /= 2 + 0o237 & 6", "something /= 2 + 0o237 & 6");
+        test_reconstruction("something %= 2 + 0o237 & 6", "something %= 2 + 0o237 & 6");
+        test_reconstruction("something &= 2 + 0o237 & 6", "something &= 2 + 0o237 & 6");
+        test_reconstruction("something |= 2 + 0o237 & 6", "something |= 2 + 0o237 & 6");
+        test_reconstruction("something <<= 2 + 0o237 & 6", "something <<= 2 + 0o237 & 6");
+        test_reconstruction("something >>= 2 + 0o237 & 6", "something >>= 2 + 0o237 & 6");
+        test_reconstruction("something ~= 2 + 0o237 & 6", "something ~= 2 + 0o237 & 6");
+        test_reconstruction("something ^= 2 + 0o237 & 6", "something ^= 2 + 0o237 & 6");
+    }
+}

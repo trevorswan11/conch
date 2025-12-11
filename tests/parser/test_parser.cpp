@@ -16,6 +16,7 @@
 extern "C" {
 #include "ast/ast.h"
 #include "ast/expressions/array.h"
+#include "ast/expressions/assignment.h"
 #include "ast/expressions/bool.h"
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
@@ -357,10 +358,11 @@ TEST_CASE("Basic prefix / infix expressions") {
             std::variant<int64_t, uint64_t, double> rvalue;
         };
 
-        const TestCase cases[] = {
+        const TestCase standard_cases[] = {
             {"5 + 5;", 5ll, TokenType::PLUS, 5ll},
             {"5 - 5;", 5ll, TokenType::MINUS, 5ll},
             {"5.0 * 5.2;", 5.0, TokenType::STAR, 5.2},
+            {"5.0 ** 5.2;", 5.0, TokenType::STAR_STAR, 5.2},
             {"4.9e2 / 5.1e3;", 4.9e2, TokenType::SLASH, 5.1e3},
             {"0x231 % 0xF;", 0x231, TokenType::PERCENT, 0xF},
             {"5 < 5;", 5ll, TokenType::LT, 5ll},
@@ -380,11 +382,24 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"0b10111u in 4u;", 0b10111ull, TokenType::IN, 4ull},
             {"0b10111u and 4u;", 0b10111ull, TokenType::BOOLEAN_AND, 4ull},
             {"0b10111u or 4u;", 0b10111ull, TokenType::BOOLEAN_OR, 4ull},
-            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull},
             {"0b10111u orelse 4u;", 0b10111ull, TokenType::ORELSE, 4ull},
         };
 
-        for (const auto& t : cases) {
+        const TestCase compound_assignment_cases[] = {
+            {"0b10111u += 4u;", 0b10111ull, TokenType::PLUS_ASSIGN, 4ull},
+            {"0b10111u -= 4u;", 0b10111ull, TokenType::MINUS_ASSIGN, 4ull},
+            {"0b10111u *= 4u;", 0b10111ull, TokenType::STAR_ASSIGN, 4ull},
+            {"0b10111u /= 4u;", 0b10111ull, TokenType::SLASH_ASSIGN, 4ull},
+            {"0b10111u %= 4u;", 0b10111ull, TokenType::PERCENT_ASSIGN, 4ull},
+            {"0b10111u &= 4u;", 0b10111ull, TokenType::AND_ASSIGN, 4ull},
+            {"0b10111u |= 4u;", 0b10111ull, TokenType::OR_ASSIGN, 4ull},
+            {"0b10111u <<= 4u;", 0b10111ull, TokenType::SHL_ASSIGN, 4ull},
+            {"0b10111u >>= 4u;", 0b10111ull, TokenType::SHR_ASSIGN, 4ull},
+            {"0b10111u ~= 4u;", 0b10111ull, TokenType::NOT_ASSIGN, 4ull},
+            {"0b10111u ^= 4u;", 0b10111ull, TokenType::XOR_ASSIGN, 4ull},
+        };
+
+        const auto test_infix = []<typename T>(TestCase t) {
             ParserFixture pf(t.input);
             check_parse_errors(pf.parser(), {}, true);
 
@@ -394,14 +409,17 @@ TEST_CASE("Basic prefix / infix expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
             ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            InfixExpression*     expr      = (InfixExpression*)expr_stmt->expression;
+            T*                   expr      = (T*)expr_stmt->expression;
 
             const std::pair<std::variant<int64_t, uint64_t, double>, Expression*> pairs[] = {
                 {t.lvalue, expr->lhs},
                 {t.rvalue, expr->rhs},
             };
 
-            REQUIRE(expr->op == t.op);
+            if constexpr (requires { expr->op; }) {
+                REQUIRE(expr->op == t.op);
+            }
+
             for (const auto& p : pairs) {
                 if (std::holds_alternative<int64_t>(p.first)) {
                     test_number_expression<int64_t>(p.second, std::get<int64_t>(p.first));
@@ -413,6 +431,17 @@ TEST_CASE("Basic prefix / infix expressions") {
                     REQUIRE(false);
                 }
             }
+        };
+
+        // Yay templates in C++ 20 its so fun
+        for (const auto& t : standard_cases) {
+            test_infix.template operator()<InfixExpression>(t);
+        }
+
+        test_infix.template operator()<AssignmentExpression>(
+            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull});
+        for (const auto& t : compound_assignment_cases) {
+            test_infix.template operator()<CompoundAssignmentExpression>(t);
         }
     }
 
@@ -453,6 +482,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
             {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
             {"(5 + 5) * 2", "((5 + 5) * 2)"},
+            {"5 * 5 ** 2", "(5 * (5 ** 2))"},
             {"2 / (5 + 5)", "(2 / (5 + 5))"},
             {"-(5 + 5)", "(-(5 + 5))"},
             {"!(true == true)", "(!(true == true))"},

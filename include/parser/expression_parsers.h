@@ -55,6 +55,12 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status narrow_expression_parse(Parser* p, Expression* outer, Expression** expression);
+NODISCARD Status assignment_expression_parse(Parser*      p,
+                                             Expression*  assignee,
+                                             Expression** expression);
+NODISCARD Status compound_assignment_expression_parse(Parser*      p,
+                                                      Expression*  assignee,
+                                                      Expression** expression);
 
 typedef NODISCARD Status (*prefix_parse_fn)(Parser*, Expression**);
 typedef NODISCARD Status (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -158,6 +164,7 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {STAR, &infix_expression_parse},
     {SLASH, &infix_expression_parse},
     {PERCENT, &infix_expression_parse},
+    {STAR_STAR, &infix_expression_parse},
     {LT, &infix_expression_parse},
     {LTEQ, &infix_expression_parse},
     {GT, &infix_expression_parse},
@@ -176,18 +183,18 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {DOT_DOT, &infix_expression_parse},
     {DOT_DOT_EQ, &infix_expression_parse},
     {LPAREN, &call_expression_parse},
-    {ASSIGN, &infix_expression_parse},
-    {PLUS_ASSIGN, &infix_expression_parse},
-    {MINUS_ASSIGN, &infix_expression_parse},
-    {STAR_ASSIGN, &infix_expression_parse},
-    {SLASH_ASSIGN, &infix_expression_parse},
-    {PERCENT_ASSIGN, &infix_expression_parse},
-    {AND_ASSIGN, &infix_expression_parse},
-    {OR_ASSIGN, &infix_expression_parse},
-    {SHL_ASSIGN, &infix_expression_parse},
-    {SHR_ASSIGN, &infix_expression_parse},
-    {NOT_ASSIGN, &infix_expression_parse},
-    {XOR_ASSIGN, &infix_expression_parse},
+    {ASSIGN, &assignment_expression_parse},
+    {PLUS_ASSIGN, &compound_assignment_expression_parse},
+    {MINUS_ASSIGN, &compound_assignment_expression_parse},
+    {STAR_ASSIGN, &compound_assignment_expression_parse},
+    {SLASH_ASSIGN, &compound_assignment_expression_parse},
+    {PERCENT_ASSIGN, &compound_assignment_expression_parse},
+    {AND_ASSIGN, &compound_assignment_expression_parse},
+    {OR_ASSIGN, &compound_assignment_expression_parse},
+    {SHL_ASSIGN, &compound_assignment_expression_parse},
+    {SHR_ASSIGN, &compound_assignment_expression_parse},
+    {NOT_ASSIGN, &compound_assignment_expression_parse},
+    {XOR_ASSIGN, &compound_assignment_expression_parse},
     {COMMA, &infix_expression_parse},
     {COLON_COLON, &narrow_expression_parse},
     {ORELSE, &infix_expression_parse},
