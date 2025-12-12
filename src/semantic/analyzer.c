@@ -1,4 +1,3 @@
-#include <_stdio.h>
 #include <assert.h>
 
 #include "ast/ast.h"
