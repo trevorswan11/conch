@@ -19,6 +19,10 @@
         node_ptr_to_cast_and_free = NULL;                                            \
     } while (0);
 
+// Casts the input pointer to a node and calls its virtual analyzer
+#define NODE_VIRTUAL_ANALYZE(node_ptr_to_cast, context, errors) \
+    ((Node*)node_ptr_to_cast)->vtable->analyze((Node*)node_ptr_to_cast, context, errors)
+
 typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;
 

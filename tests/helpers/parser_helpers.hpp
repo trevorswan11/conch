@@ -26,6 +26,10 @@ class SBFixture {
     StringBuilder builder;
 };
 
+void check_errors(const ArrayList*         actual_errors,
+                  std::vector<std::string> expected_errors,
+                  bool                     print_anyways);
+
 class ParserFixture {
   public:
     ParserFixture(const char* input);
@@ -40,6 +44,10 @@ class ParserFixture {
     AST*    ast() { return &a; }
     Lexer*  lexer() { return &l; }
 
+    inline void check_errors(std::vector<std::string> expected_errors, bool print_anyways = false) {
+        ::check_errors(&p.errors, expected_errors, print_anyways);
+    }
+
   private:
     Parser p;
     AST    a;
@@ -47,9 +55,7 @@ class ParserFixture {
     FileIO stdio;
 };
 
-void check_parse_errors(Parser*                  p,
-                        std::vector<std::string> expected_errors,
-                        bool                     print_anyways = false);
+void test_reconstruction(const char* input, std::string expected);
 
 // This does not verify any correctness for non-identifiers.
 void test_type_expression(Expression*     expression,
@@ -71,7 +77,6 @@ void test_decl_statement(Statement*      stmt,
                          std::string     expected_type_literal);
 
 template <typename T> void test_number_expression(Expression* expression, T expected_value);
-
 template <typename T> void test_number_expression(const char* input, T expected_value);
 
 void test_bool_expression(Expression* expression, bool expected_value);

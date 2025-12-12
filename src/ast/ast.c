@@ -26,6 +26,16 @@ void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
     array_list_clear_retaining_capacity(errors);
 }
 
+void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
+    assert(free_alloc);
+    if (!errors || !errors->data) {
+        return;
+    }
+
+    clear_error_list(errors, free_alloc);
+    array_list_deinit(errors);
+}
+
 NODISCARD Status ast_init(AST* ast, Allocator allocator) {
     assert(ast);
     ASSERT_ALLOCATOR(allocator);

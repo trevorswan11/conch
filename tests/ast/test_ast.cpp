@@ -5,26 +5,6 @@
 
 #include "parser_helpers.hpp"
 
-extern "C" {
-#include "ast/ast.h"
-#include "util/status.h"
-}
-
-void test_reconstruction(const char* input, std::string expected) {
-    if (!input || expected.empty()) {
-        return;
-    }
-
-    group_expressions = false;
-    ParserFixture pf(input);
-    check_parse_errors(pf.parser(), {}, true);
-
-    SBFixture sb(expected.size());
-    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
-    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
-    REQUIRE(expected == sb.to_string());
-}
-
 TEST_CASE("Declaration reconstructions") {
     SECTION("Simple") {
         test_reconstruction("var my_var := another_var", "var my_var := another_var;");

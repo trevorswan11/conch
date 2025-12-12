@@ -1,26 +1,17 @@
 #pragma once
 
-#include <fstream>
-#include <iostream>
 #include <string>
 
-struct TempFile {
-    TempFile(const std::string& path, const std::string& content) : m_Path(path) {
-        std::ofstream ofs(m_Path, std::ios::binary);
-        ofs.write(content.data(), content.size());
-        ofs.close();
-    }
+class TempFile {
+  public:
+    TempFile(const std::string& path, const std::string& content);
 
-    TempFile(const std::string& path) : m_Path(path) {}
-    ~TempFile() { std::remove(m_Path.c_str()); }
+    TempFile(const std::string& path) : filepath(path) {}
+    ~TempFile() { std::remove(filepath.c_str()); }
 
-    FILE* open(const char* permissions) const {
-        FILE* f = fopen(m_Path.c_str(), permissions);
-        if (!f) {
-            return NULL;
-        }
-        return f;
-    }
+    FILE*              open(const char* permissions);
+    inline std::string path() { return filepath; }
 
-    std::string m_Path;
+  private:
+    std::string filepath;
 };

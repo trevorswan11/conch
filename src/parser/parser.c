@@ -180,8 +180,7 @@ void parser_deinit(Parser* p) {
     }
     ASSERT_ALLOCATOR(p->allocator);
 
-    clear_error_list(&p->errors, p->allocator.free_alloc);
-    array_list_deinit(&p->errors);
+    free_error_list(&p->errors, p->allocator.free_alloc);
     hash_set_deinit(&p->prefix_parse_fns);
     hash_set_deinit(&p->infix_parse_fns);
     hash_set_deinit(&p->primitives);

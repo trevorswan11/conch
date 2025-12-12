@@ -8,12 +8,13 @@ typedef struct AST             AST;
 typedef struct SemanticContext SemanticContext;
 
 typedef struct SemanticAnalyzer {
-    AST*             ast;
+    const AST*       ast;
     SemanticContext* global_ctx;
     ArrayList        errors;
+    Allocator        allocator;
 } SemanticAnalyzer;
 
-NODISCARD Status seman_init(AST* ast, SemanticAnalyzer* analyzer, Allocator allocator);
-void             seman_deinit(SemanticAnalyzer* analyzer, free_alloc_fn free_alloc);
+NODISCARD Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator);
+void             seman_deinit(SemanticAnalyzer* analyzer);
 
 NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer);

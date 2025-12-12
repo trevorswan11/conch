@@ -37,10 +37,10 @@ ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {
     REQUIRE(STATUS_OK(parser_consume(&p, &a)));
 }
 
-void check_parse_errors(Parser* p, std::vector<std::string> expected_errors, bool print_anyways) {
-    const ArrayList* actual_errors = &p->errors;
-    MutSlice         error;
-
+void check_errors(const ArrayList*         actual_errors,
+                  std::vector<std::string> expected_errors,
+                  bool                     print_anyways) {
+    MutSlice error;
     if (actual_errors->length == 0 && expected_errors.size() == 0) {
         return;
     } else if (print_anyways && actual_errors->length != 0) {
@@ -55,8 +55,23 @@ void check_parse_errors(Parser* p, std::vector<std::string> expected_errors, boo
     for (size_t i = 0; i < actual_errors->length; i++) {
         REQUIRE(STATUS_OK(array_list_get(actual_errors, i, &error)));
         std::string expected = expected_errors[i];
-        REQUIRE(mut_slice_equals_str_z(&error, expected.c_str()));
+        REQUIRE(expected == error.ptr);
     }
+}
+
+void test_reconstruction(const char* input, std::string expected) {
+    if (!input || expected.empty()) {
+        return;
+    }
+
+    group_expressions = false;
+    ParserFixture pf(input);
+    pf.check_errors({}, true);
+
+    SBFixture sb(expected.size());
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+    REQUIRE(expected == sb.to_string());
 }
 
 void test_type_expression(Expression*     expression,
@@ -139,7 +154,7 @@ template <typename T> void test_number_expression(const char* input, T expected_
     ParserFixture pf(input);
     auto          ast = pf.ast();
 
-    check_parse_errors(pf.parser(), {}, true);
+    pf.check_errors({}, true);
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;

@@ -18,6 +18,7 @@
 extern bool group_expressions;
 
 void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);
+void free_error_list(ArrayList* errors, free_alloc_fn free_alloc);
 
 typedef struct AST {
     ArrayList statements;

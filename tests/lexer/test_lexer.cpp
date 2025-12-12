@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -690,7 +691,7 @@ TEST_CASE("Token dumping") {
     REQUIRE(STATUS_OK(file_io_init(&io, NULL, out, err)));
 
     REQUIRE(STATUS_OK(lexer_print_tokens(&l, &io)));
-    std::ifstream out_fs(temp_out.m_Path, std::ios::binary);
+    std::ifstream out_fs(temp_out.path(), std::ios::binary);
     std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
                              std::istreambuf_iterator<char>());
 

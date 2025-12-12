@@ -46,11 +46,11 @@ TEST_CASE("REPL with acceptable input") {
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
-    std::ifstream out_fs(temp_out.m_Path, std::ios::binary);
+    std::ifstream out_fs(temp_out.path(), std::ios::binary);
     std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
                              std::istreambuf_iterator<char>());
 
-    std::ifstream err_fs(temp_err.m_Path, std::ios::binary);
+    std::ifstream err_fs(temp_err.path(), std::ios::binary);
     std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
                              std::istreambuf_iterator<char>());
 
@@ -81,11 +81,11 @@ TEST_CASE("REPL with error input") {
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
-    std::ifstream out_fs(temp_out.m_Path, std::ios::binary);
+    std::ifstream out_fs(temp_out.path(), std::ios::binary);
     std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
                              std::istreambuf_iterator<char>());
 
-    std::ifstream err_fs(temp_err.m_Path, std::ios::binary);
+    std::ifstream err_fs(temp_err.path(), std::ios::binary);
     std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
                              std::istreambuf_iterator<char>());
 
@@ -113,7 +113,7 @@ TEST_CASE("REPL with incorrect buffer") {
 
     REQUIRE(repl_run(&io, buf, &output) == Status::TYPE_MISMATCH);
 
-    std::ifstream err_fs(temp_err.m_Path, std::ios::binary);
+    std::ifstream err_fs(temp_err.path(), std::ios::binary);
     std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
                              std::istreambuf_iterator<char>());
     REQUIRE(captured_err.find("ArrayList must be initialized for bytes") != std::string::npos);

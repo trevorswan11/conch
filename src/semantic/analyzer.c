@@ -5,9 +5,10 @@
 #include "ast/statements/statement.h"
 #include "semantic/analyzer.h"
 #include "semantic/context.h"
+#include "util/allocator.h"
 #include "util/status.h"
 
-NODISCARD Status seman_init(AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
+NODISCARD Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
     assert(ast);
     ASSERT_ALLOCATOR(allocator);
 
@@ -22,22 +23,22 @@ NODISCARD Status seman_init(AST* ast, SemanticAnalyzer* analyzer, Allocator allo
         .ast        = ast,
         .global_ctx = global_ctx,
         .errors     = errors,
+        .allocator  = allocator,
     };
 
     *analyzer = seman;
     return SUCCESS;
 }
 
-void seman_deinit(SemanticAnalyzer* analyzer, free_alloc_fn free_alloc) {
+void seman_deinit(SemanticAnalyzer* analyzer) {
     if (!analyzer) {
         return;
     }
+    free_alloc_fn free_alloc = analyzer->allocator.free_alloc;
 
-    ast_deinit(analyzer->ast);
-    analyzer->ast = NULL;
     semantic_context_destroy(analyzer->global_ctx, free_alloc);
     analyzer->global_ctx = NULL;
-    clear_error_list(&analyzer->errors, free_alloc);
+    free_error_list(&analyzer->errors, free_alloc);
 }
 
 NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
@@ -48,7 +49,7 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
     for (size_t i = 0; i < statements->length; i++) {
         UNREACHABLE_IF_ERROR(array_list_get(statements, i, &statement));
         Node* node = (Node*)statement;
-        TRY_IS(node->vtable->analyze(node, analyzer->global_ctx, &analyzer->errors),
+        TRY_IS(NODE_VIRTUAL_ANALYZE(node, analyzer->global_ctx, &analyzer->errors),
                ALLOCATION_FAILED);
     }
 
