@@ -10,7 +10,7 @@
 // An 'owning' dynamic array, data is type erased.
 //
 // Push uses a memcpy, so non-trivial types require special attention.
-typedef struct {
+typedef struct ArrayList {
     void*  data;
     size_t item_size;
     size_t capacity;

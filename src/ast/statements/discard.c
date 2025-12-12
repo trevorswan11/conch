@@ -2,6 +2,12 @@
 
 #include "ast/statements/discard.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status discard_statement_create(Token              start_token,
                                           Expression*        to_discard,
                                           DiscardStatement** discard_stmt,
@@ -47,4 +53,12 @@ NODISCARD Status discard_statement_reconstruct(Node*          node,
 
     TRY(string_builder_append(sb, ';'));
     return SUCCESS;
+}
+
+NODISCARD Status discard_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

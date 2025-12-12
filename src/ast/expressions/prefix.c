@@ -3,6 +3,12 @@
 #include "ast/ast.h"
 #include "ast/expressions/prefix.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status prefix_expression_create(Token              start_token,
                                           Expression*        rhs,
                                           PrefixExpression** prefix_expr,
@@ -56,4 +62,12 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
     }
 
     return SUCCESS;
+}
+
+NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

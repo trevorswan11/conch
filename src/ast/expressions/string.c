@@ -2,6 +2,12 @@
 
 #include "ast/expressions/string.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status string_literal_expression_create(Token                     start_token,
                                                   StringLiteralExpression** string_expr,
                                                   Allocator                 allocator) {
@@ -52,4 +58,14 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
         TRY(string_builder_append(sb, '\n'));
     }
     return SUCCESS;
+}
+
+NODISCARD Status string_literal_expression_analyze(Node*            node,
+                                                   SemanticContext* parent,
+                                                   ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

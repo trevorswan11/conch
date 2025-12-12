@@ -3,6 +3,11 @@
 #include "ast/ast.h"
 #include "ast/expressions/call.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     assert(arguments && arguments->data);
     assert(free_alloc);
@@ -86,4 +91,12 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
     TRY(generics_reconstruct(&call->generics, symbol_map, sb));
 
     return SUCCESS;
+}
+
+NODISCARD Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

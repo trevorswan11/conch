@@ -18,8 +18,6 @@
 #include "util/io.h"
 #include "util/status.h"
 
-void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);
-
 typedef struct Parser {
     Lexer* lexer;
     size_t lexer_index;

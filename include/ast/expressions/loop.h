@@ -8,8 +8,6 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct BlockStatement BlockStatement;
@@ -41,12 +39,16 @@ void             for_loop_expression_destroy(Node* node, free_alloc_fn free_allo
 NODISCARD Status for_loop_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb);
+NODISCARD Status for_loop_expression_analyze(Node*            node,
+                                             SemanticContext* parent,
+                                             ArrayList*       errors);
 
 static const ExpressionVTable FOR_VTABLE = {
     .base =
         {
             .destroy     = for_loop_expression_destroy,
             .reconstruct = for_loop_expression_reconstruct,
+            .analyze     = for_loop_expression_analyze,
         },
 };
 
@@ -70,12 +72,16 @@ void             while_loop_expression_destroy(Node* node, free_alloc_fn free_al
 NODISCARD Status while_loop_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb);
+NODISCARD Status while_loop_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors);
 
 static const ExpressionVTable WHILE_VTABLE = {
     .base =
         {
             .destroy     = while_loop_expression_destroy,
             .reconstruct = while_loop_expression_reconstruct,
+            .analyze     = while_loop_expression_analyze,
         },
 };
 
@@ -95,11 +101,15 @@ void             do_while_loop_expression_destroy(Node* node, free_alloc_fn free
 NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb);
+NODISCARD Status do_while_loop_expression_analyze(Node*            node,
+                                                  SemanticContext* parent,
+                                                  ArrayList*       errors);
 
 static const ExpressionVTable DO_WHILE_VTABLE = {
     .base =
         {
             .destroy     = do_while_loop_expression_destroy,
             .reconstruct = do_while_loop_expression_reconstruct,
+            .analyze     = do_while_loop_expression_analyze,
         },
 };

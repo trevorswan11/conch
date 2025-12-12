@@ -2,6 +2,12 @@
 
 #include "ast/expressions/if.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status if_expression_create(Token           start_token,
                                       Expression*     condition,
                                       Statement*      consequence,
@@ -67,4 +73,12 @@ NODISCARD Status if_expression_reconstruct(Node*          node,
     }
 
     return SUCCESS;
+}
+
+NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

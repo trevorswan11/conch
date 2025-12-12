@@ -86,7 +86,7 @@ typedef struct {
 // A HashMap based on open addressing and linear probing. This is not thread-safe.
 //
 // Operations that grow the map or rehash its entries invalidate all pointers.
-typedef struct {
+typedef struct HashMap {
     size_t     size;
     size_t     available;
     void*      buffer;

@@ -3,6 +3,12 @@
 #include "ast/ast.h"
 #include "ast/expressions/assignment.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 #define ASSIGNMENT_FREE(type)                  \
     ASSERT_NODE(node);                         \
     assert(free_alloc);                        \
@@ -67,6 +73,16 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
+NODISCARD Status assignment_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}
+
 NODISCARD Status compound_assignment_expression_create(Token                          start_token,
                                                        Expression*                    lhs,
                                                        TokenType                      op,
@@ -124,4 +140,14 @@ NODISCARD Status compound_assignment_expression_reconstruct(Node*          node,
     }
 
     return SUCCESS;
+}
+
+NODISCARD Status compound_assignment_expression_analyze(Node*            node,
+                                                        SemanticContext* parent,
+                                                        ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

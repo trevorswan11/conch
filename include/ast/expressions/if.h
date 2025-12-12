@@ -9,8 +9,6 @@
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct IfExpression {
@@ -31,11 +29,13 @@ void             if_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status if_expression_reconstruct(Node*          node,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb);
+NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable IF_VTABLE = {
     .base =
         {
             .destroy     = if_expression_destroy,
             .reconstruct = if_expression_reconstruct,
+            .analyze     = if_expression_analyze,
         },
 };

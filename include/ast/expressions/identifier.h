@@ -6,8 +6,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/mem.h"
 #include "util/status.h"
 
@@ -25,11 +23,15 @@ void             identifier_expression_destroy(Node* node, free_alloc_fn free_al
 NODISCARD Status identifier_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb);
+NODISCARD Status identifier_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =
         {
             .destroy     = identifier_expression_destroy,
             .reconstruct = identifier_expression_reconstruct,
+            .analyze     = identifier_expression_analyze,
         },
 };

@@ -3,6 +3,12 @@
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/narrow.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status narrow_expression_create(Token                 start_token,
                                           Expression*           outer,
                                           IdentifierExpression* inner,
@@ -54,4 +60,12 @@ NODISCARD Status narrow_expression_reconstruct(Node*          node,
     TRY(inner->vtable->reconstruct(inner, symbol_map, sb));
 
     return SUCCESS;
+}
+
+NODISCARD Status narrow_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

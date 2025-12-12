@@ -3,6 +3,12 @@
 #include "ast/ast.h"
 #include "ast/statements/block.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status block_statement_create(Token            start_token,
                                         BlockStatement** block_stmt,
                                         Allocator        allocator) {
@@ -56,6 +62,14 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
 
     TRY(string_builder_append_str_z(sb, " }"));
     return SUCCESS;
+}
+
+NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }
 
 NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt) {

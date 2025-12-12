@@ -7,8 +7,6 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct BlockStatement {
@@ -24,12 +22,14 @@ void             block_statement_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status block_statement_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb);
+NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable BLOCK_VTABLE = {
     .base =
         {
             .destroy     = block_statement_destroy,
             .reconstruct = block_statement_reconstruct,
+            .analyze     = block_statement_analyze,
         },
 };
 

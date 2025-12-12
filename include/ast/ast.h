@@ -17,6 +17,8 @@
 // This can be useful for verifying operator precedence, but is disabled by default.
 extern bool group_expressions;
 
+void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);
+
 typedef struct AST {
     ArrayList statements;
     HashMap   token_type_symbols;

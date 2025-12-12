@@ -2,6 +2,11 @@
 
 #include "ast/expressions/match.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     assert(arms && arms->item_size == sizeof(MatchArm));
     assert(free_alloc);
@@ -85,4 +90,12 @@ NODISCARD Status match_expression_reconstruct(Node*          node,
 
     TRY(string_builder_append_str_z(sb, "}"));
     return SUCCESS;
+}
+
+NODISCARD Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

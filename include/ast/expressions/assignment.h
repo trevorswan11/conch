@@ -6,8 +6,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct AssignmentExpression {
@@ -26,12 +24,16 @@ void             assignment_expression_destroy(Node* node, free_alloc_fn free_al
 NODISCARD Status assignment_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb);
+NODISCARD Status assignment_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors);
 
 static const ExpressionVTable ASSIGNMENT_VTABLE = {
     .base =
         {
             .destroy     = assignment_expression_destroy,
             .reconstruct = assignment_expression_reconstruct,
+            .analyze     = assignment_expression_analyze,
         },
 };
 
@@ -53,11 +55,15 @@ void             compound_assignment_expression_destroy(Node* node, free_alloc_f
 NODISCARD Status compound_assignment_expression_reconstruct(Node*          node,
                                                             const HashMap* symbol_map,
                                                             StringBuilder* sb);
+NODISCARD Status compound_assignment_expression_analyze(Node*            node,
+                                                        SemanticContext* parent,
+                                                        ArrayList*       errors);
 
 static const ExpressionVTable COMPOUND_ASSIGNMENT_VTABLE = {
     .base =
         {
             .destroy     = compound_assignment_expression_destroy,
             .reconstruct = compound_assignment_expression_reconstruct,
+            .analyze     = compound_assignment_expression_analyze,
         },
 };

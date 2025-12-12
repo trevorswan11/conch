@@ -8,8 +8,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc);
@@ -17,14 +15,6 @@ void integer_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status integer_expression_reconstruct(Node*          node,
                                                 const HashMap* symbol_map,
                                                 StringBuilder* sb);
-
-static const ExpressionVTable INTEGER_VTABLE = {
-    .base =
-        {
-            .destroy     = integer_expression_destroy,
-            .reconstruct = integer_expression_reconstruct,
-        },
-};
 
 typedef struct IntegerLiteralExpression {
     Expression base;
@@ -36,6 +26,19 @@ NODISCARD Status integer_literal_expression_create(Token                      st
                                                    IntegerLiteralExpression** int_expr,
                                                    memory_alloc_fn            memory_alloc);
 
+NODISCARD Status integer_literal_expression_analyze(Node*            node,
+                                                    SemanticContext* parent,
+                                                    ArrayList*       errors);
+
+static const ExpressionVTable INTEGER_VTABLE = {
+    .base =
+        {
+            .destroy     = integer_expression_destroy,
+            .reconstruct = integer_expression_reconstruct,
+            .analyze     = integer_literal_expression_analyze,
+        },
+};
+
 typedef struct UnsignedIntegerLiteralExpression {
     Expression base;
     uint64_t   value;
@@ -46,7 +49,18 @@ NODISCARD Status uinteger_literal_expression_create(Token                       
                                                     UnsignedIntegerLiteralExpression** int_expr,
                                                     memory_alloc_fn memory_alloc);
 
-void uinteger_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
+                                                     SemanticContext* parent,
+                                                     ArrayList*       errors);
+
+static const ExpressionVTable UINTEGER_VTABLE = {
+    .base =
+        {
+            .destroy     = integer_expression_destroy,
+            .reconstruct = integer_expression_reconstruct,
+            .analyze     = uinteger_literal_expression_analyze,
+        },
+};
 
 typedef struct ByteLiteralExpression {
     Expression base;
@@ -57,3 +71,16 @@ NODISCARD Status byte_literal_expression_create(Token                   start_to
                                                 uint8_t                 value,
                                                 ByteLiteralExpression** byte_expr,
                                                 memory_alloc_fn         memory_alloc);
+
+NODISCARD Status byte_literal_expression_analyze(Node*            node,
+                                                 SemanticContext* parent,
+                                                 ArrayList*       errors);
+
+static const ExpressionVTable BYTE_VTABLE = {
+    .base =
+        {
+            .destroy     = integer_expression_destroy,
+            .reconstruct = integer_expression_reconstruct,
+            .analyze     = byte_literal_expression_analyze,
+        },
+};

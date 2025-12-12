@@ -3,8 +3,6 @@
 #include "lexer/token.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 #define ASSERT_NODE(node) \
@@ -24,9 +22,16 @@
 typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;
 
+typedef struct HashMap       HashMap;
+typedef struct StringBuilder StringBuilder;
+
+typedef struct ArrayList       ArrayList;
+typedef struct SemanticContext SemanticContext;
+
 struct NodeVTable {
     void (*destroy)(Node*, free_alloc_fn);
     NODISCARD Status (*reconstruct)(Node*, const HashMap*, StringBuilder*);
+    NODISCARD Status (*analyze)(Node*, SemanticContext*, ArrayList*);
 };
 
 struct Node {

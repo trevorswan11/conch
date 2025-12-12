@@ -6,8 +6,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct InfixExpression {
@@ -28,11 +26,13 @@ void             infix_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status infix_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb);
+NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable INFIX_VTABLE = {
     .base =
         {
             .destroy     = infix_expression_destroy,
             .reconstruct = infix_expression_reconstruct,
+            .analyze     = infix_expression_analyze,
         },
 };

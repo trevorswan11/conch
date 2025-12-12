@@ -2,6 +2,12 @@
 
 #include "ast/expressions/bool.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status bool_literal_expression_create(Token                   start_token,
                                                 BoolLiteralExpression** bool_expr,
                                                 memory_alloc_fn         memory_alloc) {
@@ -40,4 +46,14 @@ NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
     TRY(string_builder_append_str_z(sb, bool_expr->value ? "true" : "false"));
     return SUCCESS;
+}
+
+NODISCARD Status bool_literal_expression_analyze(Node*            node,
+                                                 SemanticContext* parent,
+                                                 ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

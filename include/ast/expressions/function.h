@@ -11,8 +11,6 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct IdentifierExpression IdentifierExpression;
@@ -55,11 +53,15 @@ void             function_expression_destroy(Node* node, free_alloc_fn free_allo
 NODISCARD Status function_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb);
+NODISCARD Status function_expression_analyze(Node*            node,
+                                             SemanticContext* parent,
+                                             ArrayList*       errors);
 
 static const ExpressionVTable FUNCTION_VTABLE = {
     .base =
         {
             .destroy     = function_expression_destroy,
             .reconstruct = function_expression_reconstruct,
+            .analyze     = function_expression_analyze,
         },
 };

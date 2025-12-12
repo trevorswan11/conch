@@ -6,8 +6,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct {
@@ -24,11 +22,15 @@ void             float_literal_expression_destroy(Node* node, free_alloc_fn free
 NODISCARD Status float_literal_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb);
+NODISCARD Status float_literal_expression_analyze(Node*            node,
+                                                  SemanticContext* parent,
+                                                  ArrayList*       errors);
 
 static const ExpressionVTable FLOAT_VTABLE = {
     .base =
         {
             .destroy     = float_literal_expression_destroy,
             .reconstruct = float_literal_expression_reconstruct,
+            .analyze     = float_literal_expression_analyze,
         },
 };

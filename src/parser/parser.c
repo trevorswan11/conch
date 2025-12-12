@@ -9,6 +9,7 @@
 #include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
+#include "ast/ast.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
@@ -98,21 +99,6 @@ static inline NODISCARD Status _init_precedences(HashMap* precedence_map, Alloca
     }
 
     return SUCCESS;
-}
-
-void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
-    if (!errors) {
-        return;
-    }
-    assert(free_alloc);
-
-    MutSlice error;
-    for (size_t i = 0; i < errors->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(errors, i, &error));
-        free_alloc(error.ptr);
-    }
-
-    array_list_clear_retaining_capacity(errors);
 }
 
 NODISCARD Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {

@@ -8,6 +8,11 @@
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status allocate_parameter_list(Parser*    p,
                                          ArrayList* parameters,
                                          bool*      contains_default_param) {
@@ -223,4 +228,14 @@ NODISCARD Status function_expression_reconstruct(Node*          node,
     TRY(block_statement_reconstruct((Node*)func->body, symbol_map, sb));
 
     return SUCCESS;
+}
+
+NODISCARD Status function_expression_analyze(Node*            node,
+                                             SemanticContext* parent,
+                                             ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

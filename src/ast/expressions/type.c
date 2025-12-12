@@ -7,6 +7,11 @@
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 NODISCARD Status type_expression_create(Token            start_token,
                                         TypeTag          tag,
                                         TypeUnion        variant,
@@ -87,6 +92,14 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
         TRY(string_builder_append_str_z(sb, " :"));
     }
     return SUCCESS;
+}
+
+NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }
 
 NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,

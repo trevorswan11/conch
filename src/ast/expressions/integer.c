@@ -2,6 +2,12 @@
 
 #include "ast/expressions/integer.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 #define INTEGER_EXPR_CREATE(type, custom_vtab, out_expr)    \
     assert(memory_alloc);                                   \
     assert(start_token.slice.ptr);                          \
@@ -43,16 +49,46 @@ NODISCARD Status integer_literal_expression_create(Token                      st
     INTEGER_EXPR_CREATE(IntegerLiteralExpression, INTEGER_VTABLE, int_expr);
 }
 
+NODISCARD Status integer_literal_expression_analyze(Node*            node,
+                                                    SemanticContext* parent,
+                                                    ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}
+
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
                                                     uint64_t                           value,
                                                     UnsignedIntegerLiteralExpression** int_expr,
                                                     memory_alloc_fn memory_alloc) {
-    INTEGER_EXPR_CREATE(UnsignedIntegerLiteralExpression, INTEGER_VTABLE, int_expr);
+    INTEGER_EXPR_CREATE(UnsignedIntegerLiteralExpression, UINTEGER_VTABLE, int_expr);
+}
+
+NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
+                                                     SemanticContext* parent,
+                                                     ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }
 
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
                                                 uint8_t                 value,
                                                 ByteLiteralExpression** byte_expr,
                                                 memory_alloc_fn         memory_alloc) {
-    INTEGER_EXPR_CREATE(ByteLiteralExpression, INTEGER_VTABLE, byte_expr);
+    INTEGER_EXPR_CREATE(ByteLiteralExpression, BYTE_VTABLE, byte_expr);
+}
+
+NODISCARD Status byte_literal_expression_analyze(Node*            node,
+                                                 SemanticContext* parent,
+                                                 ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

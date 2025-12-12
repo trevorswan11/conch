@@ -2,6 +2,12 @@
 
 #include "ast/expressions/single.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 #define SINGLE_STMT_CREATE(type, custom_vtab, out_expr)            \
     assert(memory_alloc);                                          \
     type* temp = memory_alloc(sizeof(type));                       \
@@ -39,6 +45,14 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
     SINGLE_STMT_RECONSTRUCT("nil");
 }
 
+NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}
+
 NODISCARD Status ignore_expression_create(Token              start_token,
                                           IgnoreExpression** ignore_expr,
                                           memory_alloc_fn    memory_alloc) {
@@ -49,4 +63,12 @@ NODISCARD Status ignore_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
     SINGLE_STMT_RECONSTRUCT("_");
+}
+
+NODISCARD Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

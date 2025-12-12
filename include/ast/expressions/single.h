@@ -6,8 +6,6 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 void single_expression_destroy(Node* node, free_alloc_fn free_alloc);
@@ -23,12 +21,14 @@ NODISCARD Status nil_expression_create(Token           start_token,
 NODISCARD Status nil_expression_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb);
+NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable NIL_VTABLE = {
     .base =
         {
             .destroy     = single_expression_destroy,
             .reconstruct = nil_expression_reconstruct,
+            .analyze     = nil_expression_analyze,
         },
 };
 
@@ -43,11 +43,13 @@ NODISCARD Status ignore_expression_create(Token              start_token,
 NODISCARD Status ignore_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb);
+NODISCARD Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable IGNORE_VTABLE = {
     .base =
         {
             .destroy     = single_expression_destroy,
             .reconstruct = ignore_expression_reconstruct,
+            .analyze     = ignore_expression_analyze,
         },
 };

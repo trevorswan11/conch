@@ -7,8 +7,7 @@
 #include "ast/node.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
+#include "util/containers/array_list.h"
 #include "util/status.h"
 
 static const Keyword ALL_PRIMITIVES[] = {
@@ -97,12 +96,14 @@ void             type_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status type_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb);
+NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable TYPE_VTABLE = {
     .base =
         {
             .destroy     = type_expression_destroy,
             .reconstruct = type_expression_reconstruct,
+            .analyze     = type_expression_analyze,
         },
 };
 

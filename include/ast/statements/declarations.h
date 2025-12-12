@@ -7,8 +7,6 @@
 #include "ast/statements/statement.h"
 
 #include "util/allocator.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct IdentifierExpression IdentifierExpression;
@@ -33,12 +31,14 @@ void             decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status decl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb);
+NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
         {
             .destroy     = decl_statement_destroy,
             .reconstruct = decl_statement_reconstruct,
+            .analyze     = decl_statement_analyze,
         },
 };
 
@@ -60,11 +60,15 @@ void             type_decl_statement_destroy(Node* node, free_alloc_fn free_allo
 NODISCARD Status type_decl_statement_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb);
+NODISCARD Status type_decl_statement_analyze(Node*            node,
+                                             SemanticContext* parent,
+                                             ArrayList*       errors);
 
 static const StatementVTable TYPE_DECL_VTABLE = {
     .base =
         {
             .destroy     = type_decl_statement_destroy,
             .reconstruct = type_decl_statement_reconstruct,
+            .analyze     = type_decl_statement_analyze,
         },
 };

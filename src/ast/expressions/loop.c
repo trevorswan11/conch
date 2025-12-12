@@ -4,6 +4,11 @@
 #include "ast/expressions/loop.h"
 #include "ast/statements/block.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     assert(captures && captures->data);
     assert(free_alloc);
@@ -115,6 +120,16 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
+NODISCARD Status for_loop_expression_analyze(Node*            node,
+                                             SemanticContext* parent,
+                                             ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}
+
 NODISCARD Status while_loop_expression_create(Token                 start_token,
                                               Expression*           condition,
                                               Expression*           continuation,
@@ -188,6 +203,16 @@ NODISCARD Status while_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
+NODISCARD Status while_loop_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}
+
 NODISCARD Status do_while_loop_expression_create(Token                   start_token,
                                                  BlockStatement*         block,
                                                  Expression*             condition,
@@ -237,4 +262,14 @@ NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
     TRY(string_builder_append(sb, ')'));
 
     return SUCCESS;
+}
+
+NODISCARD Status do_while_loop_expression_analyze(Node*            node,
+                                                  SemanticContext* parent,
+                                                  ArrayList*       errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

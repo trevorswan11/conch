@@ -11,6 +11,21 @@
 
 bool group_expressions = false;
 
+void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
+    if (!errors) {
+        return;
+    }
+    assert(free_alloc);
+
+    MutSlice error;
+    for (size_t i = 0; i < errors->length; i++) {
+        UNREACHABLE_IF_ERROR(array_list_get(errors, i, &error));
+        free_alloc(error.ptr);
+    }
+
+    array_list_clear_retaining_capacity(errors);
+}
+
 NODISCARD Status ast_init(AST* ast, Allocator allocator) {
     assert(ast);
     ASSERT_ALLOCATOR(allocator);

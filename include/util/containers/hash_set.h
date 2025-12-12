@@ -41,7 +41,7 @@ typedef struct {
 // While you can use a HashSet with an arbitrary value, this is more memory efficient.
 //
 // Operations that grow the map or rehash its entries invalidate all pointers.
-typedef struct {
+typedef struct HashSet {
     size_t     size;
     size_t     available;
     void*      buffer;

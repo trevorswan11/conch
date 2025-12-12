@@ -5,6 +5,11 @@
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);
     assert(free_alloc);
@@ -91,4 +96,12 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
 
     TRY(string_builder_append(sb, '}'));
     return SUCCESS;
+}
+
+NODISCARD Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }

@@ -7,8 +7,6 @@
 
 #include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
-#include "util/containers/string_builder.h"
 #include "util/status.h"
 
 typedef struct UnsignedIntegerLiteralExpression UnsignedIntegerLiteralExpression;
@@ -29,11 +27,15 @@ void             array_literal_expression_destroy(Node* node, free_alloc_fn free
 NODISCARD Status array_literal_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb);
+NODISCARD Status array_literal_expression_analyze(Node*            node,
+                                                  SemanticContext* parent,
+                                                  ArrayList*       errors);
 
 static const ExpressionVTable ARRAY_VTABLE = {
     .base =
         {
             .destroy     = array_literal_expression_destroy,
             .reconstruct = array_literal_expression_reconstruct,
+            .analyze     = array_literal_expression_analyze,
         },
 };

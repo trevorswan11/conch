@@ -3,6 +3,11 @@
 #include "ast/expressions/enum.h"
 #include "ast/expressions/identifier.h"
 
+#include "semantic/context.h"
+
+#include "util/containers/hash_map.h"
+#include "util/containers/string_builder.h"
+
 void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     assert(variants);
     assert(free_alloc);
@@ -74,4 +79,12 @@ NODISCARD Status enum_expression_reconstruct(Node*          node,
 
     TRY(string_builder_append(sb, '}'));
     return SUCCESS;
+}
+
+NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    assert(node && parent && errors);
+    MAYBE_UNUSED(node);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
 }
