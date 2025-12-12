@@ -1,0 +1,63 @@
+Filename                                 Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+include/parser/expression_parsers.h           18                 1    94.44%           6                 0   100.00%          44                 6    86.36%           4                 1    75.00%
+include/parser/precedence.h                    1                 0   100.00%           1                 0   100.00%           3                 0   100.00%           0                 0         -
+include/util/alphanum.h                       17                 0   100.00%           3                 0   100.00%           9                 0   100.00%          24                 1    95.83%
+include/util/containers/hash_map.h            10                 0   100.00%           8                 0   100.00%          15                 0   100.00%           4                 0   100.00%
+include/util/math.h                            6                 0   100.00%           1                 0   100.00%          13                 0   100.00%           4                 0   100.00%
+include/util/mem.h                             1                 0   100.00%           1                 0   100.00%           3                 0   100.00%           0                 0         -
+src/ast/ast.c                                243                42    82.72%          11                 0   100.00%         141                10    92.91%          68                24    64.71%
+src/ast/expressions/array.c                   89                20    77.53%           4                 1    75.00%          51                 9    82.35%          24                10    58.33%
+src/ast/expressions/assignment.c             166                44    73.49%           8                 2    75.00%          90                26    71.11%          52                30    42.31%
+src/ast/expressions/bool.c                    34                 8    76.47%           4                 1    75.00%          35                 9    74.29%           6                 3    50.00%
+src/ast/expressions/call.c                   126                26    79.37%           5                 1    80.00%          68                 9    86.76%          40                15    62.50%
+src/ast/expressions/enum.c                   104                24    76.92%           5                 1    80.00%          59                 9    84.75%          28                10    64.29%
+src/ast/expressions/float.c                   31                 7    77.42%           4                 1    75.00%          34                 9    73.53%           4                 2    50.00%
+src/ast/expressions/function.c               294                63    78.57%           7                 1    85.71%         165                 9    94.55%         104                43    58.65%
+src/ast/expressions/identifier.c              31                 7    77.42%           4                 1    75.00%          36                 9    75.00%           4                 2    50.00%
+src/ast/expressions/if.c                      97                14    85.57%           4                 1    75.00%          53                 9    83.02%          32                14    56.25%
+src/ast/expressions/infix.c                   85                13    84.71%           4                 1    75.00%          52                 9    82.69%          28                12    57.14%
+src/ast/expressions/integer.c                 67                19    71.64%           8                 3    62.50%          42                21    50.00%           8                 4    50.00%
+src/ast/expressions/loop.c                   365                64    82.47%          13                 3    76.92%         182                27    85.16%         124                49    60.48%
+src/ast/expressions/match.c                  129                26    79.84%           5                 1    80.00%          66                 9    86.36%          38                17    55.26%
+src/ast/expressions/narrow.c                  57                 9    84.21%           4                 1    75.00%          42                 9    78.57%          16                 8    50.00%
+src/ast/expressions/prefix.c                  61                10    83.61%           4                 1    75.00%          46                 9    80.43%          18                 7    61.11%
+src/ast/expressions/single.c                  60                14    76.67%           7                 2    71.43%          31                14    54.84%           8                 4    50.00%
+src/ast/expressions/string.c                  61                10    83.61%           4                 1    75.00%          44                 9    79.55%          16                 6    62.50%
+src/ast/expressions/struct.c                 136                29    78.68%           5                 1    80.00%          71                 9    87.32%          40                15    62.50%
+src/ast/expressions/type.c                   250                40    84.00%           5                 1    80.00%         134                14    89.55%         112                37    66.96%
+src/ast/statements/block.c                    86                17    80.23%           5                 1    80.00%          50                 9    82.00%          16                 7    56.25%
+src/ast/statements/declarations.c            186                23    87.63%           8                 1    87.50%         112                14    87.50%          66                28    57.58%
+src/ast/statements/discard.c                  49                 9    81.63%           4                 1    75.00%          38                 9    76.32%          12                 6    50.00%
+src/ast/statements/expression.c               37                 7    81.08%           4                 1    75.00%          36                 9    75.00%           8                 4    50.00%
+src/ast/statements/impl.c                     68                11    83.82%           4                 1    75.00%          41                 9    78.05%          20                10    50.00%
+src/ast/statements/import.c                  100                24    76.00%           4                 1    75.00%          61                10    83.61%          40                14    65.00%
+src/ast/statements/jump.c                     75                12    84.00%           4                 1    75.00%          48                 9    81.25%          26                 9    65.38%
+src/evaluate/program.c                       112                17    84.82%           4                 0   100.00%          72                 4    94.44%          42                17    59.52%
+src/evaluate/repl.c                          156                50    67.95%           4                 2    50.00%          92                32    65.22%          74                42    43.24%
+src/lexer/lexer.c                            398                26    93.47%          20                 0   100.00%         427                19    95.55%         282                46    83.69%
+src/lexer/token.c                            103                19    81.55%          10                 1    90.00%         117                 6    94.87%          88                15    82.95%
+src/parser/expression_parsers.c             2258               734    67.49%          30                 0   100.00%        1184                29    97.55%         910               456    49.89%
+src/parser/parser.c                          423                54    87.23%          22                 1    95.45%         295                 9    96.95%         142                46    67.61%
+src/parser/statement_parsers.c               565               196    65.31%           8                 0   100.00%         235                20    91.49%         188               100    46.81%
+src/semantic/analyzer.c                       50                10    80.00%           3                 0   100.00%          38                 2    94.74%          12                 5    58.33%
+src/semantic/context.c                        22                 3    86.36%           2                 0   100.00%          22                 4    81.82%           6                 3    50.00%
+src/semantic/symbol.c                         29                10    65.52%           4                 2    50.00%          41                15    63.41%           8                 5    37.50%
+src/util/alphanum.c                           99                 1    98.99%           4                 0   100.00%          65                 2    96.92%          68                 7    89.71%
+src/util/containers/array_list.c             192                10    94.79%          27                 0   100.00%         248                 9    96.37%          74                13    82.43%
+src/util/containers/hash_map.c               284                31    89.08%          28                 1    96.43%         437                49    88.79%         134                25    81.34%
+src/util/containers/hash_set.c               253                29    88.54%          25                 1    96.00%         364                41    88.74%         122                22    81.97%
+src/util/containers/string_builder.c          86                10    88.37%          11                 0   100.00%          87                 5    94.25%          34                10    70.59%
+src/util/hash.c                               22                 0   100.00%           7                 0   100.00%          45                 0   100.00%          10                 0   100.00%
+src/util/io.c                                  9                 0   100.00%           3                 0   100.00%          26                 0   100.00%           4                 0   100.00%
+src/util/math.c                               22                 0   100.00%           7                 0   100.00%          46                 0   100.00%          10                 0   100.00%
+src/util/mem.c                                72                 1    98.61%          19                 0   100.00%          86                 2    97.67%          44                 8    81.82%
+
+Files which contain no functions:
+include/ast/expressions/expression.h           0                 0         -           0                 0         -           0                 0         -           0                 0         -
+include/ast/node.h                             0                 0         -           0                 0         -           0                 0         -           0                 0         -
+include/ast/statements/statement.h             0                 0         -           0                 0         -           0                 0         -           0                 0         -
+include/evaluate/repl.h                        0                 0         -           0                 0         -           0                 0         -           0                 0         -
+include/util/allocator.h                       0                 0         -           0                 0         -           0                 0         -           0                 0         -
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TOTAL                                       8295              1794    78.37%         406                40    90.15%        5842               561    90.40%        3246              1212    62.66%
