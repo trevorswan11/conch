@@ -60,7 +60,7 @@ TEST_CASE("Declarations") {
                               "var y := 10;\n"
                               "var foobar := 838383;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto        ast                    = pf.ast();
         const char* expected_identifiers[] = {"x", "y", "foobar"};
@@ -96,7 +96,7 @@ TEST_CASE("Declarations") {
                               "const y := 10;\n"
                               "var foobar := 838383;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto        ast                    = pf.ast();
         const char* expected_identifiers[] = {"x", "y", "foobar"};
@@ -118,7 +118,7 @@ TEST_CASE("Declarations") {
                               "var baz: ?LongNum = 838383;\n"
                               "const boo: Conch = 2;\n";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         std::string expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
         bool        is_const[]             = {false, false, true, false, false, true};
@@ -160,7 +160,7 @@ TEST_CASE("Jump statements") {
                               "break 10;\n"
                               "return 993322;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 5);
@@ -180,7 +180,7 @@ TEST_CASE("Jump statements") {
     SECTION("Returns w/o sentinel semicolon") {
         const char*   input = "return 5";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
         auto ast = pf.ast();
 
         REQUIRE(ast->statements.length == 1);
@@ -193,7 +193,7 @@ TEST_CASE("Jump statements") {
     SECTION("Breaks w/o sentinel semicolon") {
         const char*   input = "break -5";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
         auto ast = pf.ast();
 
         REQUIRE(ast->statements.length == 1);
@@ -208,7 +208,7 @@ TEST_CASE("Jump statements") {
         SECTION("Correctly without value") {
             const char*   input = "continue";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
             auto ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
@@ -221,7 +221,7 @@ TEST_CASE("Jump statements") {
         SECTION("Incorrectly with value") {
             const char*   input = "continue 2";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
             auto ast = pf.ast();
 
             REQUIRE(ast->statements.length == 2);
@@ -241,7 +241,7 @@ TEST_CASE("Identifier Expressions") {
     SECTION("Single arbitrary identifier") {
         const char*   input = "foobar;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -280,7 +280,7 @@ TEST_CASE("Number-based expressions") {
     SECTION("Bytes") {
         const auto test_byte_expression = [](const char* input, uint8_t expected) {
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -328,7 +328,7 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -402,7 +402,7 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         const auto test_infix = []<typename T>(TestCase t) {
             ParserFixture pf(t.input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -448,7 +448,7 @@ TEST_CASE("Basic prefix / infix expressions") {
 
     SECTION("Namespace / narrow expressions") {
         ParserFixture pf("Outer::inner");
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -496,7 +496,7 @@ TEST_CASE("Basic prefix / infix expressions") {
         for (const auto& t : cases) {
             group_expressions = true;
             ParserFixture pf(t.input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             SBFixture sb(t.expected.length());
             REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
@@ -510,7 +510,7 @@ TEST_CASE("Bool expressions") {
         const char*   input = "true;\n"
                               "false;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 2);
@@ -533,7 +533,7 @@ TEST_CASE("String expressions") {
                               "\"Hello, 'World'!\";\n"
                               "\"\";";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
@@ -563,7 +563,7 @@ TEST_CASE("String expressions") {
                               "\\\\\n"
                               ";";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
@@ -589,7 +589,7 @@ TEST_CASE("Conditional expressions") {
     SECTION("If without alternate") {
         const char*   input = "if (x < y) { x }";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -616,7 +616,7 @@ TEST_CASE("Conditional expressions") {
     SECTION("If with alternate") {
         const char*   input = "if (x < y) { x } else { y }";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -649,7 +649,7 @@ TEST_CASE("Conditional expressions") {
     SECTION("If/Else with non-block assignment") {
         const char*   input = "const val := if (x >= y) 1 else 2;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -678,7 +678,7 @@ TEST_CASE("Conditional expressions") {
     SECTION("If/Else with return statement") {
         const char*   input = "if (true) return 1; else return 2;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -703,7 +703,7 @@ TEST_CASE("Conditional expressions") {
     SECTION("If/Else with nested ifs and terminal else") {
         const char* input = "if (x < y) {return -1;} else if (x > y) {return 1;} else {return 0;}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -803,7 +803,7 @@ TEST_CASE("Function literals") {
 
             const char*   input = "var add: fn(ref a: int, b: int): int;";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
             auto ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
@@ -892,7 +892,7 @@ TEST_CASE("Function literals") {
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
-            pf.check_errors({}, true);
+            pf.check_errors();
             auto ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
@@ -928,7 +928,7 @@ TEST_CASE("Function literals") {
     SECTION("Call expression with identifier function") {
         const char*   input = "add(1, 2 * 3, ref w, 4 + 5);";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1019,7 +1019,7 @@ TEST_CASE("Enum declarations") {
             const auto  expected_variants = expected_variants_lists[test_idx];
 
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1039,7 +1039,7 @@ TEST_CASE("Enum declarations") {
             {"RED"}, {"BLUE", 100}, {"GREEN"}};
 
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1065,7 +1065,7 @@ TEST_CASE("Enum declarations") {
         SECTION("Empty enum body") {
             const char*   input = "enum {}";
             ParserFixture pf(input);
-            pf.check_errors({"ENUM_MISSING_VARIANTS [Ln 1, Col 1]"}, false);
+            pf.check_errors({"ENUM_MISSING_VARIANTS [Ln 1, Col 1]"});
         }
 
         SECTION("Missing trailing comma") {
@@ -1152,7 +1152,7 @@ TEST_CASE("Struct declarations") {
             const auto  expected_members = expected_member_lists[test_idx];
 
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1172,7 +1172,7 @@ TEST_CASE("Struct declarations") {
                                                                         {"b", "uint", true}};
 
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1198,13 +1198,13 @@ TEST_CASE("Struct declarations") {
         SECTION("Empty struct body") {
             const char*   input = "struct {}";
             ParserFixture pf(input);
-            pf.check_errors({"STRUCT_MISSING_MEMBERS [Ln 1, Col 1]"}, false);
+            pf.check_errors({"STRUCT_MISSING_MEMBERS [Ln 1, Col 1]"});
         }
 
         SECTION("Missing trailing comma") {
             const char*   input = "struct { a: int, b: int }";
             ParserFixture pf(input);
-            pf.check_errors({"MISSING_TRAILING_COMMA [Ln 1, Col 25]"}, false);
+            pf.check_errors({"MISSING_TRAILING_COMMA [Ln 1, Col 25]"});
         }
 
         SECTION("Missing internal comma") {
@@ -1252,7 +1252,7 @@ TEST_CASE("Struct declarations") {
 TEST_CASE("Nil expressions") {
     const char*   input = "nil";
     ParserFixture pf(input);
-    pf.check_errors({}, true);
+    pf.check_errors();
 
     auto ast = pf.ast();
     REQUIRE(ast->statements.length == 1);
@@ -1269,7 +1269,7 @@ TEST_CASE("Impl statements") {
     SECTION("Correct block") {
         const char*   input = "impl Obj { const a := 1; }";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1290,13 +1290,13 @@ TEST_CASE("Impl statements") {
         SECTION("Missing ident") {
             const char*   input = "impl { const a := 1; }";
             ParserFixture pf(input);
-            pf.check_errors({"Expected token IDENT, found LBRACE [Ln 1, Col 6]"}, false);
+            pf.check_errors({"Expected token IDENT, found LBRACE [Ln 1, Col 6]"});
         }
 
         SECTION("Empty implementation") {
             const char*   input = "impl Obj {}";
             ParserFixture pf(input);
-            pf.check_errors({"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"}, false);
+            pf.check_errors({"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"});
         }
     }
 }
@@ -1329,7 +1329,7 @@ TEST_CASE("Import Statements") {
             const auto  expected = expected_imports[test_idx];
 
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1398,7 +1398,7 @@ TEST_CASE("Match expressions") {
             const auto  expected = expected_matches[test_idx];
 
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1497,7 +1497,7 @@ TEST_CASE("Array expressions") {
             const auto  expected = expected_arrays[test_idx];
 
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1553,7 +1553,7 @@ TEST_CASE("Array expressions") {
                 const auto  expected = expected_dims[test_idx];
 
                 ParserFixture pf(input);
-                pf.check_errors({}, true);
+                pf.check_errors();
 
                 auto ast = pf.ast();
                 REQUIRE(ast->statements.length == 1);
@@ -1666,7 +1666,7 @@ TEST_CASE("Discard statements") {
     SECTION("Correct discards") {
         const char*   input = "_ = 90";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1690,7 +1690,7 @@ TEST_CASE("For loops") {
     SECTION("Iterable only") {
         const char*   input = "for (1) {1}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1719,7 +1719,7 @@ TEST_CASE("For loops") {
         SECTION("Aligned captures") {
             const char*   input = "for (1) : (name) {1}";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1752,7 +1752,7 @@ TEST_CASE("For loops") {
         SECTION("Ignored capture") {
             const char*   input = "for (1, 2) : (name, _) {1}";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1778,7 +1778,7 @@ TEST_CASE("For loops") {
         SECTION("With else block statement") {
             const char*   input = "for (1, 2) : (name, word) {1} else {1}";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1822,7 +1822,7 @@ TEST_CASE("For loops") {
         SECTION("With expression else") {
             const char*   input = "for (1, 2) : (name, word) {1} else 1";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1840,7 +1840,7 @@ TEST_CASE("For loops") {
     SECTION("Capture refs") {
         const char*   input = "for (1, 2, 3) : (name, ref hey, word) {1}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1866,19 +1866,19 @@ TEST_CASE("For loops") {
         SECTION("Missing iterables") {
             const char*   input = "for () {}";
             ParserFixture pf(input);
-            pf.check_errors({"FOR_MISSING_ITERABLES [Ln 1, Col 1]"}, false);
+            pf.check_errors({"FOR_MISSING_ITERABLES [Ln 1, Col 1]"});
         }
 
         SECTION("Capture mismatch") {
             const char*   input = "for (1) : () {}";
             ParserFixture pf(input);
-            pf.check_errors({"FOR_ITERABLE_CAPTURE_MISMATCH [Ln 1, Col 1]"}, false);
+            pf.check_errors({"FOR_ITERABLE_CAPTURE_MISMATCH [Ln 1, Col 1]"});
         }
 
         SECTION("Missing body") {
             const char*   input = "for (1) {}";
             ParserFixture pf(input);
-            pf.check_errors({"EMPTY_FOR_LOOP [Ln 1, Col 1]"}, false);
+            pf.check_errors({"EMPTY_FOR_LOOP [Ln 1, Col 1]"});
         }
 
         SECTION("Improper non break clause") {
@@ -1895,7 +1895,7 @@ TEST_CASE("While loops") {
     SECTION("Condition only") {
         const char*   input = "while (1) {1}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1921,7 +1921,7 @@ TEST_CASE("While loops") {
     SECTION("Condition and continuation only") {
         const char*   input = "while (1) : (1) {1}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -1949,7 +1949,7 @@ TEST_CASE("While loops") {
         SECTION("With block else") {
             const char*   input = "while (1) : (1) {1} else {1}";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -1982,7 +1982,7 @@ TEST_CASE("While loops") {
         SECTION("With expression else") {
             const char*   input = "while (1) : (1) {1} else 1u";
             ParserFixture pf(input);
-            pf.check_errors({}, true);
+            pf.check_errors();
 
             auto ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
@@ -2014,19 +2014,19 @@ TEST_CASE("While loops") {
         SECTION("Missing condition") {
             const char*   input = "while () {}";
             ParserFixture pf(input);
-            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 8]"}, false);
+            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 8]"});
         }
 
         SECTION("Empty continuation") {
             const char*   input = "while (1) : () {}";
             ParserFixture pf(input);
-            pf.check_errors({"IMPROPER_WHILE_CONTINUATION [Ln 1, Col 9]"}, false);
+            pf.check_errors({"IMPROPER_WHILE_CONTINUATION [Ln 1, Col 9]"});
         }
 
         SECTION("Missing body") {
             const char*   input = "while (1) {}";
             ParserFixture pf(input);
-            pf.check_errors({"EMPTY_WHILE_LOOP [Ln 1, Col 1]"}, false);
+            pf.check_errors({"EMPTY_WHILE_LOOP [Ln 1, Col 1]"});
         }
 
         SECTION("Improper non break clause") {
@@ -2043,7 +2043,7 @@ TEST_CASE("Do while loops") {
     SECTION("Full do while loops") {
         const char*   input = "do {1} while (1)";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -2068,7 +2068,7 @@ TEST_CASE("Do while loops") {
         SECTION("Missing condition") {
             const char*   input = "do {1} while ()";
             ParserFixture pf(input);
-            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 15]"}, false);
+            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 15]"});
         }
 
         SECTION("Missing body") {
@@ -2085,7 +2085,7 @@ TEST_CASE("Generics") {
     SECTION("Function definition generics") {
         const char*   input = "fn<T, B>(a: int): int {}";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -2107,7 +2107,7 @@ TEST_CASE("Generics") {
     SECTION("Function type generics") {
         const char*   input = "var a: fn<T>(b: int): int;";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -2129,7 +2129,7 @@ TEST_CASE("Generics") {
     SECTION("Struct generics") {
         const char*   input = "struct<T, E>{a: int, }";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
@@ -2149,7 +2149,7 @@ TEST_CASE("Generics") {
     SECTION("Call generics") {
         const char*   input = "func(1, 2) with <int>";
         ParserFixture pf(input);
-        pf.check_errors({}, true);
+        pf.check_errors();
 
         auto ast = pf.ast();
         REQUIRE(ast->statements.length == 1);

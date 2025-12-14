@@ -8,14 +8,22 @@ extern "C" {
 }
 
 SemanticFixture::SemanticFixture(const char* input) : pf(input) {
-    pf.check_errors({}, true);
+    pf.check_errors();
     REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, standard_allocator)));
     REQUIRE(STATUS_OK(seman_analyze(&seman)));
 }
 
+void SemanticFixture::check_errors(std::vector<std::string> expected_errors) {
+    check_errors(expected_errors, expected_errors.empty());
+}
+
 void SemanticFixture::check_errors(std::vector<std::string> expected_errors, bool print_anyways) {
-    pf.check_errors({}, true);
+    pf.check_errors();
     ::check_errors(&seman.errors, expected_errors, print_anyways);
+}
+
+void test_analyze(const char* input, std::vector<std::string> expected_errors) {
+    test_analyze(input, expected_errors, expected_errors.empty());
 }
 
 void test_analyze(const char* input, std::vector<std::string> expected_errors, bool print_anyways) {

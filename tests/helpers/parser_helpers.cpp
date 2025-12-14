@@ -37,6 +37,14 @@ ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {
     REQUIRE(STATUS_OK(parser_consume(&p, &a)));
 }
 
+void ParserFixture::check_errors(std::vector<std::string> expected_errors) {
+    check_errors(expected_errors, expected_errors.empty());
+}
+
+void ParserFixture::check_errors(std::vector<std::string> expected_errors, bool print_anyways) {
+    ::check_errors(&p.errors, expected_errors, print_anyways);
+}
+
 void check_errors(const ArrayList*         actual_errors,
                   std::vector<std::string> expected_errors,
                   bool                     print_anyways) {
@@ -46,7 +54,7 @@ void check_errors(const ArrayList*         actual_errors,
     } else if (print_anyways && actual_errors->length != 0) {
         for (size_t i = 0; i < actual_errors->length; i++) {
             REQUIRE(STATUS_OK(array_list_get(actual_errors, i, &error)));
-            std::cerr << "Parser error: " << error.ptr << "\n";
+            std::cerr << "Error: " << error.ptr << "\n";
         }
     }
 

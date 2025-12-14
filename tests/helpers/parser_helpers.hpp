@@ -26,10 +26,6 @@ class SBFixture {
     StringBuilder builder;
 };
 
-void check_errors(const ArrayList*         actual_errors,
-                  std::vector<std::string> expected_errors,
-                  bool                     print_anyways);
-
 class ParserFixture {
   public:
     ParserFixture(const char* input);
@@ -44,9 +40,8 @@ class ParserFixture {
     AST*    ast() { return &a; }
     Lexer*  lexer() { return &l; }
 
-    inline void check_errors(std::vector<std::string> expected_errors, bool print_anyways = false) {
-        ::check_errors(&p.errors, expected_errors, print_anyways);
-    }
+    void check_errors(std::vector<std::string> expected_errors = {});
+    void check_errors(std::vector<std::string> expected_errors, bool print_anyways);
 
   private:
     Parser p;
@@ -54,6 +49,10 @@ class ParserFixture {
     Lexer  l;
     FileIO stdio;
 };
+
+void check_errors(const ArrayList*         actual_errors,
+                  std::vector<std::string> expected_errors,
+                  bool                     print_anyways);
 
 void test_reconstruction(const char* input, std::string expected);
 

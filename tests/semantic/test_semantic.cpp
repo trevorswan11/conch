@@ -61,7 +61,7 @@ TEST_CASE("Primitive declarations") {
         };
 
         for (const auto& i : inputs) {
-            test_analyze(i, {"TYPE_MISMATCH [Ln 1, Col 1]"}, false);
+            test_analyze(i, {"TYPE_MISMATCH [Ln 1, Col 1]"});
         }
     }
 }
