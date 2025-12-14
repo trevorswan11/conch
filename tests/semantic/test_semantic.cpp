@@ -36,7 +36,7 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Correct explicit") {
-        const const char* inputs[] = {
+        const char* inputs[] = {
             "const v: int = 3;",
             "const v: uint = 3u;",
             "const v: string = \"3\";",
@@ -51,7 +51,7 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Incorrect explicit") {
-        const const char* inputs[] = {
+        const char* inputs[] = {
             "const v: uint = 3;",
             "const v: int = 3u;",
             "const v: byte = \"3\";",
