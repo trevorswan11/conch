@@ -8,6 +8,8 @@
 #include "ast/expressions/type.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
@@ -96,10 +98,39 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
 
 NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    parent->analyzed_type.valued = false;
+
+    Type type = ((TypeExpression*)node)->type;
+    if (type.tag == IMPLICIT) {
+        parent->analyzed_type.tag     = IMPLICIT_DECLARATION;
+        parent->analyzed_type.variant = DATALESS_TYPE;
+        return SUCCESS;
+    }
+
+    ExplicitType explicit_type = type.variant.explicit_type;
+    switch (explicit_type.tag) {
+    case EXPLICIT_IDENT: {
+        MutSlice        type_name = explicit_type.variant.ident_type_name->name;
+        SemanticType    symbol_type;
+        SemanticTypeTag symbol_type_tag;
+        if (semantic_name_to_type_tag(type_name, &symbol_type_tag)) {
+            parent->analyzed_type.tag     = symbol_type_tag;
+            parent->analyzed_type.variant = DATALESS_TYPE;
+        } else if (symbol_table_find(parent->symbol_table, type_name, &symbol_type)) {
+            parent->analyzed_type = symbol_type;
+        } else {
+            const Token start_token = node->start_token;
+            IGNORE_STATUS(put_status_error(
+                errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
+            return UNDECLARED_IDENTIFIER;
+        }
+        break;
+    }
+    default:
+        return NOT_IMPLEMENTED;
+    }
+
+    return SUCCESS;
 }
 
 NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,

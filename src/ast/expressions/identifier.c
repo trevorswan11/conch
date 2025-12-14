@@ -3,6 +3,7 @@
 #include "ast/expressions/identifier.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -54,9 +55,17 @@ NODISCARD Status identifier_expression_reconstruct(Node*          node,
 NODISCARD Status identifier_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    IdentifierExpression* ident = (IdentifierExpression*)node;
+
+    // Identifiers are only analyzed if they have been declared
+    SemanticType semantic_type;
+    if (!symbol_table_find(parent->symbol_table, ident->name, &semantic_type)) {
+        const Token start_token = node->start_token;
+        IGNORE_STATUS(
+            put_status_error(errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
+        return UNDECLARED_IDENTIFIER;
+    }
+
+    parent->analyzed_type = semantic_type;
+    return SUCCESS;
 }

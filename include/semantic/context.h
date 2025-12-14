@@ -1,5 +1,7 @@
 #pragma once
 
+#include "semantic/type.h"
+
 #include "util/allocator.h"
 #include "util/status.h"
 
@@ -9,6 +11,8 @@ typedef struct SymbolTable     SymbolTable;
 typedef struct SemanticContext {
     SemanticContext* parent;
     SymbolTable*     symbol_table;
+
+    SemanticType analyzed_type;
 } SemanticContext;
 
 NODISCARD Status semantic_context_create(SemanticContext*  parent,

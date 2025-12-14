@@ -23,6 +23,9 @@
 #define NODE_VIRTUAL_ANALYZE(node_ptr_to_cast, context, errors) \
     ((Node*)node_ptr_to_cast)->vtable->analyze((Node*)node_ptr_to_cast, context, errors)
 
+// Casts the input pointer to a node and retrieves its start token
+#define NODE_TOKEN(node_ptr_to_cast) ((Node*)node_ptr_to_cast)->start_token
+
 typedef struct Node       Node;
 typedef struct NodeVTable NodeVTable;
 

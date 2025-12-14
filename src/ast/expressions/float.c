@@ -3,6 +3,7 @@
 #include "ast/expressions/float.h"
 
 #include "semantic/context.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -51,9 +52,5 @@ NODISCARD Status float_literal_expression_reconstruct(Node*          node,
 NODISCARD Status float_literal_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    PRIMITIVE_ANALYZE(FLOATING_POINT);
 }

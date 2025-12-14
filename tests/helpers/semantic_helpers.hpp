@@ -19,7 +19,7 @@ class SemanticFixture {
     AST*              ast() { return pf.ast(); }
     Lexer*            lexer() { return pf.lexer(); }
 
-    void check_errors(std::vector<std::string> expected_errors, bool print_anyways = false);
+    void check_errors(std::vector<std::string> expected_errors, bool print_anyways = true);
 
   private:
     SemanticAnalyzer seman;
@@ -28,4 +28,4 @@ class SemanticFixture {
 
 void test_analyze(const char*              input,
                   std::vector<std::string> expected_errors = {},
-                  bool                     print_anyways   = false);
+                  bool                     print_anyways   = true);

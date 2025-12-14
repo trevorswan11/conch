@@ -5,7 +5,7 @@
 
 #include "util/status.h"
 
-typedef struct {
+typedef struct FileIO {
     FILE* in;
     FILE* out;
     FILE* err;

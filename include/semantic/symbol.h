@@ -5,7 +5,6 @@
 #include "util/mem.h"
 #include "util/status.h"
 
-typedef Slice               SemanticSymbol;
 typedef struct SemanticType SemanticType;
 
 typedef struct SymbolTable {
@@ -16,6 +15,16 @@ NODISCARD Status symbol_table_create(SymbolTable** table, Allocator allocator);
 void             symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc);
 
 // Adds a symbol/type pair to the table.
-NODISCARD Status symbol_table_add(SymbolTable* st, SemanticSymbol symbol, SemanticType type);
+//
+// Asserts that the symbol is not already present in the table.
+NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType type);
 
-bool symbol_table_has(SymbolTable* st, SemanticSymbol symbol);
+// Gets a type from the table.
+//
+// Asserts that the symbol is already present in the table.
+NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType* type);
+
+// Gets a type from the table. Returning a boolean indicating if the symbol was found.
+bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType* type);
+
+bool symbol_table_has(SymbolTable* st, MutSlice symbol);

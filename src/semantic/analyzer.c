@@ -1,15 +1,19 @@
 #include <assert.h>
 
 #include "ast/ast.h"
-
 #include "ast/statements/statement.h"
+
 #include "semantic/analyzer.h"
 #include "semantic/context.h"
-#include "util/allocator.h"
-#include "util/status.h"
 
 NODISCARD Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
     assert(ast);
+    TRY(seman_null_init(analyzer, allocator));
+    analyzer->ast = ast;
+    return SUCCESS;
+}
+
+NODISCARD Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
 
     SemanticContext* global_ctx;
@@ -20,7 +24,7 @@ NODISCARD Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocato
            semantic_context_destroy(global_ctx, allocator.free_alloc));
 
     SemanticAnalyzer seman = (SemanticAnalyzer){
-        .ast        = ast,
+        .ast        = NULL,
         .global_ctx = global_ctx,
         .errors     = errors,
         .allocator  = allocator,
@@ -43,6 +47,10 @@ void seman_deinit(SemanticAnalyzer* analyzer) {
 
 NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
     assert(analyzer);
+    assert(analyzer->ast);
+    assert(analyzer->global_ctx);
+
+    clear_error_list(&analyzer->errors, analyzer->allocator.free_alloc);
 
     Statement*       statement;
     const ArrayList* statements = &analyzer->ast->statements;

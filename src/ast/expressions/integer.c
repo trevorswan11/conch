@@ -3,6 +3,7 @@
 #include "ast/expressions/integer.h"
 
 #include "semantic/context.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -52,11 +53,7 @@ NODISCARD Status integer_literal_expression_create(Token                      st
 NODISCARD Status integer_literal_expression_analyze(Node*            node,
                                                     SemanticContext* parent,
                                                     ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    PRIMITIVE_ANALYZE(SIGNED_INTEGER);
 }
 
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
@@ -69,11 +66,7 @@ NODISCARD Status uinteger_literal_expression_create(Token                       
 NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
                                                      SemanticContext* parent,
                                                      ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    PRIMITIVE_ANALYZE(UNSIGNED_INTEGER);
 }
 
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
@@ -86,9 +79,5 @@ NODISCARD Status byte_literal_expression_create(Token                   start_to
 NODISCARD Status byte_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    PRIMITIVE_ANALYZE(BYTE_INTEGER);
 }

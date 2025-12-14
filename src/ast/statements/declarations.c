@@ -5,6 +5,8 @@
 #include "ast/statements/declarations.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -94,10 +96,55 @@ NODISCARD Status decl_statement_reconstruct(Node*          node,
 
 NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    DeclStatement* decl     = (DeclStatement*)node;
+    Slice          tmp_name = slice_from_mut(&decl->ident->name);
+
+    Allocator allocator = parent->symbol_table->symbols.allocator;
+    char*     duped     = strdup_s_allocator(tmp_name.ptr, tmp_name.length, allocator.memory_alloc);
+    if (!duped) {
+        return ALLOCATION_FAILED;
+    }
+    const MutSlice decl_name = mut_slice_from_str_s(duped, tmp_name.length);
+
+    if (symbol_table_has(parent->symbol_table, decl_name)) {
+        const Token start_token = NODE_TOKEN(decl->ident);
+        IGNORE_STATUS(put_status_error(
+            errors, REDEFINITION_OF_IDENTIFIER, start_token.line, start_token.column));
+
+        allocator.free_alloc(duped);
+        return REDEFINITION_OF_IDENTIFIER;
+    }
+
+    TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(duped));
+    SemanticType decl_type = parent->analyzed_type;
+
+    if (decl->value) {
+        TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {
+            allocator.free_alloc(duped);
+            semantic_type_deinit(&decl_type, allocator.free_alloc);
+        });
+        SemanticType value_type = parent->analyzed_type;
+
+        if (decl_type.tag == IMPLICIT_DECLARATION) {
+            semantic_type_deinit(&decl_type, allocator.free_alloc);
+            decl_type = value_type;
+        } else if (!type_check(decl_type, value_type)) {
+            const Token t = NODE_TOKEN(decl);
+            IGNORE_STATUS(put_status_error(errors, TYPE_MISMATCH, t.line, t.column));
+
+            allocator.free_alloc(duped);
+            semantic_type_deinit(&decl_type, allocator.free_alloc);
+            semantic_type_deinit(&value_type, allocator.free_alloc);
+
+            return TYPE_MISMATCH;
+        }
+    } else {
+        assert(!decl->is_const);
+        assert(decl_type.tag != IMPLICIT_DECLARATION);
+    }
+
+    decl_type.is_const = decl->is_const;
+    return symbol_table_add(parent->symbol_table, decl_name, decl_type);
 }
 
 NODISCARD Status type_decl_statement_create(Token                 start_token,

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>
@@ -61,12 +62,12 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors({}, true);
 
-        auto                     ast                  = pf.ast();
-        std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
-        REQUIRE(ast->statements.length == expected_identifiers.size());
+        auto        ast                    = pf.ast();
+        const char* expected_identifiers[] = {"x", "y", "foobar"};
+        REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
-        for (size_t i = 0; i < expected_identifiers.size(); i++) {
+        for (size_t i = 0; i < std::size(expected_identifiers); i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
@@ -97,13 +98,13 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors({}, true);
 
-        auto                     ast                  = pf.ast();
-        std::vector<const char*> expected_identifiers = {"x", "y", "foobar"};
-        std::vector<bool>        is_const             = {false, true, false};
-        REQUIRE(ast->statements.length == expected_identifiers.size());
+        auto        ast                    = pf.ast();
+        const char* expected_identifiers[] = {"x", "y", "foobar"};
+        bool        is_const[]             = {false, true, false};
+        REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
-        for (size_t i = 0; i < expected_identifiers.size(); i++) {
+        for (size_t i = 0; i < std::size(expected_identifiers); i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
@@ -119,25 +120,25 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors({}, true);
 
-        std::vector<std::string>     expected_identifiers = {"x", "z", "y", "foobar", "baz", "boo"};
-        std::vector<bool>            is_const     = {false, false, true, false, false, true};
-        std::vector<bool>            is_nullable  = {false, false, false, false, true, false};
-        std::vector<bool>            is_primitive = {true, true, true, false, false, false};
-        std::vector<TypeTag>         tags         = {TypeTag::EXPLICIT,
-                                                     TypeTag::EXPLICIT,
-                                                     TypeTag::EXPLICIT,
-                                                     TypeTag::IMPLICIT,
-                                                     TypeTag::EXPLICIT,
-                                                     TypeTag::EXPLICIT};
-        std::vector<ExplicitTypeTag> explicit_tags(tags.size(), ExplicitTypeTag::EXPLICIT_IDENT);
+        std::string expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
+        bool        is_const[]             = {false, false, true, false, false, true};
+        bool        is_nullable[]          = {false, false, false, false, true, false};
+        bool        is_primitive[]         = {true, true, true, false, false, false};
+        TypeTag     tags[]                 = {TypeTag::EXPLICIT,
+                                              TypeTag::EXPLICIT,
+                                              TypeTag::EXPLICIT,
+                                              TypeTag::IMPLICIT,
+                                              TypeTag::EXPLICIT,
+                                              TypeTag::EXPLICIT};
+        std::array<ExplicitTypeTag, std::size(tags)> explicit_tags;
+        explicit_tags.fill(ExplicitTypeTag::EXPLICIT_IDENT);
 
-        auto                     ast                 = pf.ast();
-        std::vector<std::string> expected_type_names = {
-            "int", "uint", "bool", {}, "LongNum", "Conch"};
-        REQUIRE(ast->statements.length == expected_identifiers.size());
+        auto        ast                   = pf.ast();
+        std::string expected_type_names[] = {"int", "uint", "bool", {}, "LongNum", "Conch"};
+        REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
-        for (size_t i = 0; i < expected_identifiers.size(); i++) {
+        for (size_t i = 0; i < std::size(expected_identifiers); i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
             test_decl_statement(stmt,
                                 is_const[i],
@@ -1005,18 +1006,15 @@ TEST_CASE("Enum declarations") {
             "enum { RED, BLUE = 1, GREEN, }",
             "enum { RED = 100, BLUE = 20, GREEN = 3, }",
         };
-        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const std::vector<EnumVariantTestCase> expected_variants_lists[] = {
             {{"RED"}, {"BLUE"}, {"GREEN"}},
             {{"RED"}, {"BLUE", 1}, {"GREEN"}},
             {{"RED", 100}, {"BLUE", 20}, {"GREEN", 3}},
         };
-        const size_t expecteds_size =
-            sizeof(expected_variants_lists) / sizeof(expected_variants_lists[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
-        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+        REQUIRE(std::size(inputs) == std::size(expected_variants_lists));
+        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
             const char* input             = inputs[test_idx];
             const auto  expected_variants = expected_variants_lists[test_idx];
 
@@ -1143,17 +1141,13 @@ TEST_CASE("Struct declarations") {
             "struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
         };
 
-        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
-
         const std::vector<StructMemberTestCase> expected_member_lists[] = {
             {{"a", "int"}},
             {{"a", "int"}, {"b", "uint"}, {"c", "Woah", true, false}, {"d", "int", false, true, 1}},
         };
-        const size_t expecteds_size =
-            sizeof(expected_member_lists) / sizeof(expected_member_lists[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
-        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+        REQUIRE(std::size(inputs) == std::size(expected_member_lists));
+        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
             const char* input            = inputs[test_idx];
             const auto  expected_members = expected_member_lists[test_idx];
 
@@ -1321,7 +1315,6 @@ TEST_CASE("Import Statements") {
             "import \"util/test.cch\" as test",
             "import hash as Hash",
         };
-        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const ImportTestCase expected_imports[] = {
             {ImportTag::STANDARD, "std"},
@@ -1329,10 +1322,9 @@ TEST_CASE("Import Statements") {
             {ImportTag::USER, "util/test.cch", "test"},
             {ImportTag::STANDARD, "hash", "Hash"},
         };
-        const size_t expecteds_size = sizeof(expected_imports) / sizeof(expected_imports[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
-        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+        REQUIRE(std::size(inputs) == std::size(expected_imports));
+        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
             const char* input    = inputs[test_idx];
             const auto  expected = expected_imports[test_idx];
 
@@ -1394,16 +1386,14 @@ TEST_CASE("Match expressions") {
             "match In { 1 => return 90u;, }",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
         };
-        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const MatchTestCase expected_matches[] = {
             {"In", {{1, 90ull}}},
             {"Out", {{1, 90ull}, {2, 0b1011ull}}},
         };
-        const size_t expecteds_size = sizeof(expected_matches) / sizeof(expected_matches[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
-        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+        REQUIRE(std::size(inputs) == std::size(expected_matches));
+        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
             const char* input    = inputs[test_idx];
             const auto  expected = expected_matches[test_idx];
 
@@ -1494,17 +1484,15 @@ TEST_CASE("Array expressions") {
             "[0b11u]{1, 2, 3, }",
             "[_]{1, 2, }",
         };
-        const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
         const ArrayTestCase expected_arrays[] = {
             {1, {1}},
             {0b11, {1, 2, 3}},
             {std::nullopt, {1, 2}},
         };
-        const size_t expecteds_size = sizeof(expected_arrays) / sizeof(expected_arrays[0]);
 
-        REQUIRE(inputs_size == expecteds_size);
-        for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+        REQUIRE(std::size(inputs) == std::size(expected_arrays));
+        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
             const char* input    = inputs[test_idx];
             const auto  expected = expected_arrays[test_idx];
 
@@ -1550,7 +1538,6 @@ TEST_CASE("Array expressions") {
                 "var a: [1u, 2u]?int;",
                 "var a: ?[1u, 2u]?int;",
             };
-            const size_t inputs_size = sizeof(inputs) / sizeof(inputs[0]);
 
             const ArrayTypeTestCase expected_dims[] = {
                 {"a", {1}, false, false},
@@ -1559,10 +1546,9 @@ TEST_CASE("Array expressions") {
                 {"a", {1, 2}, false, true},
                 {"a", {1, 2}, true, true},
             };
-            const size_t expecteds_size = sizeof(expected_dims) / sizeof(expected_dims[0]);
 
-            REQUIRE(inputs_size == expecteds_size);
-            for (size_t test_idx = 0; test_idx < inputs_size; test_idx++) {
+            REQUIRE(std::size(inputs) == std::size(expected_dims));
+            for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
                 const char* input    = inputs[test_idx];
                 const auto  expected = expected_dims[test_idx];
 

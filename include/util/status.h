@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define ENUMERATE(ENUM) ENUM
 #define STRINGIFY(STRING) #STRING
@@ -122,7 +123,8 @@ void debug_print(const char* format, ...);
         PROCESS(EMPTY_WHILE_LOOP), PROCESS(ILLEGAL_LOOP_NON_BREAK), PROCESS(ILLEGAL_IF_BRANCH),    \
         PROCESS(FOR_ITERABLE_CAPTURE_MISMATCH), PROCESS(IMPROPER_WHILE_CONTINUATION),              \
         PROCESS(ILLEGAL_IDENTIFIER), PROCESS(EMPTY_GENERIC_LIST), PROCESS(IMPLICIT_FN_PARAM_TYPE), \
-        PROCESS(MALFORMED_CHARATCER_LITERAL), PROCESS(USER_IMPORT_MISSING_ALIAS)
+        PROCESS(MALFORMED_CHARATCER_LITERAL), PROCESS(USER_IMPORT_MISSING_ALIAS),                  \
+        PROCESS(REDEFINITION_OF_IDENTIFIER), PROCESS(UNDECLARED_IDENTIFIER)
 
 typedef enum Status {
     FOREACH_STATUS(ENUMERATE),
@@ -155,3 +157,9 @@ void status_ignore(Status status);
 #endif
 
 #define IGNORE_STATUS(expr) status_ignore(expr)
+
+typedef struct ArrayList     ArrayList;
+typedef struct StringBuilder StringBuilder;
+
+NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
+NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);

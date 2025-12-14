@@ -355,34 +355,5 @@ NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt) {
 }
 
 NODISCARD Status parser_put_status_error(Parser* p, Status status, size_t line, size_t col) {
-    assert(p);
-    ASSERT_ALLOCATOR(p->allocator);
-    assert(STATUS_ERR(status));
-
-    StringBuilder builder;
-    TRY(string_builder_init_allocator(&builder, 30, p->allocator));
-
-    const char* status_literal = status_name(status);
-    TRY_DO(string_builder_append_str_z(&builder, status_literal), string_builder_deinit(&builder));
-
-    TRY_DO(error_append_ln_col(line, col, &builder), string_builder_deinit(&builder));
-
-    MutSlice slice;
-    TRY_DO(string_builder_to_string(&builder, &slice), string_builder_deinit(&builder));
-    TRY_DO(array_list_push(&p->errors, &slice), string_builder_deinit(&builder));
-    return SUCCESS;
-}
-
-NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb) {
-    assert(sb);
-    const char line_no[] = " [Ln ";
-    const char col_no[]  = ", Col ";
-
-    TRY(string_builder_append_many(sb, line_no, sizeof(line_no) - 1));
-    TRY(string_builder_append_unsigned(sb, (uint64_t)line));
-    TRY(string_builder_append_many(sb, col_no, sizeof(col_no) - 1));
-    TRY(string_builder_append_unsigned(sb, (uint64_t)col));
-    TRY(string_builder_append(sb, ']'));
-
-    return SUCCESS;
+    return put_status_error(&p->errors, status, line, col);
 }
