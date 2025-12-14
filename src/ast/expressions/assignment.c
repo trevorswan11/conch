@@ -4,23 +4,16 @@
 #include "ast/expressions/assignment.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
-#define ASSIGNMENT_FREE(type)                  \
-    ASSERT_NODE(node);                         \
-    assert(free_alloc);                        \
-                                               \
-    type* infix = (type*)node;                 \
-    NODE_VIRTUAL_FREE(infix->lhs, free_alloc); \
-    NODE_VIRTUAL_FREE(infix->rhs, free_alloc); \
-                                               \
-    free_alloc(infix)
-
 NODISCARD Status assignment_expression_create(Token                  start_token,
                                               Expression*            lhs,
+                                              TokenType              op,
                                               Expression*            rhs,
                                               AssignmentExpression** assignment_expr,
                                               memory_alloc_fn        memory_alloc) {
@@ -35,6 +28,7 @@ NODISCARD Status assignment_expression_create(Token                  start_token
     *assign = (AssignmentExpression){
         .base = EXPRESSION_INIT(ASSIGNMENT_VTABLE, start_token),
         .lhs  = lhs,
+        .op   = op,
         .rhs  = rhs,
     };
 
@@ -43,7 +37,14 @@ NODISCARD Status assignment_expression_create(Token                  start_token
 }
 
 void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSIGNMENT_FREE(AssignmentExpression);
+    ASSERT_NODE(node);
+    assert(free_alloc);
+
+    AssignmentExpression* assign = (AssignmentExpression*)node;
+    NODE_VIRTUAL_FREE(assign->lhs, free_alloc);
+    NODE_VIRTUAL_FREE(assign->rhs, free_alloc);
+
+    free_alloc(assign);
 }
 
 NODISCARD Status assignment_expression_reconstruct(Node*          node,
@@ -56,74 +57,8 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
     assert(assign->lhs && assign->rhs);
 
     Node* lhs = (Node*)assign->lhs;
+    Slice op  = poll_tt_symbol(symbol_map, assign->op);
     Node* rhs = (Node*)assign->rhs;
-
-    if (group_expressions) {
-        TRY(string_builder_append(sb, '('));
-    }
-    TRY(lhs->vtable->reconstruct(lhs, symbol_map, sb));
-
-    TRY(string_builder_append_str_z(sb, " = "));
-
-    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
-    if (group_expressions) {
-        TRY(string_builder_append(sb, ')'));
-    }
-
-    return SUCCESS;
-}
-
-NODISCARD Status assignment_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
-}
-
-NODISCARD Status compound_assignment_expression_create(Token                          start_token,
-                                                       Expression*                    lhs,
-                                                       TokenType                      op,
-                                                       Expression*                    rhs,
-                                                       CompoundAssignmentExpression** compound_expr,
-                                                       memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
-    assert(lhs && rhs);
-
-    CompoundAssignmentExpression* compound = memory_alloc(sizeof(CompoundAssignmentExpression));
-    if (!compound) {
-        return ALLOCATION_FAILED;
-    }
-
-    *compound = (CompoundAssignmentExpression){
-        .base = EXPRESSION_INIT(COMPOUND_ASSIGNMENT_VTABLE, start_token),
-        .lhs  = lhs,
-        .op   = op,
-        .rhs  = rhs,
-    };
-
-    *compound_expr = compound;
-    return SUCCESS;
-}
-
-void compound_assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSIGNMENT_FREE(CompoundAssignmentExpression);
-}
-
-NODISCARD Status compound_assignment_expression_reconstruct(Node*          node,
-                                                            const HashMap* symbol_map,
-                                                            StringBuilder* sb) {
-    ASSERT_NODE(node);
-    assert(sb);
-
-    CompoundAssignmentExpression* compound = (CompoundAssignmentExpression*)node;
-    assert(compound->lhs && compound->rhs);
-
-    Node* lhs = (Node*)compound->lhs;
-    Slice op  = poll_tt_symbol(symbol_map, compound->op);
-    Node* rhs = (Node*)compound->rhs;
 
     if (group_expressions) {
         TRY(string_builder_append(sb, '('));
@@ -142,12 +77,37 @@ NODISCARD Status compound_assignment_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status compound_assignment_expression_analyze(Node*            node,
-                                                        SemanticContext* parent,
-                                                        ArrayList*       errors) {
+NODISCARD Status assignment_expression_analyze(Node*            node,
+                                               SemanticContext* parent,
+                                               ArrayList*       errors) {
     assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    const Token   start_token = node->start_token;
+    free_alloc_fn free_alloc  = parent->symbol_table->symbols.allocator.free_alloc;
+
+    AssignmentExpression* assign = (AssignmentExpression*)node;
+    TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
+    SemanticType lhs_type = parent->analyzed_type;
+
+    if (lhs_type.is_const) {
+        IGNORE_STATUS(
+            put_status_error(errors, ASSIGNMENT_TO_CONSTANT, start_token.line, start_token.column));
+
+        semantic_type_deinit(&lhs_type, free_alloc);
+        return ASSIGNMENT_TO_CONSTANT;
+    }
+
+    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors),
+           semantic_type_deinit(&lhs_type, free_alloc));
+    SemanticType rhs_type = parent->analyzed_type;
+
+    if (!type_check(lhs_type, rhs_type)) {
+        IGNORE_STATUS(
+            put_status_error(errors, TYPE_MISMATCH, start_token.line, start_token.column));
+
+        semantic_type_deinit(&lhs_type, free_alloc);
+        semantic_type_deinit(&rhs_type, free_alloc);
+        return TYPE_MISMATCH;
+    }
+
+    return SUCCESS;
 }

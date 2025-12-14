@@ -46,4 +46,11 @@ void semantic_type_deinit(SemanticType* type, free_alloc_fn free_alloc) {
     MAYBE_UNUSED(free_alloc);
 }
 
-bool type_check(SemanticType a, SemanticType b) { return a.tag == b.tag; }
+bool type_check(SemanticType a, SemanticType b) {
+    // Conch has explicit null values
+    if (a.nullable && b.nullable) {
+        return true;
+    }
+
+    return a.tag == b.tag;
+}

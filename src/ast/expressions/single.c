@@ -3,6 +3,7 @@
 #include "ast/expressions/single.h"
 
 #include "semantic/context.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -48,9 +49,13 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
 NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
     MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+
+    parent->analyzed_type.tag      = NIL_VALUE;
+    parent->analyzed_type.variant  = DATALESS_TYPE;
+    parent->analyzed_type.valued   = true;
+    parent->analyzed_type.nullable = true;
+    return SUCCESS;
 }
 
 NODISCARD Status ignore_expression_create(Token              start_token,
@@ -70,5 +75,5 @@ NODISCARD Status ignore_expression_analyze(Node* node, SemanticContext* parent, 
     MAYBE_UNUSED(node);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    return SUCCESS;
 }

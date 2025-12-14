@@ -57,8 +57,6 @@ NODISCARD Status discard_statement_reconstruct(Node*          node,
 
 NODISCARD Status discard_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    DiscardStatement* discard = (DiscardStatement*)node;
+    return NODE_VIRTUAL_ANALYZE(discard->to_discard, parent, errors);
 }

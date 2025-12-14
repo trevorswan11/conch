@@ -71,7 +71,7 @@ bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType* type) {
         return false;
     }
 
-    IGNORE_STATUS(hash_map_get_value(&st->symbols, &symbol, type));
+    IGNORE_STATUS(symbol_table_get(st, symbol, type));
     return true;
 }
 

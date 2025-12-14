@@ -106,7 +106,8 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     }
     const MutSlice decl_name = mut_slice_from_str_s(duped, tmp_name.length);
 
-    if (symbol_table_has(parent->symbol_table, decl_name)) {
+    // Declarations are checked in all parent scopes since there is no shadowing
+    if (semantic_context_has(parent, true, decl_name)) {
         const Token start_token = NODE_TOKEN(decl->ident);
         IGNORE_STATUS(put_status_error(
             errors, REDEFINITION_OF_IDENTIFIER, start_token.line, start_token.column));
@@ -124,7 +125,6 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
             semantic_type_deinit(&decl_type, allocator.free_alloc);
         });
         SemanticType value_type = parent->analyzed_type;
-
         if (decl_type.tag == IMPLICIT_DECLARATION) {
             semantic_type_deinit(&decl_type, allocator.free_alloc);
             decl_type = value_type;

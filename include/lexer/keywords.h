@@ -4,9 +4,7 @@
 
 #include "util/mem.h"
 
-// clang-format off
 #define KW(str, tok) {{str, sizeof(str) - 1}, tok}
-// clang-format on
 
 typedef struct {
     Slice     slice;

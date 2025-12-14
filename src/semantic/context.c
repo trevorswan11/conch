@@ -33,3 +33,42 @@ void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc
     symbol_table_destroy(context->symbol_table, free_alloc);
     free_alloc(context);
 }
+
+bool semantic_context_find(SemanticContext* context,
+                           bool             check_parents,
+                           MutSlice         symbol,
+                           SemanticType*    type) {
+    assert(context);
+    if (!check_parents) {
+        return symbol_table_find(context->symbol_table, symbol, type);
+    }
+
+    SemanticContext* current = context;
+    while (current != NULL) {
+        if (symbol_table_find(current->symbol_table, symbol, type)) {
+            return true;
+        }
+
+        current = current->parent;
+    }
+
+    return false;
+}
+
+bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol) {
+    assert(context);
+    if (!check_parents) {
+        return symbol_table_has(context->symbol_table, symbol);
+    }
+
+    SemanticContext* current = context;
+    while (current != NULL) {
+        if (symbol_table_has(current->symbol_table, symbol)) {
+            return true;
+        }
+
+        current = current->parent;
+    }
+
+    return false;
+}

@@ -43,6 +43,8 @@ TEST_CASE("Primitive declarations") {
             "const v: byte = '3';",
             "const v: bool = true;",
             "const v: float = 5.234;",
+            "const v: ?float = 5.234;",
+            "const v: ?float = nil;",
         };
 
         for (const auto& i : inputs) {
@@ -58,10 +60,102 @@ TEST_CASE("Primitive declarations") {
             "const v: string = '3';",
             "const v: float = true;",
             "const v: bool = 5.234;",
+            "const v: float = nil;",
         };
 
         for (const auto& i : inputs) {
             test_analyze(i, {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        }
+    }
+}
+
+TEST_CASE("Assignment expressions") {
+    SECTION("Basic assignments") {
+        SECTION("Correct assignment") {
+            const char* inputs[] = {
+                "var v := 3; v = 5",
+                "var v := 3u; v = 6u",
+                "var v := \"3\"; v = \"woah\"",
+                "var v := '3'; v = '\\0'",
+                "var v := true; v = false",
+                "var v := 5.234; v = 2.34e30",
+            };
+
+            for (const auto& i : inputs) {
+                test_analyze(i);
+            }
+        }
+
+        SECTION("Undeclared identifiers") {
+            const char* input = "var a := 4; a = b";
+            test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 17]"});
+        }
+
+        SECTION("Constant assignment") {
+            const char* input = "const a := 4; a = 5";
+            test_analyze(input, {"ASSIGNMENT_TO_CONSTANT [Ln 1, Col 15]"});
+        }
+    }
+
+    SECTION("Compound assignments") {
+        SECTION("Correct assignment") {
+            // Adding nil to a nullable value will be a runtime check
+            const char* inputs[] = {
+                "var v: int = 3; v += 7",
+                "var v: uint = 3u; v += 9u",
+                "var v: ?uint = 3u; v += nil",
+            };
+
+            for (const auto& i : inputs) {
+                test_analyze(i);
+            }
+        }
+
+        SECTION("Incorrect assignments") {
+            const char* input = "var v: int = 3; v += nil";
+            test_analyze(input, {"TYPE_MISMATCH [Ln 1, Col 17]"});
+        }
+    }
+
+    SECTION("Nil assignments") {
+        SECTION("Correct assignment") {
+            const char* inputs[] = {
+                "var v: ?int = 3; v = nil",
+                "var v: ?uint = 3u; v = nil",
+            };
+
+            for (const auto& i : inputs) {
+                test_analyze(i);
+            }
+        }
+
+        SECTION("Incorrect assignments") {
+            const char* input = "var v: int = 3; v = nil";
+            test_analyze(input, {"TYPE_MISMATCH [Ln 1, Col 17]"});
+        }
+    }
+
+    SECTION("Discard assignments") {
+        SECTION("Valid discard assignment") {
+            const char* input = "_ = 4";
+            test_analyze(input);
+        }
+
+        SECTION("Invalid discard assignment") {
+            const char* input = "_ = a";
+            test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 5]"});
+        }
+    }
+
+    SECTION("Block statements") {
+        SECTION("Correct top-level blocks") {
+            const char* input = "var v := 3; { v = 5 }";
+            test_analyze(input);
+        }
+
+        SECTION("Incorrect top-level blocks") {
+            const char* input = "var v := 3; { a = 5 }";
+            test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 15]"});
         }
     }
 }

@@ -4,6 +4,8 @@
 #include "ast/statements/block.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
@@ -66,10 +68,24 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
 
 NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    Allocator allocator = parent->symbol_table->symbols.allocator;
+
+    SemanticContext* child;
+    TRY(semantic_context_create(parent, &child, allocator));
+
+    BlockStatement* block = (BlockStatement*)node;
+    for (size_t i = 0; i < block->statements.length; i++) {
+        Statement* stmt;
+        UNREACHABLE_IF_ERROR(array_list_get(&block->statements, i, &stmt));
+        ASSERT_STATEMENT(stmt);
+
+        TRY_DO(NODE_VIRTUAL_ANALYZE(stmt, child, errors),
+               semantic_context_destroy(child, allocator.free_alloc));
+        semantic_type_deinit(&child->analyzed_type, allocator.free_alloc);
+    }
+
+    semantic_context_destroy(child, allocator.free_alloc);
+    return SUCCESS;
 }
 
 NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt) {

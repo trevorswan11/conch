@@ -5,14 +5,15 @@
 #include "util/allocator.h"
 #include "util/mem.h"
 
-#define PRIMITIVE_ANALYZE(type)                    \
-    assert(node && parent && errors);              \
-    MAYBE_UNUSED(node);                            \
-    MAYBE_UNUSED(errors);                          \
-                                                   \
-    parent->analyzed_type.tag     = type;          \
-    parent->analyzed_type.variant = DATALESS_TYPE; \
-    parent->analyzed_type.valued  = true;          \
+#define PRIMITIVE_ANALYZE(type)                     \
+    assert(node && parent && errors);               \
+    MAYBE_UNUSED(node);                             \
+    MAYBE_UNUSED(errors);                           \
+                                                    \
+    parent->analyzed_type.tag      = type;          \
+    parent->analyzed_type.variant  = DATALESS_TYPE; \
+    parent->analyzed_type.valued   = true;          \
+    parent->analyzed_type.nullable = false;         \
     return SUCCESS
 
 typedef enum {
@@ -23,6 +24,7 @@ typedef enum {
     STR,
     BOOL,
     VOID,
+    NIL_VALUE,
     IMPLICIT_DECLARATION,
 } SemanticTypeTag;
 
@@ -46,6 +48,7 @@ typedef struct SemanticType {
     SemanticTypeUnion variant;
     bool              is_const;
     bool              valued;
+    bool              nullable;
 } SemanticType;
 
 void semantic_type_deinit(SemanticType* type, free_alloc_fn free_alloc);

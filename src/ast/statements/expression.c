@@ -2,6 +2,7 @@
 
 #include "ast/statements/expression.h"
 
+#include "ast/node.h"
 #include "semantic/context.h"
 
 #include "util/containers/array_list.h"
@@ -55,9 +56,6 @@ NODISCARD Status expression_statement_reconstruct(Node*          node,
 NODISCARD Status expression_statement_analyze(Node*            node,
                                               SemanticContext* parent,
                                               ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
+    return NODE_VIRTUAL_ANALYZE(expr_stmt->expression, parent, errors);
 }

@@ -107,7 +107,8 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
         return SUCCESS;
     }
 
-    ExplicitType explicit_type = type.variant.explicit_type;
+    ExplicitType explicit_type     = type.variant.explicit_type;
+    parent->analyzed_type.nullable = explicit_type.nullable;
     switch (explicit_type.tag) {
     case EXPLICIT_IDENT: {
         MutSlice        type_name = explicit_type.variant.ident_type_name->name;
@@ -116,7 +117,7 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
         if (semantic_name_to_type_tag(type_name, &symbol_type_tag)) {
             parent->analyzed_type.tag     = symbol_type_tag;
             parent->analyzed_type.variant = DATALESS_TYPE;
-        } else if (symbol_table_find(parent->symbol_table, type_name, &symbol_type)) {
+        } else if (semantic_context_find(parent, true, type_name, &symbol_type)) {
             parent->analyzed_type = symbol_type;
         } else {
             const Token start_token = node->start_token;

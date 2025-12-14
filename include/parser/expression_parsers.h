@@ -58,9 +58,6 @@ NODISCARD Status narrow_expression_parse(Parser* p, Expression* outer, Expressio
 NODISCARD Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
                                              Expression** expression);
-NODISCARD Status compound_assignment_expression_parse(Parser*      p,
-                                                      Expression*  assignee,
-                                                      Expression** expression);
 
 typedef NODISCARD Status (*prefix_parse_fn)(Parser*, Expression**);
 typedef NODISCARD Status (*infix_parse_fn)(Parser*, Expression*, Expression**);
@@ -184,17 +181,17 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {DOT_DOT_EQ, &infix_expression_parse},
     {LPAREN, &call_expression_parse},
     {ASSIGN, &assignment_expression_parse},
-    {PLUS_ASSIGN, &compound_assignment_expression_parse},
-    {MINUS_ASSIGN, &compound_assignment_expression_parse},
-    {STAR_ASSIGN, &compound_assignment_expression_parse},
-    {SLASH_ASSIGN, &compound_assignment_expression_parse},
-    {PERCENT_ASSIGN, &compound_assignment_expression_parse},
-    {AND_ASSIGN, &compound_assignment_expression_parse},
-    {OR_ASSIGN, &compound_assignment_expression_parse},
-    {SHL_ASSIGN, &compound_assignment_expression_parse},
-    {SHR_ASSIGN, &compound_assignment_expression_parse},
-    {NOT_ASSIGN, &compound_assignment_expression_parse},
-    {XOR_ASSIGN, &compound_assignment_expression_parse},
+    {PLUS_ASSIGN, &assignment_expression_parse},
+    {MINUS_ASSIGN, &assignment_expression_parse},
+    {STAR_ASSIGN, &assignment_expression_parse},
+    {SLASH_ASSIGN, &assignment_expression_parse},
+    {PERCENT_ASSIGN, &assignment_expression_parse},
+    {AND_ASSIGN, &assignment_expression_parse},
+    {OR_ASSIGN, &assignment_expression_parse},
+    {SHL_ASSIGN, &assignment_expression_parse},
+    {SHR_ASSIGN, &assignment_expression_parse},
+    {NOT_ASSIGN, &assignment_expression_parse},
+    {XOR_ASSIGN, &assignment_expression_parse},
     {COMMA, &infix_expression_parse},
     {COLON_COLON, &narrow_expression_parse},
     {ORELSE, &infix_expression_parse},

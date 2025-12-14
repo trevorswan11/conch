@@ -386,7 +386,8 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"0b10111u orelse 4u;", 0b10111ull, TokenType::ORELSE, 4ull},
         };
 
-        const TestCase compound_assignment_cases[] = {
+        const TestCase assignment_cases[] = {
+            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull},
             {"0b10111u += 4u;", 0b10111ull, TokenType::PLUS_ASSIGN, 4ull},
             {"0b10111u -= 4u;", 0b10111ull, TokenType::MINUS_ASSIGN, 4ull},
             {"0b10111u *= 4u;", 0b10111ull, TokenType::STAR_ASSIGN, 4ull},
@@ -434,15 +435,13 @@ TEST_CASE("Basic prefix / infix expressions") {
             }
         };
 
-        // Yay templates in C++ 20 its so fun
+        // Yay templated lambdas in C++ 20 so fun
         for (const auto& t : standard_cases) {
             test_infix.template operator()<InfixExpression>(t);
         }
 
-        test_infix.template operator()<AssignmentExpression>(
-            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull});
-        for (const auto& t : compound_assignment_cases) {
-            test_infix.template operator()<CompoundAssignmentExpression>(t);
+        for (const auto& t : assignment_cases) {
+            test_infix.template operator()<AssignmentExpression>(t);
         }
     }
 

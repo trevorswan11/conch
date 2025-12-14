@@ -59,7 +59,7 @@ NODISCARD Status identifier_expression_analyze(Node*            node,
 
     // Identifiers are only analyzed if they have been declared
     SemanticType semantic_type;
-    if (!symbol_table_find(parent->symbol_table, ident->name, &semantic_type)) {
+    if (!semantic_context_find(parent, true, ident->name, &semantic_type)) {
         const Token start_token = node->start_token;
         IGNORE_STATUS(
             put_status_error(errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));

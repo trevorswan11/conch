@@ -1474,6 +1474,7 @@ NODISCARD Status narrow_expression_parse(Parser* p, Expression* outer, Expressio
 NODISCARD Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
                                              Expression** expression) {
+    const TokenType  op_token_type      = p->current_token.type;
     const Precedence current_precedence = parser_current_precedence(p);
     TRY(parser_next_token(p));
     ASSERT_EXPRESSION(assignee);
@@ -1483,35 +1484,14 @@ NODISCARD Status assignment_expression_parse(Parser*      p,
 
     Node*                 assignee_node = (Node*)assignee;
     AssignmentExpression* assign;
-    TRY_DO(assignment_expression_create(
-               assignee_node->start_token, assignee, right, &assign, p->allocator.memory_alloc),
+    TRY_DO(assignment_expression_create(assignee_node->start_token,
+                                        assignee,
+                                        op_token_type,
+                                        right,
+                                        &assign,
+                                        p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(right, p->allocator.free_alloc));
 
     *expression = (Expression*)assign;
-    return SUCCESS;
-}
-
-NODISCARD Status compound_assignment_expression_parse(Parser*      p,
-                                                      Expression*  assignee,
-                                                      Expression** expression) {
-    const TokenType  op_token_type      = p->current_token.type;
-    const Precedence current_precedence = parser_current_precedence(p);
-    TRY(parser_next_token(p));
-    ASSERT_EXPRESSION(assignee);
-
-    Expression* right;
-    TRY(expression_parse(p, current_precedence, &right));
-
-    Node*                         assignee_node = (Node*)assignee;
-    CompoundAssignmentExpression* compound;
-    TRY_DO(compound_assignment_expression_create(assignee_node->start_token,
-                                                 assignee,
-                                                 op_token_type,
-                                                 right,
-                                                 &compound,
-                                                 p->allocator.memory_alloc),
-           NODE_VIRTUAL_FREE(right, p->allocator.free_alloc));
-
-    *expression = (Expression*)compound;
     return SUCCESS;
 }

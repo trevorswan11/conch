@@ -8,14 +8,19 @@
 #include "util/allocator.h"
 #include "util/status.h"
 
+// Semantically different compared to generic infix.
+//
+// Parser invariant allows easy analysis.
 typedef struct AssignmentExpression {
     Expression  base;
     Expression* lhs;
+    TokenType   op;
     Expression* rhs;
 } AssignmentExpression;
 
 NODISCARD Status assignment_expression_create(Token                  start_token,
                                               Expression*            lhs,
+                                              TokenType              op,
                                               Expression*            rhs,
                                               AssignmentExpression** assignment_expr,
                                               memory_alloc_fn        memory_alloc);
@@ -34,36 +39,5 @@ static const ExpressionVTable ASSIGNMENT_VTABLE = {
             .destroy     = assignment_expression_destroy,
             .reconstruct = assignment_expression_reconstruct,
             .analyze     = assignment_expression_analyze,
-        },
-};
-
-typedef struct CompoundAssignmentExpression {
-    Expression  base;
-    Expression* lhs;
-    TokenType   op;
-    Expression* rhs;
-} CompoundAssignmentExpression;
-
-NODISCARD Status compound_assignment_expression_create(Token                          start_token,
-                                                       Expression*                    lhs,
-                                                       TokenType                      op,
-                                                       Expression*                    rhs,
-                                                       CompoundAssignmentExpression** compound_expr,
-                                                       memory_alloc_fn                memory_alloc);
-
-void             compound_assignment_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status compound_assignment_expression_reconstruct(Node*          node,
-                                                            const HashMap* symbol_map,
-                                                            StringBuilder* sb);
-NODISCARD Status compound_assignment_expression_analyze(Node*            node,
-                                                        SemanticContext* parent,
-                                                        ArrayList*       errors);
-
-static const ExpressionVTable COMPOUND_ASSIGNMENT_VTABLE = {
-    .base =
-        {
-            .destroy     = compound_assignment_expression_destroy,
-            .reconstruct = compound_assignment_expression_reconstruct,
-            .analyze     = compound_assignment_expression_analyze,
         },
 };
