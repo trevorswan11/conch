@@ -48,7 +48,6 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
 NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     const Allocator allocator = parent->symbol_table->symbols.allocator;
     PRIMITIVE_ANALYZE(STYPE_NIL, true);
-    return SUCCESS;
 }
 
 NODISCARD Status ignore_expression_create(Token              start_token,
