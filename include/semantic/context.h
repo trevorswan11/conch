@@ -2,21 +2,21 @@
 
 #include <stdbool.h>
 
-#include "semantic/type.h"
-
-#include "util/allocator.h"
-#include "util/mem.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 typedef struct SemanticContext SemanticContext;
+typedef struct SemanticType    SemanticType;
 typedef struct SymbolTable     SymbolTable;
 
 typedef struct SemanticContext {
     SemanticContext* parent;
     SymbolTable*     symbol_table;
 
-    SemanticType analyzed_type;
+    SemanticType* analyzed_type;
 } SemanticContext;
+
+SemanticType* semantic_context_move_analyzed(SemanticContext* context);
 
 NODISCARD Status semantic_context_create(SemanticContext*  parent,
                                          SemanticContext** context,
@@ -28,5 +28,5 @@ void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc
 bool semantic_context_find(SemanticContext* context,
                            bool             check_parents,
                            MutSlice         symbol,
-                           SemanticType*    type);
+                           SemanticType**   type);
 bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol);

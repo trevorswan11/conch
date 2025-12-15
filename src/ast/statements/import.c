@@ -6,8 +6,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status import_statement_create(Token                 start_token,

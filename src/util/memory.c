@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #include "util/math.h"
-#include "util/mem.h"
+#include "util/memory.h"
 
 Slice slice_from_str_z(const char* start) { return slice_from_str_s(start, strlen(start)); }
 
@@ -64,6 +64,13 @@ bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size)
 
 Slice slice_from_mut(const MutSlice* slice) { return slice_from_str_s(slice->ptr, slice->length); }
 
+Slice    zeroed_slice(void) { return slice_from_str_s(NULL, 0); }
+MutSlice zeroed_mut_slice(void) { return mut_slice_from_str_s(NULL, 0); }
+AnySlice zeroed_any_slice(void) { return (AnySlice){NULL, 0}; }
+
+AnySlice any_from_slice(const Slice* slice) { return (AnySlice){slice->ptr, slice->length}; }
+AnySlice any_from_mut_slice(const MutSlice* slice) { return (AnySlice){slice->ptr, slice->length}; }
+
 uintptr_t align_up(uintptr_t ptr, size_t alignment) {
     assert(is_power_of_two(alignment));
     return (ptr + (alignment - 1)) & ~(alignment - 1);
@@ -88,22 +95,22 @@ void swap(void* a, void* b, size_t size) {
     }
 }
 
-char* strdup_z_allocator(const char* str, memory_alloc_fn alloc) {
+char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
     if (!str) {
         return NULL;
     }
-    return strdup_s_allocator(str, strlen(str), alloc);
+    return strdup_s_allocator(str, strlen(str), memory_alloc);
 }
 
 char* strdup_z(const char* str) { return strdup_z_allocator(str, standard_allocator.memory_alloc); }
 
-char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc) {
-    assert(alloc);
+char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
+    assert(memory_alloc);
     if (!str) {
         return NULL;
     }
 
-    char* copy = alloc(size + 1);
+    char* copy = memory_alloc(size + 1);
     if (!copy) {
         return NULL;
     }
@@ -115,4 +122,35 @@ char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc) {
 
 char* strdup_s(const char* str, size_t size) {
     return strdup_s_allocator(str, size, standard_allocator.memory_alloc);
+}
+
+RcControlBlock rc_init(rc_dtor dtor) {
+    return (RcControlBlock){
+        .ref_count = 1,
+        .dtor      = dtor,
+    };
+}
+
+void* rc_retain(void* rc_obj) {
+    assert(rc_obj);
+    RcControlBlock* rc = (RcControlBlock*)rc_obj;
+    rc->ref_count += 1;
+    return rc_obj;
+}
+
+void rc_release(void* rc_obj, free_alloc_fn free_alloc) {
+    if (!rc_obj) {
+        return;
+    }
+
+    RcControlBlock* rc = (RcControlBlock*)rc_obj;
+    rc->ref_count -= 1;
+
+    if (rc->ref_count == 0) {
+        if (rc->dtor) {
+            rc->dtor(rc_obj, free_alloc);
+        }
+
+        free_alloc(rc_obj);
+    }
 }

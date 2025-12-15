@@ -2,8 +2,6 @@
 
 #include "lexer/token.h"
 
-#include "util/mem.h"
-
 #define KW(str, tok) {{str, sizeof(str) - 1}, tok}
 
 typedef struct {

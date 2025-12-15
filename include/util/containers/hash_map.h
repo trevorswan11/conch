@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
 #include "util/hash.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 static const size_t HASH_MAP_MAX_LOAD_PERCENTAGE = 80;

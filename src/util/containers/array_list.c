@@ -6,7 +6,6 @@
 
 #include "util/containers/array_list.h"
 #include "util/math.h"
-#include "util/mem.h"
 
 MAX_FN(size_t, size_t)
 

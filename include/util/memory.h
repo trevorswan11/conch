@@ -4,9 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-
-#include "util/allocator.h"
 
 #if INTPTR_MAX == INT64_MAX
 #define WORD_SIZE_64
@@ -15,6 +14,31 @@
 #else
 #error "Unsupported architecture"
 #endif
+
+#define ASSERT_ALLOCATOR(a)     \
+    assert(a.memory_alloc);     \
+    assert(a.continuous_alloc); \
+    assert(a.re_alloc);         \
+    assert(a.free_alloc);
+
+typedef void* (*memory_alloc_fn)(size_t);
+typedef void* (*continuous_alloc_fn)(size_t, size_t);
+typedef void* (*re_alloc_fn)(void*, size_t);
+typedef void (*free_alloc_fn)(void*);
+
+typedef struct Allocator {
+    memory_alloc_fn     memory_alloc;
+    continuous_alloc_fn continuous_alloc;
+    re_alloc_fn         re_alloc;
+    free_alloc_fn       free_alloc;
+} Allocator;
+
+static const Allocator standard_allocator = {
+    .memory_alloc     = &malloc,
+    .continuous_alloc = &calloc,
+    .re_alloc         = &realloc,
+    .free_alloc       = &free,
+};
 
 // A stack allocated slice into a string with a given length.
 typedef struct {
@@ -67,12 +91,46 @@ static inline bool mut_slice_equals_slice(const MutSlice* a, const Slice* b) {
 // Makes no assumptions about ownership.
 Slice slice_from_mut(const MutSlice* slice);
 
+Slice    zeroed_slice(void);
+MutSlice zeroed_mut_slice(void);
+AnySlice zeroed_any_slice(void);
+
+AnySlice any_from_slice(const Slice* slice);
+AnySlice any_from_mut_slice(const MutSlice* slice);
+
 uintptr_t align_up(uintptr_t ptr, size_t alignment);
 void*     align_ptr(void* ptr, size_t alignment);
 void*     ptr_offset(void* p, size_t offset);
 void      swap(void* a, void* b, size_t size);
 
-char* strdup_z_allocator(const char* str, memory_alloc_fn alloc);
+char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc);
 char* strdup_z(const char* str);
-char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn alloc);
+char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc);
 char* strdup_s(const char* str, size_t size);
+
+typedef void (*rc_dtor)(void*, free_alloc_fn);
+
+// The control block for reference counted objects.
+// All operations can only fail if you don't respect memory safety.
+//
+// This must be the first member in a reference counted struct.
+typedef struct {
+    size_t  ref_count;
+    rc_dtor dtor;
+} RcControlBlock;
+
+// Creates the control block for an object.
+//
+// - The destructor can be null if the object is 'trivial'.
+// - If a destructor is provided, it must not free its parent, only its members!
+RcControlBlock rc_init(rc_dtor dtor);
+
+// Increments the objects reference count and returns a pointer to itself.
+//
+// The object must have the control block as its first member.
+void* rc_retain(void* rc_obj);
+
+// Reduces the reference count, and frees if this was the last owner of memory.
+//
+// The object must have the control block as its first member.
+void rc_release(void* rc_obj, free_alloc_fn free_alloc);

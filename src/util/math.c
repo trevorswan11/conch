@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "util/math.h"
-#include "util/mem.h"
+#include "util/memory.h"
 
 uint32_t ceil_power_of_two_32(uint32_t n) {
     if (n == 0) {

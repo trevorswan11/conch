@@ -5,7 +5,7 @@
 
 #include "util/alphanum.h"
 #include "util/hash.h"
-#include "util/mem.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 #define FOREACH_TOKEN(PROCESS)                                                                    \

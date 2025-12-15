@@ -4,15 +4,12 @@
 
 #include "lexer/token.h"
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/io.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 // A lexer object which does not own the string input.
-typedef struct {
+typedef struct Lexer {
     const char* input;
     size_t      input_length;
     size_t      position;

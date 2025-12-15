@@ -1,12 +1,6 @@
 #pragma once
 
-#include "lexer/token.h"
-
 #include "ast/expressions/expression.h"
-#include "ast/node.h"
-
-#include "util/allocator.h"
-#include "util/status.h"
 
 void single_expression_destroy(Node* node, free_alloc_fn free_alloc);
 

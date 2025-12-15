@@ -5,7 +5,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {

@@ -5,10 +5,7 @@
 #include "parser/parser.h"
 #include "semantic/analyzer.h"
 
-#include "util/allocator.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 typedef struct FileIO    FileIO;
 typedef struct ArrayList ArrayList;

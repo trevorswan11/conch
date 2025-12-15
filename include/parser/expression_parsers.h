@@ -3,15 +3,9 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include "lexer/token.h"
-
 #include "parser/parser.h"
-#include "parser/precedence.h"
 
 #include "ast/expressions/expression.h"
-
-#include "util/containers/hash_set.h"
-#include "util/status.h"
 
 typedef struct TypeExpression TypeExpression;
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 typedef struct AST             AST;

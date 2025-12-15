@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 // An 'owning' dynamic array, data is type erased.

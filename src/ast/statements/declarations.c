@@ -8,8 +8,6 @@
 #include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status decl_statement_create(Token                 start_token,
@@ -117,34 +115,50 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     }
 
     TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(duped));
-    SemanticType decl_type = parent->analyzed_type;
+    SemanticType* decl_type = semantic_context_move_analyzed(parent);
 
     if (decl->value) {
         TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {
             allocator.free_alloc(duped);
-            semantic_type_deinit(&decl_type, allocator.free_alloc);
+            rc_release(decl_type, allocator.free_alloc);
         });
-        SemanticType value_type = parent->analyzed_type;
-        if (decl_type.tag == IMPLICIT_DECLARATION) {
-            semantic_type_deinit(&decl_type, allocator.free_alloc);
+        SemanticType* value_type = semantic_context_move_analyzed(parent);
+        if (decl_type->tag == STYPE_IMPLICIT_DECLARATION) {
+            // We can now release the decl and just have it set to the value's type
+            rc_release(decl_type, allocator.free_alloc);
             decl_type = value_type;
-        } else if (!type_check(decl_type, value_type)) {
-            const Token t = NODE_TOKEN(decl);
-            IGNORE_STATUS(put_status_error(errors, TYPE_MISMATCH, t.line, t.column));
+        } else {
+            // In this case, we can drop the value type since all we need is the decl
+            const bool same_type = type_check(decl_type, value_type);
+            rc_release(value_type, allocator.free_alloc);
 
-            allocator.free_alloc(duped);
-            semantic_type_deinit(&decl_type, allocator.free_alloc);
-            semantic_type_deinit(&value_type, allocator.free_alloc);
+            if (!same_type) {
+                const Token t = NODE_TOKEN(decl);
+                IGNORE_STATUS(put_status_error(errors, TYPE_MISMATCH, t.line, t.column));
 
-            return TYPE_MISMATCH;
+                allocator.free_alloc(duped);
+                rc_release(decl_type, allocator.free_alloc);
+
+                return TYPE_MISMATCH;
+            }
         }
     } else {
         assert(!decl->is_const);
-        assert(decl_type.tag != IMPLICIT_DECLARATION);
+        assert(decl_type->tag != STYPE_IMPLICIT_DECLARATION);
     }
 
-    decl_type.is_const = decl->is_const;
-    return symbol_table_add(parent->symbol_table, decl_name, decl_type);
+    // Enforce const qualifier, but don't return anything in the context
+    decl_type->is_const = decl->is_const;
+    assert(!parent->analyzed_type);
+
+    TRY_DO(symbol_table_add(parent->symbol_table, decl_name, decl_type), {
+        allocator.free_alloc(duped);
+        rc_release(decl_type, allocator.free_alloc);
+    });
+
+    // The table retains the type, so we can release this control flow's ownership
+    rc_release(decl_type, allocator.free_alloc);
+    return SUCCESS;
 }
 
 NODISCARD Status type_decl_statement_create(Token                 start_token,

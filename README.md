@@ -18,7 +18,7 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 # Getting Started
 System dependencies:
 1. CMake (3.20 or later)
-2. Any mainstream C compiler (Clang is recommended for maximum compatibility)
+2. Any mainstream C compiler (LLVM Clang is recommended for maximum compatibility)
 3. Clang-format
 
 Once these are installed, building conch is as easy as running:

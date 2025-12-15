@@ -5,7 +5,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status array_literal_expression_create(Token                    start_token,

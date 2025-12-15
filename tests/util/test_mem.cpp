@@ -1,5 +1,4 @@
 #include "catch_amalgamated.hpp"
-#include "util/allocator.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -8,7 +7,7 @@
 
 extern "C" {
 #include "util/math.h"
-#include "util/mem.h"
+#include "util/memory.h"
 }
 
 TEST_CASE("Word size determined correctly") {
@@ -17,6 +16,21 @@ TEST_CASE("Word size determined correctly") {
 #elif defined(WORD_SIZE_32)
     REQUIRE(sizeof(size_t) == 4);
 #endif
+}
+
+TEST_CASE("Zeroed slices") {
+    Slice    slice     = zeroed_slice();
+    MutSlice mut_slice = zeroed_mut_slice();
+    AnySlice any_slice = zeroed_any_slice();
+
+    const auto test_zeroed_any = [](AnySlice any) {
+        REQUIRE(any.ptr == NULL);
+        REQUIRE(any.length == 0);
+    };
+
+    test_zeroed_any(any_from_slice(&slice));
+    test_zeroed_any(any_from_mut_slice(&mut_slice));
+    test_zeroed_any(any_slice);
 }
 
 TEST_CASE("Slice creation and equality") {
@@ -178,4 +192,59 @@ TEST_CASE("String duplication") {
         REQUIRE_FALSE(strdup_z_allocator(NULL, standard_allocator.memory_alloc));
         REQUIRE_FALSE(strdup_s_allocator(NULL, 0, standard_allocator.memory_alloc));
     }
+}
+
+TEST_CASE("Reference counting") {
+    extern struct Int {
+        RcControlBlock rc_control;
+        int            value;
+        int*           heap;
+    };
+
+    const auto int_dtor = [](void* i, free_alloc_fn free_alloc) {
+        Int* ii = (Int*)i;
+        if (ii->heap) {
+            free_alloc(ii->heap);
+            ii->heap = NULL;
+        }
+    };
+
+    const auto int_ctor = [&int_dtor](int v, bool heaped) {
+        Int* i = (Int*)malloc(sizeof(Int));
+
+        int* j = NULL;
+        if (heaped) {
+            j  = (int*)malloc(sizeof(int));
+            *j = v;
+            *i = {rc_init(int_dtor), v, j};
+        } else {
+            *i = {rc_init(NULL), v, j};
+        }
+
+        return i;
+    };
+
+    SECTION("Standard usage") {
+        Int* i = int_ctor(2, true);
+        REQUIRE(i->rc_control.ref_count == 1);
+        Int* i_ref = (Int*)rc_retain(i);
+        REQUIRE(i->rc_control.ref_count == 2);
+
+        rc_release(i_ref, free);
+        REQUIRE(i->rc_control.ref_count == 1);
+        rc_release(i, free);
+    }
+
+    SECTION("Without destructor") {
+        Int* i = int_ctor(2, false);
+        REQUIRE(i->rc_control.ref_count == 1);
+        Int* i_ref = (Int*)rc_retain(i);
+        REQUIRE(i->rc_control.ref_count == 2);
+
+        rc_release(i_ref, free);
+        REQUIRE(i->rc_control.ref_count == 1);
+        rc_release(i, free);
+    }
+
+    rc_release(NULL, free);
 }

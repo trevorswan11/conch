@@ -3,13 +3,10 @@
 #include "lexer/token.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
 #include "ast/expressions/identifier.h"
-#include "ast/expressions/string.h"
 #include "ast/expressions/type.h"
-#include "ast/node.h"
 #include "ast/statements/block.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/discard.h"
@@ -18,8 +15,6 @@
 #include "ast/statements/import.h"
 #include "ast/statements/jump.h"
 
-#include "parser/precedence.h"
-#include "util/allocator.h"
 #include "util/status.h"
 
 NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {

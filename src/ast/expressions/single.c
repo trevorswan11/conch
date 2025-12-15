@@ -3,10 +3,9 @@
 #include "ast/expressions/single.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 #define SINGLE_STMT_CREATE(type, custom_vtab, out_expr)            \
@@ -47,14 +46,8 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(errors);
-
-    parent->analyzed_type.tag      = NIL_VALUE;
-    parent->analyzed_type.variant  = DATALESS_TYPE;
-    parent->analyzed_type.valued   = true;
-    parent->analyzed_type.nullable = true;
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_NIL, true);
     return SUCCESS;
 }
 

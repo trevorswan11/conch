@@ -7,8 +7,6 @@
 #include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status assignment_expression_create(Token                  start_token,
@@ -86,28 +84,30 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
 
     AssignmentExpression* assign = (AssignmentExpression*)node;
     TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
-    SemanticType lhs_type = parent->analyzed_type;
+    SemanticType* lhs_type = semantic_context_move_analyzed(parent);
 
-    if (lhs_type.is_const) {
+    if (lhs_type->is_const) {
         IGNORE_STATUS(
             put_status_error(errors, ASSIGNMENT_TO_CONSTANT, start_token.line, start_token.column));
 
-        semantic_type_deinit(&lhs_type, free_alloc);
+        rc_release(lhs_type, free_alloc);
         return ASSIGNMENT_TO_CONSTANT;
     }
 
-    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors),
-           semantic_type_deinit(&lhs_type, free_alloc));
-    SemanticType rhs_type = parent->analyzed_type;
+    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), rc_release(lhs_type, free_alloc));
+    SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
     if (!type_check(lhs_type, rhs_type)) {
         IGNORE_STATUS(
             put_status_error(errors, TYPE_MISMATCH, start_token.line, start_token.column));
 
-        semantic_type_deinit(&lhs_type, free_alloc);
-        semantic_type_deinit(&rhs_type, free_alloc);
+        rc_release(lhs_type, free_alloc);
+        rc_release(rhs_type, free_alloc);
         return TYPE_MISMATCH;
     }
 
+    // Assignment expressions return the type of their assigned value
+    rc_release(lhs_type, free_alloc);
+    parent->analyzed_type = rhs_type;
     return SUCCESS;
 }

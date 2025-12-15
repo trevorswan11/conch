@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "lexer/token.h"
+#include "lexer/lexer.h"
+
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
 #include "parser/statement_parsers.h"
 
 #include "ast/ast.h"
@@ -20,7 +20,6 @@
 #include "ast/statements/jump.h"
 
 #include "util/containers/string_builder.h"
-#include "util/status.h"
 
 static inline NODISCARD Status _init_prefix(HashSet* prefix_set, Allocator allocator) {
     const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);

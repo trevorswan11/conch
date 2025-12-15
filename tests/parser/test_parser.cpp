@@ -44,7 +44,7 @@ extern "C" {
 
 #include "lexer/token.h"
 #include "util/containers/array_list.h"
-#include "util/mem.h"
+#include "util/memory.h"
 #include "util/status.h"
 }
 

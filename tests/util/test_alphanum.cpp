@@ -8,7 +8,6 @@
 extern "C" {
 #include "util/alphanum.h"
 #include "util/math.h"
-#include "util/status.h"
 }
 
 TEST_CASE("Character utils") {

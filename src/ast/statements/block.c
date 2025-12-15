@@ -5,10 +5,7 @@
 
 #include "semantic/context.h"
 #include "semantic/symbol.h"
-#include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status block_statement_create(Token            start_token,
@@ -81,7 +78,12 @@ NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, Ar
 
         TRY_DO(NODE_VIRTUAL_ANALYZE(stmt, child, errors),
                semantic_context_destroy(child, allocator.free_alloc));
-        semantic_type_deinit(&child->analyzed_type, allocator.free_alloc);
+
+        // If a type bubbled up we have to release it
+        if (child->analyzed_type) {
+            rc_release(child->analyzed_type, allocator.free_alloc);
+            child->analyzed_type = NULL;
+        }
     }
 
     semantic_context_destroy(child, allocator.free_alloc);

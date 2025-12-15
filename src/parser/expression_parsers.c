@@ -1,10 +1,8 @@
 #include <assert.h>
 
-#include "lexer/token.h"
+#include "lexer/lexer.h"
 
 #include "parser/expression_parsers.h"
-#include "parser/parser.h"
-#include "parser/precedence.h"
 #include "parser/statement_parsers.h"
 
 #include "ast/ast.h"
@@ -28,16 +26,10 @@
 #include "ast/expressions/string.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
-#include "ast/node.h"
 #include "ast/statements/block.h"
 #include "ast/statements/statement.h"
 
-#include "util/allocator.h"
-#include "util/alphanum.h"
-#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 static inline NODISCARD Status record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;

@@ -1,13 +1,6 @@
 #pragma once
 
-#include "lexer/token.h"
-
 #include "ast/expressions/expression.h"
-#include "ast/node.h"
-
-#include "util/allocator.h"
-#include "util/mem.h"
-#include "util/status.h"
 
 typedef struct StringLiteralExpression {
     Expression base;

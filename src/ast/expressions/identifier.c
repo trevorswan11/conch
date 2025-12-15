@@ -5,8 +5,6 @@
 #include "semantic/context.h"
 #include "semantic/symbol.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status identifier_expression_create(Token                  start_token,
@@ -58,7 +56,7 @@ NODISCARD Status identifier_expression_analyze(Node*            node,
     IdentifierExpression* ident = (IdentifierExpression*)node;
 
     // Identifiers are only analyzed if they have been declared
-    SemanticType semantic_type;
+    SemanticType* semantic_type;
     if (!semantic_context_find(parent, true, ident->name, &semantic_type)) {
         const Token start_token = node->start_token;
         IGNORE_STATUS(
@@ -66,6 +64,6 @@ NODISCARD Status identifier_expression_analyze(Node*            node,
         return UNDECLARED_IDENTIFIER;
     }
 
-    parent->analyzed_type = semantic_type;
+    parent->analyzed_type = rc_retain(semantic_type);
     return SUCCESS;
 }

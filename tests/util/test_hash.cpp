@@ -5,7 +5,7 @@
 
 extern "C" {
 #include "util/hash.h"
-#include "util/mem.h"
+#include "util/memory.h"
 }
 
 TEST_CASE("Null terminated string comparison") {

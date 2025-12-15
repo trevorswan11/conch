@@ -4,7 +4,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {

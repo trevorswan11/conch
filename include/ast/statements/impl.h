@@ -1,12 +1,6 @@
 #pragma once
 
-#include "lexer/token.h"
-
-#include "ast/node.h"
 #include "ast/statements/statement.h"
-
-#include "util/allocator.h"
-#include "util/status.h"
 
 typedef struct IdentifierExpression IdentifierExpression;
 typedef struct BlockStatement       BlockStatement;

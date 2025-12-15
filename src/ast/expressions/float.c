@@ -3,10 +3,9 @@
 #include "ast/expressions/float.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status float_literal_expression_create(Token                    start_token,
@@ -52,5 +51,6 @@ NODISCARD Status float_literal_expression_reconstruct(Node*          node,
 NODISCARD Status float_literal_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(FLOATING_POINT);
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_FLOATING_POINT, false);
 }

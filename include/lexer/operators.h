@@ -2,11 +2,7 @@
 
 #include "lexer/token.h"
 
-#include "util/mem.h"
-
-// clang-format off
 #define OP(str, tok) {{str, sizeof(str) - 1}, tok}
-// clang-format on
 
 static const size_t MAX_OPERATOR_LEN = 3;
 

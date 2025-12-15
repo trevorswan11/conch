@@ -5,9 +5,6 @@
 
 #include "semantic/analyzer.h"
 
-#include "util/containers/array_list.h"
-#include "util/io.h"
-
 NODISCARD Status program_init(Program* program, FileIO* io, Allocator allocator) {
     Lexer l;
     TRY(lexer_null_init(&l, allocator));

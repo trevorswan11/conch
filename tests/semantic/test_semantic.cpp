@@ -25,9 +25,9 @@ TEST_CASE("Primitive declarations") {
             "const v := 3;",
             "const v := 3u;",
             "const v := \"3\";",
-            "const v := '3';",
+            "var v := '3';",
             "const v := true;",
-            "const v := 5.234;",
+            "var v := 5.234;",
         };
 
         for (const auto& i : inputs) {
@@ -134,7 +134,9 @@ TEST_CASE("Assignment expressions") {
             test_analyze(input, {"TYPE_MISMATCH [Ln 1, Col 17]"});
         }
     }
+}
 
+TEST_CASE("Discard and ignore expressions") {
     SECTION("Discard assignments") {
         SECTION("Valid discard assignment") {
             const char* input = "_ = 4";
@@ -146,16 +148,16 @@ TEST_CASE("Assignment expressions") {
             test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 5]"});
         }
     }
+}
 
-    SECTION("Block statements") {
-        SECTION("Correct top-level blocks") {
-            const char* input = "var v := 3; { v = 5 }";
-            test_analyze(input);
-        }
+TEST_CASE("Block statements") {
+    SECTION("Correct top-level blocks") {
+        const char* input = "var v := 3; { v = 5 }";
+        test_analyze(input);
+    }
 
-        SECTION("Incorrect top-level blocks") {
-            const char* input = "var v := 3; { a = 5 }";
-            test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 15]"});
-        }
+    SECTION("Incorrect top-level blocks") {
+        const char* input = "var v := 3; { a = 5 }";
+        test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 15]"});
     }
 }

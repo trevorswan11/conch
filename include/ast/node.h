@@ -2,7 +2,7 @@
 
 #include "lexer/token.h"
 
-#include "util/allocator.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 #define ASSERT_NODE(node) \

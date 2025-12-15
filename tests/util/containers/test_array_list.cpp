@@ -9,7 +9,6 @@
 extern "C" {
 #include "util/containers/array_list.h"
 #include "util/hash.h"
-#include "util/status.h"
 }
 
 TEST_CASE("Init and resize") {

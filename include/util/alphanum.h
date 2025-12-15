@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }

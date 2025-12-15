@@ -1,14 +1,10 @@
 #pragma once
 
 #include "lexer/keywords.h"
-#include "lexer/token.h"
 
 #include "ast/expressions/expression.h"
-#include "ast/node.h"
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/status.h"
 
 static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_INT,

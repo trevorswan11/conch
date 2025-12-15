@@ -1,8 +1,8 @@
 #include <assert.h>
-#include <stdalign.h>
 
 #include "semantic/context.h"
 #include "semantic/symbol.h"
+#include "semantic/type.h"
 
 NODISCARD Status semantic_context_create(SemanticContext*  parent,
                                          SemanticContext** context,
@@ -25,6 +25,13 @@ NODISCARD Status semantic_context_create(SemanticContext*  parent,
     return SUCCESS;
 }
 
+SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
+    assert(context);
+    SemanticType* type     = context->analyzed_type;
+    context->analyzed_type = NULL;
+    return type;
+}
+
 void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc) {
     if (!context) {
         return;
@@ -37,7 +44,7 @@ void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc
 bool semantic_context_find(SemanticContext* context,
                            bool             check_parents,
                            MutSlice         symbol,
-                           SemanticType*    type) {
+                           SemanticType**   type) {
     assert(context);
     if (!check_parents) {
         return symbol_table_find(context->symbol_table, symbol, type);

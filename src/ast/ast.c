@@ -9,6 +9,8 @@
 #include "lexer/keywords.h"
 #include "lexer/operators.h"
 
+#include "util/containers/string_builder.h"
+
 bool group_expressions = false;
 
 void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {

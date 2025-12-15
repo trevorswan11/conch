@@ -5,9 +5,6 @@
 
 extern "C" {
 #include "util/containers/hash_set.h"
-#include "util/hash.h"
-#include "util/mem.h"
-#include "util/status.h"
 }
 
 HASH_INTEGER_FN(uint16_t)

@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
 #include "util/hash.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 typedef struct Metadata Metadata;

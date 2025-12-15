@@ -10,11 +10,8 @@ extern "C" {
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/string.h"
-#include "ast/node.h"
 #include "ast/statements/declarations.h"
 #include "ast/statements/expression.h"
-
-#include "util/mem.h"
 }
 
 SBFixture::SBFixture(size_t initial_length) {

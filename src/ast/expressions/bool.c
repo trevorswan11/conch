@@ -3,10 +3,9 @@
 #include "ast/expressions/bool.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status bool_literal_expression_create(Token                   start_token,
@@ -52,5 +51,6 @@ NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
 NODISCARD Status bool_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(BOOL);
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_BOOL, false);
 }

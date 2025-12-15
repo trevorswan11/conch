@@ -1,5 +1,5 @@
 #include "util/hash.h"
-#include "util/mem.h"
+#include "util/memory.h"
 
 int compare_string_z(const void* a, const void* b) {
     const char* str_a = (const char*)a;

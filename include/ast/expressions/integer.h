@@ -2,13 +2,7 @@
 
 #include <stdint.h>
 
-#include "lexer/token.h"
-
 #include "ast/expressions/expression.h"
-#include "ast/node.h"
-
-#include "util/allocator.h"
-#include "util/status.h"
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc);
 

@@ -3,20 +3,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "lexer/lexer.h"
 #include "lexer/token.h"
 
 #include "parser/precedence.h"
 
-#include "ast/ast.h"
-#include "ast/statements/statement.h"
-
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
 #include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
 #include "util/io.h"
 #include "util/status.h"
+
+typedef struct Lexer     Lexer;
+typedef struct AST       AST;
+typedef struct Statement Statement;
 
 typedef struct Parser {
     Lexer* lexer;

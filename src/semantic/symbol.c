@@ -18,8 +18,8 @@ NODISCARD Status symbol_table_create(SymbolTable** table, Allocator allocator) {
                                    4,
                                    sizeof(MutSlice),
                                    alignof(MutSlice),
-                                   sizeof(SemanticType),
-                                   alignof(SemanticType),
+                                   sizeof(SemanticType*),
+                                   alignof(SemanticType*),
                                    hash_mut_slice,
                                    compare_mut_slices,
                                    allocator),
@@ -42,30 +42,35 @@ void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
     HashMapIterator it = hash_map_iterator_init(&table->symbols);
     while (hash_map_iterator_has_next(&it, &next)) {
         MutSlice* name = (MutSlice*)next.key_ptr;
-        free_alloc(name->ptr);
-        SemanticType* type = next.value_ptr;
-        semantic_type_deinit(type, free_alloc);
+        if (name->ptr) {
+            free_alloc(name->ptr);
+            *name = zeroed_mut_slice();
+        }
+
+        SemanticType** type = next.value_ptr;
+        rc_release(*type, free_alloc);
     }
 
     hash_map_deinit(&table->symbols);
     free_alloc(table);
 }
 
-NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType type) {
+NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType* type) {
     assert(st);
     assert(!symbol_table_has(st, symbol));
 
-    return hash_map_put(&st->symbols, &symbol, &type);
+    const void* retained = rc_retain(type);
+    return hash_map_put(&st->symbols, &symbol, &retained);
 }
 
-NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType* type) {
+NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType** type) {
     assert(st);
     assert(symbol_table_has(st, symbol));
 
     return hash_map_get_value(&st->symbols, &symbol, type);
 }
 
-bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType* type) {
+bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType** type) {
     assert(st);
     if (!symbol_table_has(st, symbol)) {
         return false;

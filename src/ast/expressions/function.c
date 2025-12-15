@@ -10,7 +10,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 NODISCARD Status allocate_parameter_list(Parser*    p,

@@ -7,7 +7,6 @@
 
 #include "semantic/context.h"
 
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {

@@ -2,11 +2,6 @@
 
 #include "semantic_helpers.hpp"
 
-extern "C" {
-#include "util/allocator.h"
-#include "util/status.h"
-}
-
 SemanticFixture::SemanticFixture(const char* input) : pf(input) {
     pf.check_errors();
     REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, standard_allocator)));

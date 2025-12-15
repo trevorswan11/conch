@@ -7,9 +7,7 @@
 #include "evaluate/program.h"
 #include "evaluate/repl.h"
 
-#include "util/allocator.h"
 #include "util/containers/string_builder.h"
-#include "util/status.h"
 
 static volatile sig_atomic_t interrupted = 0;
 

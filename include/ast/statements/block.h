@@ -1,13 +1,8 @@
 #pragma once
 
-#include "lexer/token.h"
-
-#include "ast/node.h"
 #include "ast/statements/statement.h"
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/status.h"
 
 typedef struct BlockStatement {
     Statement base;

@@ -4,9 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/allocator.h"
 #include "util/containers/array_list.h"
-#include "util/mem.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 typedef struct StringBuilder {

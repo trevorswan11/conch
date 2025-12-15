@@ -14,9 +14,8 @@
 extern "C" {
 #include "lexer/lexer.h"
 #include "lexer/token.h"
-#include "util/allocator.h"
 #include "util/io.h"
-#include "util/mem.h"
+#include "util/memory.h"
 #include "util/status.h"
 }
 

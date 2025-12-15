@@ -7,7 +7,6 @@
 
 extern "C" {
 #include "util/containers/string_builder.h"
-#include "util/status.h"
 }
 
 TEST_CASE("StringBuilder basic append") {

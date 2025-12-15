@@ -3,10 +3,9 @@
 #include "ast/expressions/integer.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
 #include "semantic/type.h"
 
-#include "util/containers/array_list.h"
-#include "util/containers/hash_map.h"
 #include "util/containers/string_builder.h"
 
 #define INTEGER_EXPR_CREATE(type, custom_vtab, out_expr)    \
@@ -53,7 +52,8 @@ NODISCARD Status integer_literal_expression_create(Token                      st
 NODISCARD Status integer_literal_expression_analyze(Node*            node,
                                                     SemanticContext* parent,
                                                     ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(SIGNED_INTEGER);
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_SIGNED_INTEGER, false);
 }
 
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
@@ -66,7 +66,8 @@ NODISCARD Status uinteger_literal_expression_create(Token                       
 NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
                                                      SemanticContext* parent,
                                                      ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(UNSIGNED_INTEGER);
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_UNSIGNED_INTEGER, false);
 }
 
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
@@ -79,5 +80,6 @@ NODISCARD Status byte_literal_expression_create(Token                   start_to
 NODISCARD Status byte_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(BYTE_INTEGER);
+    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    PRIMITIVE_ANALYZE(STYPE_BYTE_INTEGER, false);
 }
