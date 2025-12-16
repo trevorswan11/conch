@@ -25,7 +25,9 @@
     return SUCCESS
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
     free_alloc(node);
 }
@@ -33,10 +35,9 @@ void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status integer_expression_reconstruct(Node*          node,
                                                 const HashMap* symbol_map,
                                                 StringBuilder* sb) {
-    ASSERT_NODE(node);
-    assert(sb);
-
+    ASSERT_EXPRESSION(node);
     MAYBE_UNUSED(symbol_map);
+    assert(sb);
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
@@ -52,8 +53,8 @@ NODISCARD Status integer_literal_expression_create(Token                      st
 NODISCARD Status integer_literal_expression_analyze(Node*            node,
                                                     SemanticContext* parent,
                                                     ArrayList*       errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_SIGNED_INTEGER, false);
+    PRIMITIVE_ANALYZE(
+        STYPE_SIGNED_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }
 
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
@@ -66,8 +67,8 @@ NODISCARD Status uinteger_literal_expression_create(Token                       
 NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
                                                      SemanticContext* parent,
                                                      ArrayList*       errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_UNSIGNED_INTEGER, false);
+    PRIMITIVE_ANALYZE(
+        STYPE_UNSIGNED_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }
 
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
@@ -80,6 +81,6 @@ NODISCARD Status byte_literal_expression_create(Token                   start_to
 NODISCARD Status byte_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_BYTE_INTEGER, false);
+    PRIMITIVE_ANALYZE(
+        STYPE_BYTE_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }

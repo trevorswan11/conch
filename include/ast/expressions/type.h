@@ -31,8 +31,8 @@ typedef enum {
 } ExplicitTypeTag;
 
 typedef struct ExplicitFunctionType {
-    ArrayList       fn_generics;
-    ArrayList       fn_type_params;
+    ArrayList       generics;
+    ArrayList       parameters;
     TypeExpression* return_type;
 } ExplicitFunctionType;
 
@@ -63,30 +63,26 @@ typedef struct ImplicitType {
 typedef enum {
     EXPLICIT,
     IMPLICIT,
-} TypeTag;
+} TypeExpressionTag;
 
 typedef union {
     ExplicitType explicit_type;
     ImplicitType implicit_type;
-} TypeUnion;
+} TypeExpressionUnion;
 
-static const TypeUnion IMPLICIT_TYPE = {.implicit_type = {'\0'}};
-
-typedef struct Type {
-    TypeTag   tag;
-    TypeUnion variant;
-} Type;
+static const TypeExpressionUnion IMPLICIT_TYPE = {.implicit_type = {'\0'}};
 
 typedef struct TypeExpression {
-    Expression base;
-    Type       type;
+    Expression          base;
+    TypeExpressionTag   tag;
+    TypeExpressionUnion variant;
 } TypeExpression;
 
-NODISCARD Status type_expression_create(Token            start_token,
-                                        TypeTag          tag,
-                                        TypeUnion        variant,
-                                        TypeExpression** type_expr,
-                                        memory_alloc_fn  memory_alloc);
+NODISCARD Status type_expression_create(Token               start_token,
+                                        TypeExpressionTag   tag,
+                                        TypeExpressionUnion variant,
+                                        TypeExpression**    type_expr,
+                                        memory_alloc_fn     memory_alloc);
 
 void             type_expression_destroy(Node* node, free_alloc_fn free_alloc);
 NODISCARD Status type_expression_reconstruct(Node*          node,

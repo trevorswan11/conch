@@ -48,6 +48,3 @@ bool is_power_of_two(size_t n);
 
 bool approx_eq_float(float x, float y, float tolerance);
 bool approx_eq_double(double x, double y, double tolerance);
-
-// Generates a random integer in the range [min, max].
-int rand_in_range(int min, int max);

@@ -5,9 +5,10 @@
 #include "util/memory.h"
 #include "util/status.h"
 
-#define ASSERT_NODE(node) \
-    assert(node->vtable); \
-    assert(node->start_token.slice.ptr);
+#define ASSERT_NODE(node)          \
+    assert(node);                  \
+    assert(((Node*)node)->vtable); \
+    assert(((Node*)node)->start_token.slice.ptr);
 
 // Casts the input pointer to a node, calls is virtual destructor, and nulls the pointer
 #define NODE_VIRTUAL_FREE(node_ptr_to_cast_and_free, free_alloc)                     \
@@ -18,6 +19,10 @@
         }                                                                            \
         node_ptr_to_cast_and_free = NULL;                                            \
     } while (0);
+
+// Casts the input pointer to a node and calls its virtual reconstruct function
+#define NODE_VIRTUAL_RECONSTRUCT(node_ptr_to_cast, symbol_map, sb_ptr) \
+    ((Node*)node_ptr_to_cast)->vtable->reconstruct((Node*)node_ptr_to_cast, symbol_map, sb_ptr)
 
 // Casts the input pointer to a node and calls its virtual analyzer
 #define NODE_VIRTUAL_ANALYZE(node_ptr_to_cast, context, errors) \

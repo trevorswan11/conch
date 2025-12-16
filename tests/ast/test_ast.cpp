@@ -105,6 +105,9 @@ TEST_CASE("Conditionals") {
                             "match Out { 1 => return 90u;, 2 => return 0b1011u;, }");
         test_reconstruction("match Out { 1 => { return first }, 2 => { return second }, }",
                             "match Out { 1 => { return first; }, 2 => { return second; }, }");
+        test_reconstruction(
+            "match Out { 1 => { return first }, 2 => { return second }, } else third",
+            "match Out { 1 => { return first; }, 2 => { return second; }, } else third");
     }
 }
 

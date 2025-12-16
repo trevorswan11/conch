@@ -1,7 +1,6 @@
 #include <assert.h>
 
 #include "ast/expressions/enum.h"
-#include "ast/expressions/identifier.h"
 
 #include "semantic/context.h"
 
@@ -11,10 +10,10 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     assert(variants);
     assert(free_alloc);
 
-    EnumVariant variant;
-    for (size_t i = 0; i < variants->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(variants, i, &variant));
-        identifier_expression_destroy((Node*)variant.name, free_alloc);
+    ArrayListIterator it = array_list_iterator_init(variants);
+    EnumVariant       variant;
+    while (array_list_iterator_has_next(&it, &variant)) {
+        NODE_VIRTUAL_FREE(variant.name, free_alloc);
         NODE_VIRTUAL_FREE(variant.value, free_alloc);
     }
 
@@ -44,33 +43,36 @@ NODISCARD Status enum_expression_create(Token            start_token,
 }
 
 void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
-    EnumExpression* e = (EnumExpression*)node;
-    free_enum_variant_list(&e->variants, free_alloc);
+    EnumExpression* enum_expr = (EnumExpression*)node;
+    free_enum_variant_list(&enum_expr->variants, free_alloc);
 
-    free_alloc(e);
+    free_alloc(enum_expr);
 }
 
 NODISCARD Status enum_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
-    EnumExpression* e = (EnumExpression*)node;
+    EnumExpression* enum_expr = (EnumExpression*)node;
     TRY(string_builder_append_str_z(sb, "enum { "));
 
-    EnumVariant variant;
-    for (size_t i = 0; i < e->variants.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&e->variants, i, &variant));
+    ArrayListIterator it = array_list_iterator_init(&enum_expr->variants);
+    EnumVariant       variant;
+    while (array_list_iterator_has_next(&it, &variant)) {
+        ASSERT_EXPRESSION(variant.name);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(variant.name, symbol_map, sb));
 
-        TRY(identifier_expression_reconstruct((Node*)variant.name, symbol_map, sb));
         if (variant.value) {
-            Node* value_node = (Node*)variant.value;
+            ASSERT_EXPRESSION(variant.value);
             TRY(string_builder_append_str_z(sb, " = "));
-            TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+            TRY(NODE_VIRTUAL_RECONSTRUCT(variant.value, symbol_map, sb));
         }
 
         TRY(string_builder_append_str_z(sb, ", "));
@@ -81,8 +83,13 @@ NODISCARD Status enum_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    EnumExpression* enum_expr = (EnumExpression*)node;
+    assert(enum_expr->variants.data && enum_expr->variants.length > 0);
+
+    MAYBE_UNUSED(enum_expr);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

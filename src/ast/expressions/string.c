@@ -30,7 +30,9 @@ NODISCARD Status string_literal_expression_create(Token                     star
 }
 
 void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
@@ -44,9 +46,9 @@ void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status string_literal_expression_reconstruct(Node*          node,
                                                        const HashMap* symbol_map,
                                                        StringBuilder* sb) {
-    ASSERT_NODE(node);
-    assert(sb);
+    ASSERT_EXPRESSION(node);
     MAYBE_UNUSED(symbol_map);
+    assert(sb);
 
     // The tokenizer drops the start of multiline strings so we have to reconstruct here
     if (node->start_token.type == MULTILINE_STRING) {
@@ -63,6 +65,5 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
 NODISCARD Status string_literal_expression_analyze(Node*            node,
                                                    SemanticContext* parent,
                                                    ArrayList*       errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_STR, false);
+    PRIMITIVE_ANALYZE(STYPE_STR, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }

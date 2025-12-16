@@ -12,9 +12,9 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     assert(captures && captures->data);
     assert(free_alloc);
 
-    ForLoopCapture capture;
-    for (size_t i = 0; i < captures->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(captures, i, &capture));
+    ArrayListIterator it = array_list_iterator_init(captures);
+    ForLoopCapture    capture;
+    while (array_list_iterator_has_next(&it, &capture)) {
         NODE_VIRTUAL_FREE(capture.capture, free_alloc);
     }
 
@@ -50,7 +50,9 @@ NODISCARD Status for_loop_expression_create(Token               start_token,
 }
 
 void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     ForLoopExpression* for_loop = (ForLoopExpression*)node;
@@ -65,20 +67,20 @@ void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status for_loop_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     ForLoopExpression* for_loop = (ForLoopExpression*)node;
+    assert(for_loop->iterables.data && for_loop->iterables.length > 0);
     TRY(string_builder_append_str_z(sb, "for ("));
 
     // All for loops have an iterables clause
-    for (size_t i = 0; i < for_loop->iterables.length; i++) {
-        Expression* iterable;
-        UNREACHABLE_IF_ERROR(array_list_get(&for_loop->iterables, i, &iterable));
-        Node* iter_node = (Node*)iterable;
-        TRY(iter_node->vtable->reconstruct(iter_node, symbol_map, sb));
-
-        if (i != for_loop->iterables.length - 1) {
+    ArrayListIterator it = array_list_iterator_init(&for_loop->iterables);
+    Expression*       iterable;
+    while (array_list_iterator_has_next(&it, &iterable)) {
+        ASSERT_EXPRESSION(iterable);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(iterable, symbol_map, sb));
+        if (!array_list_iterator_exhausted(&it)) {
             TRY(string_builder_append_str_z(sb, ", "));
         }
     }
@@ -88,17 +90,17 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     if (for_loop->captures.length > 0) {
         TRY(string_builder_append_str_z(sb, " : ("));
 
-        for (size_t i = 0; i < for_loop->captures.length; i++) {
-            ForLoopCapture capture;
-            UNREACHABLE_IF_ERROR(array_list_get(&for_loop->captures, i, &capture));
+        it = array_list_iterator_init(&for_loop->captures);
+        ForLoopCapture capture;
+        while (array_list_iterator_has_next(&it, &capture)) {
             if (capture.is_ref) {
                 TRY(string_builder_append_str_z(sb, "ref "));
             }
 
-            Node* capture_node = (Node*)capture.capture;
-            TRY(capture_node->vtable->reconstruct(capture_node, symbol_map, sb));
+            ASSERT_EXPRESSION(capture.capture);
+            TRY(NODE_VIRTUAL_RECONSTRUCT(capture.capture, symbol_map, sb));
 
-            if (i != for_loop->captures.length - 1) {
+            if (!array_list_iterator_exhausted(&it)) {
                 TRY(string_builder_append_str_z(sb, ", "));
             }
         }
@@ -106,14 +108,15 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
         TRY(string_builder_append(sb, ')'));
     }
 
+    ASSERT_STATEMENT(for_loop->block);
     TRY(string_builder_append(sb, ' '));
-    TRY(block_statement_reconstruct((Node*)for_loop->block, symbol_map, sb));
+    TRY(NODE_VIRTUAL_RECONSTRUCT(for_loop->block, symbol_map, sb));
 
     // The non break clause is optional but uses an else clause like a condition
     if (for_loop->non_break) {
+        ASSERT_STATEMENT(for_loop->non_break);
         TRY(string_builder_append_str_z(sb, " else "));
-        Node* non_break = (Node*)for_loop->non_break;
-        TRY(non_break->vtable->reconstruct(non_break, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(for_loop->non_break, symbol_map, sb));
     }
 
     return SUCCESS;
@@ -122,8 +125,14 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
 NODISCARD Status for_loop_expression_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    ForLoopExpression* for_loop = (ForLoopExpression*)node;
+    assert(for_loop->iterables.data && for_loop->iterables.length > 0);
+    ASSERT_STATEMENT(for_loop->block);
+
+    MAYBE_UNUSED(for_loop);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
@@ -156,7 +165,9 @@ NODISCARD Status while_loop_expression_create(Token                 start_token,
 }
 
 void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
@@ -171,32 +182,33 @@ void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status while_loop_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
     TRY(string_builder_append_str_z(sb, "while ("));
 
-    Node* cond_node = (Node*)while_loop->condition;
-    TRY(cond_node->vtable->reconstruct(cond_node, symbol_map, sb));
+    ASSERT_EXPRESSION(while_loop->condition);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(while_loop->condition, symbol_map, sb));
     TRY(string_builder_append(sb, ')'));
 
     // A continuation runs after every loop and is optional
     if (while_loop->continuation) {
+        ASSERT_EXPRESSION(while_loop->continuation);
         TRY(string_builder_append_str_z(sb, " : ("));
-        Node* cont_node = (Node*)while_loop->continuation;
-        TRY(cont_node->vtable->reconstruct(cont_node, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(while_loop->continuation, symbol_map, sb));
         TRY(string_builder_append(sb, ')'));
     }
 
+    ASSERT_STATEMENT(while_loop->block);
     TRY(string_builder_append(sb, ' '));
-    TRY(block_statement_reconstruct((Node*)while_loop->block, symbol_map, sb));
+    TRY(NODE_VIRTUAL_RECONSTRUCT(while_loop->block, symbol_map, sb));
 
     // While loops also have a non break clause
     if (while_loop->non_break) {
+        ASSERT_STATEMENT(while_loop->non_break);
         TRY(string_builder_append_str_z(sb, " else "));
-        Node* non_break = (Node*)while_loop->non_break;
-        TRY(non_break->vtable->reconstruct(non_break, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(while_loop->non_break, symbol_map, sb));
     }
 
     return SUCCESS;
@@ -205,8 +217,14 @@ NODISCARD Status while_loop_expression_reconstruct(Node*          node,
 NODISCARD Status while_loop_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
+    ASSERT_EXPRESSION(while_loop->condition);
+    ASSERT_STATEMENT(while_loop->block);
+
+    MAYBE_UNUSED(while_loop);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
@@ -235,7 +253,9 @@ NODISCARD Status do_while_loop_expression_create(Token                   start_t
 }
 
 void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)node;
@@ -248,16 +268,18 @@ void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)node;
     TRY(string_builder_append_str_z(sb, "do "));
-    TRY(block_statement_reconstruct((Node*)do_while_loop->block, symbol_map, sb));
 
+    ASSERT_STATEMENT(do_while_loop->block);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(do_while_loop->block, symbol_map, sb));
+
+    ASSERT_EXPRESSION(do_while_loop->condition);
     TRY(string_builder_append_str_z(sb, " while ("));
-    Node* cond_node = (Node*)do_while_loop->condition;
-    TRY(cond_node->vtable->reconstruct(cond_node, symbol_map, sb));
+    TRY(NODE_VIRTUAL_RECONSTRUCT(do_while_loop->condition, symbol_map, sb));
     TRY(string_builder_append(sb, ')'));
 
     return SUCCESS;
@@ -266,8 +288,14 @@ NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
 NODISCARD Status do_while_loop_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    WhileLoopExpression* do_while_loop = (WhileLoopExpression*)node;
+    ASSERT_STATEMENT(do_while_loop->block);
+    ASSERT_EXPRESSION(do_while_loop->condition);
+
+    MAYBE_UNUSED(do_while_loop);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

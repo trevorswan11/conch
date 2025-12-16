@@ -28,7 +28,9 @@ NODISCARD Status discard_statement_create(Token              start_token,
 }
 
 void discard_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     DiscardStatement* discard = (DiscardStatement*)node;
@@ -40,21 +42,25 @@ void discard_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status discard_statement_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     TRY(string_builder_append_str_z(sb, "_ = "));
 
-    DiscardStatement* discard    = (DiscardStatement*)node;
-    Node*             to_discard = (Node*)discard->to_discard;
-    TRY(to_discard->vtable->reconstruct(to_discard, symbol_map, sb));
+    DiscardStatement* discard = (DiscardStatement*)node;
+    ASSERT_EXPRESSION(discard->to_discard);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(discard->to_discard, symbol_map, sb));
 
     TRY(string_builder_append(sb, ';'));
     return SUCCESS;
 }
 
 NODISCARD Status discard_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
     DiscardStatement* discard = (DiscardStatement*)node;
+    ASSERT_EXPRESSION(discard->to_discard);
+
     return NODE_VIRTUAL_ANALYZE(discard->to_discard, parent, errors);
 }

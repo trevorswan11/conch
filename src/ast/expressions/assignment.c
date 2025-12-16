@@ -35,7 +35,9 @@ NODISCARD Status assignment_expression_create(Token                  start_token
 }
 
 void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     AssignmentExpression* assign = (AssignmentExpression*)node;
@@ -48,26 +50,24 @@ void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status assignment_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     AssignmentExpression* assign = (AssignmentExpression*)node;
-    assert(assign->lhs && assign->rhs);
-
-    Node* lhs = (Node*)assign->lhs;
-    Slice op  = poll_tt_symbol(symbol_map, assign->op);
-    Node* rhs = (Node*)assign->rhs;
+    Slice                 op     = poll_tt_symbol(symbol_map, assign->op);
 
     if (group_expressions) {
         TRY(string_builder_append(sb, '('));
     }
-    TRY(lhs->vtable->reconstruct(lhs, symbol_map, sb));
+    ASSERT_EXPRESSION(assign->lhs);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(assign->lhs, symbol_map, sb));
 
     TRY(string_builder_append(sb, ' '));
     TRY(string_builder_append_slice(sb, op));
     TRY(string_builder_append(sb, ' '));
 
-    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
+    ASSERT_EXPRESSION(assign->rhs);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(assign->rhs, symbol_map, sb));
     if (group_expressions) {
         TRY(string_builder_append(sb, ')'));
     }
@@ -78,11 +78,16 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
 NODISCARD Status assignment_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
-    assert(node && parent && errors);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    AssignmentExpression* assign = (AssignmentExpression*)node;
+    ASSERT_EXPRESSION(assign->lhs);
+    ASSERT_EXPRESSION(assign->rhs);
+
     const Token   start_token = node->start_token;
     free_alloc_fn free_alloc  = parent->symbol_table->symbols.allocator.free_alloc;
 
-    AssignmentExpression* assign = (AssignmentExpression*)node;
     TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
 

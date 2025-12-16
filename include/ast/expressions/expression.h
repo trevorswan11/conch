@@ -2,9 +2,9 @@
 
 #include "ast/node.h"
 
-#define ASSERT_EXPRESSION(expr) \
-    assert(expr->vtable);       \
-    ASSERT_NODE(((Node*)expr));
+#define ASSERT_EXPRESSION(expr)          \
+    assert(((Expression*)expr)->vtable); \
+    ASSERT_NODE(expr);
 
 #define EXPRESSION_INIT(custom_vtab, token)       \
     (Expression) {                                \

@@ -31,6 +31,30 @@
 
 #include "util/containers/string_builder.h"
 
+#define TRAILING_ALTERNATE(result, err, err_code)                                                  \
+    switch (p->current_token.type) {                                                               \
+    case VAR:                                                                                      \
+    case CONST:                                                                                    \
+    case TYPE:                                                                                     \
+    case IMPL:                                                                                     \
+    case IMPORT:                                                                                   \
+    case UNDERSCORE:                                                                               \
+        IGNORE_STATUS(                                                                             \
+            parser_put_status_error(p, err_code, p->current_token.line, p->current_token.column)); \
+        err;                                                                                       \
+        return err_code;                                                                           \
+    default:                                                                                       \
+        TRY_DO(parser_parse_statement(p, &result), err);                                           \
+        break;                                                                                     \
+    }
+
+#define POSSIBLE_TRAILING_ALTERNATE(result, err, err_code) \
+    if (parser_peek_token_is(p, ELSE)) {                   \
+        UNREACHABLE_IF_ERROR(parser_next_token(p));        \
+        TRY_DO(parser_next_token(p), err);                 \
+        TRAILING_ALTERNATE(result, err, err_code);         \
+    }
+
 static inline NODISCARD Status record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;
     StringBuilder sb;
@@ -100,6 +124,106 @@ NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression)
     return SUCCESS;
 }
 
+NODISCARD Status parameter_list_parse(Parser*    p,
+                                      ArrayList* parameters,
+                                      bool*      contains_default_param) {
+    assert(p && parameters);
+    ASSERT_ALLOCATOR(p->allocator);
+    Allocator allocator = p->allocator;
+
+    ArrayList list;
+    TRY(array_list_init_allocator(&list, 2, sizeof(Parameter), allocator));
+
+    bool some_initialized = false;
+    if (parser_peek_token_is(p, RPAREN)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+    } else {
+        TRY_DO(parser_next_token(p), array_list_deinit(&list));
+        while (!parser_current_token_is(p, RPAREN)) {
+            bool is_ref_argument = false;
+            if (parser_current_token_is(p, REF)) {
+                UNREACHABLE_IF_ERROR(parser_next_token(p));
+                is_ref_argument = true;
+            }
+
+            // Every parameter must have an identifier and a type
+            Expression* ident_expr;
+            TRY_DO(identifier_expression_parse(p, &ident_expr),
+                   free_parameter_list(&list, p->allocator.free_alloc));
+            IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
+
+            Expression* type_expr;
+            bool        initalized;
+            TRY_DO(type_expression_parse(p, &type_expr, &initalized), {
+                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                free_parameter_list(&list, p->allocator.free_alloc);
+            });
+
+            TypeExpression* type = (TypeExpression*)type_expr;
+            if (type->tag == IMPLICIT) {
+                IGNORE_STATUS(parser_put_status_error(
+                    p, IMPLICIT_FN_PARAM_TYPE, p->current_token.line, p->current_token.column));
+
+                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                type_expression_destroy((Node*)type, allocator.free_alloc);
+                free_parameter_list(&list, p->allocator.free_alloc);
+                return IMPLICIT_FN_PARAM_TYPE;
+            }
+
+            // Parse the default value based on the types knowledge of it
+            Expression* default_value = NULL;
+            if (initalized) {
+                some_initialized = some_initialized || initalized;
+
+                TRY_DO(expression_parse(p, LOWEST, &default_value), {
+                    identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                    type_expression_destroy((Node*)type, allocator.free_alloc);
+                    free_parameter_list(&list, p->allocator.free_alloc);
+                });
+
+                // Expression parsing moves up to the end of the expression, so pass it
+                TRY_DO(parser_next_token(p), {
+                    identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                    type_expression_destroy((Node*)type, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
+                    free_parameter_list(&list, p->allocator.free_alloc);
+                });
+            }
+
+            Parameter parameter = {
+                .is_ref        = is_ref_argument,
+                .ident         = ident,
+                .type          = type,
+                .default_value = default_value,
+            };
+
+            TRY_DO(array_list_push(&list, &parameter), {
+                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                type_expression_destroy((Node*)type, allocator.free_alloc);
+                NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
+                free_parameter_list(&list, p->allocator.free_alloc);
+            });
+
+            // Parsing a type may move up to the closing parentheses
+            if (parser_current_token_is(p, RPAREN)) {
+                break;
+            }
+
+            // Consume the comma and advance past it if there's not a closing delim
+            TRY_DO(parser_expect_current(p, COMMA),
+                   free_parameter_list(&list, p->allocator.free_alloc));
+        }
+    }
+
+    // The caller may not care about default parameter presence
+    if (contains_default_param) {
+        *contains_default_param = some_initialized;
+    }
+
+    *parameters = list;
+    return SUCCESS;
+}
+
 NODISCARD Status generics_parse(Parser* p, ArrayList* generics) {
     TRY(array_list_init_allocator(generics, 1, sizeof(Expression*), p->allocator));
     if (parser_peek_token_is(p, LT)) {
@@ -144,7 +268,7 @@ NODISCARD Status function_definition_parse(Parser*          p,
     TRY(generics_parse(p, generics));
 
     TRY_DO(parser_expect_peek(p, LPAREN), free_expression_list(generics, p->allocator.free_alloc));
-    TRY_DO(allocate_parameter_list(p, parameters, contains_default_param),
+    TRY_DO(parameter_list_parse(p, parameters, contains_default_param),
            free_expression_list(generics, p->allocator.free_alloc));
 
     TRY_DO(parser_expect_peek(p, COLON), {
@@ -226,17 +350,17 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
     }
 
     // Check for primitive before parsing the real type
-    const bool is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
-    TypeUnion  explicit_union = (TypeUnion){
-         .explicit_type =
+    const bool          is_primitive   = hash_set_contains(&p->primitives, &p->peek_token.type);
+    TypeExpressionUnion explicit_union = (TypeExpressionUnion){
+        .explicit_type =
             (ExplicitType){
-                 .tag = EXPLICIT_IDENT,
-                 .variant =
+                .tag = EXPLICIT_IDENT,
+                .variant =
                     (ExplicitTypeUnion){
-                         .ident_type_name = NULL,
+                        .ident_type_name = NULL,
                     },
-                 .nullable  = is_inner_type_nullable,
-                 .primitive = is_primitive,
+                .nullable  = is_inner_type_nullable,
+                .primitive = is_primitive,
             },
     };
 
@@ -288,9 +412,9 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
             explicit_union.explicit_type.variant = (ExplicitTypeUnion){
                 .function_type =
                     (ExplicitFunctionType){
-                        .fn_generics    = generics,
-                        .fn_type_params = parameters,
-                        .return_type    = return_type,
+                        .generics    = generics,
+                        .parameters  = parameters,
+                        .return_type = return_type,
                     },
             };
 
@@ -348,7 +472,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
     // If we parsed an array type at the start, then the actual type is nested
     if (is_array_type) {
-        TypeUnion array_type_union = (TypeUnion){
+        TypeExpressionUnion array_type_union = (TypeExpressionUnion){
             .explicit_type =
                 (ExplicitType){
                     .tag = EXPLICIT_ARRAY,
@@ -553,21 +677,7 @@ static inline NODISCARD Status _if_expression_parse_branch(Parser* p, Statement*
     TRY(parser_next_token(p));
 
     Statement* alternate;
-    switch (p->current_token.type) {
-    case VAR:
-    case CONST:
-    case TYPE:
-    case IMPL:
-    case IMPORT:
-    case UNDERSCORE:
-        IGNORE_STATUS(parser_put_status_error(
-            p, ILLEGAL_IF_BRANCH, p->current_token.line, p->current_token.column));
-        return ILLEGAL_IF_BRANCH;
-    default:
-        TRY(parser_parse_statement(p, &alternate));
-        break;
-    }
-
+    TRAILING_ALTERNATE(alternate, {}, ILLEGAL_IF_BRANCH);
     *stmt = alternate;
     return SUCCESS;
 }
@@ -763,7 +873,7 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
 
         // Struct members must have explicit type declarations
         TypeExpression* type = (TypeExpression*)type_expr;
-        if (type->type.tag == IMPLICIT) {
+        if (type->tag == IMPLICIT) {
             const Token error_token = p->current_token;
             IGNORE_STATUS(parser_put_status_error(
                 p, STRUCT_MEMBER_NOT_EXPLICIT, error_token.line, error_token.column));
@@ -940,29 +1050,14 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
         });
 
         Statement* consequence;
-        switch (p->current_token.type) {
-        case VAR:
-        case CONST:
-        case TYPE:
-        case IMPL:
-        case IMPORT:
-        case UNDERSCORE:
-            IGNORE_STATUS(parser_put_status_error(
-                p, ILLEGAL_MATCH_ARM, p->current_token.line, p->current_token.column));
-
-            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
-            NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
-            free_match_arm_list(&arms, p->allocator.free_alloc);
-            return ILLEGAL_MATCH_ARM;
-        default:
-            // The statement can either be a jump, expression, or block statement
-            TRY_DO(parser_parse_statement(p, &consequence), {
+        TRAILING_ALTERNATE(
+            consequence,
+            {
                 NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
                 NODE_VIRTUAL_FREE(pattern, p->allocator.free_alloc);
                 free_match_arm_list(&arms, p->allocator.free_alloc);
-            });
-            break;
-        }
+            },
+            ILLEGAL_MATCH_ARM);
 
         // As per the rest of the language, commas are required as trailing tokens
         TRY_DO(parser_expect_peek(p, COMMA), {
@@ -991,16 +1086,29 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
         return ARMLESS_MATCH_EXPR;
     }
 
+    TRY_DO(parser_expect_peek(p, RBRACE), {
+        NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+        free_match_arm_list(&arms, p->allocator.free_alloc);
+    });
+
+    // Catch all statement is optional and is the equivalent of a switch default
+    Statement* catch_all = NULL;
+    POSSIBLE_TRAILING_ALTERNATE(
+        catch_all,
+        {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
+        },
+        ILLEGAL_MATCH_CATCH_ALL);
+
     MatchExpression* match;
     TRY_DO(match_expression_create(
-               start_token, match_cond_expr, arms, &match, p->allocator.memory_alloc),
+               start_token, match_cond_expr, arms, catch_all, &match, p->allocator.memory_alloc),
            {
                NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
                free_match_arm_list(&arms, p->allocator.free_alloc);
            });
 
-    TRY_DO(parser_expect_peek(p, RBRACE),
-           match_expression_destroy((Node*)match, p->allocator.free_alloc));
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
@@ -1215,38 +1323,14 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
 
     // Finally, we should try to parse the non break clause
     Statement* non_break = NULL;
-    if (parser_peek_token_is(p, ELSE)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-        TRY_DO(parser_next_token(p), {
+    POSSIBLE_TRAILING_ALTERNATE(
+        non_break,
+        {
             free_expression_list(&iterables, p->allocator.free_alloc);
             free_for_capture_list(&captures, p->allocator.free_alloc);
             block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        });
-
-        // This logic follows the same restrictions as if branches and match arms
-        switch (p->current_token.type) {
-        case VAR:
-        case CONST:
-        case TYPE:
-        case IMPL:
-        case IMPORT:
-        case UNDERSCORE:
-            IGNORE_STATUS(parser_put_status_error(
-                p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
-
-            free_expression_list(&iterables, p->allocator.free_alloc);
-            free_for_capture_list(&captures, p->allocator.free_alloc);
-            block_statement_destroy((Node*)block, p->allocator.free_alloc);
-            return ILLEGAL_LOOP_NON_BREAK;
-        default:
-            TRY_DO(parser_parse_statement(p, &non_break), {
-                free_expression_list(&iterables, p->allocator.free_alloc);
-                free_for_capture_list(&captures, p->allocator.free_alloc);
-                block_statement_destroy((Node*)block, p->allocator.free_alloc);
-            });
-            break;
-        }
-    }
+        },
+        ILLEGAL_LOOP_NON_BREAK);
 
     // We're now ready to construct the actual object and transfer ownership
     ForLoopExpression* for_loop;
@@ -1340,37 +1424,14 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
 
     // Finally, we should try to parse the non break clause
     Statement* non_break = NULL;
-    if (parser_peek_token_is(p, ELSE)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-        TRY_DO(parser_next_token(p), {
+    POSSIBLE_TRAILING_ALTERNATE(
+        non_break,
+        {
             NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
             block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        });
-
-        // This logic follows the same restrictions as if branches and match arms
-        switch (p->current_token.type) {
-        case VAR:
-        case CONST:
-        case TYPE:
-        case IMPL:
-        case IMPORT:
-            IGNORE_STATUS(parser_put_status_error(
-                p, ILLEGAL_LOOP_NON_BREAK, p->current_token.line, p->current_token.column));
-
-            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
-            NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
-            block_statement_destroy((Node*)block, p->allocator.free_alloc);
-            return ILLEGAL_LOOP_NON_BREAK;
-        default:
-            TRY_DO(parser_parse_statement(p, &non_break), {
-                NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
-                NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
-                block_statement_destroy((Node*)block, p->allocator.free_alloc);
-            });
-            break;
-        }
-    }
+        },
+        ILLEGAL_LOOP_NON_BREAK);
 
     // Ownership transfer time
     WhileLoopExpression* while_loop;

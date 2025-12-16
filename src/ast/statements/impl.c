@@ -32,7 +32,9 @@ NODISCARD Status impl_statement_create(Token                 start_token,
 }
 
 void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     ImplStatement* impl = (ImplStatement*)node;
@@ -45,23 +47,32 @@ void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status impl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     TRY(string_builder_append_str_z(sb, "impl "));
 
     ImplStatement* impl = (ImplStatement*)node;
-    TRY(identifier_expression_reconstruct((Node*)impl->parent, symbol_map, sb));
+    ASSERT_EXPRESSION(impl->parent);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(impl->parent, symbol_map, sb));
     TRY(string_builder_append(sb, ' '));
-    TRY(block_statement_reconstruct((Node*)impl->implementation, symbol_map, sb));
+    ASSERT_STATEMENT(impl->implementation);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(impl->implementation, symbol_map, sb));
 
     TRY(string_builder_append(sb, ';'));
     return SUCCESS;
 }
 
 NODISCARD Status impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
+    ImplStatement* impl = (ImplStatement*)node;
+    ASSERT_EXPRESSION(impl->parent);
+    ASSERT_STATEMENT(impl->implementation);
+    assert(impl->implementation->statements.data && impl->implementation->statements.length > 0);
+
+    MAYBE_UNUSED(impl);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

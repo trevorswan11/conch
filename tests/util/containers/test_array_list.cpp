@@ -40,8 +40,8 @@ TEST_CASE("Push ops w/o resize") {
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
 
     // Push a handful of elements and check
-    std::vector<uint8_t> expecteds = {4, 5, 7, 2, 6, 10, 22, 3};
-    for (size_t i = 0; i < expecteds.size(); i++) {
+    const uint8_t expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3};
+    for (size_t i = 0; i < std::size(expecteds); i++) {
         array_list_push_assume_capacity(&a, &expecteds[i]);
     }
 
@@ -65,7 +65,7 @@ TEST_CASE("Push ops w/o resize") {
 TEST_CASE("Push ops w/ resize") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    std::vector<uint8_t> expecteds = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
+    const uint8_t expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
 
     // Push and check the first few elements
     const size_t chunk = 8;
@@ -80,7 +80,7 @@ TEST_CASE("Push ops w/ resize") {
     }
 
     // Push and check the remaining elements
-    for (size_t i = chunk; i < expecteds.size(); i++) {
+    for (size_t i = chunk; i < std::size(expecteds); i++) {
         REQUIRE(STATUS_OK(array_list_push(&a, &expecteds[i])));
     }
 
@@ -144,9 +144,9 @@ TEST_CASE("Remove ops") {
     uint32_t target = 10;
     REQUIRE(STATUS_OK(array_list_remove_item(&a, &target, compare_uint32_t)));
 
-    std::vector<uint32_t> remaining = {7, 2, 6, 22, 3};
-    REQUIRE(a.length == remaining.size());
-    for (size_t i = 0; i < remaining.size(); i++) {
+    const uint32_t remaining[] = {7, 2, 6, 22, 3};
+    REQUIRE(a.length == std::size(remaining));
+    for (size_t i = 0; i < std::size(remaining); i++) {
         uint32_t out_item;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out_item)));
         REQUIRE(out_item == remaining[i]);
@@ -164,16 +164,16 @@ TEST_CASE("Stable insertion") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
 
-    std::vector<uint32_t> initial = {10, 20, 30, 40};
+    const uint32_t initial[] = {10, 20, 30, 40};
     for (auto v : initial) {
         REQUIRE(STATUS_OK(array_list_push(&a, &v)));
     }
 
     uint32_t new_val = 25;
     REQUIRE(STATUS_OK(array_list_insert_stable(&a, 2, &new_val)));
-    std::vector<uint32_t> expected_stable = {10, 20, 25, 30, 40};
-    REQUIRE(a.length == expected_stable.size());
-    for (size_t i = 0; i < expected_stable.size(); i++) {
+    const uint32_t expected_stable[] = {10, 20, 25, 30, 40};
+    REQUIRE(a.length == std::size(expected_stable));
+    for (size_t i = 0; i < std::size(expected_stable); i++) {
         uint32_t out;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out)));
         REQUIRE(out == expected_stable[i]);
@@ -181,8 +181,8 @@ TEST_CASE("Stable insertion") {
 
     uint32_t begin_val = 5;
     REQUIRE(STATUS_OK(array_list_insert_stable(&a, 0, &begin_val)));
-    std::vector<uint32_t> expected_begin = {5, 10, 20, 25, 30, 40};
-    for (size_t i = 0; i < expected_begin.size(); i++) {
+    const uint32_t expected_begin[] = {5, 10, 20, 25, 30, 40};
+    for (size_t i = 0; i < std::size(expected_begin); i++) {
         uint32_t out;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out)));
         REQUIRE(out == expected_begin[i]);
@@ -192,7 +192,7 @@ TEST_CASE("Stable insertion") {
 
     uint32_t end_val = 99;
     array_list_insert_stable_assume_capacity(&a, a.length, &end_val);
-    REQUIRE(a.length == expected_begin.size() + 1);
+    REQUIRE(a.length == std::size(expected_begin) + 1);
     uint32_t last;
     REQUIRE(STATUS_OK(array_list_get(&a, a.length - 1, &last)));
     REQUIRE(last == 99);
@@ -206,7 +206,7 @@ TEST_CASE("Unstable insertion") {
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
     REQUIRE(STATUS_OK(array_list_init(&b, 4, sizeof(uint32_t))));
 
-    std::vector<uint32_t> initial = {10, 20, 30, 40};
+    const std::vector<uint32_t> initial = {10, 20, 30, 40};
     for (auto v : initial) {
         REQUIRE(STATUS_OK(array_list_push(&a, &v)));
         REQUIRE(STATUS_OK(array_list_push(&b, &v)));
@@ -268,8 +268,8 @@ TEST_CASE("Find") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
 
-    std::vector<int32_t> values = {10, 20, 30, 40};
-    for (size_t i = 0; i < values.size(); i++) {
+    const int32_t values[] = {10, 20, 30, 40};
+    for (size_t i = 0; i < std::size(values); i++) {
         REQUIRE(STATUS_OK(array_list_push(&a, &values[i])));
     }
 
@@ -316,6 +316,28 @@ TEST_CASE("Sorting and binary search") {
         REQUIRE(array_list_bsearch(&a, &search_index, &elem, compare_uint32_t));
         REQUIRE(STATUS_OK(array_list_get(&a, search_index, &search_elem)));
         REQUIRE(elem == search_elem);
+    }
+
+    array_list_deinit(&a);
+}
+
+TEST_CASE("ArrayList iterator pattern") {
+    ArrayList a;
+    REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
+
+    const uint32_t values[] = {10, 20, 30, 40};
+    for (auto v : values) {
+        REQUIRE(STATUS_OK(array_list_push(&a, &v)));
+    }
+    REQUIRE(a.length == std::size(values));
+
+    auto     it = array_list_iterator_init(&a);
+    size_t   i  = 0;
+    uint32_t out;
+    while (array_list_iterator_has_next(&it, &out)) {
+        REQUIRE(STATUS_OK(array_list_get(&a, i, &out)));
+        REQUIRE(out == values[i]);
+        i += 1;
     }
 
     array_list_deinit(&a);

@@ -5,21 +5,23 @@
 #include "util/memory.h"
 #include "util/status.h"
 
-#define MAKE_PRIMITIVE(T, N, name, err)                               \
-    SemanticType* name;                                               \
-    TRY_DO(semantic_type_create(&name, allocator.memory_alloc), err); \
-                                                                      \
-    name->tag      = T;                                               \
-    name->variant  = DATALESS_TYPE;                                   \
-    name->is_const = true;                                            \
-    name->valued   = true;                                            \
+#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)       \
+    SemanticType* name;                                     \
+    TRY_DO(semantic_type_create(&name, memory_alloc), err); \
+                                                            \
+    name->tag      = T;                                     \
+    name->variant  = DATALESS_TYPE;                         \
+    name->is_const = true;                                  \
+    name->valued   = true;                                  \
     name->nullable = N;
 
-#define PRIMITIVE_ANALYZE(T, N)       \
-    assert(node && parent && errors); \
+#define PRIMITIVE_ANALYZE(T, N, A)    \
+    ASSERT_EXPRESSION(node);          \
+    assert(parent);                   \
+    assert(errors);                   \
     MAYBE_UNUSED(node);               \
     MAYBE_UNUSED(errors);             \
-    MAKE_PRIMITIVE(T, N, type, {})    \
+    MAKE_PRIMITIVE(T, N, type, A, {}) \
                                       \
     parent->analyzed_type = type;     \
     return SUCCESS

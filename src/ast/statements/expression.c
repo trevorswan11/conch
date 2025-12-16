@@ -29,7 +29,9 @@ NODISCARD Status expression_statement_create(Token                 start_token,
 }
 
 void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
@@ -41,19 +43,22 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status expression_statement_reconstruct(Node*          node,
                                                   const HashMap* symbol_map,
                                                   StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
-    ExpressionStatement* expr_stmt  = (ExpressionStatement*)node;
-    Node*                value_node = (Node*)expr_stmt->expression;
-    TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
-
-    return SUCCESS;
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
+    ASSERT_EXPRESSION(expr_stmt->expression);
+    return NODE_VIRTUAL_RECONSTRUCT(expr_stmt->expression, symbol_map, sb);
 }
 
 NODISCARD Status expression_statement_analyze(Node*            node,
                                               SemanticContext* parent,
                                               ArrayList*       errors) {
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
     ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
+    ASSERT_EXPRESSION(expr_stmt->expression);
+
     return NODE_VIRTUAL_ANALYZE(expr_stmt->expression, parent, errors);
 }

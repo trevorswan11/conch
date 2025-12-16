@@ -12,13 +12,13 @@ uint32_t ceil_power_of_two_32(uint32_t n) {
         return 1;
     }
 
-    n--;
+    n -= 1;
     n |= n >> 1;
     n |= n >> 2;
     n |= n >> 4;
     n |= n >> 8;
     n |= n >> 16;
-    n++;
+    n += 1;
 
     return n;
 }
@@ -28,14 +28,14 @@ uint64_t ceil_power_of_two_64(uint64_t n) {
         return 1;
     }
 
-    n--;
+    n -= 1;
     n |= n >> 1;
     n |= n >> 2;
     n |= n >> 4;
     n |= n >> 8;
     n |= n >> 16;
     n |= n >> 32;
-    n++;
+    n += 1;
 
     return n;
 }
@@ -65,5 +65,3 @@ bool approx_eq_double(double x, double y, double tolerance) {
         return fabs(x - y) <= tolerance;
     }
 }
-
-int rand_in_range(int min, int max) { return rand() % (max + 1 - min) + min; }

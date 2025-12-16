@@ -20,15 +20,18 @@
     return SUCCESS
 
 #define SINGLE_STMT_RECONSTRUCT(string)           \
-    assert(sb);                                   \
+    ASSERT_EXPRESSION(node);                      \
     MAYBE_UNUSED(node);                           \
     MAYBE_UNUSED(symbol_map);                     \
+    assert(sb);                                   \
                                                   \
     TRY(string_builder_append_str_z(sb, string)); \
     return SUCCESS
 
 void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
     free_alloc(node);
 }
@@ -46,8 +49,7 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_NIL, true);
+    PRIMITIVE_ANALYZE(STYPE_NIL, true, parent->symbol_table->symbols.allocator.memory_alloc);
 }
 
 NODISCARD Status ignore_expression_create(Token              start_token,
@@ -63,7 +65,8 @@ NODISCARD Status ignore_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
     MAYBE_UNUSED(node);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);

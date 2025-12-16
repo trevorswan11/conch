@@ -32,7 +32,9 @@ NODISCARD Status if_expression_create(Token           start_token,
 }
 
 void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     IfExpression* if_expr = (IfExpression*)node;
@@ -46,36 +48,37 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status if_expression_reconstruct(Node*          node,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     IfExpression* if_expr = (IfExpression*)node;
-    TRY(string_builder_append_str_z(sb, "if "));
 
-    assert(if_expr->condition);
-    TRY(string_builder_append(sb, '('));
-    Node* condition_node = (Node*)if_expr->condition;
-    TRY(condition_node->vtable->reconstruct(condition_node, symbol_map, sb));
-    TRY(string_builder_append(sb, ')'));
+    ASSERT_EXPRESSION(if_expr->condition);
+    TRY(string_builder_append_str_z(sb, "if ("));
+    TRY(NODE_VIRTUAL_RECONSTRUCT(if_expr->condition, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, ") "));
 
-    TRY(string_builder_append(sb, ' '));
-
-    assert(if_expr->consequence);
-    Node* consequence_node = (Node*)if_expr->consequence;
-    TRY(consequence_node->vtable->reconstruct(consequence_node, symbol_map, sb));
+    ASSERT_EXPRESSION(if_expr->consequence);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(if_expr->consequence, symbol_map, sb));
 
     if (if_expr->alternate) {
+        ASSERT_EXPRESSION(if_expr->alternate);
         TRY(string_builder_append_str_z(sb, " else "));
-        Node* alternate_node = (Node*)if_expr->alternate;
-        TRY(alternate_node->vtable->reconstruct(alternate_node, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(if_expr->alternate, symbol_map, sb));
     }
 
     return SUCCESS;
 }
 
 NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    IfExpression* if_expr = (IfExpression*)node;
+    ASSERT_EXPRESSION(if_expr->condition);
+    ASSERT_EXPRESSION(if_expr->consequence);
+
+    MAYBE_UNUSED(if_expr);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

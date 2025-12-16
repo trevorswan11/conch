@@ -2,9 +2,9 @@
 
 #include "ast/node.h"
 
-#define ASSERT_STATEMENT(stmt) \
-    assert(stmt->vtable);      \
-    ASSERT_NODE(((Node*)stmt));
+#define ASSERT_STATEMENT(stmt)          \
+    assert(((Statement*)stmt)->vtable); \
+    ASSERT_NODE(stmt);
 
 #define STATEMENT_INIT(custom_vtab, token)        \
     (Statement) {                                 \

@@ -28,7 +28,9 @@ NODISCARD Status identifier_expression_create(Token                  start_token
 }
 
 void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
@@ -40,12 +42,12 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status identifier_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
+    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
-    MAYBE_UNUSED(symbol_map);
-
     IdentifierExpression* ident = (IdentifierExpression*)node;
+    assert(ident->name.ptr && ident->name.length > 0);
     TRY(string_builder_append_mut_slice(sb, ident->name));
     return SUCCESS;
 }
@@ -53,7 +55,11 @@ NODISCARD Status identifier_expression_reconstruct(Node*          node,
 NODISCARD Status identifier_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
     IdentifierExpression* ident = (IdentifierExpression*)node;
+    assert(ident->name.ptr && ident->name.length > 0);
 
     // Identifiers are only analyzed if they have been declared
     SemanticType* semantic_type;

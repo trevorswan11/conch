@@ -30,7 +30,9 @@ NODISCARD Status jump_statement_create(Token           start_token,
 }
 
 void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     JumpStatement* jump = (JumpStatement*)node;
@@ -42,7 +44,7 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status jump_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     const TokenType start_token_type = node->start_token.type;
@@ -57,8 +59,7 @@ NODISCARD Status jump_statement_reconstruct(Node*          node,
     JumpStatement* jump = (JumpStatement*)node;
     if (jump->value) {
         TRY(string_builder_append(sb, ' '));
-        Node* value_node = (Node*)jump->value;
-        TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(jump->value, symbol_map, sb));
     }
 
     TRY(string_builder_append(sb, ';'));
@@ -66,8 +67,12 @@ NODISCARD Status jump_statement_reconstruct(Node*          node,
 }
 
 NODISCARD Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
+    JumpStatement* jump = (JumpStatement*)node;
+
+    MAYBE_UNUSED(jump);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

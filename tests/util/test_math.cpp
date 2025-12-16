@@ -70,15 +70,3 @@ TEST_CASE("is_power_of_two") {
     REQUIRE(is_power_of_two(31) == false);
     REQUIRE(is_power_of_two(64) == true);
 }
-
-TEST_CASE("Random number in range") {
-    int min = 9;
-    int max = 50;
-
-    const size_t iterations = 100;
-    for (size_t i = 0; i < iterations; i++) {
-        const int num = rand_in_range(min, max);
-        REQUIRE(num >= min);
-        REQUIRE(num <= max);
-    }
-}

@@ -19,6 +19,18 @@ typedef struct ArrayList {
     Allocator allocator;
 } ArrayList;
 
+// A non-owning iterator. Invalid if the underlying array is freed.
+// An iterator is invalidated if it modifies the array during iteration.
+typedef struct {
+    ArrayList* a;
+    size_t     index;
+} ArrayListIterator;
+
+typedef struct {
+    const ArrayList* a;
+    size_t           index;
+} ArrayListConstIterator;
+
 NODISCARD Status array_list_init_allocator(ArrayList* a,
                                            size_t     capacity,
                                            size_t     item_size,
@@ -106,3 +118,10 @@ void array_list_sort(ArrayList* a, int (*compare)(const void*, const void*));
 // For the purposes of this function, an array is sorted if, for every element i, it is less than or
 // equal to all succeeding elements j.
 bool array_list_is_sorted(const ArrayList* a, int (*compare)(const void*, const void*));
+
+ArrayListIterator array_list_iterator_init(ArrayList* a);
+bool              array_list_iterator_has_next(ArrayListIterator* it, void* next);
+bool              array_list_iterator_exhausted(const ArrayListIterator* it);
+
+ArrayListConstIterator array_list_const_iterator_init(const ArrayList* a);
+bool                   array_list_const_iterator_has_next(ArrayListConstIterator* it, void* next);

@@ -22,6 +22,7 @@ extern "C" {
 #include "ast/expressions/call.h"
 #include "ast/expressions/enum.h"
 #include "ast/expressions/expression.h"
+#include "ast/expressions/float.h"
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
@@ -31,6 +32,8 @@ extern "C" {
 #include "ast/expressions/match.h"
 #include "ast/expressions/narrow.h"
 #include "ast/expressions/prefix.h"
+#include "ast/expressions/single.h"
+#include "ast/expressions/string.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
@@ -48,7 +51,7 @@ extern "C" {
 #include "util/status.h"
 }
 
-TEST_CASE("Precedence confirmation") {
+TEST_CASE("Precedence coverage") {
     const std::string expected = "MUL_DIV";
     REQUIRE(expected == precedence_name(Precedence::MUL_DIV));
 }
@@ -120,16 +123,16 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        std::string expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
-        bool        is_const[]             = {false, false, true, false, false, true};
-        bool        is_nullable[]          = {false, false, false, false, true, false};
-        bool        is_primitive[]         = {true, true, true, false, false, false};
-        TypeTag     tags[]                 = {TypeTag::EXPLICIT,
-                                              TypeTag::EXPLICIT,
-                                              TypeTag::EXPLICIT,
-                                              TypeTag::IMPLICIT,
-                                              TypeTag::EXPLICIT,
-                                              TypeTag::EXPLICIT};
+        std::string       expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
+        bool              is_const[]             = {false, false, true, false, false, true};
+        bool              is_nullable[]          = {false, false, false, false, true, false};
+        bool              is_primitive[]         = {true, true, true, false, false, false};
+        TypeExpressionTag tags[]                 = {TypeExpressionTag::EXPLICIT,
+                                                    TypeExpressionTag::EXPLICIT,
+                                                    TypeExpressionTag::EXPLICIT,
+                                                    TypeExpressionTag::IMPLICIT,
+                                                    TypeExpressionTag::EXPLICIT,
+                                                    TypeExpressionTag::EXPLICIT};
         std::array<ExplicitTypeTag, std::size(tags)> explicit_tags;
         explicit_tags.fill(ExplicitTypeTag::EXPLICIT_IDENT);
 
@@ -149,6 +152,70 @@ TEST_CASE("Declarations") {
                                 explicit_tags[i],
                                 expected_type_names[i]);
         }
+    }
+
+    SECTION("Primitive alias type decls") {
+        const char* inputs[] = {
+            "type a = int",
+            "type a = uint",
+            "type a = float",
+            "type a = string",
+            "type a = byte",
+            "type a = bool",
+            "type a = void",
+        };
+
+        const std::pair<std::string, TokenType> expected_primitives[] = {
+            {"int", TokenType::INT_TYPE},
+            {"uint", TokenType::UINT_TYPE},
+            {"float", TokenType::FLOAT_TYPE},
+            {"string", TokenType::STRING_TYPE},
+            {"byte", TokenType::BYTE_TYPE},
+            {"bool", TokenType::BOOL_TYPE},
+            {"void", TokenType::VOID_TYPE},
+        };
+
+        REQUIRE(std::size(inputs) == std::size(expected_primitives));
+        for (size_t i = 0; i < std::size(inputs); i++) {
+            const char* input    = inputs[i];
+            const auto  expected = expected_primitives[i];
+
+            ParserFixture pf(input);
+            pf.check_errors();
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
+            test_identifier_expression((Expression*)type_decl_stmt->ident, "a");
+            REQUIRE(type_decl_stmt->primitive_alias);
+
+            test_identifier_expression(type_decl_stmt->value, expected.first, expected.second);
+        }
+    }
+
+    SECTION("Nullable type decl") {
+        const char*   input = "type N = ?int";
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
+        test_identifier_expression((Expression*)type_decl_stmt->ident, "N");
+        REQUIRE_FALSE(type_decl_stmt->primitive_alias);
+
+        test_type_expression(type_decl_stmt->value,
+                             true,
+                             true,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_IDENT,
+                             "int");
     }
 }
 
@@ -657,7 +724,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, true, "val");
         DeclStatement* decl_stmt = (DeclStatement*)stmt;
-        REQUIRE(decl_stmt->type->type.tag == IMPLICIT);
+        REQUIRE(decl_stmt->type->tag == IMPLICIT);
 
         IfExpression* if_expr = (IfExpression*)decl_stmt->value;
         REQUIRE(if_expr->alternate);
@@ -759,11 +826,11 @@ TEST_CASE("Function literals") {
     struct TestParameter {
         std::string name;
 
-        bool        is_ref    = false;
-        bool        nullable  = false;
-        bool        primitive = true;
-        TypeTag     tag       = TypeTag::EXPLICIT;
-        std::string type_name = "int";
+        bool              is_ref    = false;
+        bool              nullable  = false;
+        bool              primitive = true;
+        TypeExpressionTag tag       = TypeExpressionTag::EXPLICIT;
+        std::string       type_name = "int";
 
         std::optional<int64_t> default_value = std::nullopt;
     };
@@ -814,20 +881,20 @@ TEST_CASE("Function literals") {
                                 "add",
                                 false,
                                 false,
-                                TypeTag::EXPLICIT,
+                                TypeExpressionTag::EXPLICIT,
                                 ExplicitTypeTag::EXPLICIT_FN,
                                 {});
             DeclStatement* decl_stmt = (DeclStatement*)stmt;
             REQUIRE_FALSE(decl_stmt->value);
 
             TypeExpression*      type_expr     = (TypeExpression*)decl_stmt->type;
-            ExplicitType         explicit_type = type_expr->type.variant.explicit_type;
+            ExplicitType         explicit_type = type_expr->variant.explicit_type;
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
-            test_parameters(&function_type.fn_type_params, expected_params);
+            test_parameters(&function_type.parameters, expected_params);
             test_type_expression((Expression*)function_type.return_type,
                                  false,
                                  true,
-                                 TypeTag::EXPLICIT,
+                                 TypeExpressionTag::EXPLICIT,
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  "int");
         }
@@ -908,7 +975,7 @@ TEST_CASE("Function literals") {
             test_type_expression((Expression*)function->return_type,
                                  t.expected_return.nullable,
                                  t.expected_return.primitive,
-                                 TypeTag::EXPLICIT,
+                                 TypeExpressionTag::EXPLICIT,
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  t.expected_return.type_name);
         }
@@ -1052,10 +1119,39 @@ TEST_CASE("Enum declarations") {
         test_type_expression((Expression*)type_expr,
                              false,
                              false,
-                             TypeTag::EXPLICIT,
+                             TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_ENUM,
                              {});
-        EnumExpression* enum_type = type_expr->type.variant.explicit_type.variant.enum_type;
+        EnumExpression* enum_type = type_expr->variant.explicit_type.variant.enum_type;
+
+        test_enum_variants(&enum_type->variants, expected_variants_list);
+    }
+
+    SECTION("Enums in type decls") {
+        const char* input = "type Colors = enum { RED, BLUE = 100, GREEN, };";
+        const std::vector<EnumVariantTestCase> expected_variants_list = {
+            {"RED"}, {"BLUE", 100}, {"GREEN"}};
+
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
+        test_identifier_expression((Expression*)type_decl_stmt->ident, "Colors");
+        REQUIRE_FALSE(type_decl_stmt->primitive_alias);
+
+        TypeExpression* type_expr = (TypeExpression*)type_decl_stmt->value;
+        test_type_expression((Expression*)type_expr,
+                             false,
+                             false,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_ENUM,
+                             {});
+        EnumExpression* enum_type = type_expr->variant.explicit_type.variant.enum_type;
 
         test_enum_variants(&enum_type->variants, expected_variants_list);
     }
@@ -1120,7 +1216,7 @@ TEST_CASE("Struct declarations") {
             test_type_expression((Expression*)member.type,
                                  expected.nullable,
                                  expected.primitive,
-                                 TypeTag::EXPLICIT,
+                                 TypeExpressionTag::EXPLICIT,
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  expected.type_name);
 
@@ -1185,10 +1281,10 @@ TEST_CASE("Struct declarations") {
         test_type_expression((Expression*)type_expr,
                              false,
                              false,
-                             TypeTag::EXPLICIT,
+                             TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_STRUCT,
                              {});
-        StructExpression* struct_type = type_expr->type.variant.explicit_type.variant.struct_type;
+        StructExpression* struct_type = type_expr->variant.explicit_type.variant.struct_type;
 
         test_struct_members(&struct_type->members, expected_member_list);
     }
@@ -1281,8 +1377,14 @@ TEST_CASE("Impl statements") {
 
         REQUIRE(impl_stmt->implementation->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&impl_stmt->implementation->statements, 0, &stmt)));
-        test_decl_statement(
-            stmt, true, "a", false, false, TypeTag::IMPLICIT, ExplicitTypeTag::EXPLICIT_IDENT, {});
+        test_decl_statement(stmt,
+                            true,
+                            "a",
+                            false,
+                            false,
+                            TypeExpressionTag::IMPLICIT,
+                            ExplicitTypeTag::EXPLICIT_IDENT,
+                            {});
     }
 
     SECTION("Malformed impl blocks") {
@@ -1378,17 +1480,20 @@ TEST_CASE("Match expressions") {
     struct MatchTestCase {
         std::string                   expected_expr_name;
         std::vector<MatchArmTestCase> expected_arms;
+        std::optional<int64_t>        otherwise = std::nullopt;
     };
 
     SECTION("Correct match") {
         const char* inputs[] = {
             "match In { 1 => return 90u;, }",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
+            "match Out { 1 => return 90u;, 2 => return 0b1011u, } else 5",
         };
 
         const MatchTestCase expected_matches[] = {
             {"In", {{1, 90ull}}},
             {"Out", {{1, 90ull}, {2, 0b1011ull}}},
+            {"Out", {{1, 90ull}, {2, 0b1011ull}}, 5},
         };
 
         REQUIRE(std::size(inputs) == std::size(expected_matches));
@@ -1420,6 +1525,14 @@ TEST_CASE("Match expressions") {
                 JumpStatement* jump = (JumpStatement*)arm.dispatch;
                 test_number_expression<uint64_t>(jump->value, expected_arm.expected_return_value);
             }
+
+            if (match_expr->catch_all) {
+                REQUIRE(expected.otherwise.has_value());
+                ExpressionStatement* otherwise = (ExpressionStatement*)match_expr->catch_all;
+                test_number_expression<int64_t>(otherwise->expression, expected.otherwise.value());
+            } else {
+                REQUIRE_FALSE(expected.otherwise.has_value());
+            }
         }
     }
 
@@ -1432,13 +1545,21 @@ TEST_CASE("Match expressions") {
                             false);
         }
 
+        SECTION("Illegal catch-all") {
+            const char*   input = "match Out { a => 4, } else const b := 4";
+            ParserFixture pf(input);
+            pf.check_errors({"ILLEGAL_MATCH_CATCH_ALL [Ln 1, Col 28]",
+                             "No prefix parse function for WALRUS found [Ln 1, Col 36]"},
+                            false);
+        }
+
         SECTION("Standard declarations in arm") {
-            const char*   input = "match true { 1 => const a:= 1, }";
+            const char*   input = "match true { 1 => const a := 1, }";
             ParserFixture pf(input);
             pf.check_errors({"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                             "No prefix parse function for WALRUS found [Ln 1, Col 26]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 30]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 32]"},
+                             "No prefix parse function for WALRUS found [Ln 1, Col 27]",
+                             "No prefix parse function for COMMA found [Ln 1, Col 31]",
+                             "No prefix parse function for RBRACE found [Ln 1, Col 33]"},
                             false);
         }
 
@@ -1562,9 +1683,9 @@ TEST_CASE("Array expressions") {
                 test_decl_statement(stmt, false, expected.decl_name);
                 DeclStatement* decl_stmt = (DeclStatement*)stmt;
 
-                Type decl_type = decl_stmt->type->type;
-                REQUIRE(decl_type.tag == TypeTag::EXPLICIT);
-                ExplicitType explicit_type = decl_type.variant.explicit_type;
+                TypeExpression* decl_type = decl_stmt->type;
+                REQUIRE(decl_type->tag == TypeExpressionTag::EXPLICIT);
+                ExplicitType explicit_type = decl_type->variant.explicit_type;
                 REQUIRE(explicit_type.nullable == expected.array_nullable);
                 REQUIRE_FALSE(explicit_type.primitive);
                 REQUIRE(explicit_type.tag == ExplicitTypeTag::EXPLICIT_ARRAY);
@@ -1580,7 +1701,7 @@ TEST_CASE("Array expressions") {
                 test_type_expression((Expression*)explicit_array.inner_type,
                                      expected.inner_nullable,
                                      true,
-                                     TypeTag::EXPLICIT,
+                                     TypeExpressionTag::EXPLICIT,
                                      ExplicitTypeTag::EXPLICIT_IDENT,
                                      "int");
             }
@@ -2113,16 +2234,54 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        test_decl_statement(
-            stmt, false, "a", false, false, TypeTag::EXPLICIT, ExplicitTypeTag::EXPLICIT_FN, {});
+        test_decl_statement(stmt,
+                            false,
+                            "a",
+                            false,
+                            false,
+                            TypeExpressionTag::EXPLICIT,
+                            ExplicitTypeTag::EXPLICIT_FN,
+                            {});
 
         DeclStatement*       decl_stmt = (DeclStatement*)stmt;
         ExplicitFunctionType explicit_fn =
-            decl_stmt->type->type.variant.explicit_type.variant.function_type;
+            decl_stmt->type->variant.explicit_type.variant.function_type;
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&explicit_fn.fn_generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&explicit_fn.generics, 0, &generic)));
         test_identifier_expression(generic, "T");
+    }
+
+    SECTION("Function generics in type decls") {
+        const char*   input = "type F = fn<T, B>(a: int): int";
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        REQUIRE_FALSE(type_decl->primitive_alias);
+        test_identifier_expression((Expression*)type_decl->ident, "F");
+
+        TypeExpression* function_type = (TypeExpression*)type_decl->value;
+        test_type_expression((Expression*)function_type,
+                             false,
+                             false,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_FN,
+                             {});
+
+        ExplicitFunctionType function = function_type->variant.explicit_type.variant.function_type;
+        REQUIRE(function.generics.length == 2);
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&function.generics, 0, &generic)));
+        test_identifier_expression(generic, "T");
+        REQUIRE(STATUS_OK(array_list_get(&function.generics, 1, &generic)));
+        test_identifier_expression(generic, "B");
     }
 
     SECTION("Struct generics") {
@@ -2137,6 +2296,38 @@ TEST_CASE("Generics") {
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
         StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
+        test_identifier_expression(generic, "T");
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, &generic)));
+        test_identifier_expression(generic, "E");
+    }
+
+    SECTION("Call generics in type decls") {
+        const char*   input = "type S = struct<T, E>{a: int, }";
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        REQUIRE_FALSE(type_decl->primitive_alias);
+        test_identifier_expression((Expression*)type_decl->ident, "S");
+
+        TypeExpression* struct_type = (TypeExpression*)type_decl->value;
+        test_type_expression((Expression*)struct_type,
+                             false,
+                             false,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_STRUCT,
+                             {});
+
+        StructExpression* struct_expr = struct_type->variant.explicit_type.variant.struct_type;
+        REQUIRE(struct_expr->generics.length == 2);
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
@@ -2238,5 +2429,43 @@ TEST_CASE("Generics") {
                              "No prefix parse function for PLUS found [Ln 1, Col 27]"},
                             false);
         }
+    }
+}
+
+TEST_CASE("Null passed to destructors") {
+    void (*const destructors[])(Node*, free_alloc_fn) = {
+        array_literal_expression_destroy,
+        assignment_expression_destroy,
+        bool_literal_expression_destroy,
+        call_expression_destroy,
+        enum_expression_destroy,
+        float_literal_expression_destroy,
+        function_expression_destroy,
+        identifier_expression_destroy,
+        if_expression_destroy,
+        infix_expression_destroy,
+        integer_expression_destroy,
+        for_loop_expression_destroy,
+        while_loop_expression_destroy,
+        do_while_loop_expression_destroy,
+        match_expression_destroy,
+        narrow_expression_destroy,
+        prefix_expression_destroy,
+        single_expression_destroy,
+        string_literal_expression_destroy,
+        struct_expression_destroy,
+        type_expression_destroy,
+        block_statement_destroy,
+        decl_statement_destroy,
+        type_decl_statement_destroy,
+        discard_statement_destroy,
+        expression_statement_destroy,
+        impl_statement_destroy,
+        import_statement_destroy,
+        jump_statement_destroy,
+    };
+
+    for (const auto d : destructors) {
+        d(NULL, free);
     }
 }

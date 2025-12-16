@@ -53,12 +53,11 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
     const Allocator allocator = analyzer->allocator;
     clear_error_list(&analyzer->errors, allocator.free_alloc);
 
-    Statement*       statement;
-    const ArrayList* statements = &analyzer->ast->statements;
-    for (size_t i = 0; i < statements->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(statements, i, &statement));
-        Node* node = (Node*)statement;
-        TRY_IS(NODE_VIRTUAL_ANALYZE(node, analyzer->global_ctx, &analyzer->errors),
+    ArrayListConstIterator it = array_list_const_iterator_init(&analyzer->ast->statements);
+    Statement*             stmt;
+    while (array_list_const_iterator_has_next(&it, &stmt)) {
+        ASSERT_STATEMENT(stmt);
+        TRY_IS(NODE_VIRTUAL_ANALYZE(stmt, analyzer->global_ctx, &analyzer->errors),
                ALLOCATION_FAILED);
 
         // If the global context never had the last type moved out, we must release it

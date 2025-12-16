@@ -31,7 +31,9 @@ NODISCARD Status array_literal_expression_create(Token                    start_
 }
 
 void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
@@ -43,7 +45,7 @@ void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status array_literal_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
@@ -56,12 +58,11 @@ NODISCARD Status array_literal_expression_reconstruct(Node*          node,
     }
     TRY(string_builder_append_str_z(sb, "]{ "));
 
-    Expression* item;
-    for (size_t i = 0; i < array->items.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&array->items, i, &item));
-
-        Node* item_node = (Node*)item;
-        TRY(item_node->vtable->reconstruct(item_node, symbol_map, sb));
+    ArrayListIterator it = array_list_iterator_init(&array->items);
+    Expression*       item;
+    while (array_list_iterator_has_next(&it, &item)) {
+        ASSERT_EXPRESSION(item);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(item, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, ", "));
     }
 
@@ -72,8 +73,12 @@ NODISCARD Status array_literal_expression_reconstruct(Node*          node,
 NODISCARD Status array_literal_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
+
+    MAYBE_UNUSED(array);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

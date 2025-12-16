@@ -13,11 +13,11 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status type_expression_create(Token            start_token,
-                                        TypeTag          tag,
-                                        TypeUnion        variant,
-                                        TypeExpression** type_expr,
-                                        memory_alloc_fn  memory_alloc) {
+NODISCARD Status type_expression_create(Token               start_token,
+                                        TypeExpressionTag   tag,
+                                        TypeExpressionUnion variant,
+                                        TypeExpression**    type_expr,
+                                        memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     TypeExpression* type = memory_alloc(sizeof(TypeExpression));
     if (!type) {
@@ -25,8 +25,9 @@ NODISCARD Status type_expression_create(Token            start_token,
     }
 
     *type = (TypeExpression){
-        .base = EXPRESSION_INIT(TYPE_VTABLE, start_token),
-        .type = {tag, variant},
+        .base    = EXPRESSION_INIT(TYPE_VTABLE, start_token),
+        .tag     = tag,
+        .variant = variant,
     };
 
     *type_expr = type;
@@ -34,12 +35,14 @@ NODISCARD Status type_expression_create(Token            start_token,
 }
 
 void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
     TypeExpression* type = (TypeExpression*)node;
 
-    if (type->type.tag == EXPLICIT) {
-        ExplicitType explicit_type = type->type.variant.explicit_type;
+    if (type->tag == EXPLICIT) {
+        ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
             IdentifierExpression* ident = explicit_type.variant.ident_type_name;
@@ -48,8 +51,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
         }
         case EXPLICIT_FN: {
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
-            free_expression_list(&function_type.fn_generics, free_alloc);
-            free_parameter_list(&function_type.fn_type_params, free_alloc);
+            free_expression_list(&function_type.generics, free_alloc);
+            free_parameter_list(&function_type.parameters, free_alloc);
             NODE_VIRTUAL_FREE(function_type.return_type, free_alloc);
             break;
         }
@@ -78,12 +81,12 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status type_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     TypeExpression* type = (TypeExpression*)node;
-    if (type->type.tag == EXPLICIT) {
-        ExplicitType explicit_type = type->type.variant.explicit_type;
+    if (type->tag == EXPLICIT) {
+        ExplicitType explicit_type = type->variant.explicit_type;
         if (explicit_type.nullable) {
             TRY(string_builder_append(sb, '?'));
         }
@@ -96,7 +99,9 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
     const Token     start_token = node->start_token;
     const Allocator allocator   = parent->symbol_table->symbols.allocator;
 
@@ -105,13 +110,13 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
     new_symbol_type->is_const = true;
     new_symbol_type->valued   = false;
 
-    Type type = ((TypeExpression*)node)->type;
-    if (type.tag == IMPLICIT) {
+    TypeExpression* type = (TypeExpression*)node;
+    if (type->tag == IMPLICIT) {
         new_symbol_type->tag      = STYPE_IMPLICIT_DECLARATION;
         new_symbol_type->variant  = DATALESS_TYPE;
         new_symbol_type->nullable = false;
     } else {
-        ExplicitType explicit_type = type.variant.explicit_type;
+        ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
             MutSlice      probe_type_name = explicit_type.variant.ident_type_name->name;
@@ -168,21 +173,21 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
 
     switch (explicit_type.tag) {
     case EXPLICIT_IDENT:
+        ASSERT_EXPRESSION(explicit_type.variant.ident_type_name);
         TRY(string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
         break;
     case EXPLICIT_FN: {
         ExplicitFunctionType function_type = explicit_type.variant.function_type;
         TRY(string_builder_append_str_z(sb, "fn"));
-        if (function_type.fn_generics.length > 0) {
+        if (function_type.generics.length > 0) {
             TRY(string_builder_append(sb, '<'));
 
-            for (size_t i = 0; i < function_type.fn_generics.length; i++) {
-                Expression* generic;
-                UNREACHABLE_IF_ERROR(array_list_get(&function_type.fn_generics, i, &generic));
-                Node* generic_node = (Node*)generic;
-                TRY(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
-
-                if (i != function_type.fn_generics.length - 1) {
+            ArrayListIterator it = array_list_iterator_init(&function_type.generics);
+            Expression*       generic;
+            while (array_list_iterator_has_next(&it, &generic)) {
+                ASSERT_EXPRESSION(generic);
+                TRY(NODE_VIRTUAL_RECONSTRUCT(generic, symbol_map, sb));
+                if (!array_list_iterator_exhausted(&it)) {
                     TRY(string_builder_append_str_z(sb, ", "));
                 }
             }
@@ -191,30 +196,32 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         }
 
         TRY(string_builder_append(sb, '('));
-        TRY(reconstruct_parameter_list(&function_type.fn_type_params, symbol_map, sb));
+        TRY(reconstruct_parameter_list(&function_type.parameters, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, "): "));
-        TRY(type_expression_reconstruct((Node*)function_type.return_type, symbol_map, sb));
+        ASSERT_EXPRESSION(function_type.return_type);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(function_type.return_type, symbol_map, sb));
         break;
     }
     case EXPLICIT_STRUCT:
-        TRY(struct_expression_reconstruct(
-            (Node*)explicit_type.variant.struct_type, symbol_map, sb));
+        ASSERT_EXPRESSION(explicit_type.variant.struct_type);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.struct_type, symbol_map, sb));
         break;
     case EXPLICIT_ENUM:
-        TRY(enum_expression_reconstruct((Node*)explicit_type.variant.enum_type, symbol_map, sb));
+        ASSERT_EXPRESSION(explicit_type.variant.enum_type);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.enum_type, symbol_map, sb));
         break;
-    case EXPLICIT_ARRAY:
+    case EXPLICIT_ARRAY: {
         assert(explicit_type.variant.array_type.dimensions.length > 0);
         TRY(string_builder_append(sb, '['));
 
+        ArrayListIterator it =
+            array_list_iterator_init(&explicit_type.variant.array_type.dimensions);
         uint64_t dim;
-        for (size_t i = 0; i < explicit_type.variant.array_type.dimensions.length; i++) {
-            UNREACHABLE_IF_ERROR(
-                array_list_get(&explicit_type.variant.array_type.dimensions, i, &dim));
+        while (array_list_iterator_has_next(&it, &dim)) {
             TRY(string_builder_append_unsigned(sb, dim));
-
             TRY(string_builder_append(sb, 'u'));
-            if (i != explicit_type.variant.array_type.dimensions.length - 1) {
+
+            if (!array_list_iterator_exhausted(&it)) {
                 TRY(string_builder_append_str_z(sb, ", "));
             }
         }
@@ -222,14 +229,15 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         TRY(string_builder_append(sb, ']'));
 
         TypeExpression* inner_type = explicit_type.variant.array_type.inner_type;
-        assert(inner_type->type.tag == EXPLICIT);
+        assert(inner_type->tag == EXPLICIT);
 
-        ExplicitType inner_explicit_type = inner_type->type.variant.explicit_type;
+        ExplicitType inner_explicit_type = inner_type->variant.explicit_type;
         if (inner_explicit_type.nullable) {
             TRY(string_builder_append(sb, '?'));
         }
         TRY(explicit_type_reconstruct(inner_explicit_type, symbol_map, sb));
         break;
+    }
     }
 
     return SUCCESS;

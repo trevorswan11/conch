@@ -101,8 +101,6 @@ typedef struct HashMap {
 
 // A non-owning iterator. Invalid if the underlying map is freed.
 // An iterator is invalidated if it modifies the map during iteration.
-//
-// HashMap growths invalidate pointers.
 typedef struct {
     HashMap* hm;
     size_t   index;

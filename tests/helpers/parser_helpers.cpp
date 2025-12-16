@@ -79,18 +79,17 @@ void test_reconstruction(const char* input, std::string expected) {
     REQUIRE(expected == sb.to_string());
 }
 
-void test_type_expression(Expression*     expression,
-                          bool            expect_nullable,
-                          bool            expect_primitive,
-                          TypeTag         expected_tag,
-                          ExplicitTypeTag expected_explicit_tag,
-                          std::string     expected_type_literal) {
+void test_type_expression(Expression*       expression,
+                          bool              expect_nullable,
+                          bool              expect_primitive,
+                          TypeExpressionTag expected_tag,
+                          ExplicitTypeTag   expected_explicit_tag,
+                          std::string       expected_type_literal) {
     TypeExpression* type_expr = (TypeExpression*)expression;
-    Type            type      = type_expr->type;
-    REQUIRE(type.tag == expected_tag);
+    REQUIRE(type_expr->tag == expected_tag);
 
-    if (type.tag == TypeTag::EXPLICIT) {
-        const ExplicitType explicit_type = type.variant.explicit_type;
+    if (type_expr->tag == TypeExpressionTag::EXPLICIT) {
+        const ExplicitType explicit_type = type_expr->variant.explicit_type;
         REQUIRE(explicit_type.nullable == expect_nullable);
         REQUIRE(explicit_type.primitive == expect_primitive);
         REQUIRE(explicit_type.tag == expected_explicit_tag);
@@ -117,14 +116,14 @@ void test_decl_statement(Statement* stmt, bool expect_const, std::string expecte
     REQUIRE(expected_ident == decl_stmt->ident->name.ptr);
 }
 
-void test_decl_statement(Statement*      stmt,
-                         bool            expect_const,
-                         std::string     expected_ident,
-                         bool            expect_nullable,
-                         bool            expect_primitive,
-                         TypeTag         expected_tag,
-                         ExplicitTypeTag expected_explicit_tag,
-                         std::string     expected_type_literal) {
+void test_decl_statement(Statement*        stmt,
+                         bool              expect_const,
+                         std::string       expected_ident,
+                         bool              expect_nullable,
+                         bool              expect_primitive,
+                         TypeExpressionTag expected_tag,
+                         ExplicitTypeTag   expected_explicit_tag,
+                         std::string       expected_type_literal) {
     test_decl_statement(stmt, expect_const, expected_ident);
 
     DeclStatement* decl_stmt = (DeclStatement*)stmt;

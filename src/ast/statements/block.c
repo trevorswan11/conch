@@ -32,7 +32,9 @@ NODISCARD Status block_statement_create(Token            start_token,
 }
 
 void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     BlockStatement* block = (BlockStatement*)node;
@@ -44,19 +46,18 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status block_statement_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     TRY(string_builder_append_str_z(sb, "{ "));
 
-    BlockStatement* block = (BlockStatement*)node;
-    for (size_t i = 0; i < block->statements.length; i++) {
-        Statement* stmt;
-        UNREACHABLE_IF_ERROR(array_list_get(&block->statements, i, &stmt));
-        ASSERT_STATEMENT(stmt);
+    BlockStatement*   block = (BlockStatement*)node;
+    ArrayListIterator it    = array_list_iterator_init(&block->statements);
 
-        Node* stmt_node = (Node*)stmt;
-        TRY(stmt_node->vtable->reconstruct(stmt_node, symbol_map, sb));
+    Statement* stmt;
+    while (array_list_iterator_has_next(&it, &stmt)) {
+        ASSERT_STATEMENT(stmt);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(stmt, symbol_map, sb));
     }
 
     TRY(string_builder_append_str_z(sb, " }"));
@@ -64,18 +65,19 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
 }
 
 NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
     Allocator allocator = parent->symbol_table->symbols.allocator;
 
     SemanticContext* child;
     TRY(semantic_context_create(parent, &child, allocator));
 
     BlockStatement* block = (BlockStatement*)node;
-    for (size_t i = 0; i < block->statements.length; i++) {
-        Statement* stmt;
-        UNREACHABLE_IF_ERROR(array_list_get(&block->statements, i, &stmt));
-        ASSERT_STATEMENT(stmt);
 
+    ArrayListIterator it = array_list_iterator_init(&block->statements);
+    Statement*        stmt;
+    while (array_list_iterator_has_next(&it, &stmt)) {
+        ASSERT_STATEMENT(stmt);
         TRY_DO(NODE_VIRTUAL_ANALYZE(stmt, child, errors),
                semantic_context_destroy(child, allocator.free_alloc));
 

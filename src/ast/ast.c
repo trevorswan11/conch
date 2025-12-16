@@ -19,9 +19,9 @@ void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
     }
     assert(free_alloc);
 
-    MutSlice error;
-    for (size_t i = 0; i < errors->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(errors, i, &error));
+    ArrayListIterator it = array_list_iterator_init(errors);
+    MutSlice          error;
+    while (array_list_iterator_has_next(&it, &error)) {
         free_alloc(error.ptr);
     }
 
@@ -93,13 +93,11 @@ NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb) {
 
     array_list_clear_retaining_capacity(&sb->buffer);
 
-    for (size_t i = 0; i < ast->statements.length; i++) {
-        Statement* stmt;
-        UNREACHABLE_IF_ERROR(array_list_get(&ast->statements, i, &stmt));
+    ArrayListIterator it = array_list_iterator_init(&ast->statements);
+    Statement*        stmt;
+    while (array_list_iterator_has_next(&it, &stmt)) {
         ASSERT_STATEMENT(stmt);
-        Node* node = (Node*)stmt;
-        ASSERT_NODE(node);
-        TRY_DO(node->vtable->reconstruct(node, &ast->token_type_symbols, sb),
+        TRY_DO(NODE_VIRTUAL_RECONSTRUCT(stmt, &ast->token_type_symbols, sb),
                string_builder_deinit(sb));
     }
     return SUCCESS;
@@ -121,9 +119,9 @@ void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
     assert(statements && statements->data);
     assert(free_alloc);
 
-    Statement* stmt;
-    for (size_t i = 0; i < statements->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(statements, i, &stmt));
+    ArrayListIterator it = array_list_iterator_init(statements);
+    Statement*        stmt;
+    while (array_list_iterator_has_next(&it, &stmt)) {
         ASSERT_STATEMENT(stmt);
         NODE_VIRTUAL_FREE(stmt, free_alloc);
     }
@@ -135,9 +133,9 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     assert(expressions && expressions->data);
     assert(free_alloc);
 
-    Expression* expr;
-    for (size_t i = 0; i < expressions->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(expressions, i, &expr));
+    ArrayListIterator it = array_list_iterator_init(expressions);
+    Expression*       expr;
+    while (array_list_iterator_has_next(&it, &expr)) {
         ASSERT_EXPRESSION(expr);
         NODE_VIRTUAL_FREE(expr, free_alloc);
     }
@@ -174,13 +172,11 @@ NODISCARD Status generics_reconstruct(ArrayList*     generics,
         assert(generics->data);
         TRY(string_builder_append(sb, '<'));
 
-        for (size_t i = 0; i < generics->length; i++) {
-            Expression* generic;
-            UNREACHABLE_IF_ERROR(array_list_get(generics, i, &generic));
-            Node* generic_node = (Node*)generic;
-            TRY(generic_node->vtable->reconstruct(generic_node, symbol_map, sb));
-
-            if (i != generics->length - 1) {
+        ArrayListIterator it = array_list_iterator_init(generics);
+        Expression*       generic;
+        while (array_list_iterator_has_next(&it, &generic)) {
+            TRY(NODE_VIRTUAL_RECONSTRUCT(generic, symbol_map, sb));
+            if (!array_list_iterator_exhausted(&it)) {
                 TRY(string_builder_append_str_z(sb, ", "));
             }
         }

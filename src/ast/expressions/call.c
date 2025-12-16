@@ -11,9 +11,9 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     assert(arguments && arguments->data);
     assert(free_alloc);
 
-    CallArgument argument;
-    for (size_t i = 0; i < arguments->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(arguments, i, &argument));
+    ArrayListIterator it = array_list_iterator_init(arguments);
+    CallArgument      argument;
+    while (array_list_iterator_has_next(&it, &argument)) {
         NODE_VIRTUAL_FREE(argument.argument, free_alloc);
     }
 
@@ -46,7 +46,9 @@ NODISCARD Status call_expression_create(Token            start_token,
 }
 
 void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     CallExpression* call = (CallExpression*)node;
@@ -60,24 +62,25 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status call_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
-    CallExpression* call     = (CallExpression*)node;
-    Node*           function = (Node*)call->function;
-    TRY(function->vtable->reconstruct(function, symbol_map, sb));
+    CallExpression* call = (CallExpression*)node;
+    ASSERT_EXPRESSION(call->function);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(call->function, symbol_map, sb));
     TRY(string_builder_append(sb, '('));
 
-    CallArgument argument;
-    for (size_t i = 0; i < call->arguments.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&call->arguments, i, &argument));
+    ArrayListIterator it = array_list_iterator_init(&call->arguments);
+    CallArgument      argument;
+    while (array_list_iterator_has_next(&it, &argument)) {
         if (argument.is_ref) {
             TRY(string_builder_append_str_z(sb, "ref "));
         }
-        Node* arg_node = (Node*)argument.argument;
-        TRY(arg_node->vtable->reconstruct(arg_node, symbol_map, sb));
 
-        if (i != call->arguments.length - 1) {
+        ASSERT_EXPRESSION(argument.argument);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(argument.argument, symbol_map, sb));
+
+        if (!array_list_iterator_exhausted(&it)) {
             TRY(string_builder_append_str_z(sb, ", "));
         }
     }
@@ -93,8 +96,13 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    CallExpression* call = (CallExpression*)node;
+    ASSERT_EXPRESSION(call->function);
+
+    MAYBE_UNUSED(call);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

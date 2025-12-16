@@ -54,10 +54,8 @@ typedef struct HashSet {
     Allocator allocator;
 } HashSet;
 
-// A non-owning iterator. Invalid if the underlying map is freed.
-// An iterator is invalidated if it modifies the map during iteration.
-//
-// HashSet growths invalidate pointers.
+// A non-owning iterator. Invalid if the underlying set is freed.
+// An iterator is invalidated if it modifies the set during iteration.
 typedef struct {
     HashSet* hs;
     size_t   index;

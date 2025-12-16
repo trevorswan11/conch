@@ -31,7 +31,9 @@ NODISCARD Status narrow_expression_create(Token                 start_token,
 }
 
 void narrow_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     NarrowExpression* narrow = (NarrowExpression*)node;
@@ -44,25 +46,29 @@ void narrow_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status narrow_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     NarrowExpression* narrow = (NarrowExpression*)node;
-    assert(narrow->outer && narrow->inner);
 
-    Node* outer = (Node*)narrow->outer;
-    Node* inner = (Node*)narrow->inner;
-
-    TRY(outer->vtable->reconstruct(outer, symbol_map, sb));
+    ASSERT_EXPRESSION(narrow->outer);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(narrow->outer, symbol_map, sb));
     TRY(string_builder_append_str_z(sb, "::"));
-    TRY(inner->vtable->reconstruct(inner, symbol_map, sb));
+    ASSERT_EXPRESSION(narrow->inner);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(narrow->inner, symbol_map, sb));
 
     return SUCCESS;
 }
 
 NODISCARD Status narrow_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    NarrowExpression* narrow = (NarrowExpression*)node;
+    ASSERT_EXPRESSION(narrow->outer);
+    ASSERT_EXPRESSION(narrow->inner);
+
+    MAYBE_UNUSED(narrow);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

@@ -322,3 +322,34 @@ bool array_list_is_sorted(const ArrayList* a, int (*compare)(const void*, const 
 
     return true;
 }
+
+ArrayListIterator array_list_iterator_init(ArrayList* a) {
+    assert(a && a->data);
+    return (ArrayListIterator){
+        .a     = a,
+        .index = 0,
+    };
+}
+
+bool array_list_iterator_has_next(ArrayListIterator* it, void* next) {
+    assert(it && it->a && it->a->data);
+    return STATUS_OK(array_list_get(it->a, it->index++, next));
+}
+
+bool array_list_iterator_exhausted(const ArrayListIterator* it) {
+    assert(it && it->a && it->a->data);
+    return it->index >= it->a->length;
+}
+
+ArrayListConstIterator array_list_const_iterator_init(const ArrayList* a) {
+    assert(a && a->data);
+    return (ArrayListConstIterator){
+        .a     = a,
+        .index = 0,
+    };
+}
+
+bool array_list_const_iterator_has_next(ArrayListConstIterator* it, void* next) {
+    assert(it && it->a && it->a->data);
+    return STATUS_OK(array_list_get(it->a, it->index++, next));
+}

@@ -33,7 +33,9 @@ NODISCARD Status infix_expression_create(Token             start_token,
 }
 
 void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     InfixExpression* infix = (InfixExpression*)node;
@@ -46,26 +48,24 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status infix_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
     InfixExpression* infix = (InfixExpression*)node;
-    assert(infix->lhs && infix->rhs);
-
-    Node* lhs = (Node*)infix->lhs;
-    Slice op  = poll_tt_symbol(symbol_map, infix->op);
-    Node* rhs = (Node*)infix->rhs;
+    Slice            op    = poll_tt_symbol(symbol_map, infix->op);
 
     if (group_expressions) {
         TRY(string_builder_append(sb, '('));
     }
-    TRY(lhs->vtable->reconstruct(lhs, symbol_map, sb));
+    ASSERT_EXPRESSION(infix->lhs);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(infix->lhs, symbol_map, sb));
 
     TRY(string_builder_append(sb, ' '));
     TRY(string_builder_append_slice(sb, op));
     TRY(string_builder_append(sb, ' '));
 
-    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
+    ASSERT_EXPRESSION(infix->rhs);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(infix->rhs, symbol_map, sb));
     if (group_expressions) {
         TRY(string_builder_append(sb, ')'));
     }
@@ -74,8 +74,14 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    InfixExpression* infix = (InfixExpression*)node;
+    ASSERT_EXPRESSION(infix->lhs);
+    ASSERT_EXPRESSION(infix->rhs);
+
+    MAYBE_UNUSED(infix);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

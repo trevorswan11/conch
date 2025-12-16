@@ -29,7 +29,9 @@ NODISCARD Status float_literal_expression_create(Token                    start_
 }
 
 void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
@@ -39,10 +41,9 @@ void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status float_literal_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb) {
-    ASSERT_NODE(node);
-    assert(sb);
-
+    ASSERT_EXPRESSION(node);
     MAYBE_UNUSED(symbol_map);
+    assert(sb);
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
@@ -51,6 +52,6 @@ NODISCARD Status float_literal_expression_reconstruct(Node*          node,
 NODISCARD Status float_literal_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
-    PRIMITIVE_ANALYZE(STYPE_FLOATING_POINT, false);
+    PRIMITIVE_ANALYZE(
+        STYPE_FLOATING_POINT, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }

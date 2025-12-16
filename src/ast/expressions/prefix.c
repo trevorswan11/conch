@@ -30,7 +30,9 @@ NODISCARD Status prefix_expression_create(Token              start_token,
 }
 
 void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     PrefixExpression* prefix = (PrefixExpression*)node;
@@ -42,19 +44,20 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status prefix_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
-    Slice             op     = poll_tt_symbol(symbol_map, node->start_token.type);
     PrefixExpression* prefix = (PrefixExpression*)node;
-    assert(prefix->rhs);
-    Node* rhs = (Node*)prefix->rhs;
+    Slice             op     = poll_tt_symbol(symbol_map, node->start_token.type);
 
     if (group_expressions) {
         TRY(string_builder_append(sb, '('));
     }
     TRY(string_builder_append_slice(sb, op));
-    TRY(rhs->vtable->reconstruct(rhs, symbol_map, sb));
+
+    ASSERT_EXPRESSION(prefix->rhs);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(prefix->rhs, symbol_map, sb));
+
     if (group_expressions) {
         TRY(string_builder_append(sb, ')'));
     }
@@ -63,8 +66,13 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    PrefixExpression* prefix = (PrefixExpression*)node;
+    ASSERT_EXPRESSION(prefix->rhs);
+
+    MAYBE_UNUSED(prefix);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

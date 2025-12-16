@@ -1,7 +1,6 @@
 #include <assert.h>
 
 #include "ast/ast.h"
-#include "ast/expressions/identifier.h"
 #include "ast/expressions/struct.h"
 #include "ast/expressions/type.h"
 
@@ -13,11 +12,11 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);
     assert(free_alloc);
 
-    StructMember member;
-    for (size_t i = 0; i < members->length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(members, i, &member));
-        identifier_expression_destroy((Node*)member.name, free_alloc);
-        type_expression_destroy((Node*)member.type, free_alloc);
+    ArrayListIterator it = array_list_iterator_init(members);
+    StructMember      member;
+    while (array_list_iterator_has_next(&it, &member)) {
+        NODE_VIRTUAL_FREE(member.name, free_alloc);
+        NODE_VIRTUAL_FREE(member.type, free_alloc);
         NODE_VIRTUAL_FREE(member.default_value, free_alloc);
     }
     array_list_deinit(members);
@@ -48,7 +47,9 @@ NODISCARD Status struct_expression_create(Token              start_token,
 }
 
 void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     StructExpression* struct_expr = (StructExpression*)node;
@@ -61,34 +62,32 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status struct_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_EXPRESSION(node);
     assert(sb);
 
-    StructExpression* s = (StructExpression*)node;
+    StructExpression* struct_expr = (StructExpression*)node;
     TRY(string_builder_append_str_z(sb, "struct"));
 
     // Struct generics introduce slightly different spacing
-    TRY(generics_reconstruct(&s->generics, symbol_map, sb));
-    if (s->generics.length == 0) {
+    TRY(generics_reconstruct(&struct_expr->generics, symbol_map, sb));
+    if (struct_expr->generics.length == 0) {
         TRY(string_builder_append(sb, ' '));
     }
     TRY(string_builder_append_str_z(sb, "{ "));
 
-    StructMember member;
-    for (size_t i = 0; i < s->members.length; i++) {
-        UNREACHABLE_IF_ERROR(array_list_get(&s->members, i, &member));
-
-        Node* member_name = (Node*)member.name;
-        TRY(member_name->vtable->reconstruct(member_name, symbol_map, sb));
+    ArrayListIterator it = array_list_iterator_init(&struct_expr->members);
+    StructMember      member;
+    while (array_list_iterator_has_next(&it, &member)) {
+        ASSERT_EXPRESSION(member.name);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(member.name, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, ": "));
-
-        Node* member_type = (Node*)member.type;
-        TRY(member_type->vtable->reconstruct(member_type, symbol_map, sb));
+        ASSERT_EXPRESSION(member.type);
+        TRY(NODE_VIRTUAL_RECONSTRUCT(member.type, symbol_map, sb));
 
         if (member.default_value) {
-            Node* member_default = (Node*)member.default_value;
+            ASSERT_EXPRESSION(member.default_value);
             TRY(string_builder_append_str_z(sb, " = "));
-            TRY(member_default->vtable->reconstruct(member_default, symbol_map, sb));
+            TRY(NODE_VIRTUAL_RECONSTRUCT(member.default_value, symbol_map, sb));
         }
         TRY(string_builder_append_str_z(sb, ", "));
     }
@@ -98,8 +97,13 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    MAYBE_UNUSED(node);
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    StructExpression* struct_expr = (StructExpression*)node;
+    assert(struct_expr->members.data && struct_expr->members.length > 0);
+
+    MAYBE_UNUSED(struct_expr);
     MAYBE_UNUSED(parent);
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;

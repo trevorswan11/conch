@@ -44,7 +44,7 @@ NODISCARD Status decl_statement_create(Token                 start_token,
     if (!value) {
         if (start_token.type == CONST) {
             return CONST_DECL_MISSING_VALUE;
-        } else if (start_token.type == VAR && type->type.tag == IMPLICIT) {
+        } else if (start_token.type == VAR && type->tag == IMPLICIT) {
             return FORWARD_VAR_DECL_MISSING_TYPE;
         }
     }
@@ -67,7 +67,9 @@ NODISCARD Status decl_statement_create(Token                 start_token,
 }
 
 void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     DeclStatement* decl = (DeclStatement*)node;
@@ -81,30 +83,28 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status decl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
     TRY(string_builder_append(sb, ' '));
 
-    DeclStatement* d          = (DeclStatement*)node;
-    Node*          ident_node = (Node*)d->ident;
-    TRY(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
-    if (d->type->type.tag == EXPLICIT) {
+    DeclStatement* decl = (DeclStatement*)node;
+    ASSERT_EXPRESSION(decl->ident);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(decl->ident, symbol_map, sb));
+    if (decl->type->tag == EXPLICIT) {
         TRY(string_builder_append_str_z(sb, ": "));
     }
 
-    Node* type_node = (Node*)d->type;
-    TRY(type_node->vtable->reconstruct(type_node, symbol_map, sb));
-
-    if (d->value) {
-        if (d->type->type.tag == EXPLICIT) {
+    TRY(NODE_VIRTUAL_RECONSTRUCT(decl->type, symbol_map, sb));
+    if (decl->value) {
+        ASSERT_EXPRESSION(decl->value);
+        if (decl->type->tag == EXPLICIT) {
             TRY(string_builder_append_str_z(sb, " = "));
         } else {
             TRY(string_builder_append_str_z(sb, "= "));
         }
-        Node* value_node = (Node*)d->value;
-        TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(decl->value, symbol_map, sb));
     }
 
     TRY(string_builder_append(sb, ';'));
@@ -112,9 +112,14 @@ NODISCARD Status decl_statement_reconstruct(Node*          node,
 }
 
 NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    assert(node && parent && errors);
-    DeclStatement* decl        = (DeclStatement*)node;
-    const Token    ident_token = NODE_TOKEN(decl->ident);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
+    DeclStatement* decl = (DeclStatement*)node;
+    ASSERT_EXPRESSION(decl->ident);
+    ASSERT_EXPRESSION(decl->type);
+
+    const Token ident_token = NODE_TOKEN(decl->ident);
     DECL_NAME(ident_token, decl->ident->name, decl_name);
 
     TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(duped));
@@ -192,7 +197,9 @@ NODISCARD Status type_decl_statement_create(Token                 start_token,
 }
 
 void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    ASSERT_NODE(node);
+    if (!node) {
+        return;
+    }
     assert(free_alloc);
 
     TypeDeclStatement* type_decl = (TypeDeclStatement*)node;
@@ -205,18 +212,18 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 NODISCARD Status type_decl_statement_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb) {
-    ASSERT_NODE(node);
+    ASSERT_STATEMENT(node);
     assert(sb);
 
     TRY(string_builder_append_str_z(sb, "type "));
 
-    TypeDeclStatement* d          = (TypeDeclStatement*)node;
-    Node*              ident_node = (Node*)d->ident;
-    TRY(ident_node->vtable->reconstruct(ident_node, symbol_map, sb));
+    TypeDeclStatement* type_decl = (TypeDeclStatement*)node;
+    ASSERT_EXPRESSION(type_decl->ident);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(type_decl->ident, symbol_map, sb));
 
     TRY(string_builder_append_str_z(sb, " = "));
-    Node* value_node = (Node*)d->value;
-    TRY(value_node->vtable->reconstruct(value_node, symbol_map, sb));
+    ASSERT_EXPRESSION(type_decl->value);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(type_decl->value, symbol_map, sb));
 
     TRY(string_builder_append(sb, ';'));
     return SUCCESS;
@@ -225,9 +232,14 @@ NODISCARD Status type_decl_statement_reconstruct(Node*          node,
 NODISCARD Status type_decl_statement_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors) {
-    assert(node && parent && errors);
-    TypeDeclStatement* type_decl   = (TypeDeclStatement*)node;
-    const Token        ident_token = NODE_TOKEN(type_decl->ident);
+    ASSERT_STATEMENT(node);
+    assert(parent && errors);
+
+    TypeDeclStatement* type_decl = (TypeDeclStatement*)node;
+    ASSERT_EXPRESSION(type_decl->ident);
+    ASSERT_EXPRESSION(type_decl->value);
+
+    const Token ident_token = NODE_TOKEN(type_decl->ident);
     DECL_NAME(ident_token, type_decl->ident->name, type_decl_name);
 
     // Primitive aliases can be eagerly evaluated and added to the context
@@ -240,7 +252,11 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
         }
 
         // This helper has an error path from an allocation, and requires manual de-value-ing
-        MAKE_PRIMITIVE(primitive_type_tag, false, primitive_type, allocator.free_alloc(duped));
+        MAKE_PRIMITIVE(primitive_type_tag,
+                       false,
+                       primitive_type,
+                       parent->symbol_table->symbols.allocator.memory_alloc,
+                       allocator.free_alloc(duped));
         primitive_type->valued = false;
 
         // Now we just move the type into the context and release our ownership
