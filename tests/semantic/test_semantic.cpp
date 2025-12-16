@@ -161,3 +161,34 @@ TEST_CASE("Block statements") {
         test_analyze(input, {"UNDECLARED_IDENTIFIER [Ln 1, Col 15]"});
     }
 }
+
+TEST_CASE("Type aliases") {
+    SECTION("Primitive aliases") {
+        const char* inputs[] = {
+            "type custom = int; const v: custom = 3;",
+            "type custom = uint; const v: custom = 3u;",
+            "type custom = string; const v: custom = \"3\";",
+            "type custom = byte; const v: custom = '3';",
+            "type custom = bool; const v: custom = true;",
+            "type custom = float; const v: custom = 5.234;",
+            "type custom = ?float; var v: custom = 5.234; v = nil",
+            "type custom = ?float; var v: custom = nil; v = 2.346",
+            "type custom = ?uint; var v: custom; v = 2u; v = nil",
+        };
+
+        for (const auto& i : inputs) {
+            test_analyze(i);
+        }
+    }
+
+    SECTION("Undeclared primitive alias") {
+        test_analyze("const v: custom = 3", {"UNDECLARED_IDENTIFIER [Ln 1, Col 7]"});
+    }
+
+    SECTION("Double nullables") {
+        test_analyze("type custom = ?int; type c = ?custom", {"DOUBLE_NULLABLE [Ln 1, Col 28]"});
+        test_analyze("type custom = ?int; var c: ?custom", {"DOUBLE_NULLABLE [Ln 1, Col 25]"});
+        test_analyze("type c1 = ?int; type c2 = c1; type c3 = ?c2",
+                     {"DOUBLE_NULLABLE [Ln 1, Col 39]"});
+    }
+}

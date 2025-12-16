@@ -403,7 +403,7 @@ TEST_CASE("TokenType regression guard") {
 TEST_CASE("Advanced literals") {
     SECTION("Comment literals") {
         const char* input = "const five = 5;\n"
-                            "var ten = 10;\n\n"
+                            "var ten_10 = 10;\n\n"
                             "// Comment on a new line\n"
                             "var add = fn(x, y) {\n"
                             "   x + y;\n"
@@ -419,7 +419,7 @@ TEST_CASE("Advanced literals") {
             {TokenType::INT_10, "5"},
             {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},
-            {TokenType::IDENT, "ten"},
+            {TokenType::IDENT, "ten_10"},
             {TokenType::ASSIGN, "="},
             {TokenType::INT_10, "10"},
             {TokenType::SEMICOLON, ";"},

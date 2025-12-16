@@ -84,15 +84,20 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
 
     Expression* value;
     bool        is_primitive_alias = false;
-    if (hash_set_contains(&p->primitives, &p->current_token.type)) {
+    if (hash_set_contains(&p->primitives, &p->peek_token.type)) {
         is_primitive_alias = true;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         TRY_DO(identifier_expression_parse(p, &value),
                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
     } else {
         TypeExpression* type;
-        TRY_DO(explicit_type_parse(p, p->current_token, &type),
-               identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+        if (STATUS_ERR(explicit_type_parse(p, p->current_token, &type))) {
+            IGNORE_STATUS(parser_put_status_error(
+                p, MALFORMED_TYPE_DECL, start_token.line, start_token.column));
+
+            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            return MALFORMED_TYPE_DECL;
+        }
         value = (Expression*)type;
     }
 

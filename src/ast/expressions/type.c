@@ -97,11 +97,13 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
 
 NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(node && parent && errors);
-    const Allocator allocator = parent->symbol_table->symbols.allocator;
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = parent->symbol_table->symbols.allocator;
 
     SemanticType* new_symbol_type;
     TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
-    new_symbol_type->valued = false;
+    new_symbol_type->is_const = true;
+    new_symbol_type->valued   = false;
 
     Type type = ((TypeExpression*)node)->type;
     if (type.tag == IMPLICIT) {
@@ -121,20 +123,23 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                 new_symbol_type->variant  = DATALESS_TYPE;
                 new_symbol_type->nullable = explicit_type.nullable;
             } else if (semantic_context_find(parent, true, probe_type_name, &probe_symbol_type)) {
-                // We can only retain on real shared references
-                if (probe_symbol_type->nullable == explicit_type.nullable) {
-                    rc_release(new_symbol_type, allocator.free_alloc);
-                    new_symbol_type = rc_retain(probe_symbol_type);
-                } else {
-                    TRY_DO(
-                        semantic_type_copy_variant(new_symbol_type, probe_symbol_type, allocator),
-                        rc_release(new_symbol_type, allocator.free_alloc));
+                // Double null doesn't make sense
+                if (probe_symbol_type->nullable && explicit_type.nullable) {
+                    IGNORE_STATUS(put_status_error(
+                        errors, DOUBLE_NULLABLE, start_token.line, start_token.column));
 
-                    // In this case it needs to be unique, but can take on the data
-                    new_symbol_type->nullable = explicit_type.nullable;
+                    rc_release(new_symbol_type, allocator.free_alloc);
+                    return DOUBLE_NULLABLE;
+                }
+
+                TRY_DO(semantic_type_copy_variant(new_symbol_type, probe_symbol_type, allocator),
+                       rc_release(new_symbol_type, allocator.free_alloc));
+
+                // In this case it needs to be unique, but can take on the data
+                if (probe_symbol_type->nullable) {
+                    new_symbol_type->nullable = probe_symbol_type->nullable;
                 }
             } else {
-                const Token start_token = node->start_token;
                 IGNORE_STATUS(put_status_error(
                     errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
 
@@ -147,6 +152,9 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             rc_release(new_symbol_type, allocator.free_alloc);
             return NOT_IMPLEMENTED;
         }
+
+        assert(new_symbol_type->is_const);
+        assert(!new_symbol_type->valued);
     }
 
     parent->analyzed_type = new_symbol_type;

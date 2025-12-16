@@ -5,21 +5,23 @@
 #include "util/memory.h"
 #include "util/status.h"
 
-#define PRIMITIVE_ANALYZE(T, N)                               \
-    assert(node && parent && errors);                         \
-    MAYBE_UNUSED(node);                                       \
-    MAYBE_UNUSED(errors);                                     \
-                                                              \
-    SemanticType* type;                                       \
-    TRY(semantic_type_create(&type, allocator.memory_alloc)); \
-                                                              \
-    type->tag      = T;                                       \
-    type->variant  = DATALESS_TYPE;                           \
-    type->is_const = true;                                    \
-    type->valued   = true;                                    \
-    type->nullable = N;                                       \
-                                                              \
-    parent->analyzed_type = type;                             \
+#define MAKE_PRIMITIVE(T, N, name, err)                               \
+    SemanticType* name;                                               \
+    TRY_DO(semantic_type_create(&name, allocator.memory_alloc), err); \
+                                                                      \
+    name->tag      = T;                                               \
+    name->variant  = DATALESS_TYPE;                                   \
+    name->is_const = true;                                            \
+    name->valued   = true;                                            \
+    name->nullable = N;
+
+#define PRIMITIVE_ANALYZE(T, N)       \
+    assert(node && parent && errors); \
+    MAYBE_UNUSED(node);               \
+    MAYBE_UNUSED(errors);             \
+    MAKE_PRIMITIVE(T, N, type, {})    \
+                                      \
+    parent->analyzed_type = type;     \
     return SUCCESS
 
 typedef enum {

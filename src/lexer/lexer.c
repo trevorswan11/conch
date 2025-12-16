@@ -256,8 +256,12 @@ Token lexer_read_operator(Lexer* l) {
 
 Slice lexer_read_identifier(Lexer* l) {
     const size_t start = l->position;
-    while (is_letter(l->current_byte) || l->current_byte == '_') {
+
+    bool passed_first = false;
+    while (is_letter(l->current_byte) || l->current_byte == '_' ||
+           (passed_first && is_digit(l->current_byte))) {
         lexer_read_char(l);
+        passed_first = true;
     }
 
     return (Slice){.ptr = &l->input[start], .length = l->position - start};
