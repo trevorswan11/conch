@@ -24,6 +24,7 @@ typedef struct ArrayLiteralExpression ArrayLiteralExpression;
 
 typedef enum {
     EXPLICIT_IDENT,
+    EXPLICIT_TYPEOF,
     EXPLICIT_FN,
     EXPLICIT_STRUCT,
     EXPLICIT_ENUM,
@@ -43,6 +44,7 @@ typedef struct ExplicitArrayType {
 
 typedef union {
     IdentifierExpression* ident_type_name;
+    Expression*           referred_type;
     ExplicitFunctionType  function_type;
     StructExpression*     struct_type;
     EnumExpression*       enum_type;

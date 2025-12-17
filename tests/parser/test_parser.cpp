@@ -378,7 +378,7 @@ TEST_CASE("Number-based expressions") {
 }
 
 TEST_CASE("Basic prefix / infix expressions") {
-    SECTION("Prefix expressions") {
+    SECTION("Simple prefix expressions") {
         struct TestCase {
             const char*                             input;
             TokenType                               op;
@@ -391,6 +391,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"!3.4", TokenType::BANG, 3.4},
             {"~0b101101", TokenType::NOT, 0b101101ll},
             {"!1.2345e100", TokenType::BANG, 1.2345e100},
+            {"typeof 1.2345e100", TokenType::TYPEOF, 1.2345e100},
         };
 
         for (const auto& t : cases) {
@@ -414,6 +415,78 @@ TEST_CASE("Basic prefix / infix expressions") {
                 test_number_expression<double>(expr->rhs, std::get<double>(t.value));
             } else {
                 REQUIRE(false);
+            }
+        }
+
+        SECTION("String typeof") {
+            const char*   input = "typeof \"Hello, World!\"";
+            ParserFixture pf(input);
+            pf.check_errors();
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
+            test_string_expression(expr->rhs, "Hello, World!");
+        }
+    }
+
+    SECTION("Typeof expressions in types") {
+        SECTION("Correct type introspection") {
+            const char*   input = "type a = ?typeof 4u";
+            ParserFixture pf(input);
+            pf.check_errors();
+
+            auto ast = pf.ast();
+            REQUIRE(ast->statements.length == 1);
+
+            Statement* stmt;
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+            test_identifier_expression((Expression*)type_decl->ident, "a");
+            REQUIRE_FALSE(type_decl->primitive_alias);
+
+            test_type_expression(type_decl->value,
+                                 true,
+                                 false,
+                                 TypeExpressionTag::EXPLICIT,
+                                 ExplicitTypeTag::EXPLICIT_TYPEOF,
+                                 {});
+
+            TypeExpression* type = (TypeExpression*)type_decl->value;
+            test_number_expression<uint64_t>(type->variant.explicit_type.variant.referred_type, 4);
+        }
+
+        SECTION("Malformed usages") {
+            struct TestCase {
+                const char*              input;
+                std::vector<std::string> errors;
+            };
+
+            const TestCase cases[] = {
+                {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+                {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+                {"type a = typeof enum { a, }",
+                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+                {"type a = typeof fn(): int",
+                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
+                  "Expected token LBRACE, found END [Ln 1, Col 26]"}},
+                {"type a = typeof struct { a: int, }",
+                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+                {"type a = typeof ?enum {a, }",
+                 {"No prefix parse function for WHAT found [Ln 1, Col 17]",
+                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            };
+
+            for (const auto& t : cases) {
+                ParserFixture pf(t.input);
+                pf.check_errors(t.errors);
             }
         }
     }

@@ -4,8 +4,11 @@
 #include "ast/expressions/prefix.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
+#include "util/status.h"
 
 NODISCARD Status prefix_expression_create(Token              start_token,
                                           Expression*        rhs,
@@ -53,7 +56,11 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
     if (group_expressions) {
         TRY(string_builder_append(sb, '('));
     }
+
     TRY(string_builder_append_slice(sb, op));
+    if (node->start_token.type == TYPEOF) {
+        TRY(string_builder_append(sb, ' '));
+    }
 
     ASSERT_EXPRESSION(prefix->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(prefix->rhs, symbol_map, sb));
@@ -69,11 +76,40 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    PrefixExpression* prefix = (PrefixExpression*)node;
-    ASSERT_EXPRESSION(prefix->rhs);
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = parent->symbol_table->symbols.allocator;
 
-    MAYBE_UNUSED(prefix);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    const TokenType prefix_op = start_token.type;
+    assert(prefix_op == BANG || prefix_op == NOT || prefix_op == MINUS || prefix_op == TYPEOF);
+
+    PrefixExpression* prefix  = (PrefixExpression*)node;
+    Expression*       operand = prefix->rhs;
+    ASSERT_EXPRESSION(operand);
+
+    // The resulting type is not always the same as the operand
+    TRY(NODE_VIRTUAL_ANALYZE(operand, parent, errors));
+    SemanticType* operand_type = semantic_context_move_analyzed(parent);
+
+    SemanticType* resulting_type;
+    TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
+           rc_release(operand_type, allocator.free_alloc));
+
+    switch (prefix_op) {
+    case BANG:
+    case NOT:
+    case MINUS:
+        return NOT_IMPLEMENTED;
+    case TYPEOF:
+        TRY_DO(semantic_type_copy(resulting_type, operand_type, allocator), {
+            rc_release(operand_type, allocator.free_alloc);
+            rc_release(resulting_type, allocator.free_alloc);
+        });
+        break;
+    default:
+        UNREACHABLE;
+    }
+
+    rc_release(operand_type, allocator.free_alloc);
+    parent->analyzed_type = resulting_type;
+    return SUCCESS;
 }

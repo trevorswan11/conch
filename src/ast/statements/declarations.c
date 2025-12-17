@@ -11,15 +11,14 @@
 
 #include "util/containers/string_builder.h"
 
-#define DECL_NAME(tok, field, name)                                                \
-    const Allocator allocator = parent->symbol_table->symbols.allocator;           \
-    MutSlice        name;                                                          \
-    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                    \
-    char* duped = name.ptr;                                                        \
-                                                                                   \
-    if (semantic_context_has(parent, true, name)) {                                \
-        PUT_STATUS_PROPAGATE(                                                      \
-            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc(duped)); \
+#define DECL_NAME(tok, field, name)                                                   \
+    const Allocator allocator = parent->symbol_table->symbols.allocator;              \
+    MutSlice        name;                                                             \
+    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                       \
+                                                                                      \
+    if (semantic_context_has(parent, true, name)) {                                   \
+        PUT_STATUS_PROPAGATE(                                                         \
+            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc(name.ptr)); \
     }
 
 NODISCARD Status decl_statement_create(Token                 start_token,
@@ -33,9 +32,15 @@ NODISCARD Status decl_statement_create(Token                 start_token,
     assert(type);
     assert(start_token.type == CONST || start_token.type == VAR);
 
+    // We really can't allow the type to be a typeof expression
+    if (type->tag == EXPLICIT && type->variant.explicit_type.tag == EXPLICIT_TYPEOF) {
+        return ILLEGAL_DECL_CONSTRUCT;
+    }
+
     // There's some behavior to check for with uninitialized decls
     if (!value) {
         if (start_token.type == CONST) {
+            assert(type->tag == EXPLICIT);
             return CONST_DECL_MISSING_VALUE;
         } else if (start_token.type == VAR && type->tag == IMPLICIT) {
             return FORWARD_VAR_DECL_MISSING_TYPE;
@@ -115,12 +120,12 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     const Token ident_token = NODE_TOKEN(decl->ident);
     DECL_NAME(ident_token, decl->ident->name, decl_name);
 
-    TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(duped));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(decl_name.ptr));
     SemanticType* decl_type = semantic_context_move_analyzed(parent);
 
     if (decl->value) {
         TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {
-            allocator.free_alloc(duped);
+            allocator.free_alloc(decl_name.ptr);
             rc_release(decl_type, allocator.free_alloc);
         });
 
@@ -128,7 +133,7 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
         if (!value_type->valued) {
             const Token t = NODE_TOKEN(decl->value);
             PUT_STATUS_PROPAGATE(errors, NON_VALUED_DECL_VALUE, t, {
-                allocator.free_alloc(duped);
+                allocator.free_alloc(decl_name.ptr);
                 rc_release(decl_type, allocator.free_alloc);
                 rc_release(value_type, allocator.free_alloc);
             });
@@ -146,7 +151,7 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
             if (!assignable) {
                 const Token t = NODE_TOKEN(decl);
                 PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, t, {
-                    allocator.free_alloc(duped);
+                    allocator.free_alloc(decl_name.ptr);
                     rc_release(decl_type, allocator.free_alloc);
                 });
             }
@@ -161,7 +166,7 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     assert(!parent->analyzed_type);
 
     TRY_DO(symbol_table_add(parent->symbol_table, decl_name, decl_type), {
-        allocator.free_alloc(duped);
+        allocator.free_alloc(decl_name.ptr);
         rc_release(decl_type, allocator.free_alloc);
     });
 
@@ -247,7 +252,7 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
         IdentifierExpression* primitive = (IdentifierExpression*)type_decl->value;
         SemanticTypeTag       primitive_type_tag;
         if (!semantic_name_to_primitive_type_tag(primitive->name, &primitive_type_tag)) {
-            allocator.free_alloc(duped);
+            allocator.free_alloc(type_decl_name.ptr);
             return VIOLATED_INVARIANT;
         }
 
@@ -256,12 +261,12 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
                        false,
                        primitive_type,
                        parent->symbol_table->symbols.allocator.memory_alloc,
-                       allocator.free_alloc(duped));
+                       allocator.free_alloc(type_decl_name.ptr));
         primitive_type->valued = false;
 
         // Now we just move the type into the context and release our ownership
         TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, primitive_type), {
-            allocator.free_alloc(duped);
+            allocator.free_alloc(type_decl_name.ptr);
             rc_release(primitive_type, allocator.free_alloc);
         });
 
@@ -271,20 +276,21 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
 
     // Otherwise the value has to be a type
     parent->namespace_type_name = slice_from_mut(&type_decl_name);
-    TRY_DO(NODE_VIRTUAL_ANALYZE(type_decl->value, parent, errors), allocator.free_alloc(duped));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(type_decl->value, parent, errors),
+           allocator.free_alloc(type_decl_name.ptr));
     parent->namespace_type_name = zeroed_slice();
 
     SemanticType* type_decl_type_probe = semantic_context_move_analyzed(parent);
     if (type_decl_type_probe->valued || !type_decl_type_probe->is_const) {
         const Token value_token = NODE_TOKEN(type_decl->ident);
         PUT_STATUS_PROPAGATE(errors, MALFORMED_TYPE_DECL, value_token, {
-            allocator.free_alloc(duped);
+            allocator.free_alloc(type_decl_name.ptr);
             rc_release(type_decl_type_probe, allocator.free_alloc);
         });
     }
 
     TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type_probe), {
-        allocator.free_alloc(duped);
+        allocator.free_alloc(type_decl_name.ptr);
         rc_release(type_decl_type_probe, allocator.free_alloc);
     });
 

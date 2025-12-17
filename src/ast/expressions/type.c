@@ -44,11 +44,12 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     if (type->tag == EXPLICIT) {
         ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
-        case EXPLICIT_IDENT: {
-            IdentifierExpression* ident = explicit_type.variant.ident_type_name;
-            NODE_VIRTUAL_FREE(ident, free_alloc);
+        case EXPLICIT_IDENT:
+            NODE_VIRTUAL_FREE(explicit_type.variant.ident_type_name, free_alloc);
             break;
-        }
+        case EXPLICIT_TYPEOF:
+            NODE_VIRTUAL_FREE(explicit_type.variant.referred_type, free_alloc);
+            break;
         case EXPLICIT_FN: {
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
             free_expression_list(&function_type.generics, free_alloc);
@@ -56,16 +57,12 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
             NODE_VIRTUAL_FREE(function_type.return_type, free_alloc);
             break;
         }
-        case EXPLICIT_STRUCT: {
-            StructExpression* s = explicit_type.variant.struct_type;
-            NODE_VIRTUAL_FREE(s, free_alloc);
+        case EXPLICIT_STRUCT:
+            NODE_VIRTUAL_FREE(explicit_type.variant.struct_type, free_alloc);
             break;
-        }
-        case EXPLICIT_ENUM: {
-            EnumExpression* e = explicit_type.variant.enum_type;
-            NODE_VIRTUAL_FREE(e, free_alloc);
+        case EXPLICIT_ENUM:
+            NODE_VIRTUAL_FREE(explicit_type.variant.enum_type, free_alloc);
             break;
-        }
         case EXPLICIT_ARRAY: {
             TypeExpression* inner = explicit_type.variant.array_type.inner_type;
             array_list_deinit(&explicit_type.variant.array_type.dimensions);
@@ -152,8 +149,25 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             }
             break;
         }
+        case EXPLICIT_TYPEOF: {
+            TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
+
+            // We need to copy into since we may be changing nullable status
+            const Expression* referred = explicit_type.variant.referred_type;
+            TRY_DO(NODE_VIRTUAL_ANALYZE(referred, parent, errors),
+                   rc_release(new_symbol_type, allocator.free_alloc));
+            SemanticType* analyzed = semantic_context_move_analyzed(parent);
+
+            TRY_DO(semantic_type_copy_variant(new_symbol_type, analyzed, allocator), {
+                rc_release(analyzed, allocator.free_alloc);
+                rc_release(new_symbol_type, allocator.free_alloc);
+            });
+
+            new_symbol_type->nullable = explicit_type.nullable;
+            break;
+        }
         case EXPLICIT_ENUM: {
-            // The enum parser does all of the heavy lifting and we can safely alter nullable
+            // The enum is brand new lifting and we can safely alter nullable
             const EnumExpression* enum_expr = explicit_type.variant.enum_type;
             TRY(NODE_VIRTUAL_ANALYZE(enum_expr, parent, errors));
 
@@ -182,6 +196,11 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
     case EXPLICIT_IDENT:
         ASSERT_EXPRESSION(explicit_type.variant.ident_type_name);
         TRY(string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
+        break;
+    case EXPLICIT_TYPEOF:
+        ASSERT_EXPRESSION(explicit_type.variant.referred_type);
+        TRY(string_builder_append_str_z(sb, "typeof "));
+        TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.referred_type, symbol_map, sb));
         break;
     case EXPLICIT_FN: {
         ExplicitFunctionType function_type = explicit_type.variant.function_type;

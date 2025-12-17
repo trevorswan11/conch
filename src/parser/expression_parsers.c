@@ -371,11 +371,10 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
         Expression* ident_expr;
         TRY_DO(identifier_expression_parse(p, &ident_expr), array_list_deinit(&dim_array));
-        IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
         explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
         explicit_union.explicit_type.variant = (ExplicitTypeUnion){
-            .ident_type_name = ident,
+            .ident_type_name = (IdentifierExpression*)ident_expr,
         };
 
         TRY_DO(type_expression_create(
@@ -389,6 +388,38 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
         switch (p->current_token.type) {
+        case TYPEOF: {
+            // Using arrays, functions, enums, or structs now is weird
+            switch (p->peek_token.type) {
+            case LBRACKET:
+            case FUNCTION:
+            case ENUM:
+            case STRUCT:
+                PUT_STATUS_PROPAGATE(&p->errors,
+                                     REDUNDANT_TYPE_INTROSPECTION,
+                                     p->peek_token,
+                                     array_list_deinit(&dim_array));
+            default:
+                TRY_DO(parser_next_token(p), array_list_deinit(&dim_array));
+                break;
+            }
+
+            Expression* referential_type;
+            TRY_DO(expression_parse(p, LOWEST, &referential_type), array_list_deinit(&dim_array));
+
+            explicit_union.explicit_type.tag     = EXPLICIT_TYPEOF;
+            explicit_union.explicit_type.variant = (ExplicitTypeUnion){
+                .referred_type = referential_type,
+            };
+
+            TRY_DO(type_expression_create(
+                       start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
+                   {
+                       NODE_VIRTUAL_FREE(referential_type, p->allocator.free_alloc);
+                       array_list_deinit(&dim_array);
+                   });
+            break;
+        }
         case FUNCTION: {
             bool            contains_default_param;
             ArrayList       generics;

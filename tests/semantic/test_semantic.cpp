@@ -232,3 +232,16 @@ TEST_CASE("Enum types") {
         test_analyze("enum { ONE, TWO, THREE, }", {"ANONYMOUS_ENUM [Ln 1, Col 1]"});
     }
 }
+
+TEST_CASE("Type introspection") {
+    SKIP();
+    SECTION("Correct introspection") {
+        test_analyze(
+            "type g = enum { ONE, }; type G = typeof g; var a: G = g::ONE; var b: g; a = b");
+        // test_analyze("type g = enum { ONE, }; var a: g; var b: g; a = b");
+    }
+
+    SECTION("Error cases") {
+        test_analyze("typeof enum { ONE, TWO, THREE, }", {"ANONYMOUS_ENUM [Ln 1, Col 8]"});
+    }
+}

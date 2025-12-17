@@ -55,6 +55,13 @@ TEST_CASE("Declaration reconstructions") {
         test_reconstruction("type Colors = enum {RED, GREEN, BLUE, }",
                             "type Colors = enum { RED, GREEN, BLUE, };");
     }
+
+    SECTION("Typeof'd types") {
+        test_reconstruction("typeof 2", "typeof 2");
+        test_reconstruction("typeof 2u", "typeof 2u");
+        test_reconstruction("typeof \"Hello, World!\"", "typeof \"Hello, World!\"");
+        test_reconstruction("typeof AAABBB", "typeof AAABBB");
+    }
 }
 
 TEST_CASE("Numbers") {

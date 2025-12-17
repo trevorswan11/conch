@@ -90,6 +90,11 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
                                             SemanticType* src,
                                             Allocator     allocator);
 
+// Copies the tagged union data from src to dest, leaving flags alone.
+//
+// Reference counting is respected when possible.
+NODISCARD Status semantic_type_copy(SemanticType* dest, SemanticType* src, Allocator allocator);
+
 // Never call this directly!
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);
 

@@ -86,8 +86,8 @@ NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memor
     *empty_type = (SemanticType){
         .rc_control = rc_init(semantic_type_destroy),
         .is_const   = true,
-        .nullable   = false,
         .valued     = false,
+        .nullable   = false,
     };
 
     *type = empty_type;
@@ -116,6 +116,14 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
         return NOT_IMPLEMENTED;
     }
 
+    return SUCCESS;
+}
+
+NODISCARD Status semantic_type_copy(SemanticType* dest, SemanticType* src, Allocator allocator) {
+    TRY(semantic_type_copy_variant(dest, src, allocator));
+    dest->is_const = src->is_const;
+    dest->valued   = src->valued;
+    dest->nullable = src->nullable;
     return SUCCESS;
 }
 
