@@ -1,9 +1,14 @@
 #include <assert.h>
+#include <stdalign.h>
 
 #include "ast/expressions/enum.h"
+#include "ast/expressions/identifier.h"
 
 #include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
 
+#include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 
 void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
@@ -86,11 +91,112 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
+    const Token     start_token    = node->start_token;
+    const Allocator allocator      = parent->symbol_table->symbols.allocator;
+    const Slice     enum_type_name = parent->namespace_type_name;
+
     EnumExpression* enum_expr = (EnumExpression*)node;
     assert(enum_expr->variants.data && enum_expr->variants.length > 0);
+    parent->namespace_type_name = zeroed_slice();
 
-    MAYBE_UNUSED(enum_expr);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    SemanticType* type;
+    TRY(semantic_type_create(&type, allocator.memory_alloc));
+    type->tag      = STYPE_ENUM;
+    type->is_const = true;
+    type->nullable = false;
+    type->valued   = false;
+
+    HashSet variants;
+    TRY_DO(hash_set_init_allocator(&variants,
+                                   4,
+                                   sizeof(MutSlice),
+                                   alignof(MutSlice),
+                                   hash_mut_slice,
+                                   compare_mut_slices,
+                                   allocator),
+           rc_release(type, allocator.free_alloc););
+
+    ArrayListConstIterator it = array_list_const_iterator_init(&enum_expr->variants);
+    EnumVariant            variant;
+    while (array_list_const_iterator_has_next(&it, &variant)) {
+        IdentifierExpression* ident = (IdentifierExpression*)variant.name;
+        char*                 duped =
+            strdup_s_allocator(ident->name.ptr, ident->name.length, allocator.memory_alloc);
+        if (!duped) {
+            rc_release(type, allocator.free_alloc);
+            free_enum_variant_set(&variants, allocator.free_alloc);
+            return ALLOCATION_FAILED;
+        }
+        const MutSlice variant_name = mut_slice_from_str_s(duped, ident->name.length);
+
+        // Shadowing of variant names is not allowed inside or outside the parent context
+        if (symbol_table_has(parent->symbol_table, variant_name) ||
+            hash_set_contains(&variants, &variant_name) ||
+            mut_slice_equals_slice(&variant_name, &enum_type_name)) {
+            Status error_code = REDEFINITION_OF_IDENTIFIER;
+            if (mut_slice_equals_slice(&variant_name, &enum_type_name)) {
+                error_code = NAMESPACE_NAME_MIRRORS_MEMBER;
+            }
+
+            IGNORE_STATUS(
+                put_status_error(errors, error_code, start_token.line, start_token.column));
+
+            rc_release(type, allocator.free_alloc);
+            free_enum_variant_set(&variants, allocator.free_alloc);
+            allocator.free_alloc(duped);
+            return error_code;
+        }
+
+        // The value type of a variant is ephemeral and optional
+        if (variant.value) {
+            TRY_DO(NODE_VIRTUAL_ANALYZE(variant.value, parent, errors), {
+                rc_release(type, allocator.free_alloc);
+                free_enum_variant_set(&variants, allocator.free_alloc);
+                allocator.free_alloc(duped);
+            });
+
+            // Explicit values must be constant, non-nullable, signed integers
+            SemanticType* variant_type      = semantic_context_move_analyzed(parent);
+            Status        type_check_result = SUCCESS;
+            if (variant_type->nullable) {
+                type_check_result = NULLABLE_ENUM_VARIANT;
+            } else if (!variant_type->is_const) {
+                type_check_result = NON_CONST_ENUM_VARIANT;
+            } else if (variant_type->tag != STYPE_SIGNED_INTEGER) {
+                type_check_result = NON_SIGNED_ENUM_VARIANT;
+            } else if (!variant_type->valued) {
+                type_check_result = NON_VALUED_ENUM_VARIANT;
+            }
+
+            // Since the types are ephemeral we just release now before error code is sent
+            rc_release(variant_type, allocator.free_alloc);
+            if (STATUS_ERR(type_check_result)) {
+                IGNORE_STATUS(put_status_error(
+                    errors, type_check_result, start_token.line, start_token.column));
+
+                rc_release(type, allocator.free_alloc);
+                free_enum_variant_set(&variants, allocator.free_alloc);
+                allocator.free_alloc(duped);
+                return type_check_result;
+            }
+        }
+
+        // Now the variant must be valid and should be added to the set
+        TRY_DO(hash_set_put(&variants, &variant_name), {
+            rc_release(type, allocator.free_alloc);
+            free_enum_variant_set(&variants, allocator.free_alloc);
+            allocator.free_alloc(duped);
+        });
+    }
+
+    // The enum stores a reference to its parent name
+    SemanticEnumType* enum_type;
+    TRY_DO(semantic_enum_create(enum_type_name, variants, &enum_type, allocator.memory_alloc), {
+        rc_release(type, allocator.free_alloc);
+        free_enum_variant_set(&variants, allocator.free_alloc);
+    });
+
+    type->variant.enum_type = enum_type;
+    parent->analyzed_type   = type;
+    return SUCCESS;
 }

@@ -1,8 +1,12 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "util/math.h"
 #include "util/memory.h"
+#include "util/status.h"
+
+#ifndef NDEBUG
+#include "util/math.h"
+#endif
 
 Slice slice_from_str_z(const char* start) { return slice_from_str_s(start, strlen(start)); }
 
@@ -64,12 +68,16 @@ bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size)
 
 Slice slice_from_mut(const MutSlice* slice) { return slice_from_str_s(slice->ptr, slice->length); }
 
-Slice    zeroed_slice(void) { return slice_from_str_s(NULL, 0); }
-MutSlice zeroed_mut_slice(void) { return mut_slice_from_str_s(NULL, 0); }
-AnySlice zeroed_any_slice(void) { return (AnySlice){NULL, 0}; }
+Slice       zeroed_slice(void) { return slice_from_str_s(NULL, 0); }
+MutSlice    zeroed_mut_slice(void) { return mut_slice_from_str_s(NULL, 0); }
+AnySlice    zeroed_any_slice(void) { return (AnySlice){NULL, 0}; }
+AnyMutSlice zeroed_any_mut_slice(void) { return (AnyMutSlice){NULL, 0}; }
 
 AnySlice any_from_slice(const Slice* slice) { return (AnySlice){slice->ptr, slice->length}; }
 AnySlice any_from_mut_slice(const MutSlice* slice) { return (AnySlice){slice->ptr, slice->length}; }
+AnySlice any_from_any_mut_slice(const AnyMutSlice* slice) {
+    return (AnySlice){slice->ptr, slice->length};
+}
 
 uintptr_t align_up(uintptr_t ptr, size_t alignment) {
     assert(is_power_of_two(alignment));
@@ -122,6 +130,22 @@ char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_al
 
 char* strdup_s(const char* str, size_t size) {
     return strdup_s_allocator(str, size, standard_allocator.memory_alloc);
+}
+
+NODISCARD Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc) {
+    assert(src && dest);
+    char* duped = strdup_s_allocator(src->ptr, src->length, memory_alloc);
+    if (!duped) {
+        return ALLOCATION_FAILED;
+    }
+
+    *dest = mut_slice_from_str_s(duped, src->length);
+    return SUCCESS;
+}
+
+NODISCARD Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc) {
+    const Slice slice_src = slice_from_mut(src);
+    return slice_dupe(dest, &slice_src, memory_alloc);
 }
 
 RcControlBlock rc_init(rc_dtor dtor) {

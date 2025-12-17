@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util/status.h"
+
 #if INTPTR_MAX == INT64_MAX
 #define WORD_SIZE_64
 #elif INTPTR_MAX == INT32_MAX
@@ -91,12 +93,14 @@ static inline bool mut_slice_equals_slice(const MutSlice* a, const Slice* b) {
 // Makes no assumptions about ownership.
 Slice slice_from_mut(const MutSlice* slice);
 
-Slice    zeroed_slice(void);
-MutSlice zeroed_mut_slice(void);
-AnySlice zeroed_any_slice(void);
+Slice       zeroed_slice(void);
+MutSlice    zeroed_mut_slice(void);
+AnySlice    zeroed_any_slice(void);
+AnyMutSlice zeroed_any_mut_slice(void);
 
 AnySlice any_from_slice(const Slice* slice);
 AnySlice any_from_mut_slice(const MutSlice* slice);
+AnySlice any_from_any_mut_slice(const AnyMutSlice* slice);
 
 uintptr_t align_up(uintptr_t ptr, size_t alignment);
 void*     align_ptr(void* ptr, size_t alignment);
@@ -107,6 +111,9 @@ char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc);
 char* strdup_z(const char* str);
 char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc);
 char* strdup_s(const char* str, size_t size);
+
+NODISCARD Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc);
+NODISCARD Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc);
 
 typedef void (*rc_dtor)(void*, free_alloc_fn);
 

@@ -192,3 +192,42 @@ TEST_CASE("Type aliases") {
                      {"DOUBLE_NULLABLE [Ln 1, Col 39]"});
     }
 }
+
+TEST_CASE("Enum types") {
+    SECTION("Correct standard declarations") {
+        test_analyze("type g = enum { ONE, }; var a: g; var b: g; a = b");
+        test_analyze("type g = enum { ONE, TWO = 2, THREE, }; var a: g; var b: g; a = b");
+        test_analyze(
+            "const val := 3; type g = enum { ONE, TWO = val, THREE, }; var a: g; var b: g; a = b");
+        test_analyze("enum { ONE, TWO, THREE, }");
+    }
+
+    SECTION("Assignment flavors") {
+        const char* inputs[] = {
+            "type A = enum { a, }; const b: A = A::a",
+            "type A = ?enum { a, }; var b: A = A::a; b = nil",
+            "type A = enum { RED, BLUE, GREEN, }; var b: A = A::RED; b = A::BLUE; b = A::GREEN",
+            "type A = ?enum { a, }; const b: A = A::a; var c: A = nil; c = b",
+            "type A = enum { a, }; type B = ?A; const b: A = A::a; var c: B = nil; c = b",
+        };
+
+        for (const auto& i : inputs) {
+            test_analyze(i);
+        }
+    }
+
+    SECTION("Error cases") {
+        test_analyze("var val := 3; type g = enum { ONE, TWO = val, THREE, };",
+                     {"NON_CONST_ENUM_VARIANT [Ln 1, Col 24]"});
+        test_analyze("const val: ?int = 3; type g = enum { ONE, TWO = val, THREE, };",
+                     {"NULLABLE_ENUM_VARIANT [Ln 1, Col 31]"});
+        test_analyze("const val: uint = 3u; type g = enum { ONE, TWO = val, THREE, };",
+                     {"NON_SIGNED_ENUM_VARIANT [Ln 1, Col 32]"});
+        test_analyze("type T = int; type g = enum { ONE, TWO = T, THREE, };",
+                     {"NON_VALUED_ENUM_VARIANT [Ln 1, Col 24]"});
+        test_analyze("type A = enum { a, }; type B = ?A; type C = ?B",
+                     {"DOUBLE_NULLABLE [Ln 1, Col 43]"});
+        test_analyze("type A = enum { a, }; const b := a",
+                     {"UNDECLARED_IDENTIFIER [Ln 1, Col 34]"});
+    }
+}

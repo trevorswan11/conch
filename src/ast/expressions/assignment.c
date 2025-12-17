@@ -102,7 +102,7 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), rc_release(lhs_type, free_alloc));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
-    if (!type_check(lhs_type, rhs_type)) {
+    if (!type_assignable(lhs_type, rhs_type)) {
         IGNORE_STATUS(
             put_status_error(errors, TYPE_MISMATCH, start_token.line, start_token.column));
 

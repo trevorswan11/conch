@@ -14,6 +14,7 @@ typedef struct SemanticContext {
     SymbolTable*     symbol_table;
 
     SemanticType* analyzed_type;
+    Slice         namespace_type_name;
 } SemanticContext;
 
 SemanticType* semantic_context_move_analyzed(SemanticContext* context);

@@ -19,9 +19,10 @@ TEST_CASE("Word size determined correctly") {
 }
 
 TEST_CASE("Zeroed slices") {
-    Slice    slice     = zeroed_slice();
-    MutSlice mut_slice = zeroed_mut_slice();
-    AnySlice any_slice = zeroed_any_slice();
+    Slice       slice         = zeroed_slice();
+    MutSlice    mut_slice     = zeroed_mut_slice();
+    AnySlice    any_slice     = zeroed_any_slice();
+    AnyMutSlice any_mut_slice = zeroed_any_mut_slice();
 
     const auto test_zeroed_any = [](AnySlice any) {
         REQUIRE_FALSE(any.ptr);
@@ -30,7 +31,7 @@ TEST_CASE("Zeroed slices") {
 
     test_zeroed_any(any_from_slice(&slice));
     test_zeroed_any(any_from_mut_slice(&mut_slice));
-    test_zeroed_any(any_slice);
+    test_zeroed_any(any_from_any_mut_slice(&any_mut_slice));
 }
 
 TEST_CASE("Slice creation and equality") {

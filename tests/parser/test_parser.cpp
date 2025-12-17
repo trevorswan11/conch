@@ -30,7 +30,7 @@ extern "C" {
 #include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
 #include "ast/expressions/match.h"
-#include "ast/expressions/narrow.h"
+#include "ast/expressions/namespace.h"
 #include "ast/expressions/prefix.h"
 #include "ast/expressions/single.h"
 #include "ast/expressions/string.h"
@@ -512,7 +512,7 @@ TEST_CASE("Basic prefix / infix expressions") {
         }
     }
 
-    SECTION("Namespace / narrow expressions") {
+    SECTION("Namespace expressions") {
         ParserFixture pf("Outer::inner");
         pf.check_errors();
 
@@ -521,11 +521,11 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        NarrowExpression*    narrow    = (NarrowExpression*)expr_stmt->expression;
+        ExpressionStatement* expr_stmt      = (ExpressionStatement*)stmt;
+        NamespaceExpression* namespace_expr = (NamespaceExpression*)expr_stmt->expression;
 
-        test_identifier_expression(narrow->outer, "Outer");
-        test_identifier_expression((Expression*)narrow->inner, "inner");
+        test_identifier_expression(namespace_expr->outer, "Outer");
+        test_identifier_expression((Expression*)namespace_expr->inner, "inner");
     }
 
     SECTION("Operator precedence parsing") {
@@ -2449,7 +2449,7 @@ TEST_CASE("Null passed to destructors") {
         while_loop_expression_destroy,
         do_while_loop_expression_destroy,
         match_expression_destroy,
-        narrow_expression_destroy,
+        namespace_expression_destroy,
         prefix_expression_destroy,
         single_expression_destroy,
         string_literal_expression_destroy,

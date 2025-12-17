@@ -105,30 +105,34 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
     const Token     start_token = node->start_token;
     const Allocator allocator   = parent->symbol_table->symbols.allocator;
 
-    SemanticType* new_symbol_type;
-    TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
-    new_symbol_type->is_const = true;
-    new_symbol_type->valued   = false;
-
     TypeExpression* type = (TypeExpression*)node;
+    SemanticType*   new_symbol_type;
+
     if (type->tag == IMPLICIT) {
+        TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
         new_symbol_type->tag      = STYPE_IMPLICIT_DECLARATION;
-        new_symbol_type->variant  = DATALESS_TYPE;
+        new_symbol_type->variant  = SEMANTIC_DATALESS_TYPE;
+        new_symbol_type->is_const = true;
+        new_symbol_type->valued   = false;
         new_symbol_type->nullable = false;
     } else {
-        ExplicitType explicit_type = type->variant.explicit_type;
+        const ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
+            TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
+            new_symbol_type->is_const = true;
+            new_symbol_type->valued   = false;
+
             MutSlice      probe_type_name = explicit_type.variant.ident_type_name->name;
             SemanticType* probe_symbol_type;
 
             SemanticTypeTag symbol_type_tag;
             if (semantic_name_to_primitive_type_tag(probe_type_name, &symbol_type_tag)) {
                 new_symbol_type->tag      = symbol_type_tag;
-                new_symbol_type->variant  = DATALESS_TYPE;
+                new_symbol_type->variant  = SEMANTIC_DATALESS_TYPE;
                 new_symbol_type->nullable = explicit_type.nullable;
             } else if (semantic_context_find(parent, true, probe_type_name, &probe_symbol_type)) {
-                // Double null doesn't make sense
+                // Double null doesn't make sense, guard before making the new type
                 if (probe_symbol_type->nullable && explicit_type.nullable) {
                     IGNORE_STATUS(put_status_error(
                         errors, DOUBLE_NULLABLE, start_token.line, start_token.column));
@@ -137,13 +141,10 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                     return DOUBLE_NULLABLE;
                 }
 
+                // Underlying copy ignores nullable, so inherit from either source
                 TRY_DO(semantic_type_copy_variant(new_symbol_type, probe_symbol_type, allocator),
                        rc_release(new_symbol_type, allocator.free_alloc));
-
-                // In this case it needs to be unique, but can take on the data
-                if (probe_symbol_type->nullable) {
-                    new_symbol_type->nullable = probe_symbol_type->nullable;
-                }
+                new_symbol_type->nullable = probe_symbol_type->nullable || explicit_type.nullable;
             } else {
                 IGNORE_STATUS(put_status_error(
                     errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
@@ -153,8 +154,16 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             }
             break;
         }
+        case EXPLICIT_ENUM: {
+            // The enum parser does all of the heavy lifting and we can safely alter nullable
+            const EnumExpression* enum_expr = explicit_type.variant.enum_type;
+            TRY(NODE_VIRTUAL_ANALYZE(enum_expr, parent, errors));
+
+            new_symbol_type           = semantic_context_move_analyzed(parent);
+            new_symbol_type->nullable = explicit_type.nullable;
+            break;
+        }
         default:
-            rc_release(new_symbol_type, allocator.free_alloc);
             return NOT_IMPLEMENTED;
         }
 

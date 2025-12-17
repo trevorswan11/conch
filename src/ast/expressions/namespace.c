@@ -1,0 +1,110 @@
+#include <assert.h>
+
+#include "ast/expressions/identifier.h"
+#include "ast/expressions/namespace.h"
+
+#include "semantic/context.h"
+#include "semantic/symbol.h"
+#include "semantic/type.h"
+
+#include "util/containers/string_builder.h"
+
+NODISCARD Status namespace_expression_create(Token                 start_token,
+                                             Expression*           outer,
+                                             IdentifierExpression* inner,
+                                             NamespaceExpression** namespace_expr,
+                                             memory_alloc_fn       memory_alloc) {
+    assert(memory_alloc);
+    assert(outer && inner);
+
+    NamespaceExpression* namespace_local = memory_alloc(sizeof(NamespaceExpression));
+    if (!namespace_local) {
+        return ALLOCATION_FAILED;
+    }
+
+    *namespace_local = (NamespaceExpression){
+        .base  = EXPRESSION_INIT(NAMESPACE_VTABLE, start_token),
+        .outer = outer,
+        .inner = inner,
+    };
+
+    *namespace_expr = namespace_local;
+    return SUCCESS;
+}
+
+void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+    if (!node) {
+        return;
+    }
+    assert(free_alloc);
+
+    NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
+    NODE_VIRTUAL_FREE(namespace_expr->outer, free_alloc);
+    NODE_VIRTUAL_FREE(namespace_expr->inner, free_alloc);
+
+    free_alloc(namespace_expr);
+}
+
+NODISCARD Status namespace_expression_reconstruct(Node*          node,
+                                                  const HashMap* symbol_map,
+                                                  StringBuilder* sb) {
+    ASSERT_EXPRESSION(node);
+    assert(sb);
+
+    NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
+
+    ASSERT_EXPRESSION(namespace_expr->outer);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(namespace_expr->outer, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, "::"));
+    ASSERT_EXPRESSION(namespace_expr->inner);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(namespace_expr->inner, symbol_map, sb));
+
+    return SUCCESS;
+}
+
+NODISCARD Status namespace_expression_analyze(Node*            node,
+                                              SemanticContext* parent,
+                                              ArrayList*       errors) {
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = parent->symbol_table->symbols.allocator;
+
+    NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
+    ASSERT_EXPRESSION(namespace_expr->outer);
+    ASSERT_EXPRESSION(namespace_expr->inner);
+
+    TRY(NODE_VIRTUAL_ANALYZE(namespace_expr->outer, parent, errors));
+    SemanticType* direct_parent = semantic_context_move_analyzed(parent);
+
+    // All we need to check is the inner presence in the namespace
+    SemanticType* inner_type;
+    TRY_DO(semantic_type_create(&inner_type, allocator.memory_alloc),
+           rc_release(direct_parent, allocator.free_alloc));
+    switch (direct_parent->tag) {
+    case STYPE_ENUM: {
+        TRY_DO(semantic_type_copy_variant(inner_type, direct_parent, allocator), {
+            rc_release(direct_parent, allocator.free_alloc);
+            rc_release(inner_type, allocator.free_alloc);
+        });
+
+        inner_type->is_const = true;
+        inner_type->valued   = true;
+        inner_type->nullable = false;
+        break;
+    }
+    default:
+        IGNORE_STATUS(put_status_error(
+            errors, ILLEGAL_OUTER_NAMESPACE, start_token.line, start_token.column));
+
+        rc_release(direct_parent, allocator.free_alloc);
+        rc_release(inner_type, allocator.free_alloc);
+        return ILLEGAL_OUTER_NAMESPACE;
+    }
+
+    // The parent type doesn't matter for the resulting type
+    rc_release(direct_parent, allocator.free_alloc);
+    parent->analyzed_type = inner_type;
+    return SUCCESS;
+}

@@ -10,17 +10,12 @@
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
-#include "util/status.h"
 
 #define DECL_NAME(tok, field, name)                                                                \
-    Slice tmp_name = slice_from_mut(&field);                                                       \
-                                                                                                   \
     const Allocator allocator = parent->symbol_table->symbols.allocator;                           \
-    char* duped = strdup_s_allocator(tmp_name.ptr, tmp_name.length, allocator.memory_alloc);       \
-    if (!duped) {                                                                                  \
-        return ALLOCATION_FAILED;                                                                  \
-    }                                                                                              \
-    const MutSlice name = mut_slice_from_str_s(duped, tmp_name.length);                            \
+    MutSlice        name;                                                                          \
+    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                                    \
+    char* duped = name.ptr;                                                                        \
                                                                                                    \
     if (semantic_context_has(parent, true, name)) {                                                \
         IGNORE_STATUS(put_status_error(errors, REDEFINITION_OF_IDENTIFIER, tok.line, tok.column)); \
@@ -132,16 +127,26 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
         });
 
         SemanticType* value_type = semantic_context_move_analyzed(parent);
+        if (!value_type->valued) {
+            const Token t = NODE_TOKEN(decl->value);
+            IGNORE_STATUS(put_status_error(errors, NON_VALUED_DECL_VALUE, t.line, t.column));
+
+            allocator.free_alloc(duped);
+            rc_release(decl_type, allocator.free_alloc);
+            rc_release(value_type, allocator.free_alloc);
+            return NON_VALUED_DECL_VALUE;
+        }
+
         if (decl_type->tag == STYPE_IMPLICIT_DECLARATION) {
             // We can now release the decl and just have it set to the value's type
             rc_release(decl_type, allocator.free_alloc);
             decl_type = value_type;
         } else {
             // In this case, we can drop the value type since all we need is the decl
-            const bool same_type = type_check(decl_type, value_type);
+            const bool assignable = type_assignable(decl_type, value_type);
             rc_release(value_type, allocator.free_alloc);
 
-            if (!same_type) {
+            if (!assignable) {
                 const Token t = NODE_TOKEN(decl);
                 IGNORE_STATUS(put_status_error(errors, TYPE_MISMATCH, t.line, t.column));
 
@@ -270,23 +275,26 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
     }
 
     // Otherwise the value has to be a type
+    parent->namespace_type_name = slice_from_mut(&type_decl_name);
     TRY_DO(NODE_VIRTUAL_ANALYZE(type_decl->value, parent, errors), allocator.free_alloc(duped));
-    SemanticType* type_decl_type = semantic_context_move_analyzed(parent);
-    if (type_decl_type->valued || !type_decl_type->is_const) {
+    parent->namespace_type_name = zeroed_slice();
+
+    SemanticType* type_decl_type_probe = semantic_context_move_analyzed(parent);
+    if (type_decl_type_probe->valued || !type_decl_type_probe->is_const) {
         const Token value_token = NODE_TOKEN(type_decl->ident);
         IGNORE_STATUS(
             put_status_error(errors, MALFORMED_TYPE_DECL, value_token.line, value_token.column));
 
         allocator.free_alloc(duped);
-        rc_release(type_decl_type, allocator.free_alloc);
+        rc_release(type_decl_type_probe, allocator.free_alloc);
         return MALFORMED_TYPE_DECL;
     }
 
-    TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type), {
+    TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type_probe), {
         allocator.free_alloc(duped);
-        rc_release(type_decl_type, allocator.free_alloc);
+        rc_release(type_decl_type_probe, allocator.free_alloc);
     });
 
-    rc_release(type_decl_type, allocator.free_alloc);
+    rc_release(type_decl_type_probe, allocator.free_alloc);
     return SUCCESS;
 }

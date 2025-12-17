@@ -53,7 +53,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
 NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status narrow_expression_parse(Parser* p, Expression* outer, Expression** expression);
+NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
 NODISCARD Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
                                              Expression** expression);
@@ -192,6 +192,6 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {NOT_ASSIGN, assignment_expression_parse},
     {XOR_ASSIGN, assignment_expression_parse},
     {COMMA, infix_expression_parse},
-    {COLON_COLON, narrow_expression_parse},
+    {COLON_COLON, namespace_expression_parse},
     {ORELSE, infix_expression_parse},
 };

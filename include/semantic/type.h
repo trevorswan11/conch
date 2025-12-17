@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include "util/containers/hash_set.h"
 #include "util/memory.h"
 #include "util/status.h"
 
@@ -10,7 +11,7 @@
     TRY_DO(semantic_type_create(&name, memory_alloc), err); \
                                                             \
     name->tag      = T;                                     \
-    name->variant  = DATALESS_TYPE;                         \
+    name->variant  = SEMANTIC_DATALESS_TYPE;                \
     name->is_const = true;                                  \
     name->valued   = true;                                  \
     name->nullable = N;
@@ -36,6 +37,7 @@ typedef enum {
     STYPE_BOOL,
     STYPE_VOID,
     STYPE_NIL,
+    STYPE_ENUM,
 } SemanticTypeTag;
 
 // Converts a semantic name to its semantic tag.
@@ -45,13 +47,28 @@ bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag);
 
 typedef struct {
     char _;
-} DatalessType;
+} SematicDatalessType;
+
+typedef struct {
+    RcControlBlock rc_control;
+
+    Slice   type_name;
+    HashSet variants;
+} SemanticEnumType;
+
+NODISCARD Status semantic_enum_create(Slice              name,
+                                      HashSet            variants,
+                                      SemanticEnumType** enum_type,
+                                      memory_alloc_fn    memory_alloc);
+void             free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
+void             semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
 
 typedef union {
-    DatalessType dataless_type;
+    SematicDatalessType dataless_type;
+    SemanticEnumType*   enum_type;
 } SemanticTypeUnion;
 
-static const SemanticTypeUnion DATALESS_TYPE = {.dataless_type = {'\0'}};
+static const SemanticTypeUnion SEMANTIC_DATALESS_TYPE = {.dataless_type = {'\0'}};
 
 typedef struct SemanticType {
     RcControlBlock rc_control;
@@ -69,12 +86,15 @@ NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memor
 // Copies the tagged union data from src to dest, leaving flags alone.
 //
 // Reference counting is respected when possible.
-NODISCARD Status semantic_type_copy_variant(SemanticType*       dest,
-                                            const SemanticType* src,
-                                            Allocator           allocator);
+NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
+                                            SemanticType* src,
+                                            Allocator     allocator);
 
 // Never call this directly!
-void semantic_type_destroy(void* type, free_alloc_fn free_alloc);
+void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);
+
+// Checks if a type of rhs can be assigned to a type lhs
+bool type_assignable(SemanticType* lhs, SemanticType* rhs);
 
 // Checks two types against each other, not comparing const-ness
-bool type_check(SemanticType* lhs, SemanticType* rhs);
+bool type_equal(SemanticType* lhs, SemanticType* rhs);
