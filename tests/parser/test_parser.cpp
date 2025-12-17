@@ -1540,17 +1540,13 @@ TEST_CASE("Match expressions") {
         SECTION("No arms") {
             const char*   input = "match Out { }";
             ParserFixture pf(input);
-            pf.check_errors({"ARMLESS_MATCH_EXPR [Ln 1, Col 1]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 13]"},
-                            false);
+            pf.check_errors({"ARMLESS_MATCH_EXPR [Ln 1, Col 1]"}, false);
         }
 
         SECTION("Illegal catch-all") {
             const char*   input = "match Out { a => 4, } else const b := 4";
             ParserFixture pf(input);
-            pf.check_errors({"ILLEGAL_MATCH_CATCH_ALL [Ln 1, Col 28]",
-                             "No prefix parse function for WALRUS found [Ln 1, Col 36]"},
-                            false);
+            pf.check_errors({"ILLEGAL_MATCH_CATCH_ALL [Ln 1, Col 28]"}, false);
         }
 
         SECTION("Standard declarations in arm") {
@@ -2004,9 +2000,7 @@ TEST_CASE("For loops") {
         SECTION("Improper non break clause") {
             const char*   input = "for (1) : (1) {1} else const a := 2;";
             ParserFixture pf(input);
-            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]",
-                             "No prefix parse function for WALRUS found [Ln 1, Col 32]"},
-                            false);
+            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]"}, false);
         }
     }
 }
@@ -2152,9 +2146,7 @@ TEST_CASE("While loops") {
         SECTION("Improper non break clause") {
             const char*   input = "while (1) : (1) {1} else const a := 2;";
             ParserFixture pf(input);
-            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 26]",
-                             "No prefix parse function for WALRUS found [Ln 1, Col 34]"},
-                            false);
+            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 26]"}, false);
         }
     }
 }

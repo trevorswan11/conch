@@ -352,7 +352,3 @@ NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt) {
 
     return SUCCESS;
 }
-
-NODISCARD Status parser_put_status_error(Parser* p, Status status, size_t line, size_t col) {
-    return put_status_error(&p->errors, status, line, col);
-}

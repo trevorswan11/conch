@@ -11,17 +11,15 @@
 
 #include "util/containers/string_builder.h"
 
-#define DECL_NAME(tok, field, name)                                                                \
-    const Allocator allocator = parent->symbol_table->symbols.allocator;                           \
-    MutSlice        name;                                                                          \
-    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                                    \
-    char* duped = name.ptr;                                                                        \
-                                                                                                   \
-    if (semantic_context_has(parent, true, name)) {                                                \
-        IGNORE_STATUS(put_status_error(errors, REDEFINITION_OF_IDENTIFIER, tok.line, tok.column)); \
-                                                                                                   \
-        allocator.free_alloc(duped);                                                               \
-        return REDEFINITION_OF_IDENTIFIER;                                                         \
+#define DECL_NAME(tok, field, name)                                                \
+    const Allocator allocator = parent->symbol_table->symbols.allocator;           \
+    MutSlice        name;                                                          \
+    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                    \
+    char* duped = name.ptr;                                                        \
+                                                                                   \
+    if (semantic_context_has(parent, true, name)) {                                \
+        PUT_STATUS_PROPAGATE(                                                      \
+            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc(duped)); \
     }
 
 NODISCARD Status decl_statement_create(Token                 start_token,
@@ -129,12 +127,11 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
         SemanticType* value_type = semantic_context_move_analyzed(parent);
         if (!value_type->valued) {
             const Token t = NODE_TOKEN(decl->value);
-            IGNORE_STATUS(put_status_error(errors, NON_VALUED_DECL_VALUE, t.line, t.column));
-
-            allocator.free_alloc(duped);
-            rc_release(decl_type, allocator.free_alloc);
-            rc_release(value_type, allocator.free_alloc);
-            return NON_VALUED_DECL_VALUE;
+            PUT_STATUS_PROPAGATE(errors, NON_VALUED_DECL_VALUE, t, {
+                allocator.free_alloc(duped);
+                rc_release(decl_type, allocator.free_alloc);
+                rc_release(value_type, allocator.free_alloc);
+            });
         }
 
         if (decl_type->tag == STYPE_IMPLICIT_DECLARATION) {
@@ -148,12 +145,10 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
 
             if (!assignable) {
                 const Token t = NODE_TOKEN(decl);
-                IGNORE_STATUS(put_status_error(errors, TYPE_MISMATCH, t.line, t.column));
-
-                allocator.free_alloc(duped);
-                rc_release(decl_type, allocator.free_alloc);
-
-                return TYPE_MISMATCH;
+                PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, t, {
+                    allocator.free_alloc(duped);
+                    rc_release(decl_type, allocator.free_alloc);
+                });
             }
         }
     } else {
@@ -282,12 +277,10 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
     SemanticType* type_decl_type_probe = semantic_context_move_analyzed(parent);
     if (type_decl_type_probe->valued || !type_decl_type_probe->is_const) {
         const Token value_token = NODE_TOKEN(type_decl->ident);
-        IGNORE_STATUS(
-            put_status_error(errors, MALFORMED_TYPE_DECL, value_token.line, value_token.column));
-
-        allocator.free_alloc(duped);
-        rc_release(type_decl_type_probe, allocator.free_alloc);
-        return MALFORMED_TYPE_DECL;
+        PUT_STATUS_PROPAGATE(errors, MALFORMED_TYPE_DECL, value_token, {
+            allocator.free_alloc(duped);
+            rc_release(type_decl_type_probe, allocator.free_alloc);
+        });
     }
 
     TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type_probe), {

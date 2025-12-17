@@ -199,7 +199,6 @@ TEST_CASE("Enum types") {
         test_analyze("type g = enum { ONE, TWO = 2, THREE, }; var a: g; var b: g; a = b");
         test_analyze(
             "const val := 3; type g = enum { ONE, TWO = val, THREE, }; var a: g; var b: g; a = b");
-        test_analyze("enum { ONE, TWO, THREE, }");
     }
 
     SECTION("Assignment flavors") {
@@ -229,5 +228,7 @@ TEST_CASE("Enum types") {
                      {"DOUBLE_NULLABLE [Ln 1, Col 43]"});
         test_analyze("type A = enum { a, }; const b := a",
                      {"UNDECLARED_IDENTIFIER [Ln 1, Col 34]"});
+        test_analyze("var a: enum { b, }", {"ANONYMOUS_ENUM [Ln 1, Col 8]"});
+        test_analyze("enum { ONE, TWO, THREE, }", {"ANONYMOUS_ENUM [Ln 1, Col 1]"});
     }
 }

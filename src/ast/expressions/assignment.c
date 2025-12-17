@@ -92,23 +92,18 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
 
     if (lhs_type->is_const) {
-        IGNORE_STATUS(
-            put_status_error(errors, ASSIGNMENT_TO_CONSTANT, start_token.line, start_token.column));
-
-        rc_release(lhs_type, free_alloc);
-        return ASSIGNMENT_TO_CONSTANT;
+        PUT_STATUS_PROPAGATE(
+            errors, ASSIGNMENT_TO_CONSTANT, start_token, rc_release(lhs_type, free_alloc));
     }
 
     TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), rc_release(lhs_type, free_alloc));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
     if (!type_assignable(lhs_type, rhs_type)) {
-        IGNORE_STATUS(
-            put_status_error(errors, TYPE_MISMATCH, start_token.line, start_token.column));
-
-        rc_release(lhs_type, free_alloc);
-        rc_release(rhs_type, free_alloc);
-        return TYPE_MISMATCH;
+        PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+            rc_release(lhs_type, free_alloc);
+            rc_release(rhs_type, free_alloc);
+        });
     }
 
     // Assignment expressions return the type of their assigned value

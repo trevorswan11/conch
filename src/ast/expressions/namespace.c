@@ -95,12 +95,10 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
         break;
     }
     default:
-        IGNORE_STATUS(put_status_error(
-            errors, ILLEGAL_OUTER_NAMESPACE, start_token.line, start_token.column));
-
-        rc_release(direct_parent, allocator.free_alloc);
-        rc_release(inner_type, allocator.free_alloc);
-        return ILLEGAL_OUTER_NAMESPACE;
+        PUT_STATUS_PROPAGATE(errors, ILLEGAL_OUTER_NAMESPACE, start_token, {
+            rc_release(direct_parent, allocator.free_alloc);
+            rc_release(inner_type, allocator.free_alloc);
+        });
     }
 
     // The parent type doesn't matter for the resulting type

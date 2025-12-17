@@ -134,11 +134,10 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             } else if (semantic_context_find(parent, true, probe_type_name, &probe_symbol_type)) {
                 // Double null doesn't make sense, guard before making the new type
                 if (probe_symbol_type->nullable && explicit_type.nullable) {
-                    IGNORE_STATUS(put_status_error(
-                        errors, DOUBLE_NULLABLE, start_token.line, start_token.column));
-
-                    rc_release(new_symbol_type, allocator.free_alloc);
-                    return DOUBLE_NULLABLE;
+                    PUT_STATUS_PROPAGATE(errors,
+                                         DOUBLE_NULLABLE,
+                                         start_token,
+                                         rc_release(new_symbol_type, allocator.free_alloc));
                 }
 
                 // Underlying copy ignores nullable, so inherit from either source
@@ -146,11 +145,10 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                        rc_release(new_symbol_type, allocator.free_alloc));
                 new_symbol_type->nullable = probe_symbol_type->nullable || explicit_type.nullable;
             } else {
-                IGNORE_STATUS(put_status_error(
-                    errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
-
-                rc_release(new_symbol_type, allocator.free_alloc);
-                return UNDECLARED_IDENTIFIER;
+                PUT_STATUS_PROPAGATE(errors,
+                                     UNDECLARED_IDENTIFIER,
+                                     start_token,
+                                     rc_release(new_symbol_type, allocator.free_alloc));
             }
             break;
         }

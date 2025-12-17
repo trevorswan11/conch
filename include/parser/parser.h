@@ -58,9 +58,3 @@ Precedence parser_current_precedence(Parser* p);
 Precedence parser_peek_precedence(Parser* p);
 
 NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt);
-
-// Adds an error message to the parser detailing an error from a status code.
-NODISCARD Status parser_put_status_error(Parser* p, Status status, size_t line, size_t col);
-
-// Appends " [Ln <>, Col <>]" to the given builder.
-NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);

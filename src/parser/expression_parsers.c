@@ -31,28 +31,36 @@
 
 #include "util/containers/string_builder.h"
 
-#define TRAILING_ALTERNATE(result, err, err_code)                                                  \
-    switch (p->current_token.type) {                                                               \
-    case VAR:                                                                                      \
-    case CONST:                                                                                    \
-    case TYPE:                                                                                     \
-    case IMPL:                                                                                     \
-    case IMPORT:                                                                                   \
-    case UNDERSCORE:                                                                               \
-        IGNORE_STATUS(                                                                             \
-            parser_put_status_error(p, err_code, p->current_token.line, p->current_token.column)); \
-        err;                                                                                       \
-        return err_code;                                                                           \
-    default:                                                                                       \
-        TRY_DO(parser_parse_statement(p, &result), err);                                           \
-        break;                                                                                     \
+#define TRAILING_ALTERNATE(result, cleanup, err_code)                          \
+    switch (p->current_token.type) {                                           \
+    case VAR:                                                                  \
+    case CONST:                                                                \
+    case TYPE:                                                                 \
+    case IMPL:                                                                 \
+    case IMPORT:                                                               \
+    case UNDERSCORE:                                                           \
+        PUT_STATUS_PROPAGATE(&p->errors, err_code, p->current_token, cleanup); \
+    default:                                                                   \
+        TRY_DO(parser_parse_statement(p, &result), cleanup);                   \
+        break;                                                                 \
     }
 
-#define POSSIBLE_TRAILING_ALTERNATE(result, err, err_code) \
-    if (parser_peek_token_is(p, ELSE)) {                   \
-        UNREACHABLE_IF_ERROR(parser_next_token(p));        \
-        TRY_DO(parser_next_token(p), err);                 \
-        TRAILING_ALTERNATE(result, err, err_code);         \
+#define POSSIBLE_TRAILING_ALTERNATE(result, cleanup, err_code)                  \
+    if (parser_peek_token_is(p, ELSE)) {                                        \
+        UNREACHABLE_IF_ERROR(parser_next_token(p));                             \
+        switch (p->peek_token.type) {                                           \
+        case VAR:                                                               \
+        case CONST:                                                             \
+        case TYPE:                                                              \
+        case IMPL:                                                              \
+        case IMPORT:                                                            \
+        case UNDERSCORE:                                                        \
+            PUT_STATUS_PROPAGATE(&p->errors, err_code, p->peek_token, cleanup); \
+        default:                                                                \
+            TRY_DO(parser_next_token(p), cleanup);                              \
+            TRY_DO(parser_parse_statement(p, &result), cleanup);                \
+            break;                                                              \
+        }                                                                       \
     }
 
 static inline NODISCARD Status record_missing_prefix(Parser* p) {
@@ -105,9 +113,7 @@ NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression**
 NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     if (start_token.type != IDENT && !hash_set_contains(&p->primitives, &start_token.type)) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, ILLEGAL_IDENTIFIER, start_token.line, start_token.column));
-        return ILLEGAL_IDENTIFIER;
+        PUT_STATUS_PROPAGATE(&p->errors, ILLEGAL_IDENTIFIER, start_token, {});
     }
 
     char* mut_name = strdup_s_allocator(
@@ -155,19 +161,17 @@ NODISCARD Status parameter_list_parse(Parser*    p,
             Expression* type_expr;
             bool        initalized;
             TRY_DO(type_expression_parse(p, &type_expr, &initalized), {
-                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, allocator.free_alloc);
                 free_parameter_list(&list, p->allocator.free_alloc);
             });
 
             TypeExpression* type = (TypeExpression*)type_expr;
             if (type->tag == IMPLICIT) {
-                IGNORE_STATUS(parser_put_status_error(
-                    p, IMPLICIT_FN_PARAM_TYPE, p->current_token.line, p->current_token.column));
-
-                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                type_expression_destroy((Node*)type, allocator.free_alloc);
-                free_parameter_list(&list, p->allocator.free_alloc);
-                return IMPLICIT_FN_PARAM_TYPE;
+                PUT_STATUS_PROPAGATE(&p->errors, IMPLICIT_FN_PARAM_TYPE, p->current_token, {
+                    NODE_VIRTUAL_FREE(ident, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(type, allocator.free_alloc);
+                    free_parameter_list(&list, p->allocator.free_alloc);
+                });
             }
 
             // Parse the default value based on the types knowledge of it
@@ -176,15 +180,15 @@ NODISCARD Status parameter_list_parse(Parser*    p,
                 some_initialized = some_initialized || initalized;
 
                 TRY_DO(expression_parse(p, LOWEST, &default_value), {
-                    identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                    type_expression_destroy((Node*)type, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(ident, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(type, allocator.free_alloc);
                     free_parameter_list(&list, p->allocator.free_alloc);
                 });
 
                 // Expression parsing moves up to the end of the expression, so pass it
                 TRY_DO(parser_next_token(p), {
-                    identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                    type_expression_destroy((Node*)type, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(ident, allocator.free_alloc);
+                    NODE_VIRTUAL_FREE(type, allocator.free_alloc);
                     NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
                     free_parameter_list(&list, p->allocator.free_alloc);
                 });
@@ -198,8 +202,8 @@ NODISCARD Status parameter_list_parse(Parser*    p,
             };
 
             TRY_DO(array_list_push(&list, &parameter), {
-                identifier_expression_destroy((Node*)ident, allocator.free_alloc);
-                type_expression_destroy((Node*)type, allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, allocator.free_alloc);
+                NODE_VIRTUAL_FREE(type, allocator.free_alloc);
                 NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
                 free_parameter_list(&list, p->allocator.free_alloc);
             });
@@ -229,10 +233,10 @@ NODISCARD Status generics_parse(Parser* p, ArrayList* generics) {
     if (parser_peek_token_is(p, LT)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         if (parser_peek_token_is(p, GT)) {
-            IGNORE_STATUS(parser_put_status_error(
-                p, EMPTY_GENERIC_LIST, p->current_token.line, p->current_token.column));
-            free_expression_list(generics, p->allocator.free_alloc);
-            return EMPTY_GENERIC_LIST;
+            PUT_STATUS_PROPAGATE(&p->errors,
+                                 EMPTY_GENERIC_LIST,
+                                 p->current_token,
+                                 free_expression_list(generics, p->allocator.free_alloc));
         }
 
         while (!parser_peek_token_is(p, GT) && !parser_peek_token_is(p, END)) {
@@ -277,12 +281,12 @@ NODISCARD Status function_definition_parse(Parser*          p,
     });
     const Token type_token_start = p->current_token;
 
-    TRY_DO(explicit_type_parse(p, type_token_start, return_type), {
-        IGNORE_STATUS(parser_put_status_error(
-            p, MALFORMED_FUNCTION_LITERAL, type_token_start.line, type_token_start.column));
-        free_parameter_list(parameters, p->allocator.free_alloc);
-        free_expression_list(generics, p->allocator.free_alloc);
-    });
+    if (STATUS_ERR(explicit_type_parse(p, type_token_start, return_type))) {
+        PUT_STATUS_PROPAGATE(&p->errors, MALFORMED_FUNCTION_LITERAL, type_token_start, {
+            free_parameter_list(parameters, p->allocator.free_alloc);
+            free_expression_list(generics, p->allocator.free_alloc);
+        });
+    }
 
     return SUCCESS;
 }
@@ -311,10 +315,10 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
             const Token integer_token = p->current_token;
 
             if (!token_is_unsigned_integer(integer_token.type)) {
-                IGNORE_STATUS(parser_put_status_error(
-                    p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
-                array_list_deinit(&dim_array);
-                return UNEXPECTED_ARRAY_SIZE_TOKEN;
+                PUT_STATUS_PROPAGATE(&p->errors,
+                                     UNEXPECTED_ARRAY_SIZE_TOKEN,
+                                     integer_token,
+                                     array_list_deinit(&dim_array));
             }
 
             uint64_t dim;
@@ -333,10 +337,8 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
         TRY_DO(parser_expect_peek(p, RBRACKET), array_list_deinit(&dim_array));
         if (dim_array.length == 0) {
-            array_list_deinit(&dim_array);
-            IGNORE_STATUS(parser_put_status_error(
-                p, MISSING_ARRAY_SIZE_TOKEN, start_token.line, start_token.column));
-            return MISSING_ARRAY_SIZE_TOKEN;
+            PUT_STATUS_PROPAGATE(
+                &p->errors, MISSING_ARRAY_SIZE_TOKEN, start_token, array_list_deinit(&dim_array));
         }
         is_array_type = true;
 
@@ -379,7 +381,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
         TRY_DO(type_expression_create(
                    start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
                {
-                   identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+                   NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
                    array_list_deinit(&dim_array);
                });
     } else {
@@ -398,14 +400,15 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
             // Default values in function types make no sense to allow
             if (contains_default_param) {
-                TRY_DO(parser_put_status_error(
-                           p, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
-                       {
-                           free_expression_list(&generics, p->allocator.free_alloc);
-                           free_parameter_list(&parameters, p->allocator.free_alloc);
-                           type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
-                           array_list_deinit(&dim_array);
-                       });
+                TRY_DO(
+                    put_status_error(
+                        &p->errors, MALFORMED_FUNCTION_LITERAL, type_start.line, type_start.column),
+                    {
+                        free_expression_list(&generics, p->allocator.free_alloc);
+                        free_parameter_list(&parameters, p->allocator.free_alloc);
+                        NODE_VIRTUAL_FREE(return_type, p->allocator.free_alloc);
+                        array_list_deinit(&dim_array);
+                    });
             }
 
             explicit_union.explicit_type.tag     = EXPLICIT_FN;
@@ -423,7 +426,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
                    {
                        free_expression_list(&generics, p->allocator.free_alloc);
                        free_parameter_list(&parameters, p->allocator.free_alloc);
-                       type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+                       NODE_VIRTUAL_FREE(return_type, p->allocator.free_alloc);
                        array_list_deinit(&dim_array);
                    });
             break;
@@ -441,7 +444,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
             TRY_DO(type_expression_create(
                        start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
                    {
-                       struct_expression_destroy((Node*)struct_type, p->allocator.free_alloc);
+                       NODE_VIRTUAL_FREE(struct_type, p->allocator.free_alloc);
                        array_list_deinit(&dim_array);
                    });
             break;
@@ -459,7 +462,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
             TRY_DO(type_expression_create(
                        start_token, EXPLICIT, explicit_union, type, p->allocator.memory_alloc),
                    {
-                       enum_expression_destroy((Node*)enum_type, p->allocator.free_alloc);
+                       NODE_VIRTUAL_FREE(enum_type, p->allocator.free_alloc);
                        array_list_deinit(&dim_array);
                    });
             break;
@@ -494,7 +497,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
                    start_token, EXPLICIT, array_type_union, type, p->allocator.memory_alloc),
                {
                    array_list_deinit(&dim_array);
-                   type_expression_destroy((Node*)*type, p->allocator.free_alloc);
+                   NODE_VIRTUAL_FREE(*type, p->allocator.free_alloc);
                });
     }
 
@@ -546,8 +549,7 @@ NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expres
         const Status parse_status =
             strntoll(start_token.slice.ptr, start_token.slice.length, base, &value);
         if (STATUS_ERR(parse_status)) {
-            TRY(parser_put_status_error(p, parse_status, start_token.line, start_token.column));
-            return parse_status;
+            PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
         }
 
         IntegerLiteralExpression* integer;
@@ -560,8 +562,7 @@ NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expres
         const Status parse_status =
             strntoull(start_token.slice.ptr, start_token.slice.length - 1, base, &value);
         if (STATUS_ERR(parse_status)) {
-            TRY(parser_put_status_error(p, parse_status, start_token.line, start_token.column));
-            return parse_status;
+            PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
         }
 
         UnsignedIntegerLiteralExpression* integer;
@@ -599,8 +600,7 @@ NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expressi
                                         p->allocator.memory_alloc,
                                         p->allocator.free_alloc);
     if (STATUS_ERR(parse_status)) {
-        TRY(parser_put_status_error(p, parse_status, start_token.line, start_token.column));
-        return parse_status;
+        PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
     }
 
     FloatLiteralExpression* float_expr;
@@ -728,14 +728,14 @@ NODISCARD Status function_expression_parse(Parser* p, Expression** expression) {
     TRY_DO(parser_expect_peek(p, LBRACE), {
         free_expression_list(&generics, p->allocator.free_alloc);
         free_parameter_list(&parameters, p->allocator.free_alloc);
-        type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(return_type, p->allocator.free_alloc);
     });
 
     BlockStatement* body;
     TRY_DO(block_statement_parse(p, &body), {
         free_expression_list(&generics, p->allocator.free_alloc);
         free_parameter_list(&parameters, p->allocator.free_alloc);
-        type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(return_type, p->allocator.free_alloc);
     });
 
     FunctionExpression* function;
@@ -748,9 +748,9 @@ NODISCARD Status function_expression_parse(Parser* p, Expression** expression) {
                                       p->allocator.memory_alloc),
            {
                free_expression_list(&generics, p->allocator.free_alloc);
-               type_expression_destroy((Node*)return_type, p->allocator.free_alloc);
+               NODE_VIRTUAL_FREE(return_type, p->allocator.free_alloc);
                free_parameter_list(&parameters, p->allocator.free_alloc);
-               block_statement_destroy((Node*)body, p->allocator.free_alloc);
+               NODE_VIRTUAL_FREE(body, p->allocator.free_alloc);
            });
 
     *expression = (Expression*)function;
@@ -840,10 +840,10 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
     TRY_DO(parser_expect_peek(p, LBRACE), free_expression_list(&generics, p->allocator.free_alloc));
     if (parser_peek_token_is(p, RBRACE)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
-        IGNORE_STATUS(parser_put_status_error(
-            p, STRUCT_MISSING_MEMBERS, start_token.line, start_token.column));
-        free_expression_list(&generics, p->allocator.free_alloc);
-        return STRUCT_MISSING_MEMBERS;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             STRUCT_MISSING_MEMBERS,
+                             start_token,
+                             free_expression_list(&generics, p->allocator.free_alloc));
     }
 
     ArrayList members;
@@ -866,7 +866,7 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         Expression* type_expr;
         bool        has_default_value;
         TRY_DO(type_expression_parse(p, &type_expr, &has_default_value), {
-            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
             free_struct_member_list(&members, p->allocator.free_alloc);
             free_expression_list(&generics, p->allocator.free_alloc);
         });
@@ -874,24 +874,20 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         // Struct members must have explicit type declarations
         TypeExpression* type = (TypeExpression*)type_expr;
         if (type->tag == IMPLICIT) {
-            const Token error_token = p->current_token;
-            IGNORE_STATUS(parser_put_status_error(
-                p, STRUCT_MEMBER_NOT_EXPLICIT, error_token.line, error_token.column));
-
-            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
-            type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
-            free_struct_member_list(&members, p->allocator.free_alloc);
-            free_expression_list(&generics, p->allocator.free_alloc);
-
-            return STRUCT_MEMBER_NOT_EXPLICIT;
+            PUT_STATUS_PROPAGATE(&p->errors, STRUCT_MEMBER_NOT_EXPLICIT, p->current_token, {
+                NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(type_expr, p->allocator.free_alloc);
+                free_struct_member_list(&members, p->allocator.free_alloc);
+                free_expression_list(&generics, p->allocator.free_alloc);
+            });
         }
 
         // The type parser leaves with the current token on assignment in this case
         Expression* default_value = NULL;
         if (has_default_value) {
             TRY_DO(expression_parse(p, LOWEST, &default_value), {
-                identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
-                type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(type_expr, p->allocator.free_alloc);
                 free_struct_member_list(&members, p->allocator.free_alloc);
                 free_expression_list(&generics, p->allocator.free_alloc);
             });
@@ -905,8 +901,8 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         };
 
         TRY_DO(array_list_push(&members, &member), {
-            identifier_expression_destroy((Node*)ident_expr, p->allocator.free_alloc);
-            type_expression_destroy((Node*)type_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(type_expr, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(default_value, p->allocator.free_alloc);
             free_struct_member_list(&members, p->allocator.free_alloc);
             free_expression_list(&generics, p->allocator.free_alloc);
@@ -916,14 +912,20 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         if (has_default_value && parser_peek_token_is(p, COMMA)) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
         } else if (!parser_current_token_is(p, COMMA)) {
-            const Token error_token = p->current_token;
-            IGNORE_STATUS(parser_put_status_error(
-                p, MISSING_TRAILING_COMMA, error_token.line, error_token.column));
-            free_struct_member_list(&members, p->allocator.free_alloc);
-            free_expression_list(&generics, p->allocator.free_alloc);
-
-            return MISSING_TRAILING_COMMA;
+            PUT_STATUS_PROPAGATE(&p->errors, MISSING_TRAILING_COMMA, p->current_token, {
+                free_struct_member_list(&members, p->allocator.free_alloc);
+                free_expression_list(&generics, p->allocator.free_alloc);
+            });
         }
+    }
+
+    TRY_DO(parser_expect_peek(p, RBRACE), {
+        free_struct_member_list(&members, p->allocator.free_alloc);
+        free_expression_list(&generics, p->allocator.free_alloc);
+    });
+
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
 
     StructExpression* struct_expr;
@@ -934,12 +936,6 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
                free_expression_list(&generics, p->allocator.free_alloc);
            });
 
-    TRY_DO(parser_expect_peek(p, RBRACE),
-           struct_expression_destroy((Node*)struct_expr, p->allocator.free_alloc));
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
-
     *expression = (Expression*)struct_expr;
     return SUCCESS;
 }
@@ -949,9 +945,7 @@ NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
     TRY(parser_expect_peek(p, LBRACE));
     if (parser_peek_token_is(p, RBRACE)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
-        IGNORE_STATUS(parser_put_status_error(
-            p, ENUM_MISSING_VARIANTS, start_token.line, start_token.column));
-        return ENUM_MISSING_VARIANTS;
+        PUT_STATUS_PROPAGATE(&p->errors, ENUM_MISSING_VARIANTS, start_token, {});
     }
 
     ArrayList variants;
@@ -970,41 +964,40 @@ NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
             TRY_DO(parser_next_token(p), {
                 free_enum_variant_list(&variants, p->allocator.free_alloc);
-                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
             });
 
             TRY_DO(expression_parse(p, LOWEST, &value), {
                 free_enum_variant_list(&variants, p->allocator.free_alloc);
-                identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+                NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
             });
         }
 
         EnumVariant variant = (EnumVariant){.name = ident, .value = value};
         TRY_DO(array_list_push(&variants, &variant), {
             free_enum_variant_list(&variants, p->allocator.free_alloc);
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
         });
 
         // All variants require a trailing comma!
         if (STATUS_ERR(parser_expect_peek(p, COMMA))) {
-            const Token error_token = p->current_token;
-            IGNORE_STATUS(parser_put_status_error(
-                p, MISSING_TRAILING_COMMA, error_token.line, error_token.column));
-            free_enum_variant_list(&variants, p->allocator.free_alloc);
-            return MISSING_TRAILING_COMMA;
+            PUT_STATUS_PROPAGATE(&p->errors,
+                                 MISSING_TRAILING_COMMA,
+                                 p->current_token,
+                                 free_enum_variant_list(&variants, p->allocator.free_alloc));
         }
+    }
+
+    TRY_DO(parser_expect_peek(p, RBRACE),
+           free_enum_variant_list(&variants, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
 
     EnumExpression* enum_expr;
     TRY_DO(enum_expression_create(start_token, variants, &enum_expr, p->allocator.memory_alloc),
            free_enum_variant_list(&variants, p->allocator.free_alloc));
-
-    TRY_DO(parser_expect_peek(p, RBRACE),
-           enum_expression_destroy((Node*)enum_expr, p->allocator.free_alloc));
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
 
     *expression = (Expression*)enum_expr;
     return SUCCESS;
@@ -1025,6 +1018,14 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
     TRY(expression_parse(p, LOWEST, &match_cond_expr));
     TRY_DO(parser_expect_peek(p, LBRACE),
            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc));
+
+    if (parser_peek_token_is(p, RBRACE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             ARMLESS_MATCH_EXPR,
+                             start_token,
+                             NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc));
+    }
 
     ArrayList arms;
     TRY_DO(array_list_init_allocator(&arms, 4, sizeof(MatchArm), p->allocator),
@@ -1078,12 +1079,10 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
 
     // Empty match statements aren't ever allowed
     if (arms.length == 0) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, ARMLESS_MATCH_EXPR, start_token.line, start_token.column));
-
-        NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
-        free_match_arm_list(&arms, p->allocator.free_alloc);
-        return ARMLESS_MATCH_EXPR;
+        PUT_STATUS_PROPAGATE(&p->errors, ARMLESS_MATCH_EXPR, start_token, {
+            NODE_VIRTUAL_FREE(match_cond_expr, p->allocator.free_alloc);
+            free_match_arm_list(&arms, p->allocator.free_alloc);
+        });
     }
 
     TRY_DO(parser_expect_peek(p, RBRACE), {
@@ -1127,17 +1126,13 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
     } else {
         const Token integer_token = p->current_token;
 
-        // Before parsing, check if we even have a type here
+        // Before parsing, check if we even have a value here
         if (parser_current_token_is(p, RBRACKET)) {
-            IGNORE_STATUS(parser_put_status_error(
-                p, MISSING_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
-            return MISSING_ARRAY_SIZE_TOKEN;
+            PUT_STATUS_PROPAGATE(&p->errors, MISSING_ARRAY_SIZE_TOKEN, integer_token, {});
         }
 
         if (!token_is_unsigned_integer(integer_token.type)) {
-            TRY(parser_put_status_error(
-                p, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token.line, integer_token.column));
-            return UNEXPECTED_ARRAY_SIZE_TOKEN;
+            PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token, {});
         }
 
         TRY(strntoull(integer_token.slice.ptr,
@@ -1172,11 +1167,10 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
 
     const bool inferred_size = array_size == 0;
     if (!inferred_size && items.length != array_size) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, INCORRECT_EXPLICIT_ARRAY_SIZE, start_token.line, start_token.column));
-
-        free_expression_list(&items, p->allocator.free_alloc);
-        return INCORRECT_EXPLICIT_ARRAY_SIZE;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             INCORRECT_EXPLICIT_ARRAY_SIZE,
+                             start_token,
+                             free_expression_list(&items, p->allocator.free_alloc));
     }
 
     ArrayLiteralExpression* array;
@@ -1184,8 +1178,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
                start_token, inferred_size, items, &array, p->allocator.memory_alloc),
            free_expression_list(&items, p->allocator.free_alloc));
 
-    TRY_DO(parser_expect_peek(p, RBRACE),
-           array_literal_expression_destroy((Node*)array, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, RBRACE), NODE_VIRTUAL_FREE(array, p->allocator.free_alloc));
     if (parser_peek_token_is(p, SEMICOLON)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
     }
@@ -1221,11 +1214,10 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
            free_expression_list(&iterables, p->allocator.free_alloc));
 
     if (iterables.length == 0) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, FOR_MISSING_ITERABLES, start_token.line, start_token.column));
-
-        free_expression_list(&iterables, p->allocator.free_alloc);
-        return FOR_MISSING_ITERABLES;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             FOR_MISSING_ITERABLES,
+                             start_token,
+                             free_expression_list(&iterables, p->allocator.free_alloc));
     }
 
     // Captures are technically optional, but they are allocated anyways
@@ -1291,12 +1283,10 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
 
     // The number of captures must align with the number of iterables
     if (expect_captures && iterables.length != captures.length) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, FOR_ITERABLE_CAPTURE_MISMATCH, start_token.line, start_token.column));
-
-        free_expression_list(&iterables, p->allocator.free_alloc);
-        free_for_capture_list(&captures, p->allocator.free_alloc);
-        return FOR_ITERABLE_CAPTURE_MISMATCH;
+        PUT_STATUS_PROPAGATE(&p->errors, FOR_ITERABLE_CAPTURE_MISMATCH, start_token, {
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
+        });
     }
 
     // Now we can parse the block statement as usual
@@ -1312,13 +1302,11 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
 
     // There is nothing that can be done in an empty for loop so we prevent it here
     if (block->statements.length == 0) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, EMPTY_FOR_LOOP, start_token.line, start_token.column));
-
-        free_expression_list(&iterables, p->allocator.free_alloc);
-        free_for_capture_list(&captures, p->allocator.free_alloc);
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        return EMPTY_FOR_LOOP;
+        PUT_STATUS_PROPAGATE(&p->errors, EMPTY_FOR_LOOP, start_token, {
+            free_expression_list(&iterables, p->allocator.free_alloc);
+            free_for_capture_list(&captures, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
+        });
     }
 
     // Finally, we should try to parse the non break clause
@@ -1328,7 +1316,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
         {
             free_expression_list(&iterables, p->allocator.free_alloc);
             free_for_capture_list(&captures, p->allocator.free_alloc);
-            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         },
         ILLEGAL_LOOP_NON_BREAK);
 
@@ -1344,7 +1332,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
            {
                free_expression_list(&iterables, p->allocator.free_alloc);
                free_for_capture_list(&captures, p->allocator.free_alloc);
-               block_statement_destroy((Node*)block, p->allocator.free_alloc);
+               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
                NODE_VIRTUAL_FREE(non_break, p->allocator.free_alloc);
            });
 
@@ -1363,9 +1351,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
 
     Expression* condition;
     if (parser_current_token_is(p, RPAREN)) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, WHILE_MISSING_CONDITION, p->current_token.line, p->current_token.column));
-        return WHILE_MISSING_CONDITION;
+        PUT_STATUS_PROPAGATE(&p->errors, WHILE_MISSING_CONDITION, p->current_token, {});
     }
     TRY(expression_parse(p, LOWEST, &condition));
 
@@ -1382,13 +1368,10 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
         // We have to consume again since we're looking at the LPAREN here
         TRY_DO(parser_next_token(p), NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
         if (parser_current_token_is(p, RPAREN)) {
-            IGNORE_STATUS(parser_put_status_error(p,
-                                                  IMPROPER_WHILE_CONTINUATION,
-                                                  continuation_start.line,
-                                                  continuation_start.column));
-
-            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
-            return IMPROPER_WHILE_CONTINUATION;
+            PUT_STATUS_PROPAGATE(&p->errors,
+                                 IMPROPER_WHILE_CONTINUATION,
+                                 continuation_start,
+                                 NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
         }
         TRY_DO(expression_parse(p, LOWEST, &continuation),
                NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
@@ -1413,13 +1396,11 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
 
     // We need at least a continuation or block
     if (!continuation && block->statements.length == 0) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, EMPTY_WHILE_LOOP, start_token.line, start_token.column));
-
-        NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
-        NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        return EMPTY_WHILE_LOOP;
+        PUT_STATUS_PROPAGATE(&p->errors, EMPTY_WHILE_LOOP, start_token, {
+            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
+        });
     }
 
     // Finally, we should try to parse the non break clause
@@ -1429,7 +1410,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
         {
             NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
-            block_statement_destroy((Node*)block, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
         },
         ILLEGAL_LOOP_NON_BREAK);
 
@@ -1445,7 +1426,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
            {
                NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
                NODE_VIRTUAL_FREE(continuation, p->allocator.free_alloc);
-               block_statement_destroy((Node*)block, p->allocator.free_alloc);
+               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
            });
 
     if (parser_peek_token_is(p, SEMICOLON)) {
@@ -1465,42 +1446,39 @@ NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expressi
     TRY(block_statement_parse(p, &block));
 
     if (block->statements.length == 0) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, EMPTY_WHILE_LOOP, start_token.line, start_token.column));
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        return EMPTY_WHILE_LOOP;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             EMPTY_WHILE_LOOP,
+                             start_token,
+                             NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
     }
 
     // We have to consume the while token, the open paren, and enter the expression
-    TRY_DO(parser_expect_peek(p, WHILE),
-           block_statement_destroy((Node*)block, p->allocator.free_alloc));
-    TRY_DO(parser_expect_peek(p, LPAREN),
-           block_statement_destroy((Node*)block, p->allocator.free_alloc));
-    TRY_DO(parser_next_token(p), block_statement_destroy((Node*)block, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, WHILE), NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, LPAREN), NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
+    TRY_DO(parser_next_token(p), NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
 
     // There's no continuation or non break clause so this is easy :)
     Expression* condition;
     if (parser_current_token_is(p, RPAREN)) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, WHILE_MISSING_CONDITION, p->current_token.line, p->current_token.column));
-
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        return WHILE_MISSING_CONDITION;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             WHILE_MISSING_CONDITION,
+                             p->current_token,
+                             NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
     }
     TRY_DO(expression_parse(p, LOWEST, &condition),
-           block_statement_destroy((Node*)block, p->allocator.free_alloc));
+           NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
 
     // Ownership transfer time
     DoWhileLoopExpression* do_while_loop;
     TRY_DO(do_while_loop_expression_create(
                start_token, block, condition, &do_while_loop, p->allocator.memory_alloc),
            {
-               block_statement_destroy((Node*)block, p->allocator.free_alloc);
+               NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
                NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
            });
 
     TRY_DO(parser_expect_peek(p, RPAREN),
-           do_while_loop_expression_destroy((Node*)do_while_loop, p->allocator.free_alloc));
+           NODE_VIRTUAL_FREE(do_while_loop, p->allocator.free_alloc));
 
     *expression = (Expression*)do_while_loop;
     return SUCCESS;

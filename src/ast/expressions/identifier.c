@@ -65,9 +65,7 @@ NODISCARD Status identifier_expression_analyze(Node*            node,
     SemanticType* semantic_type;
     if (!semantic_context_find(parent, true, ident->name, &semantic_type)) {
         const Token start_token = node->start_token;
-        IGNORE_STATUS(
-            put_status_error(errors, UNDECLARED_IDENTIFIER, start_token.line, start_token.column));
-        return UNDECLARED_IDENTIFIER;
+        PUT_STATUS_PROPAGATE(errors, UNDECLARED_IDENTIFIER, start_token, {});
     }
 
     parent->analyzed_type = rc_retain(semantic_type);

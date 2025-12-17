@@ -31,14 +31,14 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     Expression* type_expr;
     bool        value_initialized;
     TRY_DO(type_expression_parse(p, &type_expr, &value_initialized),
-           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+           NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
     TypeExpression* type = (TypeExpression*)type_expr;
 
     Expression* value = NULL;
     if (value_initialized) {
         TRY_DO(expression_parse(p, LOWEST, &value), {
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-            type_expression_destroy((Node*)type, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(type, p->allocator.free_alloc);
         });
     }
 
@@ -50,13 +50,11 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     const Status   create_status = decl_statement_create(
         start_token, ident, type, value, &decl_stmt, p->allocator.memory_alloc);
     if (STATUS_ERR(create_status)) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, create_status, start_token.line, start_token.column));
-
-        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-        type_expression_destroy((Node*)type, p->allocator.free_alloc);
-        NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
-        return create_status;
+        PUT_STATUS_PROPAGATE(&p->errors, create_status, start_token, {
+            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(type, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
+        });
     }
 
     *stmt = decl_stmt;
@@ -74,11 +72,10 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
     TRY(identifier_expression_parse(p, &ident_expr));
     IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
-    TRY_DO(parser_expect_peek(p, ASSIGN),
-           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, ASSIGN), NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
 
     if (parser_peek_token_is(p, SEMICOLON) || parser_peek_token_is(p, END)) {
-        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
         return UNEXPECTED_TOKEN;
     }
 
@@ -88,15 +85,14 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
         is_primitive_alias = true;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         TRY_DO(identifier_expression_parse(p, &value),
-               identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+               NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
     } else {
         TypeExpression* type;
         if (STATUS_ERR(explicit_type_parse(p, p->current_token, &type))) {
-            IGNORE_STATUS(parser_put_status_error(
-                p, MALFORMED_TYPE_DECL, start_token.line, start_token.column));
-
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-            return MALFORMED_TYPE_DECL;
+            PUT_STATUS_PROPAGATE(&p->errors,
+                                 MALFORMED_TYPE_DECL,
+                                 start_token,
+                                 NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
         }
         value = (Expression*)type;
     }
@@ -111,7 +107,7 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
             start_token, ident, value, is_primitive_alias, &type_decl, p->allocator.memory_alloc),
         {
             NODE_VIRTUAL_FREE(value, p->allocator.free_alloc);
-            identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
         });
 
     *stmt = type_decl;
@@ -186,8 +182,7 @@ NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
         });
     }
 
-    TRY_DO(parser_expect_peek(p, RBRACE),
-           block_statement_destroy((Node*)block, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, RBRACE), NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
 
     *stmt = block;
     return SUCCESS;
@@ -203,26 +198,22 @@ NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
     Expression* ident_expr;
     TRY(identifier_expression_parse(p, &ident_expr));
     IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
-    TRY_DO(parser_expect_peek(p, LBRACE),
-           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(parser_expect_peek(p, LBRACE), NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
 
     BlockStatement* block;
-    TRY_DO(block_statement_parse(p, &block),
-           identifier_expression_destroy((Node*)ident, p->allocator.free_alloc));
+    TRY_DO(block_statement_parse(p, &block), NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
 
     if (block->statements.length == 0) {
-        IGNORE_STATUS(
-            parser_put_status_error(p, EMPTY_IMPL_BLOCK, start_token.line, start_token.column));
-
-        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
-        return EMPTY_IMPL_BLOCK;
+        PUT_STATUS_PROPAGATE(&p->errors, EMPTY_IMPL_BLOCK, start_token, {
+            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+            NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
+        });
     }
 
     ImplStatement* impl;
     TRY_DO(impl_statement_create(start_token, ident, block, &impl, p->allocator.memory_alloc), {
-        identifier_expression_destroy((Node*)ident, p->allocator.free_alloc);
-        block_statement_destroy((Node*)block, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
+        NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
     });
 
     if (parser_peek_token_is(p, SEMICOLON)) {
@@ -262,9 +253,7 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
         break;
     }
     default:
-        IGNORE_STATUS(
-            parser_put_status_error(p, UNEXPECTED_TOKEN, p->peek_token.line, p->peek_token.column));
-        return UNEXPECTED_TOKEN;
+        PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_TOKEN, p->peek_token, {});
     }
 
     IdentifierExpression* alias = NULL;
@@ -277,10 +266,10 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
                NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
         alias = (IdentifierExpression*)ident;
     } else if (tag == USER) {
-        IGNORE_STATUS(parser_put_status_error(
-            p, USER_IMPORT_MISSING_ALIAS, start_token.line, start_token.column));
-        NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc);
-        return USER_IMPORT_MISSING_ALIAS;
+        PUT_STATUS_PROPAGATE(&p->errors,
+                             USER_IMPORT_MISSING_ALIAS,
+                             start_token,
+                             NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
     }
 
     ImportStatement* import;
