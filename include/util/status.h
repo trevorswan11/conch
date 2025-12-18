@@ -171,7 +171,7 @@ typedef struct StringBuilder StringBuilder;
 NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
 NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
 
-#define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                 \
-    IGNORE_STATUS(put_status_error(errors, status, tok.line, tok.column)); \
-    cleanup;                                                               \
+#define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                     \
+    IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \
+    cleanup;                                                                   \
     return status;

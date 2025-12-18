@@ -119,7 +119,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
                                    hash_mut_slice,
                                    compare_mut_slices,
                                    allocator),
-           rc_release(type, allocator.free_alloc););
+           RC_RELEASE(type, allocator.free_alloc););
 
     ArrayListConstIterator it = array_list_const_iterator_init(&enum_expr->variants);
     EnumVariant            variant;
@@ -127,7 +127,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
         IdentifierExpression* ident = (IdentifierExpression*)variant.name;
         MutSlice              variant_name;
         TRY_DO(mut_slice_dupe(&variant_name, &ident->name, allocator.memory_alloc), {
-            rc_release(type, allocator.free_alloc);
+            RC_RELEASE(type, allocator.free_alloc);
             free_enum_variant_set(&variants, allocator.free_alloc);
         });
 
@@ -140,7 +140,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
                                     : REDEFINITION_OF_IDENTIFIER;
 
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                rc_release(type, allocator.free_alloc);
+                RC_RELEASE(type, allocator.free_alloc);
                 free_enum_variant_set(&variants, allocator.free_alloc);
                 allocator.free_alloc(variant_name.ptr);
             });
@@ -149,7 +149,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
         // The value type of a variant is ephemeral and optional
         if (variant.value) {
             TRY_DO(NODE_VIRTUAL_ANALYZE(variant.value, parent, errors), {
-                rc_release(type, allocator.free_alloc);
+                RC_RELEASE(type, allocator.free_alloc);
                 free_enum_variant_set(&variants, allocator.free_alloc);
                 allocator.free_alloc(variant_name.ptr);
             });
@@ -168,10 +168,10 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
             }
 
             // Since the types are ephemeral we just release now before error code is sent
-            rc_release(variant_type, allocator.free_alloc);
+            RC_RELEASE(variant_type, allocator.free_alloc);
             if (STATUS_ERR(type_check_result)) {
                 PUT_STATUS_PROPAGATE(errors, type_check_result, start_token, {
-                    rc_release(type, allocator.free_alloc);
+                    RC_RELEASE(type, allocator.free_alloc);
                     free_enum_variant_set(&variants, allocator.free_alloc);
                     allocator.free_alloc(variant_name.ptr);
                 });
@@ -180,7 +180,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
 
         // Now the variant must be valid and should be added to the set
         TRY_DO(hash_set_put(&variants, &variant_name), {
-            rc_release(type, allocator.free_alloc);
+            RC_RELEASE(type, allocator.free_alloc);
             free_enum_variant_set(&variants, allocator.free_alloc);
             allocator.free_alloc(variant_name.ptr);
         });
@@ -189,7 +189,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
     // The enum stores a reference to its parent name
     SemanticEnumType* enum_type;
     TRY_DO(semantic_enum_create(enum_type_name, variants, &enum_type, allocator.memory_alloc), {
-        rc_release(type, allocator.free_alloc);
+        RC_RELEASE(type, allocator.free_alloc);
         free_enum_variant_set(&variants, allocator.free_alloc);
     });
 

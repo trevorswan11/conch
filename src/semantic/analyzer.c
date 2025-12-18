@@ -63,7 +63,7 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
 
         // If the global context never had the last type moved out, we must release it
         if (analyzer->global_ctx->analyzed_type) {
-            rc_release(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
+            RC_RELEASE(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
             analyzer->global_ctx->analyzed_type = NULL;
         }
     }

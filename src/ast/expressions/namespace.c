@@ -81,12 +81,12 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
     // All we need to check is the inner presence in the namespace
     SemanticType* inner_type;
     TRY_DO(semantic_type_create(&inner_type, allocator.memory_alloc),
-           rc_release(direct_parent, allocator.free_alloc));
+           RC_RELEASE(direct_parent, allocator.free_alloc));
     switch (direct_parent->tag) {
     case STYPE_ENUM: {
         TRY_DO(semantic_type_copy_variant(inner_type, direct_parent, allocator), {
-            rc_release(direct_parent, allocator.free_alloc);
-            rc_release(inner_type, allocator.free_alloc);
+            RC_RELEASE(direct_parent, allocator.free_alloc);
+            RC_RELEASE(inner_type, allocator.free_alloc);
         });
 
         inner_type->is_const = true;
@@ -96,13 +96,13 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
     }
     default:
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_OUTER_NAMESPACE, start_token, {
-            rc_release(direct_parent, allocator.free_alloc);
-            rc_release(inner_type, allocator.free_alloc);
+            RC_RELEASE(direct_parent, allocator.free_alloc);
+            RC_RELEASE(inner_type, allocator.free_alloc);
         });
     }
 
     // The parent type doesn't matter for the resulting type
-    rc_release(direct_parent, allocator.free_alloc);
+    RC_RELEASE(direct_parent, allocator.free_alloc);
     parent->analyzed_type = inner_type;
     return SUCCESS;
 }

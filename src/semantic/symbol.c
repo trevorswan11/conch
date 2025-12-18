@@ -48,7 +48,7 @@ void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
         }
 
         SemanticType** type = next.value_ptr;
-        rc_release(*type, free_alloc);
+        RC_RELEASE(*type, free_alloc);
     }
 
     hash_map_deinit(&table->symbols);

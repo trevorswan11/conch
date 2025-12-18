@@ -97,7 +97,7 @@ NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allo
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);
 
 // Checks if a type of rhs can be assigned to a type lhs
-bool type_assignable(SemanticType* lhs, SemanticType* rhs);
+bool type_assignable(const SemanticType* lhs, const SemanticType* rhs);
 
 // Checks two types against each other, not comparing const-ness
-bool type_equal(SemanticType* lhs, SemanticType* rhs);
+bool type_equal(const SemanticType* lhs, const SemanticType* rhs);

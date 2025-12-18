@@ -134,18 +134,18 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                     PUT_STATUS_PROPAGATE(errors,
                                          DOUBLE_NULLABLE,
                                          start_token,
-                                         rc_release(new_symbol_type, allocator.free_alloc));
+                                         RC_RELEASE(new_symbol_type, allocator.free_alloc));
                 }
 
                 // Underlying copy ignores nullable, so inherit from either source
                 TRY_DO(semantic_type_copy_variant(new_symbol_type, probe_symbol_type, allocator),
-                       rc_release(new_symbol_type, allocator.free_alloc));
+                       RC_RELEASE(new_symbol_type, allocator.free_alloc));
                 new_symbol_type->nullable = probe_symbol_type->nullable || explicit_type.nullable;
             } else {
                 PUT_STATUS_PROPAGATE(errors,
                                      UNDECLARED_IDENTIFIER,
                                      start_token,
-                                     rc_release(new_symbol_type, allocator.free_alloc));
+                                     RC_RELEASE(new_symbol_type, allocator.free_alloc));
             }
             break;
         }
@@ -155,15 +155,15 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             // We need to copy into since we may be changing nullable status
             const Expression* referred = explicit_type.variant.referred_type;
             TRY_DO(NODE_VIRTUAL_ANALYZE(referred, parent, errors),
-                   rc_release(new_symbol_type, allocator.free_alloc));
+                   RC_RELEASE(new_symbol_type, allocator.free_alloc));
             SemanticType* analyzed = semantic_context_move_analyzed(parent);
 
             TRY_DO(semantic_type_copy_variant(new_symbol_type, analyzed, allocator), {
-                rc_release(analyzed, allocator.free_alloc);
-                rc_release(new_symbol_type, allocator.free_alloc);
+                RC_RELEASE(analyzed, allocator.free_alloc);
+                RC_RELEASE(new_symbol_type, allocator.free_alloc);
             });
 
-            rc_release(analyzed, allocator.free_alloc);
+            RC_RELEASE(analyzed, allocator.free_alloc);
             new_symbol_type->nullable = explicit_type.nullable;
             break;
         }

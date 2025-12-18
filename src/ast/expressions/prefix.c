@@ -94,21 +94,21 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
                        false,
                        resulting_type,
                        allocator.memory_alloc,
-                       rc_release(operand_type, allocator.free_alloc));
+                       RC_RELEASE(operand_type, allocator.free_alloc));
 
-        rc_release(operand_type, allocator.free_alloc);
+        RC_RELEASE(operand_type, allocator.free_alloc);
         parent->analyzed_type = resulting_type;
         return SUCCESS;
     } else if (!operand_type->valued || operand_type->nullable) {
         PUT_STATUS_PROPAGATE(errors,
                              ILLEGAL_PREFIX_OPERAND,
                              value_tok,
-                             rc_release(operand_type, allocator.free_alloc));
+                             RC_RELEASE(operand_type, allocator.free_alloc));
     }
 
     SemanticType* resulting_type;
     TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
-           rc_release(operand_type, allocator.free_alloc));
+           RC_RELEASE(operand_type, allocator.free_alloc));
 
     const SemanticTypeTag operand_tag = operand_type->tag;
     switch (prefix_op) {
@@ -129,8 +129,8 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
             break;
         default:
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                rc_release(operand_type, allocator.free_alloc);
-                rc_release(operand_type, allocator.free_alloc);
+                RC_RELEASE(resulting_type, allocator.free_alloc);
+                RC_RELEASE(operand_type, allocator.free_alloc);
             });
         }
 
@@ -144,8 +144,8 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
             resulting_type->nullable = false;
         } else {
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                rc_release(operand_type, allocator.free_alloc);
-                rc_release(operand_type, allocator.free_alloc);
+                RC_RELEASE(resulting_type, allocator.free_alloc);
+                RC_RELEASE(operand_type, allocator.free_alloc);
             });
         }
 
@@ -164,8 +164,8 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
             break;
         default:
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                rc_release(operand_type, allocator.free_alloc);
-                rc_release(operand_type, allocator.free_alloc);
+                RC_RELEASE(resulting_type, allocator.free_alloc);
+                RC_RELEASE(operand_type, allocator.free_alloc);
             });
         }
 
@@ -174,7 +174,7 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
         UNREACHABLE;
     }
 
-    rc_release(operand_type, allocator.free_alloc);
+    RC_RELEASE(operand_type, allocator.free_alloc);
     parent->analyzed_type = resulting_type;
     return SUCCESS;
 }

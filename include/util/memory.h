@@ -107,10 +107,10 @@ void*     align_ptr(void* ptr, size_t alignment);
 void*     ptr_offset(void* p, size_t offset);
 void      swap(void* a, void* b, size_t size);
 
-char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc);
-char* strdup_z(const char* str);
-char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc);
-char* strdup_s(const char* str, size_t size);
+NODISCARD char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc);
+NODISCARD char* strdup_z(const char* str);
+NODISCARD char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc);
+NODISCARD char* strdup_s(const char* str, size_t size);
 
 NODISCARD Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc);
 NODISCARD Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc);
@@ -135,9 +135,22 @@ RcControlBlock rc_init(rc_dtor dtor);
 // Increments the objects reference count and returns a pointer to itself.
 //
 // The object must have the control block as its first member.
-void* rc_retain(void* rc_obj);
+NODISCARD void* rc_retain(void* rc_obj);
 
 // Reduces the reference count, and frees if this was the last owner of memory.
+// Use the RC_RELEASE macro instead of this function!
 //
 // The object must have the control block as its first member.
 void rc_release(void* rc_obj, free_alloc_fn free_alloc);
+
+#ifdef DIST
+#define RC_RELEASE(rc_obj, free_alloc) rc_release(rc_obj, free_alloc)
+#else
+#define RC_RELEASE(rc_obj, free_alloc)          \
+    do {                                        \
+        if ((rc_obj) != NULL) {                 \
+            rc_release((rc_obj), (free_alloc)); \
+            (rc_obj) = NULL;                    \
+        }                                       \
+    } while (0)
+#endif

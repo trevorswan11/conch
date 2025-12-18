@@ -126,14 +126,14 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     SemanticType* decl_type;
     TRY_DO(semantic_type_copy(&decl_type, analyzed_decl_type, allocator), {
         allocator.free_alloc(decl_name.ptr);
-        rc_release(analyzed_decl_type, allocator.free_alloc);
+        RC_RELEASE(analyzed_decl_type, allocator.free_alloc);
     });
-    rc_release(analyzed_decl_type, allocator.free_alloc);
+    RC_RELEASE(analyzed_decl_type, allocator.free_alloc);
 
     if (decl->value) {
         TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {
             allocator.free_alloc(decl_name.ptr);
-            rc_release(decl_type, allocator.free_alloc);
+            RC_RELEASE(decl_type, allocator.free_alloc);
         });
 
         SemanticType* value_type = semantic_context_move_analyzed(parent);
@@ -141,27 +141,27 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
             const Token t = NODE_TOKEN(decl->value);
             PUT_STATUS_PROPAGATE(errors, NON_VALUED_DECL_VALUE, t, {
                 allocator.free_alloc(decl_name.ptr);
-                rc_release(decl_type, allocator.free_alloc);
-                rc_release(value_type, allocator.free_alloc);
+                RC_RELEASE(decl_type, allocator.free_alloc);
+                RC_RELEASE(value_type, allocator.free_alloc);
             });
         }
 
         if (decl_type->tag == STYPE_IMPLICIT_DECLARATION) {
             // We can now release the decl and just have it set to the value's type
-            rc_release(decl_type, allocator.free_alloc);
+            RC_RELEASE(decl_type, allocator.free_alloc);
             decl_type = value_type;
         } else {
             decl_type->valued = true;
 
             // In this case, we can drop the value type since all we need is the decl
             const bool assignable = type_assignable(decl_type, value_type);
-            rc_release(value_type, allocator.free_alloc);
+            RC_RELEASE(value_type, allocator.free_alloc);
 
             if (!assignable) {
                 const Token t = NODE_TOKEN(decl);
                 PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, t, {
                     allocator.free_alloc(decl_name.ptr);
-                    rc_release(decl_type, allocator.free_alloc);
+                    RC_RELEASE(decl_type, allocator.free_alloc);
                 });
             }
         }
@@ -176,11 +176,11 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
 
     TRY_DO(symbol_table_add(parent->symbol_table, decl_name, decl_type), {
         allocator.free_alloc(decl_name.ptr);
-        rc_release(decl_type, allocator.free_alloc);
+        RC_RELEASE(decl_type, allocator.free_alloc);
     });
 
     // The table retains the type, so we can release this control flow's ownership
-    rc_release(decl_type, allocator.free_alloc);
+    RC_RELEASE(decl_type, allocator.free_alloc);
     return SUCCESS;
 }
 
@@ -276,10 +276,10 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
         // Now we just move the type into the context and release our ownership
         TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, primitive_type), {
             allocator.free_alloc(type_decl_name.ptr);
-            rc_release(primitive_type, allocator.free_alloc);
+            RC_RELEASE(primitive_type, allocator.free_alloc);
         });
 
-        rc_release(primitive_type, allocator.free_alloc);
+        RC_RELEASE(primitive_type, allocator.free_alloc);
         return SUCCESS;
     }
 
@@ -294,15 +294,15 @@ NODISCARD Status type_decl_statement_analyze(Node*            node,
         const Token value_token = NODE_TOKEN(type_decl->ident);
         PUT_STATUS_PROPAGATE(errors, MALFORMED_TYPE_DECL, value_token, {
             allocator.free_alloc(type_decl_name.ptr);
-            rc_release(type_decl_type_probe, allocator.free_alloc);
+            RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
         });
     }
 
     TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type_probe), {
         allocator.free_alloc(type_decl_name.ptr);
-        rc_release(type_decl_type_probe, allocator.free_alloc);
+        RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
     });
 
-    rc_release(type_decl_type_probe, allocator.free_alloc);
+    RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
     return SUCCESS;
 }
