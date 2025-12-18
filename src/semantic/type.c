@@ -36,6 +36,20 @@ bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag) {
     return false;
 }
 
+bool semantic_type_is_primitive(SemanticType* type) {
+    switch (type->tag) {
+    case STYPE_SIGNED_INTEGER:
+    case STYPE_UNSIGNED_INTEGER:
+    case STYPE_FLOATING_POINT:
+    case STYPE_BYTE_INTEGER:
+    case STYPE_STR:
+    case STYPE_BOOL:
+        return true;
+    default:
+        return false;
+    }
+}
+
 NODISCARD Status semantic_enum_create(Slice              name,
                                       HashSet            variants,
                                       SemanticEnumType** enum_type,

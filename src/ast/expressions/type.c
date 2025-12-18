@@ -8,7 +8,6 @@
 #include "ast/expressions/type.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -100,7 +99,7 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
     assert(parent && errors);
 
     const Token     start_token = node->start_token;
-    const Allocator allocator   = parent->symbol_table->symbols.allocator;
+    const Allocator allocator   = semantic_context_allocator(parent);
 
     TypeExpression* type = (TypeExpression*)node;
     SemanticType*   new_symbol_type;

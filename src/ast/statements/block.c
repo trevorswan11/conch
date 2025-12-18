@@ -4,7 +4,6 @@
 #include "ast/statements/block.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 
 #include "util/containers/string_builder.h"
 
@@ -67,7 +66,7 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
 NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
-    Allocator allocator = parent->symbol_table->symbols.allocator;
+    Allocator allocator = semantic_context_allocator(parent);
 
     SemanticContext* child;
     TRY(semantic_context_create(parent, &child, allocator));

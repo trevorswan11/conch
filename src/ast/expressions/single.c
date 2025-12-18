@@ -3,7 +3,6 @@
 #include "ast/expressions/single.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -49,7 +48,7 @@ NODISCARD Status nil_expression_reconstruct(Node*          node,
 }
 
 NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
-    PRIMITIVE_ANALYZE(STYPE_NIL, true, parent->symbol_table->symbols.allocator.memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_NIL, true, semantic_context_allocator(parent).memory_alloc);
 }
 
 NODISCARD Status ignore_expression_create(Token              start_token,

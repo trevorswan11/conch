@@ -6,6 +6,8 @@
 #include "util/memory.h"
 #include "util/status.h"
 
+typedef struct SemanticType SemanticType;
+
 #define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)       \
     SemanticType* name;                                     \
     TRY_DO(semantic_type_create(&name, memory_alloc), err); \
@@ -44,6 +46,9 @@ typedef enum {
 //
 // This can only return true for primitive types.
 bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag);
+
+// Checks if a type is a 'valued' primitive (i.e not void or nil)
+bool semantic_type_is_primitive(SemanticType* type);
 
 typedef struct {
     char _;

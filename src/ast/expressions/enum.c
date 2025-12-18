@@ -92,7 +92,7 @@ NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, Ar
     assert(parent && errors);
 
     const Token     start_token    = node->start_token;
-    const Allocator allocator      = parent->symbol_table->symbols.allocator;
+    const Allocator allocator      = semantic_context_allocator(parent);
     const Slice     enum_type_name = parent->namespace_type_name;
 
     EnumExpression* enum_expr = (EnumExpression*)node;

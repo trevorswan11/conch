@@ -103,7 +103,7 @@ TEST_CASE("Assignment expressions") {
             const char* inputs[] = {
                 "var v: int = 3; v += 7",
                 "var v: uint = 3u; v += 9u",
-                "var v: ?uint = 3u; v += nil",
+                "var v: string = \"H\"; v += \"i\"",
             };
 
             for (const auto& i : inputs) {
@@ -112,8 +112,9 @@ TEST_CASE("Assignment expressions") {
         }
 
         SECTION("Incorrect assignments") {
-            const char* input = "var v: int = 3; v += nil";
-            test_analyze(input, {"TYPE_MISMATCH [Ln 1, Col 17]"});
+            test_analyze("var v: int = 3; v += nil", {"TYPE_MISMATCH [Ln 1, Col 17]"});
+            test_analyze("var v: int = 3; v += 3u", {"TYPE_MISMATCH [Ln 1, Col 17]"});
+            test_analyze("var v: ?int = 3; v += nil", {"TYPE_MISMATCH [Ln 1, Col 18]"});
         }
     }
 

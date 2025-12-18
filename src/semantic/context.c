@@ -25,6 +25,11 @@ NODISCARD Status semantic_context_create(SemanticContext*  parent,
     return SUCCESS;
 }
 
+Allocator semantic_context_allocator(SemanticContext* context) {
+    assert(context && context->symbol_table);
+    return context->symbol_table->symbols.allocator;
+}
+
 SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
     assert(context);
     SemanticType* type     = context->analyzed_type;

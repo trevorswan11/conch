@@ -177,6 +177,7 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {IN, infix_expression_parse},
     {DOT_DOT, infix_expression_parse},
     {DOT_DOT_EQ, infix_expression_parse},
+    {ORELSE, infix_expression_parse},
     {LPAREN, call_expression_parse},
     {ASSIGN, assignment_expression_parse},
     {PLUS_ASSIGN, assignment_expression_parse},
@@ -190,7 +191,5 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {SHR_ASSIGN, assignment_expression_parse},
     {NOT_ASSIGN, assignment_expression_parse},
     {XOR_ASSIGN, assignment_expression_parse},
-    {COMMA, infix_expression_parse},
     {COLON_COLON, namespace_expression_parse},
-    {ORELSE, infix_expression_parse},
 };

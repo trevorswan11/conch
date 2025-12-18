@@ -4,7 +4,6 @@
 #include "ast/expressions/assignment.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -86,7 +85,7 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     ASSERT_EXPRESSION(assign->rhs);
 
     const Token   start_token = node->start_token;
-    free_alloc_fn free_alloc  = parent->symbol_table->symbols.allocator.free_alloc;
+    free_alloc_fn free_alloc  = semantic_context_allocator(parent).free_alloc;
 
     TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
@@ -99,7 +98,15 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), RC_RELEASE(lhs_type, free_alloc));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
-    if (!type_assignable(lhs_type, rhs_type)) {
+    // Compound expressions are treated like a subset of infix expressions
+    bool ok = type_assignable(lhs_type, rhs_type);
+    if (assign->op != ASSIGN) {
+        // Neither side can be nullable and must be primitive
+        ok = ok && !lhs_type->nullable && !rhs_type->nullable;
+        ok = ok && semantic_type_is_primitive(lhs_type) && semantic_type_is_primitive(rhs_type);
+    }
+
+    if (!ok) {
         PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
             RC_RELEASE(lhs_type, free_alloc);
             RC_RELEASE(rhs_type, free_alloc);

@@ -17,6 +17,7 @@ typedef struct SemanticContext {
     Slice         namespace_type_name;
 } SemanticContext;
 
+Allocator     semantic_context_allocator(SemanticContext* context);
 SemanticType* semantic_context_move_analyzed(SemanticContext* context);
 
 NODISCARD Status semantic_context_create(SemanticContext*  parent,

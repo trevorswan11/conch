@@ -3,7 +3,6 @@
 #include "ast/expressions/integer.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -53,8 +52,7 @@ NODISCARD Status integer_literal_expression_create(Token                      st
 NODISCARD Status integer_literal_expression_analyze(Node*            node,
                                                     SemanticContext* parent,
                                                     ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(
-        STYPE_SIGNED_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_SIGNED_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
 
 NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
@@ -68,7 +66,7 @@ NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
                                                      SemanticContext* parent,
                                                      ArrayList*       errors) {
     PRIMITIVE_ANALYZE(
-        STYPE_UNSIGNED_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
+        STYPE_UNSIGNED_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
 
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
@@ -81,6 +79,5 @@ NODISCARD Status byte_literal_expression_create(Token                   start_to
 NODISCARD Status byte_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(
-        STYPE_BYTE_INTEGER, false, parent->symbol_table->symbols.allocator.memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_BYTE_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }

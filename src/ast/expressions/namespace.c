@@ -4,7 +4,6 @@
 #include "ast/expressions/namespace.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -69,7 +68,7 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
     assert(parent && errors);
 
     const Token     start_token = node->start_token;
-    const Allocator allocator   = parent->symbol_table->symbols.allocator;
+    const Allocator allocator   = semantic_context_allocator(parent);
 
     NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
     ASSERT_EXPRESSION(namespace_expr->outer);

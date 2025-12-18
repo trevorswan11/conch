@@ -77,12 +77,52 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = semantic_context_allocator(parent);
+
     InfixExpression* infix = (InfixExpression*)node;
     ASSERT_EXPRESSION(infix->lhs);
     ASSERT_EXPRESSION(infix->rhs);
 
-    MAYBE_UNUSED(infix);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
+    TRY(NODE_VIRTUAL_ANALYZE(infix->lhs, parent, errors));
+    SemanticType* lhs_type = semantic_context_move_analyzed(parent);
+    TRY_DO(NODE_VIRTUAL_ANALYZE(infix->rhs, parent, errors),
+           RC_RELEASE(lhs_type, allocator.free_alloc));
+    SemanticType* rhs_type = semantic_context_move_analyzed(parent);
+
+    MAYBE_UNUSED(start_token);
+
+    // Subsets of operators have different behaviors and restrictions
+    switch (infix->op) {
+    case PLUS:
+    case MINUS:
+    case STAR:
+    case SLASH:
+    case PERCENT:
+    case STAR_STAR:
+    case LT:
+    case LTEQ:
+    case GT:
+    case GTEQ:
+    case EQ:
+    case NEQ:
+    case BOOLEAN_AND:
+    case BOOLEAN_OR:
+    case AND:
+    case OR:
+    case XOR:
+    case SHR:
+    case SHL:
+    case IS:
+    case IN:
+    case DOT_DOT:
+    case DOT_DOT_EQ:
+    case ORELSE:
+    default:
+        UNREACHABLE;
+    }
+
+    RC_RELEASE(lhs_type, allocator.free_alloc);
+    RC_RELEASE(rhs_type, allocator.free_alloc);
     return NOT_IMPLEMENTED;
 }

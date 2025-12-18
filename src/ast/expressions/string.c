@@ -3,7 +3,6 @@
 #include "ast/expressions/string.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -65,5 +64,5 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
 NODISCARD Status string_literal_expression_analyze(Node*            node,
                                                    SemanticContext* parent,
                                                    ArrayList*       errors) {
-    PRIMITIVE_ANALYZE(STYPE_STR, false, parent->symbol_table->symbols.allocator.memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_STR, false, semantic_context_allocator(parent).memory_alloc);
 }

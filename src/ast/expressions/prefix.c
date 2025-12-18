@@ -4,7 +4,6 @@
 #include "ast/expressions/prefix.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -74,7 +73,7 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
     assert(parent && errors);
 
     const Token     start_token = node->start_token;
-    const Allocator allocator   = parent->symbol_table->symbols.allocator;
+    const Allocator allocator   = semantic_context_allocator(parent);
 
     const TokenType prefix_op = start_token.type;
     assert(prefix_op == BANG || prefix_op == NOT || prefix_op == MINUS);
@@ -113,21 +112,14 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
     const SemanticTypeTag operand_tag = operand_type->tag;
     switch (prefix_op) {
     case BANG:
-        // User defined types are not implicitly convertible to bools
-        switch (operand_tag) {
-        case STYPE_SIGNED_INTEGER:
-        case STYPE_UNSIGNED_INTEGER:
-        case STYPE_FLOATING_POINT:
-        case STYPE_BYTE_INTEGER:
-        case STYPE_STR:
-        case STYPE_BOOL:
+        if (semantic_type_is_primitive(operand_type)) {
             resulting_type->tag      = STYPE_BOOL;
             resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
             resulting_type->is_const = true;
             resulting_type->valued   = true;
             resulting_type->nullable = false;
-            break;
-        default:
+        } else {
+            // User defined types are not implicitly convertible to bools
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
                 RC_RELEASE(resulting_type, allocator.free_alloc);
                 RC_RELEASE(operand_type, allocator.free_alloc);

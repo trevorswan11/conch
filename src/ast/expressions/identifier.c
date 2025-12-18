@@ -3,7 +3,7 @@
 #include "ast/expressions/identifier.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
+#include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
 
