@@ -101,30 +101,28 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
     MAYBE_UNUSED(allocator);
 
     switch (src->tag) {
-    case STYPE_SIGNED_INTEGER:
-    case STYPE_UNSIGNED_INTEGER:
-    case STYPE_FLOATING_POINT:
-    case STYPE_BYTE_INTEGER:
-    case STYPE_STR:
-    case STYPE_BOOL:
-    case STYPE_NIL:
-        dest->variant = src->variant;
-        break;
     case STYPE_ENUM:
         dest->variant.enum_type = (SemanticEnumType*)rc_retain(src->variant.enum_type);
         break;
     default:
-        return NOT_IMPLEMENTED;
+        dest->variant = src->variant;
+        break;
     }
 
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy(SemanticType* dest, SemanticType* src, Allocator allocator) {
-    TRY(semantic_type_copy_variant(dest, src, allocator));
-    dest->is_const = src->is_const;
-    dest->valued   = src->valued;
-    dest->nullable = src->nullable;
+NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+    SemanticType* type;
+    TRY(semantic_type_create(&type, allocator.memory_alloc));
+
+    TRY_DO(semantic_type_copy_variant(type, src, allocator),
+           rc_release(type, allocator.free_alloc));
+    type->is_const = src->is_const;
+    type->valued   = src->valued;
+    type->nullable = src->nullable;
+
+    *dest = type;
     return SUCCESS;
 }
 

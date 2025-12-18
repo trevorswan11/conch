@@ -254,12 +254,18 @@ TEST_CASE("Prefix operators") {
             test_analyze("const a: int = -0b011011; const b: uint = -0b011011u;");
             test_analyze("const a: float = -2.34; const b: float = -3.14e-100;");
             test_analyze("type T = ?float; var v: T = nil; v = 2.3; v = -4.5e10");
-            test_analyze("var v := = 2u; v = ~v");
+            test_analyze("var v := 2u; v = ~v");
             test_analyze("var v: uint = 2u; v = ~v");
-            // test_analyze("type T = uint; var v: T = 2u; v = ~v");
+            test_analyze("type T = uint; var v: T = 2u; v = ~v");
         }
 
-        SECTION("Incorrect types") {}
+        SECTION("Incorrect types") {
+            test_analyze("var v: uint = 2u; v = ~2", {"TYPE_MISMATCH [Ln 1, Col 19]"});
+            test_analyze("var v: uint = 2u; v = -2", {"TYPE_MISMATCH [Ln 1, Col 19]"});
+            test_analyze("var v: ?uint = 2u; v = ~v", {"ILLEGAL_PREFIX_OPERAND [Ln 1, Col 25]"});
+            test_analyze("type E = enum { A, }; var v := !E::A",
+                         {"ILLEGAL_PREFIX_OPERAND [Ln 1, Col 33]"});
+        }
     }
 }
 
