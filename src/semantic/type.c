@@ -107,6 +107,7 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
     case STYPE_BYTE_INTEGER:
     case STYPE_STR:
     case STYPE_BOOL:
+    case STYPE_NIL:
         dest->variant = src->variant;
         break;
     case STYPE_ENUM:

@@ -121,7 +121,19 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     DECL_NAME(ident_token, decl->ident->name, decl_name);
 
     TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(decl_name.ptr));
-    SemanticType* decl_type = semantic_context_move_analyzed(parent);
+    SemanticType* analyzed_decl_type = semantic_context_move_analyzed(parent);
+    SemanticType* decl_type;
+    TRY_DO(semantic_type_create(&decl_type, allocator.memory_alloc), {
+        allocator.free_alloc(decl_name.ptr);
+        rc_release(analyzed_decl_type, allocator.free_alloc);
+    });
+
+    TRY_DO(semantic_type_copy(decl_type, analyzed_decl_type, allocator), {
+        allocator.free_alloc(decl_name.ptr);
+        rc_release(analyzed_decl_type, allocator.free_alloc);
+        rc_release(decl_type, allocator.free_alloc);
+    });
+    rc_release(analyzed_decl_type, allocator.free_alloc);
 
     if (decl->value) {
         TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {

@@ -391,7 +391,6 @@ TEST_CASE("Basic prefix / infix expressions") {
             {"!3.4", TokenType::BANG, 3.4},
             {"~0b101101", TokenType::NOT, 0b101101ll},
             {"!1.2345e100", TokenType::BANG, 1.2345e100},
-            {"typeof 1.2345e100", TokenType::TYPEOF, 1.2345e100},
         };
 
         for (const auto& t : cases) {
@@ -416,21 +415,6 @@ TEST_CASE("Basic prefix / infix expressions") {
             } else {
                 REQUIRE(false);
             }
-        }
-
-        SECTION("String typeof") {
-            const char*   input = "typeof \"Hello, World!\"";
-            ParserFixture pf(input);
-            pf.check_errors();
-
-            auto ast = pf.ast();
-            REQUIRE(ast->statements.length == 1);
-
-            Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
-            test_string_expression(expr->rhs, "Hello, World!");
         }
     }
 
@@ -467,6 +451,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             };
 
             const TestCase cases[] = {
+                {"typeof 1", {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
                 {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
                 {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
                 {"type a = typeof enum { a, }",

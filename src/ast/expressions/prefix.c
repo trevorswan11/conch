@@ -16,6 +16,7 @@ NODISCARD Status prefix_expression_create(Token              start_token,
                                           memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
+    assert(start_token.type == BANG || start_token.type == NOT || start_token.type == MINUS);
     assert(rhs);
 
     PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
@@ -58,10 +59,6 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
     }
 
     TRY(string_builder_append_slice(sb, op));
-    if (node->start_token.type == TYPEOF) {
-        TRY(string_builder_append(sb, ' '));
-    }
-
     ASSERT_EXPRESSION(prefix->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(prefix->rhs, symbol_map, sb));
 
@@ -80,7 +77,7 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
     const Allocator allocator   = parent->symbol_table->symbols.allocator;
 
     const TokenType prefix_op = start_token.type;
-    assert(prefix_op == BANG || prefix_op == NOT || prefix_op == MINUS || prefix_op == TYPEOF);
+    assert(prefix_op == BANG || prefix_op == NOT || prefix_op == MINUS);
 
     PrefixExpression* prefix  = (PrefixExpression*)node;
     Expression*       operand = prefix->rhs;
@@ -90,20 +87,88 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
     TRY(NODE_VIRTUAL_ANALYZE(operand, parent, errors));
     SemanticType* operand_type = semantic_context_move_analyzed(parent);
 
+    // We can save an allocation and error check if we handle special cases now
+    const Token value_tok = NODE_TOKEN(operand);
+    if (prefix_op == BANG && operand_type->nullable) {
+        MAKE_PRIMITIVE(STYPE_BOOL,
+                       false,
+                       resulting_type,
+                       allocator.memory_alloc,
+                       rc_release(operand_type, allocator.free_alloc));
+
+        rc_release(operand_type, allocator.free_alloc);
+        parent->analyzed_type = resulting_type;
+        return SUCCESS;
+    } else if (!operand_type->valued || operand_type->nullable) {
+        PUT_STATUS_PROPAGATE(errors,
+                             ILLEGAL_PREFIX_OPERAND,
+                             value_tok,
+                             rc_release(operand_type, allocator.free_alloc));
+    }
+
     SemanticType* resulting_type;
     TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
            rc_release(operand_type, allocator.free_alloc));
 
+    const SemanticTypeTag operand_tag = operand_type->tag;
     switch (prefix_op) {
     case BANG:
+        // User defined types are not implicitly convertible to bools
+        switch (operand_tag) {
+        case STYPE_SIGNED_INTEGER:
+        case STYPE_UNSIGNED_INTEGER:
+        case STYPE_FLOATING_POINT:
+        case STYPE_BYTE_INTEGER:
+        case STYPE_STR:
+        case STYPE_BOOL:
+            resulting_type->tag      = STYPE_BOOL;
+            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
+            resulting_type->is_const = true;
+            resulting_type->valued   = true;
+            resulting_type->nullable = false;
+            break;
+        default:
+            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+                rc_release(operand_type, allocator.free_alloc);
+                rc_release(operand_type, allocator.free_alloc);
+            });
+        }
+
+        break;
     case NOT:
+        if (operand_tag == STYPE_SIGNED_INTEGER || operand_tag == STYPE_UNSIGNED_INTEGER) {
+            resulting_type->tag      = operand_tag;
+            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
+            resulting_type->is_const = true;
+            resulting_type->valued   = true;
+            resulting_type->nullable = false;
+        } else {
+            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+                rc_release(operand_type, allocator.free_alloc);
+                rc_release(operand_type, allocator.free_alloc);
+            });
+        }
+
+        break;
     case MINUS:
-        return NOT_IMPLEMENTED;
-    case TYPEOF:
-        TRY_DO(semantic_type_copy(resulting_type, operand_type, allocator), {
-            rc_release(operand_type, allocator.free_alloc);
-            rc_release(resulting_type, allocator.free_alloc);
-        });
+        // Only numbers can use the unary minus operator
+        switch (operand_tag) {
+        case STYPE_SIGNED_INTEGER:
+        case STYPE_UNSIGNED_INTEGER:
+        case STYPE_FLOATING_POINT:
+            resulting_type->tag      = operand_tag;
+            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
+            resulting_type->is_const = true;
+            resulting_type->valued   = true;
+            resulting_type->nullable = false;
+            break;
+        default:
+            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+                rc_release(operand_type, allocator.free_alloc);
+                rc_release(operand_type, allocator.free_alloc);
+            });
+        }
+
         break;
     default:
         UNREACHABLE;

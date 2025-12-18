@@ -233,15 +233,41 @@ TEST_CASE("Enum types") {
     }
 }
 
-TEST_CASE("Type introspection") {
-    SKIP();
-    SECTION("Correct introspection") {
-        test_analyze(
-            "type g = enum { ONE, }; type G = typeof g; var a: G = g::ONE; var b: g; a = b");
-        // test_analyze("type g = enum { ONE, }; var a: g; var b: g; a = b");
+TEST_CASE("Prefix operators") {
+    SECTION("Bang operator") {
+        SECTION("Correct types") {
+            test_analyze("const a: bool = !false; const b: bool = !nil;");
+            test_analyze("const a: bool = !2u; const b: bool = !2u; const c: bool = !3.23");
+            test_analyze("const a: bool = !\"Value\"; const b: bool = !'v';");
+            test_analyze("type g = ?enum { ONE, }; const d := !g");
+        }
+
+        SECTION("Incorrect types") {
+            test_analyze("type g = enum { ONE, }; const d := !g",
+                         {"ILLEGAL_PREFIX_OPERAND [Ln 1, Col 37]"});
+        }
     }
 
-    SECTION("Error cases") {
-        test_analyze("typeof enum { ONE, TWO, THREE, }", {"ANONYMOUS_ENUM [Ln 1, Col 8]"});
+    SECTION("Not and minus operators") {
+        SECTION("Correct types") {
+            test_analyze("const a: int = ~0b011011; const b: uint = ~0b011011u;");
+            test_analyze("const a: int = -0b011011; const b: uint = -0b011011u;");
+            test_analyze("const a: float = -2.34; const b: float = -3.14e-100;");
+            test_analyze("type T = ?float; var v: T = nil; v = 2.3; v = -4.5e10");
+            test_analyze("var v := = 2u; v = ~v");
+            test_analyze("var v: uint = 2u; v = ~v");
+            // test_analyze("type T = uint; var v: T = 2u; v = ~v");
+        }
+
+        SECTION("Incorrect types") {}
+    }
+}
+
+TEST_CASE("Type introspection") {
+    SECTION("Enum introspection") {
+        test_analyze(
+            "type g = enum { ONE, }; type G = typeof g; var a: G = g::ONE; var b: g; a = b");
+        test_analyze("type g = enum { ONE, }; type G = ?typeof g; var a: G = g::ONE; a = nil;");
+        test_analyze("type g = enum { ONE, }; type G = ?typeof g; const a: G = G::ONE;");
     }
 }

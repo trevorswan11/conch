@@ -163,6 +163,7 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                 rc_release(new_symbol_type, allocator.free_alloc);
             });
 
+            rc_release(analyzed, allocator.free_alloc);
             new_symbol_type->nullable = explicit_type.nullable;
             break;
         }

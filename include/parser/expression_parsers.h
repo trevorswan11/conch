@@ -93,7 +93,6 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {BANG, prefix_expression_parse},
     {NOT, prefix_expression_parse},
     {MINUS, prefix_expression_parse},
-    {TYPEOF, prefix_expression_parse},
     {TRUE, bool_expression_parse},
     {FALSE, bool_expression_parse},
     {STRING, string_expression_parse},
