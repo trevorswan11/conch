@@ -56,13 +56,14 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
     ArrayListConstIterator it = array_list_const_iterator_init(&analyzer->ast->statements);
     Statement*             stmt;
     while (array_list_const_iterator_has_next(&it, &stmt)) {
+        assert(analyzer->global_ctx);
         ASSERT_STATEMENT(stmt);
         TRY_IS(NODE_VIRTUAL_ANALYZE(stmt, analyzer->global_ctx, &analyzer->errors),
                ALLOCATION_FAILED);
 
         // If the global context never had the last type moved out, we must release it
         if (analyzer->global_ctx->analyzed_type) {
-            rc_release(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
+            RC_RELEASE(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
             analyzer->global_ctx->analyzed_type = NULL;
         }
     }

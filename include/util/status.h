@@ -130,7 +130,8 @@ void debug_print(const char* format, ...);
         PROCESS(NON_CONST_ENUM_VARIANT), PROCESS(NON_SIGNED_ENUM_VARIANT),                         \
         PROCESS(NON_VALUED_ENUM_VARIANT), PROCESS(NAMESPACE_NAME_MIRRORS_MEMBER),                  \
         PROCESS(NON_VALUED_DECL_VALUE), PROCESS(ILLEGAL_OUTER_NAMESPACE), PROCESS(ANONYMOUS_ENUM), \
-        PROCESS(REDUNDANT_TYPE_INTROSPECTION), PROCESS(ILLEGAL_DECL_CONSTRUCT)
+        PROCESS(REDUNDANT_TYPE_INTROSPECTION), PROCESS(ILLEGAL_DECL_CONSTRUCT),                    \
+        PROCESS(ILLEGAL_PREFIX_OPERAND)
 
 typedef enum Status {
     FOREACH_STATUS(ENUMERATE),
@@ -170,7 +171,7 @@ typedef struct StringBuilder StringBuilder;
 NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
 NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
 
-#define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                 \
-    IGNORE_STATUS(put_status_error(errors, status, tok.line, tok.column)); \
-    cleanup;                                                               \
+#define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                     \
+    IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \
+    cleanup;                                                                   \
     return status;

@@ -57,10 +57,11 @@ TEST_CASE("Declaration reconstructions") {
     }
 
     SECTION("Typeof'd types") {
-        test_reconstruction("typeof 2", "typeof 2");
-        test_reconstruction("typeof 2u", "typeof 2u");
-        test_reconstruction("typeof \"Hello, World!\"", "typeof \"Hello, World!\"");
-        test_reconstruction("typeof AAABBB", "typeof AAABBB");
+        test_reconstruction("type T = typeof 2", "type T = typeof 2;");
+        test_reconstruction("type T = typeof 2u", "type T = typeof 2u;");
+        test_reconstruction("type T = typeof \"Hello, World!\"",
+                            "type T = typeof \"Hello, World!\";");
+        test_reconstruction("type T = typeof AAABBB", "type T = typeof AAABBB;");
     }
 }
 

@@ -103,16 +103,18 @@ void swap(void* a, void* b, size_t size) {
     }
 }
 
-char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
+NODISCARD char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
     if (!str) {
         return NULL;
     }
     return strdup_s_allocator(str, strlen(str), memory_alloc);
 }
 
-char* strdup_z(const char* str) { return strdup_z_allocator(str, standard_allocator.memory_alloc); }
+NODISCARD char* strdup_z(const char* str) {
+    return strdup_z_allocator(str, standard_allocator.memory_alloc);
+}
 
-char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
+NODISCARD char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
     if (!str) {
         return NULL;
@@ -128,7 +130,7 @@ char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_al
     return copy;
 }
 
-char* strdup_s(const char* str, size_t size) {
+NODISCARD char* strdup_s(const char* str, size_t size) {
     return strdup_s_allocator(str, size, standard_allocator.memory_alloc);
 }
 
@@ -155,7 +157,7 @@ RcControlBlock rc_init(rc_dtor dtor) {
     };
 }
 
-void* rc_retain(void* rc_obj) {
+NODISCARD void* rc_retain(void* rc_obj) {
     assert(rc_obj);
     RcControlBlock* rc = (RcControlBlock*)rc_obj;
     rc->ref_count += 1;

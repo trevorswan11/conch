@@ -101,29 +101,28 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
     MAYBE_UNUSED(allocator);
 
     switch (src->tag) {
-    case STYPE_SIGNED_INTEGER:
-    case STYPE_UNSIGNED_INTEGER:
-    case STYPE_FLOATING_POINT:
-    case STYPE_BYTE_INTEGER:
-    case STYPE_STR:
-    case STYPE_BOOL:
-        dest->variant = src->variant;
-        break;
     case STYPE_ENUM:
         dest->variant.enum_type = (SemanticEnumType*)rc_retain(src->variant.enum_type);
         break;
     default:
-        return NOT_IMPLEMENTED;
+        dest->variant = src->variant;
+        break;
     }
 
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy(SemanticType* dest, SemanticType* src, Allocator allocator) {
-    TRY(semantic_type_copy_variant(dest, src, allocator));
-    dest->is_const = src->is_const;
-    dest->valued   = src->valued;
-    dest->nullable = src->nullable;
+NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+    SemanticType* type;
+    TRY(semantic_type_create(&type, allocator.memory_alloc));
+
+    TRY_DO(semantic_type_copy_variant(type, src, allocator),
+           RC_RELEASE(type, allocator.free_alloc));
+    type->is_const = src->is_const;
+    type->valued   = src->valued;
+    type->nullable = src->nullable;
+
+    *dest = type;
     return SUCCESS;
 }
 
@@ -136,14 +135,14 @@ void semantic_type_destroy(void* stype, free_alloc_fn free_alloc) {
     SemanticType* type = (SemanticType*)stype;
     switch (type->tag) {
     case STYPE_ENUM:
-        rc_release(type->variant.enum_type, free_alloc);
+        RC_RELEASE(type->variant.enum_type, free_alloc);
         break;
     default:
         break;
     }
 }
 
-bool type_assignable(SemanticType* lhs, SemanticType* rhs) {
+bool type_assignable(const SemanticType* lhs, const SemanticType* rhs) {
     if (rhs->tag == STYPE_NIL) {
         return lhs->nullable;
     }
@@ -161,7 +160,7 @@ bool type_assignable(SemanticType* lhs, SemanticType* rhs) {
     return type_equal(lhs, rhs);
 }
 
-bool type_equal(SemanticType* lhs, SemanticType* rhs) {
+bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
     // Conch has explicit null values and minimal shallow type checking
     if (lhs->tag != rhs->tag) {
         return false;
