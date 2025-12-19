@@ -150,9 +150,13 @@ TEST_CASE("Loops") {
 TEST_CASE("Complex expressions") {
     SECTION("Function expressions") {
         test_reconstruction("fn(x: int, y: int, z: int): int {}",
-                            "fn(x: int, y: int, z: int) {  }");
+                            "fn(x: int, y: int, z: int): int {  }");
         test_reconstruction("fn<T>(x: int, y: int, z: int = 2): int { if (x + y == z) return z; }",
-                            "fn<T>(x: int, y: int, z: int = 2) { if (x + y == z) return z; }");
+                            "fn<T>(x: int, y: int, z: int = 2): int { if (x + y == z) return z; }");
+        test_reconstruction("fn<T>(x: int, ref y: int, z: int = 2): Result<T, E> { if (x + y == z) "
+                            "return Ok(3) with <int>; }",
+                            "fn<T>(x: int, ref y: int, z: int = 2): Result<T, E> { if (x + y == z) "
+                            "return Ok(3) with <int>; }");
     }
 
     SECTION("Call expressions") {

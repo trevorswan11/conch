@@ -31,6 +31,11 @@ typedef enum {
     EXPLICIT_ARRAY,
 } ExplicitTypeTag;
 
+typedef struct ExplicitIdentType {
+    IdentifierExpression* name;
+    ArrayList             generics;
+} ExplicitIdentType;
+
 typedef struct ExplicitFunctionType {
     ArrayList       generics;
     ArrayList       parameters;
@@ -43,12 +48,12 @@ typedef struct ExplicitArrayType {
 } ExplicitArrayType;
 
 typedef union {
-    IdentifierExpression* ident_type_name;
-    Expression*           referred_type;
-    ExplicitFunctionType  function_type;
-    StructExpression*     struct_type;
-    EnumExpression*       enum_type;
-    ExplicitArrayType     array_type;
+    ExplicitIdentType    ident_type;
+    Expression*          referred_type;
+    ExplicitFunctionType function_type;
+    StructExpression*    struct_type;
+    EnumExpression*      enum_type;
+    ExplicitArrayType    array_type;
 } ExplicitTypeUnion;
 
 typedef struct ExplicitType {

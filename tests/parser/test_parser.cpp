@@ -418,64 +418,6 @@ TEST_CASE("Basic prefix / infix expressions") {
         }
     }
 
-    SECTION("Typeof expressions in types") {
-        SECTION("Correct type introspection") {
-            const char*   input = "type a = ?typeof 4u";
-            ParserFixture pf(input);
-            pf.check_errors();
-
-            auto ast = pf.ast();
-            REQUIRE(ast->statements.length == 1);
-
-            Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
-            test_identifier_expression((Expression*)type_decl->ident, "a");
-            REQUIRE_FALSE(type_decl->primitive_alias);
-
-            test_type_expression(type_decl->value,
-                                 true,
-                                 false,
-                                 TypeExpressionTag::EXPLICIT,
-                                 ExplicitTypeTag::EXPLICIT_TYPEOF,
-                                 {});
-
-            TypeExpression* type = (TypeExpression*)type_decl->value;
-            test_number_expression<uint64_t>(type->variant.explicit_type.variant.referred_type, 4);
-        }
-
-        SECTION("Malformed usages") {
-            struct TestCase {
-                const char*              input;
-                std::vector<std::string> errors;
-            };
-
-            const TestCase cases[] = {
-                {"typeof 1", {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
-                {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-                {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-                {"type a = typeof enum { a, }",
-                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-                {"type a = typeof fn(): int",
-                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
-                  "Expected token LBRACE, found END [Ln 1, Col 26]"}},
-                {"type a = typeof struct { a: int, }",
-                 {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-                {"type a = typeof ?enum {a, }",
-                 {"No prefix parse function for WHAT found [Ln 1, Col 17]",
-                  "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-            };
-
-            for (const auto& t : cases) {
-                ParserFixture pf(t.input);
-                pf.check_errors(t.errors);
-            }
-        }
-    }
-
     SECTION("Infix expressions") {
         struct TestCase {
             const char*                             input;
@@ -625,6 +567,75 @@ TEST_CASE("Basic prefix / infix expressions") {
             SBFixture sb(t.expected.length());
             REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
             REQUIRE(t.expected == sb.to_string());
+        }
+    }
+
+    SECTION("Malformed expressions") {
+        std::pair<const char*, std::string> cases[] = {
+            {"!", "PREFIX_MISSING_OPERAND [Ln 1, Col 1]"},
+            {"3+", "INFIX_MISSING_RHS [Ln 1, Col 2]"},
+            {"3+4-", "INFIX_MISSING_RHS [Ln 1, Col 4]"},
+        };
+
+        for (const auto& t : cases) {
+            ParserFixture pf(t.first);
+            pf.check_errors({t.second});
+        }
+    }
+}
+
+TEST_CASE("Typeof expressions") {
+    SECTION("Correct type introspection") {
+        const char*   input = "type a = ?typeof 4u";
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        auto ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        test_identifier_expression((Expression*)type_decl->ident, "a");
+        REQUIRE_FALSE(type_decl->primitive_alias);
+
+        test_type_expression(type_decl->value,
+                             true,
+                             false,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_TYPEOF,
+                             {});
+
+        TypeExpression* type = (TypeExpression*)type_decl->value;
+        test_number_expression<uint64_t>(type->variant.explicit_type.variant.referred_type, 4);
+    }
+
+    SECTION("Malformed usages") {
+        struct TestCase {
+            const char*              input;
+            std::vector<std::string> errors;
+        };
+
+        const TestCase cases[] = {
+            {"typeof 1", {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
+            {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {"type a = typeof enum { a, }",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {"type a = typeof fn(): int",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+              "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
+              "Expected token LBRACE, found END [Ln 1, Col 26]"}},
+            {"type a = typeof struct { a: int, }",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {"type a = typeof ?enum {a, }",
+             {"No prefix parse function for WHAT found [Ln 1, Col 17]",
+              "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+        };
+
+        for (const auto& t : cases) {
+            ParserFixture pf(t.input);
+            pf.check_errors(t.errors);
         }
     }
 }
@@ -2275,7 +2286,7 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Function type generics") {
-        const char*   input = "var a: fn<T>(b: int): int;";
+        const char*   input = "var a: fn<T>(b: int): Result<int>;";
         ParserFixture pf(input);
         pf.check_errors();
 
@@ -2300,6 +2311,18 @@ TEST_CASE("Generics") {
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&explicit_fn.generics, 0, &generic)));
         test_identifier_expression(generic, "T");
+
+        test_type_expression((Expression*)explicit_fn.return_type,
+                             false,
+                             false,
+                             TypeExpressionTag::EXPLICIT,
+                             ExplicitTypeTag::EXPLICIT_IDENT,
+                             "Result");
+        REQUIRE(STATUS_OK(array_list_get(
+            &explicit_fn.return_type->variant.explicit_type.variant.ident_type.generics,
+            0,
+            &generic)));
+        test_identifier_expression(generic, "int", TokenType::INT_TYPE);
     }
 
     SECTION("Function generics in type decls") {
@@ -2476,7 +2499,8 @@ TEST_CASE("Generics") {
             const char*   input = "func(1, 2) with <int, \"2\" + 2>";
             ParserFixture pf(input);
             pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 23]",
-                             "No prefix parse function for PLUS found [Ln 1, Col 27]"},
+                             "No prefix parse function for PLUS found [Ln 1, Col 27]",
+                             "INFIX_MISSING_RHS [Ln 1, Col 30]"},
                             false);
         }
     }

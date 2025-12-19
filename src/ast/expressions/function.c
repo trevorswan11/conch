@@ -112,9 +112,13 @@ NODISCARD Status function_expression_reconstruct(Node*          node,
     TRY(generics_reconstruct(&func->generics, symbol_map, sb));
     TRY(string_builder_append(sb, '('));
     TRY(reconstruct_parameter_list(&func->parameters, symbol_map, sb));
+    TRY(string_builder_append_str_z(sb, "): "));
+
+    ASSERT_STATEMENT(func->return_type);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(func->return_type, symbol_map, sb));
+    TRY(string_builder_append(sb, ' '));
 
     ASSERT_STATEMENT(func->body);
-    TRY(string_builder_append_str_z(sb, ") "));
     TRY(NODE_VIRTUAL_RECONSTRUCT(func->body, symbol_map, sb));
 
     return SUCCESS;

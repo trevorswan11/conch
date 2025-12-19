@@ -96,7 +96,7 @@ void test_type_expression(Expression*       expression,
 
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
-            IdentifierExpression* ident = explicit_type.variant.ident_type_name;
+            IdentifierExpression* ident = explicit_type.variant.ident_type.name;
             REQUIRE(ident->name.ptr == expected_type_literal);
             break;
         }

@@ -103,6 +103,13 @@ NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression**
         }
 
         TRY(parser_next_token(p));
+        if (p->peek_token.type == END) {
+            PUT_STATUS_PROPAGATE(&p->errors,
+                                 INFIX_MISSING_RHS,
+                                 p->current_token,
+                                 NODE_VIRTUAL_FREE(*lhs_expression, p->allocator.free_alloc));
+        }
+
         TRY_DO(infix.infix_parse(p, *lhs_expression, lhs_expression),
                NODE_VIRTUAL_FREE(*lhs_expression, p->allocator.free_alloc));
     }
@@ -356,11 +363,6 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
     TypeExpressionUnion explicit_union = (TypeExpressionUnion){
         .explicit_type =
             (ExplicitType){
-                .tag = EXPLICIT_IDENT,
-                .variant =
-                    (ExplicitTypeUnion){
-                        .ident_type_name = NULL,
-                    },
                 .nullable  = is_inner_type_nullable,
                 .primitive = is_primitive,
             },
@@ -372,9 +374,18 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
         Expression* ident_expr;
         TRY_DO(identifier_expression_parse(p, &ident_expr), array_list_deinit(&dim_array));
 
+        ArrayList generics;
+        TRY_DO(generics_parse(p, &generics), {
+            NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
+            array_list_deinit(&dim_array);
+        });
+
         explicit_union.explicit_type.tag     = EXPLICIT_IDENT;
         explicit_union.explicit_type.variant = (ExplicitTypeUnion){
-            .ident_type_name = (IdentifierExpression*)ident_expr,
+            (ExplicitIdentType){
+                .name     = (IdentifierExpression*)ident_expr,
+                .generics = generics,
+            },
         };
 
         TRY_DO(type_expression_create(
@@ -382,6 +393,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
                {
                    NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
                    array_list_deinit(&dim_array);
+                   free_expression_list(&generics, p->allocator.free_alloc);
                });
     } else {
         const Token type_start = p->current_token;
@@ -645,6 +657,10 @@ NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expressi
 NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression) {
     const Token prefix_token = p->current_token;
     assert(prefix_token.slice.length > 0);
+
+    if (p->peek_token.type == END) {
+        PUT_STATUS_PROPAGATE(&p->errors, PREFIX_MISSING_OPERAND, p->current_token, {});
+    }
     TRY(parser_next_token(p));
 
     Expression* rhs;

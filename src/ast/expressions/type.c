@@ -43,9 +43,12 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     if (type->tag == EXPLICIT) {
         ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
-        case EXPLICIT_IDENT:
-            NODE_VIRTUAL_FREE(explicit_type.variant.ident_type_name, free_alloc);
+        case EXPLICIT_IDENT: {
+            ExplicitIdentType ident_type = explicit_type.variant.ident_type;
+            NODE_VIRTUAL_FREE(ident_type.name, free_alloc);
+            free_expression_list(&ident_type.generics, free_alloc);
             break;
+        }
         case EXPLICIT_TYPEOF:
             NODE_VIRTUAL_FREE(explicit_type.variant.referred_type, free_alloc);
             break;
@@ -119,8 +122,10 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
             new_symbol_type->is_const = true;
             new_symbol_type->valued   = false;
 
-            MutSlice      probe_type_name = explicit_type.variant.ident_type_name->name;
-            SemanticType* probe_symbol_type;
+            // TODO: Handle type generics
+            ExplicitIdentType ident_type      = explicit_type.variant.ident_type;
+            MutSlice          probe_type_name = ident_type.name->name;
+            SemanticType*     probe_symbol_type;
 
             SemanticTypeTag symbol_type_tag;
             if (semantic_name_to_primitive_type_tag(probe_type_name, &symbol_type_tag)) {
@@ -193,10 +198,13 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
     assert(sb);
 
     switch (explicit_type.tag) {
-    case EXPLICIT_IDENT:
-        ASSERT_EXPRESSION(explicit_type.variant.ident_type_name);
-        TRY(string_builder_append_mut_slice(sb, explicit_type.variant.ident_type_name->name));
+    case EXPLICIT_IDENT: {
+        ExplicitIdentType ident_type = explicit_type.variant.ident_type;
+        ASSERT_EXPRESSION(ident_type.name);
+        TRY(string_builder_append_mut_slice(sb, ident_type.name->name));
+        TRY(generics_reconstruct(&ident_type.generics, symbol_map, sb));
         break;
+    }
     case EXPLICIT_TYPEOF:
         ASSERT_EXPRESSION(explicit_type.variant.referred_type);
         TRY(string_builder_append_str_z(sb, "typeof "));
@@ -205,21 +213,7 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
     case EXPLICIT_FN: {
         ExplicitFunctionType function_type = explicit_type.variant.function_type;
         TRY(string_builder_append_str_z(sb, "fn"));
-        if (function_type.generics.length > 0) {
-            TRY(string_builder_append(sb, '<'));
-
-            ArrayListIterator it = array_list_iterator_init(&function_type.generics);
-            Expression*       generic;
-            while (array_list_iterator_has_next(&it, &generic)) {
-                ASSERT_EXPRESSION(generic);
-                TRY(NODE_VIRTUAL_RECONSTRUCT(generic, symbol_map, sb));
-                if (!array_list_iterator_exhausted(&it)) {
-                    TRY(string_builder_append_str_z(sb, ", "));
-                }
-            }
-
-            TRY(string_builder_append(sb, '>'));
-        }
+        TRY(generics_reconstruct(&function_type.generics, symbol_map, sb));
 
         TRY(string_builder_append(sb, '('));
         TRY(reconstruct_parameter_list(&function_type.parameters, symbol_map, sb));
