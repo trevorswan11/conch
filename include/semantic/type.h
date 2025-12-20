@@ -50,6 +50,9 @@ bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag);
 // Checks if a type is a 'valued' primitive (i.e not void or nil)
 bool semantic_type_is_primitive(SemanticType* type);
 
+// Checks if a type is trivially arithmetic (i.e not nullable or a byte)
+bool semantic_type_is_arithmetic(SemanticType* type);
+
 typedef struct {
     char _;
 } SematicDatalessType;

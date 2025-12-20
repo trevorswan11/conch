@@ -143,18 +143,13 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
 
         break;
     case MINUS:
-        // Only numbers can use the unary minus operator
-        switch (operand_tag) {
-        case STYPE_SIGNED_INTEGER:
-        case STYPE_UNSIGNED_INTEGER:
-        case STYPE_FLOATING_POINT:
+        if (semantic_type_is_arithmetic(operand_type)) {
             resulting_type->tag      = operand_tag;
             resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
             resulting_type->is_const = true;
             resulting_type->valued   = true;
             resulting_type->nullable = false;
-            break;
-        default:
+        } else {
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
                 RC_RELEASE(resulting_type, allocator.free_alloc);
                 RC_RELEASE(operand_type, allocator.free_alloc);

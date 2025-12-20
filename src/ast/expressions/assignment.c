@@ -99,6 +99,7 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
     // Compound expressions are treated like a subset of infix expressions
+    // TODO: Narrow in restrictions as in infix
     bool ok = type_assignable(lhs_type, rhs_type);
     if (assign->op != ASSIGN) {
         // Neither side can be nullable and must be primitive

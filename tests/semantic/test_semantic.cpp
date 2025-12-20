@@ -270,6 +270,39 @@ TEST_CASE("Prefix operators") {
     }
 }
 
+TEST_CASE("Infix operators") {
+    SECTION("Addition and multiplication") {
+        test_analyze("const a: string = \"Result: \"; const b: int = 5; const c: string = a + b");
+        test_analyze("const a: string = \"Result: \"; const b: int = 5; const c: string = a * b");
+        test_analyze("const a: int = 3; const b: int = 5; const c: int = a + b");
+        test_analyze("const a: uint = 3u; const b: uint = 5u; const c := a + b");
+        test_analyze("const a := 3.3; const b := 5.5; const c: float = a + b");
+        test_analyze("const a := 3u; const b: uint = 5u; const c := a * b");
+    }
+
+    SECTION("Modulo") {
+        test_analyze("3 % 4");
+        test_analyze("3u % 4u");
+        test_analyze("3u % -4u");
+    }
+
+    SECTION("Error cases") {
+        test_analyze("type a = int; type b = uint; a + b",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 30]"});
+        test_analyze("const a: byte = '3'; const b: byte = '5'; const c := a + b",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 54]"});
+        test_analyze("const a: int = 5; const b: string = \"Result: \"; const c: string = a + b",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 67]"});
+        test_analyze("const a: int = 5; const b: string = \"Result: \"; const c: string = a * b",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 67]"});
+        test_analyze("const a := 3u; const b: uint = 5u; const c: int = a * b",
+                     {"TYPE_MISMATCH [Ln 1, Col 36]"});
+        test_analyze("3.34 % 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3 % 4.45", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3.23 % 4.45", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+    }
+}
+
 TEST_CASE("Type introspection") {
     SECTION("Enum introspection") {
         test_analyze(

@@ -37,6 +37,7 @@ bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag) {
 }
 
 bool semantic_type_is_primitive(SemanticType* type) {
+    assert(type);
     switch (type->tag) {
     case STYPE_SIGNED_INTEGER:
     case STYPE_UNSIGNED_INTEGER:
@@ -45,6 +46,18 @@ bool semantic_type_is_primitive(SemanticType* type) {
     case STYPE_STR:
     case STYPE_BOOL:
         return true;
+    default:
+        return false;
+    }
+}
+
+bool semantic_type_is_arithmetic(SemanticType* type) {
+    assert(type);
+    switch (type->tag) {
+    case STYPE_SIGNED_INTEGER:
+    case STYPE_UNSIGNED_INTEGER:
+    case STYPE_FLOATING_POINT:
+        return !type->nullable;
     default:
         return false;
     }

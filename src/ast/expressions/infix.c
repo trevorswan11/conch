@@ -4,6 +4,7 @@
 #include "ast/expressions/infix.h"
 
 #include "semantic/context.h"
+#include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
 
@@ -73,6 +74,23 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
+#define FALLBACK_ARITHMETIC(result, cleanup)                                                  \
+    const bool lhs_ok = !lhs_type->nullable && semantic_type_is_arithmetic(lhs_type);         \
+    const bool rhs_ok = !rhs_type->nullable && semantic_type_is_arithmetic(rhs_type);         \
+    if (!lhs_ok || !rhs_ok) {                                                                 \
+        PUT_STATUS_PROPAGATE(errors,                                                          \
+                             !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND, \
+                             start_token,                                                     \
+                             cleanup);                                                        \
+    }                                                                                         \
+                                                                                              \
+    if (lhs_type->tag != rhs_type->tag) {                                                     \
+        PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, cleanup);                    \
+    }                                                                                         \
+                                                                                              \
+    MAKE_PRIMITIVE(lhs_type->tag, false, new_type, allocator.memory_alloc, cleanup);          \
+    result = new_type;
+
 NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
@@ -90,39 +108,206 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
            RC_RELEASE(lhs_type, allocator.free_alloc));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
-    MAYBE_UNUSED(start_token);
+    if (!lhs_type->valued || !rhs_type->valued) {
+        const Status error_code =
+            !lhs_type->valued ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+        PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+    }
 
     // Subsets of operators have different behaviors and restrictions
+    SemanticType* resulting_type = NULL;
     switch (infix->op) {
     case PLUS:
+    case STAR: {
+        if (lhs_type->tag == STYPE_STR && semantic_type_is_primitive(rhs_type)) {
+            if (lhs_type->nullable || rhs_type->nullable) {
+                const Status error_code =
+                    lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+                PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                    RC_RELEASE(lhs_type, allocator.free_alloc);
+                    RC_RELEASE(rhs_type, allocator.free_alloc);
+                });
+            }
+
+            MAKE_PRIMITIVE(STYPE_STR, false, new_type, allocator.memory_alloc, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+            resulting_type = new_type;
+            break;
+        } else if (semantic_type_is_primitive(lhs_type) && rhs_type->tag == STYPE_STR) {
+            PUT_STATUS_PROPAGATE(errors, ILLEGAL_LHS_INFIX_OPERAND, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        FALLBACK_ARITHMETIC(resulting_type, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        break;
+    }
+    case PERCENT: {
+        // Modulo cannot support floating points, which the fallback allows
+        if (lhs_type->tag == STYPE_FLOATING_POINT || rhs_type->tag == STYPE_FLOATING_POINT) {
+            const Status error_code = lhs_type->tag == STYPE_FLOATING_POINT
+                                          ? ILLEGAL_LHS_INFIX_OPERAND
+                                          : ILLEGAL_RHS_INFIX_OPERAND;
+            PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        FALLBACK_ARITHMETIC(resulting_type, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        break;
+    }
     case MINUS:
-    case STAR:
     case SLASH:
-    case PERCENT:
-    case STAR_STAR:
+    case STAR_STAR: {
+        FALLBACK_ARITHMETIC(resulting_type, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        break;
+    }
     case LT:
     case LTEQ:
     case GT:
-    case GTEQ:
+    case GTEQ: {
+        const bool lhs_ok = !lhs_type->nullable && (semantic_type_is_arithmetic(lhs_type) ||
+                                                    lhs_type->tag == STYPE_BYTE_INTEGER);
+        const bool rhs_ok = !rhs_type->nullable && (semantic_type_is_arithmetic(rhs_type) ||
+                                                    rhs_type->tag == STYPE_BYTE_INTEGER);
+        if (!lhs_ok || !rhs_ok) {
+            PUT_STATUS_PROPAGATE(errors,
+                                 !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
+                                 start_token,
+                                 {
+                                     RC_RELEASE(lhs_type, allocator.free_alloc);
+                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                 });
+        }
+
+        if (lhs_type->tag != rhs_type->tag) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        resulting_type = new_type;
+        break;
+    }
     case EQ:
-    case NEQ:
+    case NEQ: {
+        const bool lhs_ok = !lhs_type->nullable && semantic_type_is_primitive(lhs_type);
+        const bool rhs_ok = !rhs_type->nullable && semantic_type_is_primitive(rhs_type);
+        if (!lhs_ok || !rhs_ok) {
+            PUT_STATUS_PROPAGATE(errors,
+                                 !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
+                                 start_token,
+                                 {
+                                     RC_RELEASE(lhs_type, allocator.free_alloc);
+                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                 });
+        }
+
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        resulting_type = new_type;
+        break;
+    }
     case BOOLEAN_AND:
-    case BOOLEAN_OR:
+    case BOOLEAN_OR: {
+        if (lhs_type->tag != STYPE_BOOL || rhs_type->tag != STYPE_BOOL) {
+            const Status error_code =
+                lhs_type->tag != STYPE_BOOL ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+            PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        resulting_type = new_type;
+        break;
+    }
     case AND:
     case OR:
     case XOR:
     case SHR:
     case SHL:
-    case IS:
+        // TODO
+        RC_RELEASE(lhs_type, allocator.free_alloc);
+        RC_RELEASE(rhs_type, allocator.free_alloc);
+        return NOT_IMPLEMENTED;
+    case IS: {
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        resulting_type = new_type;
+        break;
+    }
     case IN:
+        // TODO
+        RC_RELEASE(lhs_type, allocator.free_alloc);
+        RC_RELEASE(rhs_type, allocator.free_alloc);
+        return NOT_IMPLEMENTED;
     case DOT_DOT:
     case DOT_DOT_EQ:
+        // TODO
+        RC_RELEASE(lhs_type, allocator.free_alloc);
+        RC_RELEASE(rhs_type, allocator.free_alloc);
+        return NOT_IMPLEMENTED;
     case ORELSE:
+        if (!lhs_type->nullable || rhs_type->nullable) {
+            const Status error_code =
+                !lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+            PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        if (!type_assignable(lhs_type, rhs_type)) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        // Copy the right hand side since the result cannot be nullable
+        TRY_DO(semantic_type_copy(&resulting_type, rhs_type, allocator), {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        break;
     default:
         UNREACHABLE;
     }
 
+    assert(resulting_type);
+    parent->analyzed_type = resulting_type;
+
     RC_RELEASE(lhs_type, allocator.free_alloc);
     RC_RELEASE(rhs_type, allocator.free_alloc);
-    return NOT_IMPLEMENTED;
+    return SUCCESS;
 }
