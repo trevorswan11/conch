@@ -280,15 +280,58 @@ TEST_CASE("Infix operators") {
         test_analyze("const a := 3u; const b: uint = 5u; const c := a * b");
     }
 
-    SECTION("Modulo") {
+    SECTION("Modulo, bitwise, and logic") {
         test_analyze("3 % 4");
         test_analyze("3u % 4u");
         test_analyze("3u % -4u");
+        test_analyze("3 & 4");
+        test_analyze("3u | 4u");
+        test_analyze("3u ^ -4u");
+        test_analyze("3 << 4");
+        test_analyze("3u >> 4u");
+        test_analyze("3u < 4u");
+        test_analyze("'3' < '4'");
+        test_analyze("3u <= -4u");
+        test_analyze("3u > 4u");
+        test_analyze("'3' > '4'");
+        test_analyze("'3' > '4'");
+        test_analyze("3 >= 4");
+        test_analyze("'3' >= '4'");
+        test_analyze("3u == nil");
+        test_analyze("nil != \"Hello\"");
+        test_analyze("nil == nil");
+        test_analyze("3 != 4");
+        test_analyze("const a: ?int = 3; 6 == a");
+        test_analyze("3 is 4");
+        test_analyze("3 is 'd'");
+        test_analyze("3 is \"Hello\"");
+        test_analyze("true and true");
+        test_analyze("nil and false");
+        test_analyze("const a: ?int = 3; a or nil");
+        test_analyze("const a: ?int = 3; true and a");
+        test_analyze("true or true");
+        test_analyze("true or nil");
+    }
+
+    SECTION("Fallback arithmetic") {
+        test_analyze("3 - 4");
+        test_analyze("3 / 4");
+        test_analyze("3 ** 4");
+        test_analyze("var v: uint = 3u ** 4u; v = 45u");
+    }
+
+    SECTION("Orelse expressions") {
+        test_analyze("const a: ?int = 3; var b: int = a orelse 6");
+        test_analyze("const a: ?uint = 3u; var b: uint = a orelse 6u");
     }
 
     SECTION("Error cases") {
         test_analyze("type a = int; type b = uint; a + b",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 30]"});
+        test_analyze("const a: string = \"Hello\"; const b: ?int = 3; a + b",
+                     {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 47]"});
+        test_analyze("const a: ?string = \"Hello\"; const b: int = 3; a + b",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 47]"});
         test_analyze("const a: byte = '3'; const b: byte = '5'; const c := a + b",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 54]"});
         test_analyze("const a: int = 5; const b: string = \"Result: \"; const c: string = a + b",
@@ -300,6 +343,17 @@ TEST_CASE("Infix operators") {
         test_analyze("3.34 % 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3 % 4.45", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3.23 % 4.45", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3.23 orelse 4.45", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3 == 4.45", {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        test_analyze("nil orelse 4", {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        test_analyze("const a: ?int = 3; const c: ?int = nil; var b: int = a orelse c",
+                     {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 54]"});
+        test_analyze("true or 4", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("5u or false", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("true and 4", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("7u and 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("type a = enum { ONE, }; const b: a = a::ONE; b == 4",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 46]"});
     }
 }
 

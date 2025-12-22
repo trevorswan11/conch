@@ -75,8 +75,8 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
 }
 
 #define FALLBACK_ARITHMETIC(result, cleanup)                                                  \
-    const bool lhs_ok = !lhs_type->nullable && semantic_type_is_arithmetic(lhs_type);         \
-    const bool rhs_ok = !rhs_type->nullable && semantic_type_is_arithmetic(rhs_type);         \
+    const bool lhs_ok = semantic_type_is_arithmetic(lhs_type);                                \
+    const bool rhs_ok = semantic_type_is_arithmetic(rhs_type);                                \
     if (!lhs_ok || !rhs_ok) {                                                                 \
         PUT_STATUS_PROPAGATE(errors,                                                          \
                              !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND, \
@@ -151,8 +151,13 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
         });
         break;
     }
+    case AND:
+    case OR:
+    case XOR:
+    case SHR:
+    case SHL:
     case PERCENT: {
-        // Modulo cannot support floating points, which the fallback allows
+        // Modulo and bitwise cannot support floating points, which the fallback allows
         if (lhs_type->tag == STYPE_FLOATING_POINT || rhs_type->tag == STYPE_FLOATING_POINT) {
             const Status error_code = lhs_type->tag == STYPE_FLOATING_POINT
                                           ? ILLEGAL_LHS_INFIX_OPERAND
@@ -182,10 +187,10 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
     case LTEQ:
     case GT:
     case GTEQ: {
-        const bool lhs_ok = !lhs_type->nullable && (semantic_type_is_arithmetic(lhs_type) ||
-                                                    lhs_type->tag == STYPE_BYTE_INTEGER);
-        const bool rhs_ok = !rhs_type->nullable && (semantic_type_is_arithmetic(rhs_type) ||
-                                                    rhs_type->tag == STYPE_BYTE_INTEGER);
+        const bool lhs_ok =
+            semantic_type_is_arithmetic(lhs_type) || lhs_type->tag == STYPE_BYTE_INTEGER;
+        const bool rhs_ok =
+            semantic_type_is_arithmetic(rhs_type) || rhs_type->tag == STYPE_BYTE_INTEGER;
         if (!lhs_ok || !rhs_ok) {
             PUT_STATUS_PROPAGATE(errors,
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
@@ -212,8 +217,8 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
     }
     case EQ:
     case NEQ: {
-        const bool lhs_ok = !lhs_type->nullable && semantic_type_is_primitive(lhs_type);
-        const bool rhs_ok = !rhs_type->nullable && semantic_type_is_primitive(rhs_type);
+        const bool lhs_ok = lhs_type->tag == STYPE_NIL || semantic_type_is_primitive(lhs_type);
+        const bool rhs_ok = rhs_type->tag == STYPE_NIL || semantic_type_is_primitive(rhs_type);
         if (!lhs_ok || !rhs_ok) {
             PUT_STATUS_PROPAGATE(errors,
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
@@ -222,6 +227,14 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
                                      RC_RELEASE(lhs_type, allocator.free_alloc);
                                      RC_RELEASE(rhs_type, allocator.free_alloc);
                                  });
+        }
+
+        if (lhs_type->tag != rhs_type->tag &&
+            (lhs_type->tag != STYPE_NIL && rhs_type->tag != STYPE_NIL)) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
         }
 
         MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
@@ -233,7 +246,8 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
     }
     case BOOLEAN_AND:
     case BOOLEAN_OR: {
-        if (lhs_type->tag != STYPE_BOOL || rhs_type->tag != STYPE_BOOL) {
+        if ((!lhs_type->nullable && !rhs_type->nullable) &&
+            (lhs_type->tag != STYPE_BOOL || rhs_type->tag != STYPE_BOOL)) {
             const Status error_code =
                 lhs_type->tag != STYPE_BOOL ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
@@ -249,15 +263,6 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
         resulting_type = new_type;
         break;
     }
-    case AND:
-    case OR:
-    case XOR:
-    case SHR:
-    case SHL:
-        // TODO
-        RC_RELEASE(lhs_type, allocator.free_alloc);
-        RC_RELEASE(rhs_type, allocator.free_alloc);
-        return NOT_IMPLEMENTED;
     case IS: {
         MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
             RC_RELEASE(lhs_type, allocator.free_alloc);
