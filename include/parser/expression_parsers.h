@@ -45,6 +45,7 @@ NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status if_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status function_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expression** expression);
+NODISCARD Status index_expression_parse(Parser* p, Expression* array, Expression** expression);
 NODISCARD Status struct_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status enum_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status nil_expression_parse(Parser* p, Expression** expression);
@@ -88,6 +89,10 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {UINT_8, integer_literal_expression_parse},
     {UINT_10, integer_literal_expression_parse},
     {UINT_16, integer_literal_expression_parse},
+    {UZINT_2, integer_literal_expression_parse},
+    {UZINT_8, integer_literal_expression_parse},
+    {UZINT_10, integer_literal_expression_parse},
+    {UZINT_16, integer_literal_expression_parse},
     {CHARACTER, byte_literal_expression_parse},
     {FLOAT, float_literal_expression_parse},
     {BANG, prefix_expression_parse},
@@ -179,6 +184,7 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {DOT_DOT_EQ, infix_expression_parse},
     {ORELSE, infix_expression_parse},
     {LPAREN, call_expression_parse},
+    {LBRACKET, index_expression_parse},
     {ASSIGN, assignment_expression_parse},
     {PLUS_ASSIGN, assignment_expression_parse},
     {MINUS_ASSIGN, assignment_expression_parse},

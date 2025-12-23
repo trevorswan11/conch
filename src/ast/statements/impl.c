@@ -14,6 +14,8 @@ NODISCARD Status impl_statement_create(Token                 start_token,
                                        ImplStatement**       impl_stmt,
                                        memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
+    ASSERT_EXPRESSION(parent);
+    ASSERT_STATEMENT(implementation);
     assert(implementation->statements.length > 0);
 
     ImplStatement* impl = memory_alloc(sizeof(ImplStatement));

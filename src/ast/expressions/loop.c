@@ -29,6 +29,7 @@ NODISCARD Status for_loop_expression_create(Token               start_token,
                                             ForLoopExpression** for_expr,
                                             memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
+    ASSERT_EXPRESSION(block);
     assert(iterables.item_size == sizeof(Expression*));
     assert(captures.item_size == sizeof(ForLoopCapture));
 

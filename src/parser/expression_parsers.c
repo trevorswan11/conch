@@ -16,6 +16,7 @@
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
+#include "ast/expressions/index.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
@@ -123,12 +124,8 @@ NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression)
         PUT_STATUS_PROPAGATE(&p->errors, ILLEGAL_IDENTIFIER, start_token, {});
     }
 
-    char* mut_name = strdup_s_allocator(
-        start_token.slice.ptr, start_token.slice.length, p->allocator.memory_alloc);
-    if (!mut_name) {
-        return ALLOCATION_FAILED;
-    }
-    MutSlice name = mut_slice_from_str_z(mut_name);
+    MutSlice name;
+    TRY(slice_dupe(&name, &start_token.slice, p->allocator.memory_alloc));
 
     IdentifierExpression* ident;
     TRY_DO(identifier_expression_create(start_token, name, &ident, p->allocator.memory_alloc),
@@ -315,24 +312,24 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
     if (parser_peek_token_is(p, LBRACKET)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
-        TRY(array_list_init_allocator(&dim_array, 1, sizeof(uint64_t), p->allocator));
+        TRY(array_list_init_allocator(&dim_array, 1, sizeof(size_t), p->allocator));
 
         while (!parser_peek_token_is(p, RBRACKET) && !parser_peek_token_is(p, END)) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
             const Token integer_token = p->current_token;
 
-            if (!token_is_unsigned_integer(integer_token.type)) {
+            if (!token_is_size_integer(integer_token.type)) {
                 PUT_STATUS_PROPAGATE(&p->errors,
                                      UNEXPECTED_ARRAY_SIZE_TOKEN,
                                      integer_token,
                                      array_list_deinit(&dim_array));
             }
 
-            uint64_t dim;
-            TRY_DO(strntoull(integer_token.slice.ptr,
-                             integer_token.slice.length - 1,
-                             integer_token_to_base(integer_token.type),
-                             &dim),
+            size_t dim;
+            TRY_DO(strntouz(integer_token.slice.ptr,
+                            integer_token.slice.length - 2,
+                            integer_token_to_base(integer_token.type),
+                            &dim),
                    array_list_deinit(&dim_array));
 
             TRY_DO(array_list_push(&dim_array, &dim), array_list_deinit(&dim_array));
@@ -582,37 +579,42 @@ NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool*
     return SUCCESS;
 }
 
+#define INT_PARSE(T, t, N, parse_fn, create_fn)                                   \
+    t            value;                                                           \
+    const Status parse_status = parse_fn(start_token.slice.ptr, N, base, &value); \
+    if (STATUS_ERR(parse_status)) {                                               \
+        PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});          \
+    }                                                                             \
+                                                                                  \
+    T* integer;                                                                   \
+    TRY(create_fn(start_token, value, &integer, p->allocator.memory_alloc));      \
+    *expression = (Expression*)integer;
+
 NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
-    assert(start_token.slice.length > 0);
-    const int base = integer_token_to_base(start_token.type);
+    const int   base        = integer_token_to_base(start_token.type);
 
     if (token_is_signed_integer(start_token.type)) {
-        int64_t      value;
-        const Status parse_status =
-            strntoll(start_token.slice.ptr, start_token.slice.length, base, &value);
-        if (STATUS_ERR(parse_status)) {
-            PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
-        }
-
-        IntegerLiteralExpression* integer;
-        TRY(integer_literal_expression_create(
-            start_token, value, &integer, p->allocator.memory_alloc));
-
-        *expression = (Expression*)integer;
+        assert(start_token.slice.length > 0);
+        INT_PARSE(IntegerLiteralExpression,
+                  int64_t,
+                  start_token.slice.length,
+                  strntoll,
+                  integer_literal_expression_create);
     } else if (token_is_unsigned_integer(start_token.type)) {
-        uint64_t     value;
-        const Status parse_status =
-            strntoull(start_token.slice.ptr, start_token.slice.length - 1, base, &value);
-        if (STATUS_ERR(parse_status)) {
-            PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
-        }
-
-        UnsignedIntegerLiteralExpression* integer;
-        TRY(uinteger_literal_expression_create(
-            start_token, value, &integer, p->allocator.memory_alloc));
-
-        *expression = (Expression*)integer;
+        assert(start_token.slice.length > 1);
+        INT_PARSE(UnsignedIntegerLiteralExpression,
+                  uint64_t,
+                  start_token.slice.length - 1,
+                  strntoull,
+                  uinteger_literal_expression_create);
+    } else if (token_is_size_integer(start_token.type)) {
+        assert(start_token.slice.length > 2);
+        INT_PARSE(SizeIntegerLiteralExpression,
+                  size_t,
+                  start_token.slice.length - 2,
+                  strntouz,
+                  uzinteger_literal_expression_create);
     } else {
         return UNEXPECTED_TOKEN;
     }
@@ -876,6 +878,29 @@ NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expressi
            });
 
     *expression = (Expression*)call;
+    return SUCCESS;
+}
+
+NODISCARD Status index_expression_parse(Parser* p, Expression* array, Expression** expression) {
+    const Token start_token = p->current_token;
+    ASSERT_EXPRESSION(array);
+
+    if (parser_peek_token_is(p, RBRACE)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        PUT_STATUS_PROPAGATE(&p->errors, INDEX_MISSING_EXPRESSION, start_token, {});
+    }
+
+    TRY(parser_next_token(p));
+    Expression* idx_expr;
+    TRY(expression_parse(p, LOWEST, &idx_expr));
+
+    IndexExpression* index;
+    TRY_DO(index_expression_create(start_token, array, idx_expr, &index, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(idx_expr, p->allocator.free_alloc));
+
+    TRY_DO(parser_expect_peek(p, RBRACKET), NODE_VIRTUAL_FREE(index, p->allocator.free_alloc));
+
+    *expression = (Expression*)index;
     return SUCCESS;
 }
 
@@ -1167,7 +1192,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
     const Token start_token = p->current_token;
     TRY(parser_next_token(p));
 
-    uint64_t array_size;
+    size_t array_size;
     if (p->current_token.type == UNDERSCORE) {
         array_size = 0;
     } else {
@@ -1178,14 +1203,14 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
             PUT_STATUS_PROPAGATE(&p->errors, MISSING_ARRAY_SIZE_TOKEN, integer_token, {});
         }
 
-        if (!token_is_unsigned_integer(integer_token.type)) {
+        if (!token_is_size_integer(integer_token.type)) {
             PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_ARRAY_SIZE_TOKEN, integer_token, {});
         }
 
-        TRY(strntoull(integer_token.slice.ptr,
-                      integer_token.slice.length - 1,
-                      integer_token_to_base(integer_token.type),
-                      &array_size));
+        TRY(strntouz(integer_token.slice.ptr,
+                     integer_token.slice.length - 2,
+                     integer_token_to_base(integer_token.type),
+                     &array_size));
     }
 
     TRY(parser_expect_peek(p, RBRACKET));

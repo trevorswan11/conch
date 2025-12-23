@@ -12,8 +12,9 @@ NODISCARD Status if_expression_create(Token           start_token,
                                       Statement*      alternate,
                                       IfExpression**  if_expr,
                                       memory_alloc_fn memory_alloc) {
-    assert(condition && consequence);
     assert(memory_alloc);
+    ASSERT_EXPRESSION(condition);
+    ASSERT_EXPRESSION(consequence);
 
     IfExpression* if_local = memory_alloc(sizeof(IfExpression));
     if (!if_local) {

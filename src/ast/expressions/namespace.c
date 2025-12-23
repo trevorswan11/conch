@@ -14,7 +14,8 @@ NODISCARD Status namespace_expression_create(Token                 start_token,
                                              NamespaceExpression** namespace_expr,
                                              memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
-    assert(outer && inner);
+    ASSERT_EXPRESSION(outer);
+    ASSERT_EXPRESSION(inner);
 
     NamespaceExpression* namespace_local = memory_alloc(sizeof(NamespaceExpression));
     if (!namespace_local) {

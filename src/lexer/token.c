@@ -56,12 +56,12 @@ bool misc_token_type_from_char(char c, TokenType* t) {
 }
 
 bool token_is_integer(TokenType t) {
-    return token_is_signed_integer(t) || token_is_unsigned_integer(t);
+    return token_is_signed_integer(t) || token_is_unsigned_integer(t) || token_is_size_integer(t);
 }
 
 bool token_is_signed_integer(TokenType t) { return INT_2 <= t && t <= INT_16; }
-
 bool token_is_unsigned_integer(TokenType t) { return UINT_2 <= t && t <= UINT_16; }
+bool token_is_size_integer(TokenType t) { return UZINT_2 <= t && t <= UZINT_16; }
 
 Token token_init(TokenType t, const char* str, size_t length, size_t line, size_t col) {
     return (Token){
@@ -121,15 +121,19 @@ Base integer_token_to_base(TokenType type) {
     switch (type) {
     case INT_2:
     case UINT_2:
+    case UZINT_2:
         return BINARY;
     case INT_8:
     case UINT_8:
+    case UZINT_8:
         return OCTAL;
     case INT_10:
     case UINT_10:
+    case UZINT_10:
         return DECIMAL;
     case INT_16:
     case UINT_16:
+    case UZINT_16:
         return HEXADECIMAL;
     default:
         UNREACHABLE_IF(!token_is_integer(type));

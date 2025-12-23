@@ -54,7 +54,7 @@ NODISCARD Status array_literal_expression_reconstruct(Node*          node,
         TRY(string_builder_append(sb, '_'));
     } else {
         TRY(string_builder_append_unsigned(sb, (uint64_t)array->items.length));
-        TRY(string_builder_append(sb, 'u'));
+        TRY(string_builder_append_str_z(sb, "uz"));
     }
     TRY(string_builder_append_str_z(sb, "]{ "));
 

@@ -34,12 +34,16 @@ TEST_CASE("Declaration reconstructions") {
     }
 
     SECTION("Array types") {
-        test_reconstruction("var a: [2u]int;", "var a: [2u]int;");
-        test_reconstruction("var a: [2u]int = [_]{};", "var a: [2u]int = [_]{ };");
-        test_reconstruction("var a: ?[2u]int = [_]{};", "var a: ?[2u]int = [_]{ };");
-        test_reconstruction("var a: [2u]?int = [_]{};", "var a: [2u]?int = [_]{ };");
-        test_reconstruction("var a: [2u, 2u]int = [_]{};", "var a: [2u, 2u]int = [_]{ };");
-        test_reconstruction("var a: [2u]int = [0b10u]{2, 3, };", "var a: [2u]int = [2u]{ 2, 3, };");
+        test_reconstruction("var a: [2uz]int;", "var a: [2uz]int;");
+        test_reconstruction("var a: [2uz]int = [_]{};", "var a: [2uz]int = [_]{ };");
+        test_reconstruction("var a: ?[2uz]int = [_]{};", "var a: ?[2uz]int = [_]{ };");
+        test_reconstruction("var a: [2uz]?int = [_]{};", "var a: [2uz]?int = [_]{ };");
+        test_reconstruction("var a: [2uz, 2uz]int = [_]{};", "var a: [2uz, 2uz]int = [_]{ };");
+        test_reconstruction("var a: [2uz]int = [0b10uz]{2, 3, };",
+                            "var a: [2uz]int = [2uz]{ 2, 3, };");
+        test_reconstruction("const a := a..3u;", "const a := a..3u;");
+        test_reconstruction("const a := a..=3uz;", "const a := a..=3uz;");
+        test_reconstruction("a[3uz]", "a[3uz]");
     }
 
     SECTION("Type declarations") {

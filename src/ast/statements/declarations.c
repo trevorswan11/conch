@@ -29,7 +29,8 @@ NODISCARD Status decl_statement_create(Token                 start_token,
                                        memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
-    assert(type);
+    ASSERT_EXPRESSION(ident);
+    ASSERT_EXPRESSION(type);
     assert(start_token.type == CONST || start_token.type == VAR);
 
     // We really can't allow the type to be a typeof expression
@@ -45,6 +46,8 @@ NODISCARD Status decl_statement_create(Token                 start_token,
         } else if (start_token.type == VAR && type->tag == IMPLICIT) {
             return FORWARD_VAR_DECL_MISSING_TYPE;
         }
+    } else {
+        ASSERT_EXPRESSION(value);
     }
 
     DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));

@@ -236,10 +236,10 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
 
         ArrayListIterator it =
             array_list_iterator_init(&explicit_type.variant.array_type.dimensions);
-        uint64_t dim;
+        size_t dim;
         while (array_list_iterator_has_next(&it, &dim)) {
-            TRY(string_builder_append_unsigned(sb, dim));
-            TRY(string_builder_append(sb, 'u'));
+            TRY(string_builder_append_unsigned(sb, (uint64_t)dim));
+            TRY(string_builder_append_str_z(sb, "uz"));
 
             if (!array_list_iterator_exhausted(&it)) {
                 TRY(string_builder_append_str_z(sb, ", "));
@@ -255,6 +255,7 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         if (inner_explicit_type.nullable) {
             TRY(string_builder_append(sb, '?'));
         }
+
         TRY(explicit_type_reconstruct(inner_explicit_type, symbol_map, sb));
         break;
     }

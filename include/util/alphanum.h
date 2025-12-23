@@ -51,6 +51,15 @@ NODISCARD Status strntoll(const char* str, size_t n, Base base, int64_t* value);
 // - Non-decimal digits have their prefix.
 NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value);
 
+// Returns the size form of the input string. Case insensitive.
+//
+// Invariants:
+// - The string is at least length n.
+// - The characters are valid for the given base.
+// - The requested integer is not a negative value.
+// - Non-decimal digits have their prefix.
+NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value);
+
 // Returns the double precision floating point form of the input string.
 NODISCARD Status strntod(const char*     str,
                          size_t          n,

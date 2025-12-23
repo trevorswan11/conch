@@ -14,6 +14,7 @@ NODISCARD Status float_literal_expression_create(Token                    start_
                                                  memory_alloc_fn          memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
+
     FloatLiteralExpression* float_local = memory_alloc(sizeof(FloatLiteralExpression));
     if (!float_local) {
         return ALLOCATION_FAILED;

@@ -69,6 +69,19 @@ NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
         STYPE_UNSIGNED_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
 
+NODISCARD Status uzinteger_literal_expression_create(Token                          start_token,
+                                                     size_t                         value,
+                                                     SizeIntegerLiteralExpression** int_expr,
+                                                     memory_alloc_fn                memory_alloc) {
+    INTEGER_EXPR_CREATE(SizeIntegerLiteralExpression, UZINTEGER_VTABLE, int_expr);
+}
+
+NODISCARD Status uzinteger_literal_expression_analyze(Node*            node,
+                                                      SemanticContext* parent,
+                                                      ArrayList*       errors) {
+    PRIMITIVE_ANALYZE(STYPE_SIZE_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
+}
+
 NODISCARD Status byte_literal_expression_create(Token                   start_token,
                                                 uint8_t                 value,
                                                 ByteLiteralExpression** byte_expr,

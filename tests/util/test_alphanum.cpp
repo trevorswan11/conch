@@ -98,6 +98,23 @@ TEST_CASE("Unsigned integer from string") {
     REQUIRE(test_value == 342391);
 }
 
+TEST_CASE("Size type from string") {
+    size_t test_value;
+    REQUIRE(STATUS_OK(strntouz("1023", 4, Base::DECIMAL, &test_value)));
+    REQUIRE(test_value == 1023);
+
+    REQUIRE(strntouz("0x10000000000000000", 19, Base::HEXADECIMAL, &test_value) ==
+            Status::SIZE_OVERFLOW);
+    REQUIRE(STATUS_OK(strntouz("0xFF", 4, Base::HEXADECIMAL, &test_value)));
+    REQUIRE(test_value == 0xFF);
+
+    REQUIRE(STATUS_OK(strntouz("0b10011101101", 13, Base::BINARY, &test_value)));
+    REQUIRE(test_value == 0b10011101101);
+
+    REQUIRE(STATUS_OK(strntouz("0o1234567", 9, Base::OCTAL, &test_value)));
+    REQUIRE(test_value == 342391);
+}
+
 TEST_CASE("Double from string") {
     double test_value;
     REQUIRE(STATUS_OK(strntod("1023", 4, &test_value, malloc, free)));

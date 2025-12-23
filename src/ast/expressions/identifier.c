@@ -12,7 +12,8 @@ NODISCARD Status identifier_expression_create(Token                  start_token
                                               IdentifierExpression** ident_expr,
                                               memory_alloc_fn        memory_alloc) {
     assert(memory_alloc);
-    assert(start_token.slice.ptr);
+    assert(start_token.slice.ptr && start_token.slice.length > 0);
+
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
     if (!ident) {
         return ALLOCATION_FAILED;

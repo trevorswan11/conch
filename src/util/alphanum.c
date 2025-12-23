@@ -54,6 +54,10 @@ NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value
     PARSE_INT_STR(uint64_t, UINT64_MAX, UNSIGNED_INTEGER_OVERFLOW);
 }
 
+NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value) {
+    PARSE_INT_STR(size_t, SIZE_MAX, SIZE_OVERFLOW);
+}
+
 NODISCARD Status strntod(const char*     str,
                          size_t          n,
                          double*         value,

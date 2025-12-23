@@ -191,13 +191,17 @@ TEST_CASE("Numbers and lexer consumer resets") {
     }
 
     SECTION("Unsigned integer variants") {
-        const char* input = "0b1010u 0o17u 0O17u 42u 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou";
+        const char* input =
+            "0b1010u 0b1010uz 0o17u 0o17uz 0O17u 42u 42UZ 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::UINT_2, "0b1010u"},
+            {TokenType::UZINT_2, "0b1010uz"},
             {TokenType::UINT_8, "0o17u"},
+            {TokenType::UZINT_8, "0o17uz"},
             {TokenType::UINT_8, "0O17u"},
             {TokenType::UINT_10, "42u"},
+            {TokenType::UZINT_10, "42UZ"},
             {TokenType::UINT_16, "0x2AU"},
             {TokenType::UINT_16, "0X2Au"},
             {TokenType::UINT_10, "123u"},
@@ -277,7 +281,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
 
 TEST_CASE("Advanced next token") {
     SECTION("Keywords") {
-        const char* input = "struct true false and or orelse enum nil is int uint float impl";
+        const char* input = "struct true false and or orelse enum nil is int uint size float impl";
 
         std::vector<ExpectedToken> expecteds = {
             {TokenType::STRUCT, "struct"},
@@ -291,6 +295,7 @@ TEST_CASE("Advanced next token") {
             {TokenType::IS, "is"},
             {TokenType::INT_TYPE, "int"},
             {TokenType::UINT_TYPE, "uint"},
+            {TokenType::SIZE_TYPE, "size"},
             {TokenType::FLOAT_TYPE, "float"},
             {TokenType::IMPL, "impl"},
             {TokenType::END, ""},

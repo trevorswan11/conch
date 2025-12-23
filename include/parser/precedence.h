@@ -5,7 +5,7 @@
 #define FOREACH_PRECEDENCE(PROCESS)                                                                \
     PROCESS(LOWEST), PROCESS(BOOL_EQUIV), PROCESS(BOOL_LT_GT), PROCESS(ADD_SUB), PROCESS(MUL_DIV), \
         PROCESS(EXPONENT), PROCESS(PREFIX), PROCESS(RANGE), PROCESS(ASSIGNMENT),                   \
-        PROCESS(NAMESPACE), PROCESS(CALL)
+        PROCESS(NAMESPACE), PROCESS(CALL_IDX)
 
 typedef enum Precedence {
     FOREACH_PRECEDENCE(ENUMERATE),
@@ -46,7 +46,8 @@ static const PrecedencePair PRECEDENCE_PAIRS[] = {
     {XOR, ADD_SUB},
     {SHR, MUL_DIV},
     {SHL, MUL_DIV},
-    {LPAREN, CALL},
+    {LPAREN, CALL_IDX},
+    {LBRACKET, CALL_IDX},
     {DOT_DOT, RANGE},
     {DOT_DOT_EQ, RANGE},
     {ASSIGN, ASSIGNMENT},

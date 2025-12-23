@@ -39,6 +39,8 @@ TEST_CASE("Primitive declarations") {
         const char* inputs[] = {
             "const v: int = 3;",
             "const v: uint = 3u;",
+            "const v: size = 5uz;",
+            "const v: ?size = nil;",
             "const v: string = \"3\";",
             "const v: byte = '3';",
             "const v: bool = true;",
@@ -56,6 +58,8 @@ TEST_CASE("Primitive declarations") {
         const char* inputs[] = {
             "const v: uint = 3;",
             "const v: int = 3u;",
+            "const v: ?size = 3u;",
+            "const v: size = 3u;",
             "const v: byte = \"3\";",
             "const v: string = '3';",
             "const v: float = true;",
@@ -75,6 +79,7 @@ TEST_CASE("Assignment expressions") {
             const char* inputs[] = {
                 "var v := 3; v = 5",
                 "var v := 3u; v = 6u",
+                "var v := 3uz; v = 6uz",
                 "var v := \"3\"; v = \"woah\"",
                 "var v := '3'; v = '\\0'",
                 "var v := true; v = false",
@@ -168,6 +173,7 @@ TEST_CASE("Type aliases") {
         const char* inputs[] = {
             "type custom = int; const v: custom = 3;",
             "type custom = uint; const v: custom = 3u;",
+            "type custom = size; const v: custom = 3uz;",
             "type custom = string; const v: custom = \"3\";",
             "type custom = byte; const v: custom = '3';",
             "type custom = bool; const v: custom = true;",
@@ -320,6 +326,15 @@ TEST_CASE("Infix operators") {
         test_analyze("var v: uint = 3u ** 4u; v = 45u");
     }
 
+    SECTION("Range and in expressions") {
+        test_analyze("3..4");
+        test_analyze("3u..4u");
+        test_analyze("3uz..4uz");
+        test_analyze("3uz..=4uz");
+        test_analyze("const a: int = 5; const b: int = 34; a..=b");
+        test_analyze("3 in 5..6");
+    }
+
     SECTION("Orelse expressions") {
         test_analyze("const a: ?int = 3; var b: int = a orelse 6");
         test_analyze("const a: ?uint = 3u; var b: uint = a orelse 6u");
@@ -328,6 +343,7 @@ TEST_CASE("Infix operators") {
     SECTION("Error cases") {
         test_analyze("type a = int; type b = uint; a + b",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 30]"});
+        test_analyze("type a = uint; 4 + a", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 16]"});
         test_analyze("const a: string = \"Hello\"; const b: ?int = 3; a + b",
                      {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 47]"});
         test_analyze("const a: ?string = \"Hello\"; const b: int = 3; a + b",
@@ -341,6 +357,7 @@ TEST_CASE("Infix operators") {
         test_analyze("const a := 3u; const b: uint = 5u; const c: int = a * b",
                      {"TYPE_MISMATCH [Ln 1, Col 36]"});
         test_analyze("3.34 % 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3.34 ** 4", {"TYPE_MISMATCH [Ln 1, Col 1]"});
         test_analyze("3 % 4.45", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3.23 % 4.45", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3.23 orelse 4.45", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
@@ -354,6 +371,31 @@ TEST_CASE("Infix operators") {
         test_analyze("7u and 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("type a = enum { ONE, }; const b: a = a::ONE; b == 4",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 46]"});
+        test_analyze("\"tre\" < \"vor\"", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3 < 4.3", {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        test_analyze("3.3..=4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3..=4.3", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze("3..=4u", {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        test_analyze("4 in 3u..=4u", {"TYPE_MISMATCH [Ln 1, Col 1]"});
+        test_analyze("type a = enum { A, }; a::A in 3u..=4u",
+                     {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 23]"});
+        test_analyze("3 in 4", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});
+    }
+}
+
+TEST_CASE("Indexing") {
+    SECTION("Range Expressions") {
+        test_analyze("const a := 3..60; const b := 20uz; a[b]");
+        test_analyze("const a := 3..6; const b: int = a[2uz]");
+        test_analyze("const a := 3u..=6u; var b: ?uint = a[3uz]");
+    }
+
+    SECTION("Incorrect indexing") {
+        test_analyze("3[4]", {"NON_ARRAY_INDEX_TARGET [Ln 1, Col 2]"});
+        test_analyze("const a := 3..6; const b: int = a[2u]",
+                     {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
+        test_analyze("const a := 3..6; const b: int = a[2]",
+                     {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
     }
 }
 

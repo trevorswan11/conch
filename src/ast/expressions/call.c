@@ -28,6 +28,7 @@ NODISCARD Status call_expression_create(Token            start_token,
                                         memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
     assert(arguments.item_size == sizeof(CallArgument));
+    ASSERT_EXPRESSION(function);
 
     CallExpression* call = memory_alloc(sizeof(CallExpression));
     if (!call) {

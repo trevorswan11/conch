@@ -15,7 +15,8 @@ NODISCARD Status assignment_expression_create(Token                  start_token
                                               AssignmentExpression** assignment_expr,
                                               memory_alloc_fn        memory_alloc) {
     assert(memory_alloc);
-    assert(lhs && rhs);
+    ASSERT_EXPRESSION(lhs);
+    ASSERT_EXPRESSION(rhs);
 
     AssignmentExpression* assign = memory_alloc(sizeof(AssignmentExpression));
     if (!assign) {

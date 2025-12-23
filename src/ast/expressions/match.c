@@ -27,9 +27,9 @@ NODISCARD Status match_expression_create(Token             start_token,
                                          MatchExpression** match_expr,
                                          memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
+    ASSERT_EXPRESSION(expression);
     assert(arms.item_size == sizeof(MatchArm));
     assert(arms.length > 0);
-    assert(expression);
 
     MatchExpression* match = memory_alloc(sizeof(MatchExpression));
     if (!match) {

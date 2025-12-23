@@ -16,7 +16,7 @@ NODISCARD Status prefix_expression_create(Token              start_token,
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(start_token.type == BANG || start_token.type == NOT || start_token.type == MINUS);
-    assert(rhs);
+    ASSERT_EXPRESSION(rhs);
 
     PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
     if (!prefix) {

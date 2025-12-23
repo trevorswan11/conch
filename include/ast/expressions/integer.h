@@ -56,6 +56,29 @@ static const ExpressionVTable UINTEGER_VTABLE = {
         },
 };
 
+typedef struct SizeIntegerLiteralExpression {
+    Expression base;
+    size_t     value;
+} SizeIntegerLiteralExpression;
+
+NODISCARD Status uzinteger_literal_expression_create(Token                          start_token,
+                                                     size_t                         value,
+                                                     SizeIntegerLiteralExpression** int_expr,
+                                                     memory_alloc_fn                memory_alloc);
+
+NODISCARD Status uzinteger_literal_expression_analyze(Node*            node,
+                                                      SemanticContext* parent,
+                                                      ArrayList*       errors);
+
+static const ExpressionVTable UZINTEGER_VTABLE = {
+    .base =
+        {
+            .destroy     = integer_expression_destroy,
+            .reconstruct = integer_expression_reconstruct,
+            .analyze     = uzinteger_literal_expression_analyze,
+        },
+};
+
 typedef struct ByteLiteralExpression {
     Expression base;
     uint8_t    value;

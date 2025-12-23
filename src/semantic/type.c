@@ -21,6 +21,7 @@ bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag) {
             switch (ALL_PRIMITIVES[i].type) {
                 PRIMITIVE_CASE(INT_TYPE, STYPE_SIGNED_INTEGER)
                 PRIMITIVE_CASE(UINT_TYPE, STYPE_UNSIGNED_INTEGER)
+                PRIMITIVE_CASE(SIZE_TYPE, STYPE_SIZE_INTEGER)
                 PRIMITIVE_CASE(FLOAT_TYPE, STYPE_FLOATING_POINT)
                 PRIMITIVE_CASE(BYTE_TYPE, STYPE_BYTE_INTEGER)
                 PRIMITIVE_CASE(STRING_TYPE, STYPE_STR)
@@ -41,6 +42,7 @@ bool semantic_type_is_primitive(SemanticType* type) {
     switch (type->tag) {
     case STYPE_SIGNED_INTEGER:
     case STYPE_UNSIGNED_INTEGER:
+    case STYPE_SIZE_INTEGER:
     case STYPE_FLOATING_POINT:
     case STYPE_BYTE_INTEGER:
     case STYPE_STR:
@@ -56,6 +58,7 @@ bool semantic_type_is_arithmetic(SemanticType* type) {
     switch (type->tag) {
     case STYPE_SIGNED_INTEGER:
     case STYPE_UNSIGNED_INTEGER:
+    case STYPE_SIZE_INTEGER:
     case STYPE_FLOATING_POINT:
         return !type->nullable;
     default:
@@ -63,18 +66,74 @@ bool semantic_type_is_arithmetic(SemanticType* type) {
     }
 }
 
+bool semantic_type_is_integer(SemanticType* type) {
+    assert(type);
+    switch (type->tag) {
+    case STYPE_SIGNED_INTEGER:
+    case STYPE_UNSIGNED_INTEGER:
+    case STYPE_SIZE_INTEGER:
+        return !type->nullable;
+    default:
+        return false;
+    }
+}
+
+NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
+                                       SemanticArrayUnion  variant,
+                                       SemanticType*       inner_type,
+                                       SemanticArrayType** array_type,
+                                       memory_alloc_fn     memory_alloc) {
+    assert(inner_type);
+    assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.length > 1 : true);
+    assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
+
+    SemanticArrayType* sema_array = memory_alloc(sizeof(SemanticArrayType));
+    if (!sema_array) {
+        return ALLOCATION_FAILED;
+    }
+
+    *sema_array = (SemanticArrayType){
+        .rc_control = rc_init(semantic_array_destroy),
+        .tag        = tag,
+        .variant    = variant,
+        .inner_type = inner_type,
+    };
+
+    *array_type = sema_array;
+    return SUCCESS;
+}
+
+void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
+    if (!array_type) {
+        return;
+    }
+    assert(free_alloc);
+
+    SemanticArrayType* sema_array = (SemanticArrayType*)array_type;
+    if (sema_array->tag == STYPE_ARRAY_MULTI_DIM) {
+        array_list_deinit(&sema_array->variant.dimensions);
+    }
+
+    RC_RELEASE(sema_array->inner_type, free_alloc);
+}
+
 NODISCARD Status semantic_enum_create(Slice              name,
                                       HashSet            variants,
                                       SemanticEnumType** enum_type,
                                       memory_alloc_fn    memory_alloc) {
+    assert(memory_alloc);
     assert(variants.header->key_size == sizeof(MutSlice));
+
     SemanticEnumType* type_variant = memory_alloc(sizeof(SemanticEnumType));
     if (!type_variant) {
         return ALLOCATION_FAILED;
     }
 
     *type_variant = (SemanticEnumType){
-        .rc_control = rc_init(semantic_enum_destroy), .type_name = name, .variants = variants};
+        .rc_control = rc_init(semantic_enum_destroy),
+        .type_name  = name,
+        .variants   = variants,
+    };
 
     *enum_type = type_variant;
     return SUCCESS;
@@ -105,6 +164,8 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
 }
 
 NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
+    assert(memory_alloc);
+
     SemanticType* empty_type = memory_alloc(sizeof(SemanticType));
     if (!empty_type) {
         return ALLOCATION_FAILED;
@@ -129,7 +190,10 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
 
     switch (src->tag) {
     case STYPE_ENUM:
-        dest->variant.enum_type = (SemanticEnumType*)rc_retain(src->variant.enum_type);
+        dest->variant.enum_type = rc_retain(src->variant.enum_type);
+        break;
+    case STYPE_ARRAY:
+        dest->variant.array_type = rc_retain(src->variant.array_type);
         break;
     default:
         dest->variant = src->variant;
@@ -163,6 +227,9 @@ void semantic_type_destroy(void* stype, free_alloc_fn free_alloc) {
     switch (type->tag) {
     case STYPE_ENUM:
         RC_RELEASE(type->variant.enum_type, free_alloc);
+        break;
+    case STYPE_ARRAY:
+        RC_RELEASE(type->variant.array_type, free_alloc);
         break;
     default:
         break;
@@ -206,7 +273,7 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
             return false;
         }
 
-        // The hash sets are equal if they are the same size and one is a subset of the other
+        // Hash sets are equal if they are the same size and one is a perfect subset of the other
         if (lhs_enum->variants.size != rhs_enum->variants.size) {
             return false;
         }

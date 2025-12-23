@@ -12,8 +12,9 @@
     PROCESS(END),                                                                                 \
                                                                                                   \
         PROCESS(IDENT), PROCESS(INT_2), PROCESS(INT_8), PROCESS(INT_10), PROCESS(INT_16),         \
-        PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(FLOAT),     \
-        PROCESS(STRING), PROCESS(CHARACTER),                                                      \
+        PROCESS(UINT_2), PROCESS(UINT_8), PROCESS(UINT_10), PROCESS(UINT_16), PROCESS(UZINT_2),   \
+        PROCESS(UZINT_8), PROCESS(UZINT_10), PROCESS(UZINT_16), PROCESS(FLOAT), PROCESS(STRING),  \
+        PROCESS(CHARACTER),                                                                       \
                                                                                                   \
         PROCESS(ASSIGN), PROCESS(WALRUS), PROCESS(PLUS), PROCESS(MINUS), PROCESS(STAR),           \
         PROCESS(STAR_STAR), PROCESS(SLASH), PROCESS(PERCENT), PROCESS(BANG), PROCESS(WHAT),       \
@@ -43,8 +44,8 @@
         PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
         PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE), PROCESS(DO), PROCESS(AS), \
                                                                                                   \
-        PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(BYTE_TYPE), PROCESS(FLOAT_TYPE),           \
-        PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),                             \
+        PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(SIZE_TYPE), PROCESS(BYTE_TYPE),            \
+        PROCESS(FLOAT_TYPE), PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),        \
                                                                                                   \
         PROCESS(ILLEGAL)
 
@@ -71,6 +72,7 @@ bool misc_token_type_from_char(char c, TokenType* t);
 bool token_is_integer(TokenType t);
 bool token_is_signed_integer(TokenType t);
 bool token_is_unsigned_integer(TokenType t);
+bool token_is_size_integer(TokenType t);
 
 // A stack allocated Token that does not own its string literal.
 //

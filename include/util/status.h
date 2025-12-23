@@ -133,7 +133,9 @@ void debug_print(const char* format, ...);
         PROCESS(NON_VALUED_DECL_VALUE), PROCESS(ILLEGAL_OUTER_NAMESPACE), PROCESS(ANONYMOUS_ENUM), \
         PROCESS(REDUNDANT_TYPE_INTROSPECTION), PROCESS(ILLEGAL_DECL_CONSTRUCT),                    \
         PROCESS(ILLEGAL_PREFIX_OPERAND), PROCESS(ILLEGAL_LHS_INFIX_OPERAND),                       \
-        PROCESS(ILLEGAL_RHS_INFIX_OPERAND), PROCESS(NON_ARTITHMETIC_TYPES)
+        PROCESS(ILLEGAL_RHS_INFIX_OPERAND), PROCESS(NON_ARTITHMETIC_TYPES),                        \
+        PROCESS(UNEXPECTED_ARRAY_INDEX_TYPE), PROCESS(INDEX_MISSING_EXPRESSION),                   \
+        PROCESS(NON_ARRAY_INDEX_TARGET)
 
 typedef enum Status {
     FOREACH_STATUS(ENUMERATE),
@@ -176,4 +178,4 @@ NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb)
 #define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                     \
     IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \
     cleanup;                                                                   \
-    return status;
+    return status

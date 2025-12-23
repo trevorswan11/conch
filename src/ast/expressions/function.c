@@ -65,10 +65,12 @@ NODISCARD Status function_expression_create(Token                start_token,
                                             BlockStatement*      body,
                                             FunctionExpression** function_expr,
                                             memory_alloc_fn      memory_alloc) {
-    assert(return_type && body);
-    assert(parameters.item_size == sizeof(Parameter));
-
     assert(memory_alloc);
+    assert(generics.item_size == sizeof(Expression*));
+    assert(parameters.item_size == sizeof(Parameter));
+    ASSERT_EXPRESSION(return_type);
+    ASSERT_STATEMENT(body);
+
     FunctionExpression* func = memory_alloc(sizeof(FunctionExpression));
     if (!func) {
         return ALLOCATION_FAILED;

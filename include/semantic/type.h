@@ -2,9 +2,8 @@
 
 #include <stdbool.h>
 
+#include "util/containers/array_list.h"
 #include "util/containers/hash_set.h"
-#include "util/memory.h"
-#include "util/status.h"
 
 typedef struct SemanticType SemanticType;
 
@@ -16,29 +15,31 @@ typedef struct SemanticType SemanticType;
     name->variant  = SEMANTIC_DATALESS_TYPE;                \
     name->is_const = true;                                  \
     name->valued   = true;                                  \
-    name->nullable = N;
+    name->nullable = N
 
-#define PRIMITIVE_ANALYZE(T, N, A)    \
-    ASSERT_EXPRESSION(node);          \
-    assert(parent);                   \
-    assert(errors);                   \
-    MAYBE_UNUSED(node);               \
-    MAYBE_UNUSED(errors);             \
-    MAKE_PRIMITIVE(T, N, type, A, {}) \
-                                      \
-    parent->analyzed_type = type;     \
+#define PRIMITIVE_ANALYZE(T, N, A)     \
+    ASSERT_EXPRESSION(node);           \
+    assert(parent);                    \
+    assert(errors);                    \
+    MAYBE_UNUSED(node);                \
+    MAYBE_UNUSED(errors);              \
+    MAKE_PRIMITIVE(T, N, type, A, {}); \
+                                       \
+    parent->analyzed_type = type;      \
     return SUCCESS
 
 typedef enum {
     STYPE_IMPLICIT_DECLARATION,
     STYPE_SIGNED_INTEGER,
     STYPE_UNSIGNED_INTEGER,
+    STYPE_SIZE_INTEGER,
     STYPE_FLOATING_POINT,
     STYPE_BYTE_INTEGER,
     STYPE_STR,
     STYPE_BOOL,
     STYPE_VOID,
     STYPE_NIL,
+    STYPE_ARRAY,
     STYPE_ENUM,
 } SemanticTypeTag;
 
@@ -53,9 +54,39 @@ bool semantic_type_is_primitive(SemanticType* type);
 // Checks if a type is trivially arithmetic (i.e not nullable or a byte)
 bool semantic_type_is_arithmetic(SemanticType* type);
 
+// Checks if a type is a non-nullable integer (byte included)
+bool semantic_type_is_integer(SemanticType* type);
+
 typedef struct {
     char _;
 } SematicDatalessType;
+
+typedef enum {
+    STYPE_ARRAY_SINGLE_DIM,
+    STYPE_ARRAY_MULTI_DIM,
+    STYPE_ARRAY_RANGE,
+} SemanticArrayTag;
+
+typedef union {
+    size_t    length;
+    ArrayList dimensions;
+    bool      inclusive;
+} SemanticArrayUnion;
+
+typedef struct {
+    RcControlBlock rc_control;
+
+    SemanticArrayTag   tag;
+    SemanticArrayUnion variant;
+    SemanticType*      inner_type;
+} SemanticArrayType;
+
+NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
+                                       SemanticArrayUnion  variant,
+                                       SemanticType*       inner_type,
+                                       SemanticArrayType** array_type,
+                                       memory_alloc_fn     memory_alloc);
+void             semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
 
 typedef struct {
     RcControlBlock rc_control;
@@ -73,10 +104,11 @@ void             semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc
 
 typedef union {
     SematicDatalessType dataless_type;
+    SemanticArrayType*  array_type;
     SemanticEnumType*   enum_type;
 } SemanticTypeUnion;
 
-static const SemanticTypeUnion SEMANTIC_DATALESS_TYPE = {.dataless_type = {'\0'}};
+static const SemanticTypeUnion SEMANTIC_DATALESS_TYPE = {.dataless_type = {0}};
 
 typedef struct SemanticType {
     RcControlBlock rc_control;

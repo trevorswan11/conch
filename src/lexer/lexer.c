@@ -347,9 +347,10 @@ Token lexer_read_number(Lexer* l) {
         if (!is_hex && !is_bin && !is_oct && c == '.') {
             if (l->peek_position < l->input_length && l->input[l->peek_position] == '.') {
                 break;
-            }
-            if (passed_decimal)
+            } else if (passed_decimal) {
                 break;
+            }
+
             passed_decimal = true;
             lexer_read_char(l);
             continue;
@@ -373,19 +374,28 @@ Token lexer_read_number(Lexer* l) {
     }
 
     bool has_unsigned_suffix = false;
+    bool has_size_suffix     = false;
     if (!(passed_decimal || passed_exponent) && l->position < l->input_length) {
         char c = l->current_byte;
         if (c == 'u' || c == 'U') {
             has_unsigned_suffix = true;
             lexer_read_char(l);
+
+            c = l->current_byte;
+            if (c == 'z' || c == 'Z') {
+                has_unsigned_suffix = false;
+                has_size_suffix     = true;
+                lexer_read_char(l);
+            }
         }
     }
 
     // Total validation
     const size_t length = l->position - start;
     TokenType    type   = ILLEGAL;
-    if (length == 0)
+    if (length == 0) {
         return token_init(type, &l->input[start], 1, start_line, start_col);
+    }
 
     if (l->input[l->position - 1] == '.') {
         return token_init(type, &l->input[start], length, start_line, start_col);
@@ -400,13 +410,13 @@ Token lexer_read_number(Lexer* l) {
         type = FLOAT;
     } else {
         if (is_hex) {
-            type = has_unsigned_suffix ? UINT_16 : INT_16;
+            type = has_unsigned_suffix ? UINT_16 : (has_size_suffix ? UZINT_16 : INT_16);
         } else if (is_bin) {
-            type = has_unsigned_suffix ? UINT_2 : INT_2;
+            type = has_unsigned_suffix ? UINT_2 : (has_size_suffix ? UZINT_2 : INT_2);
         } else if (is_oct) {
-            type = has_unsigned_suffix ? UINT_8 : INT_8;
+            type = has_unsigned_suffix ? UINT_8 : (has_size_suffix ? UZINT_8 : INT_8);
         } else {
-            type = has_unsigned_suffix ? UINT_10 : INT_10;
+            type = has_unsigned_suffix ? UINT_10 : (has_size_suffix ? UZINT_10 : INT_10);
         }
     }
 

@@ -12,6 +12,7 @@ NODISCARD Status bool_literal_expression_create(Token                   start_to
                                                 memory_alloc_fn         memory_alloc) {
     assert(memory_alloc);
     assert(start_token.type == TRUE || start_token.type == FALSE);
+
     BoolLiteralExpression* bool_local = memory_alloc(sizeof(BoolLiteralExpression));
     if (!bool_local) {
         return ALLOCATION_FAILED;

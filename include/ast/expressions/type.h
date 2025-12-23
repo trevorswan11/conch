@@ -9,6 +9,7 @@
 static const Keyword ALL_PRIMITIVES[] = {
     KEYWORD_INT,
     KEYWORD_UINT,
+    KEYWORD_SIZE,
     KEYWORD_FLOAT,
     KEYWORD_BYTE,
     KEYWORD_STRING,

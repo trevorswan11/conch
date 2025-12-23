@@ -26,6 +26,7 @@ extern "C" {
 #include "ast/expressions/function.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/if.h"
+#include "ast/expressions/index.h"
 #include "ast/expressions/infix.h"
 #include "ast/expressions/integer.h"
 #include "ast/expressions/loop.h"
@@ -305,20 +306,35 @@ TEST_CASE("Jump statements") {
 }
 
 TEST_CASE("Identifier Expressions") {
-    SECTION("Single arbitrary identifier") {
-        const char*   input = "foobar;";
-        ParserFixture pf(input);
-        pf.check_errors();
+    const char*   input = "foobar;";
+    ParserFixture pf(input);
+    pf.check_errors();
 
-        auto ast = pf.ast();
-        REQUIRE(ast->statements.length == 1);
+    auto ast = pf.ast();
+    REQUIRE(ast->statements.length == 1);
 
-        Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    Statement* stmt;
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        test_identifier_expression(expr_stmt->expression, "foobar");
-    }
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+    test_identifier_expression(expr_stmt->expression, "foobar");
+}
+
+TEST_CASE("Index expression") {
+    const char*   input = "foo[bar]";
+    ParserFixture pf(input);
+    pf.check_errors();
+
+    auto ast = pf.ast();
+    REQUIRE(ast->statements.length == 1);
+
+    Statement* stmt;
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+
+    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+    IndexExpression*     index     = (IndexExpression*)expr_stmt->expression;
+    test_identifier_expression(index->array, "foo");
+    test_identifier_expression(index->idx, "bar");
 }
 
 TEST_CASE("Number-based expressions") {
@@ -1665,8 +1681,8 @@ TEST_CASE("Array expressions") {
 
     SECTION("Correct int arrays") {
         const char* inputs[] = {
-            "[1u]{1,}",
-            "[0b11u]{1, 2, 3, }",
+            "[1uz]{1,}",
+            "[0b11uz]{1, 2, 3, }",
             "[_]{1, 2, }",
         };
 
@@ -1717,11 +1733,11 @@ TEST_CASE("Array expressions") {
 
         SECTION("Correct array types") {
             const char* inputs[] = {
-                "var a: [1u]int;",
-                "var a: [1u, 2u]int;",
-                "var a: ?[1u, 2u]int;",
-                "var a: [1u, 2u]?int;",
-                "var a: ?[1u, 2u]?int;",
+                "var a: [1uz]int;",
+                "var a: [1uz, 2uz]int;",
+                "var a: ?[1uz, 2uz]int;",
+                "var a: [1uz, 2uz]?int;",
+                "var a: ?[1uz, 2uz]?int;",
             };
 
             const ArrayTypeTestCase expected_dims[] = {
@@ -1838,10 +1854,10 @@ TEST_CASE("Array expressions") {
         }
 
         SECTION("Incorrect token value") {
-            const char*   input = "[23u]{1, 2, 3, }";
+            const char*   input = "[23uz]{1, 2, 3, }";
             ParserFixture pf(input);
             pf.check_errors({"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
+                             "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
                             false);
         }
     }
@@ -2508,35 +2524,21 @@ TEST_CASE("Generics") {
 
 TEST_CASE("Null passed to destructors") {
     void (*const destructors[])(Node*, free_alloc_fn) = {
-        array_literal_expression_destroy,
-        assignment_expression_destroy,
-        bool_literal_expression_destroy,
-        call_expression_destroy,
-        enum_expression_destroy,
-        float_literal_expression_destroy,
-        function_expression_destroy,
-        identifier_expression_destroy,
-        if_expression_destroy,
-        infix_expression_destroy,
-        integer_expression_destroy,
-        for_loop_expression_destroy,
-        while_loop_expression_destroy,
-        do_while_loop_expression_destroy,
-        match_expression_destroy,
-        namespace_expression_destroy,
-        prefix_expression_destroy,
-        single_expression_destroy,
-        string_literal_expression_destroy,
-        struct_expression_destroy,
-        type_expression_destroy,
-        block_statement_destroy,
-        decl_statement_destroy,
-        type_decl_statement_destroy,
-        discard_statement_destroy,
-        expression_statement_destroy,
-        impl_statement_destroy,
-        import_statement_destroy,
-        jump_statement_destroy,
+        array_literal_expression_destroy, assignment_expression_destroy,
+        bool_literal_expression_destroy,  call_expression_destroy,
+        index_expression_destroy,         enum_expression_destroy,
+        float_literal_expression_destroy, function_expression_destroy,
+        identifier_expression_destroy,    if_expression_destroy,
+        infix_expression_destroy,         integer_expression_destroy,
+        for_loop_expression_destroy,      while_loop_expression_destroy,
+        do_while_loop_expression_destroy, match_expression_destroy,
+        namespace_expression_destroy,     prefix_expression_destroy,
+        single_expression_destroy,        string_literal_expression_destroy,
+        struct_expression_destroy,        type_expression_destroy,
+        block_statement_destroy,          decl_statement_destroy,
+        type_decl_statement_destroy,      discard_statement_destroy,
+        expression_statement_destroy,     impl_statement_destroy,
+        import_statement_destroy,         jump_statement_destroy,
     };
 
     for (const auto d : destructors) {

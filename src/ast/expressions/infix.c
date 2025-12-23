@@ -61,9 +61,13 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
     ASSERT_EXPRESSION(infix->lhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(infix->lhs, symbol_map, sb));
 
-    TRY(string_builder_append(sb, ' '));
-    TRY(string_builder_append_slice(sb, op));
-    TRY(string_builder_append(sb, ' '));
+    if (infix->op == DOT_DOT || infix->op == DOT_DOT_EQ) {
+        TRY(string_builder_append_slice(sb, op));
+    } else {
+        TRY(string_builder_append(sb, ' '));
+        TRY(string_builder_append_slice(sb, op));
+        TRY(string_builder_append(sb, ' '));
+    }
 
     ASSERT_EXPRESSION(infix->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(infix->rhs, symbol_map, sb));
@@ -271,17 +275,84 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
         resulting_type = new_type;
         break;
     }
-    case IN:
-        // TODO
-        RC_RELEASE(lhs_type, allocator.free_alloc);
-        RC_RELEASE(rhs_type, allocator.free_alloc);
-        return NOT_IMPLEMENTED;
+    case IN: {
+        // In is just a linear equality check so this aligns with EQ and NEQ
+        const bool lhs_ok = lhs_type->tag == STYPE_NIL || semantic_type_is_primitive(lhs_type);
+        const bool rhs_ok = rhs_type->tag == STYPE_ARRAY && !rhs_type->nullable;
+        if (!lhs_ok || !rhs_ok) {
+            PUT_STATUS_PROPAGATE(errors,
+                                 !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
+                                 start_token,
+                                 {
+                                     RC_RELEASE(lhs_type, allocator.free_alloc);
+                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                 });
+        }
+
+        // The search type must be compatible with the inner type
+        SemanticType* inner_array_type = rhs_type->variant.array_type->inner_type;
+        if (!type_assignable(lhs_type, inner_array_type)) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+        resulting_type = new_type;
+        break;
+    }
     case DOT_DOT:
-    case DOT_DOT_EQ:
-        // TODO
-        RC_RELEASE(lhs_type, allocator.free_alloc);
-        RC_RELEASE(rhs_type, allocator.free_alloc);
-        return NOT_IMPLEMENTED;
+    case DOT_DOT_EQ: {
+        // LHS & RHS must be integers or bytes and non-nullable
+        const bool lhs_ok = semantic_type_is_integer(lhs_type);
+        const bool rhs_ok = semantic_type_is_integer(rhs_type);
+        if (!lhs_ok || !rhs_ok) {
+            PUT_STATUS_PROPAGATE(errors,
+                                 !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
+                                 start_token,
+                                 {
+                                     RC_RELEASE(lhs_type, allocator.free_alloc);
+                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                 });
+        }
+
+        if (lhs_type->tag != rhs_type->tag) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc), {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+
+        SemanticType*      inner_type = rc_retain(lhs_type);
+        SemanticArrayType* array_type;
+        TRY_DO(semantic_array_create(STYPE_ARRAY_RANGE,
+                                     (SemanticArrayUnion){.inclusive = infix->op == DOT_DOT_EQ},
+                                     inner_type,
+                                     &array_type,
+                                     allocator.memory_alloc),
+               {
+                   RC_RELEASE(inner_type, allocator.free_alloc);
+                   RC_RELEASE(resulting_type, allocator.free_alloc);
+                   RC_RELEASE(lhs_type, allocator.free_alloc);
+                   RC_RELEASE(rhs_type, allocator.free_alloc);
+               });
+
+        resulting_type->tag      = STYPE_ARRAY;
+        resulting_type->variant  = (SemanticTypeUnion){.array_type = array_type};
+        resulting_type->is_const = true;
+        resulting_type->valued   = true;
+        resulting_type->nullable = false;
+        break;
+    }
     case ORELSE:
         if (!lhs_type->nullable || rhs_type->nullable) {
             const Status error_code =
