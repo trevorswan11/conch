@@ -1,14 +1,15 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 extern "C" {
 #include "util/containers/hash_map.h"
 }
 
 TEST_CASE("Metadata helpers") {
-    Metadata a, b;
+    Metadata a;
+    Metadata b;
 
     metadata_clear(&a);
     REQUIRE(metadata_open(a));
@@ -37,7 +38,7 @@ TEST_CASE("Malformed map usage") {
     HashMap hm;
 
     // Null pointers should not allow initialization
-    REQUIRE(hash_map_init(NULL,
+    REQUIRE(hash_map_init(nullptr,
                           10,
                           sizeof(K),
                           alignof(K),
@@ -46,10 +47,10 @@ TEST_CASE("Malformed map usage") {
                           hash_uint16_t_u,
                           compare_uint16_t) == Status::NULL_PARAMETER);
     REQUIRE(hash_map_init(
-                &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), NULL, compare_uint16_t) ==
+                &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), nullptr, compare_uint16_t) ==
             Status::NULL_PARAMETER);
     REQUIRE(hash_map_init(
-                &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, NULL) ==
+                &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, nullptr) ==
             Status::NULL_PARAMETER);
 
     // Zero size/alignment is illegal
@@ -84,10 +85,10 @@ TEST_CASE("Malformed map usage") {
                           hash_uint16_t_u,
                           compare_uint16_t) == Status::SIZE_OVERFLOW);
 
-    REQUIRE(hash_map_ensure_total_capacity(NULL, 10) == Status::NULL_PARAMETER);
-    hash_map_deinit(NULL);
+    REQUIRE(hash_map_ensure_total_capacity(nullptr, 10) == Status::NULL_PARAMETER);
+    hash_map_deinit(nullptr);
 
-    hm.buffer = NULL;
+    hm.buffer = nullptr;
     REQUIRE(hash_map_ensure_total_capacity(&hm, 10) == Status::NULL_PARAMETER);
     hash_map_deinit(&hm);
 }
@@ -301,9 +302,7 @@ TEST_CASE("Rehash map") {
     const size_t total_count = 6 * 1637;
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_map_remove(&hm, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_map_remove(&hm, &i))); }
     }
 
     // Rehash and ensure data was not lost along the way
@@ -375,9 +374,7 @@ TEST_CASE("Remove map") {
     }
 
     for (K i = 0; i < 16; i++) {
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_map_remove(&hm, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_map_remove(&hm, &i))); }
     }
     REQUIRE(hash_map_count(&hm) == 10);
 

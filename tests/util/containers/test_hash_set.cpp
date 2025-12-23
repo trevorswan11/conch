@@ -1,7 +1,7 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 extern "C" {
 #include "util/containers/hash_set.h"
@@ -16,11 +16,11 @@ TEST_CASE("Malformed set usage") {
     HashSet hs;
 
     // Null pointers should not allow initialization
-    REQUIRE(hash_set_init(NULL, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+    REQUIRE(hash_set_init(nullptr, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
             Status::NULL_PARAMETER);
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), NULL, compare_uint16_t) ==
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), nullptr, compare_uint16_t) ==
             Status::NULL_PARAMETER);
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, NULL) ==
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, nullptr) ==
             Status::NULL_PARAMETER);
 
     // Zero size/alignment is illegal
@@ -34,10 +34,10 @@ TEST_CASE("Malformed set usage") {
             Status::SIZE_OVERFLOW);
 
     // Helpers that check self and buffer initialization
-    REQUIRE(hash_set_ensure_total_capacity(NULL, 10) == Status::NULL_PARAMETER);
-    hash_set_deinit(NULL);
+    REQUIRE(hash_set_ensure_total_capacity(nullptr, 10) == Status::NULL_PARAMETER);
+    hash_set_deinit(nullptr);
 
-    hs.buffer = NULL;
+    hs.buffer = nullptr;
     REQUIRE(hash_set_ensure_total_capacity(&hs, 10) == Status::NULL_PARAMETER);
     hash_set_deinit(&hs);
 }
@@ -216,9 +216,7 @@ TEST_CASE("Rehash set") {
     const size_t total_count = 6 * 1637;
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_set_put(&hs, &i)));
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_set_remove(&hs, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_set_remove(&hs, &i))); }
     }
 
     // Rehash and ensure data was not lost along the way
@@ -248,16 +246,14 @@ TEST_CASE("Remove set") {
     }
 
     for (K i = 0; i < 16; i++) {
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_set_remove(&hs, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_set_remove(&hs, &i))); }
     }
     REQUIRE(hash_set_count(&hs) == 10);
 
     HashSetIterator it = hash_set_iterator_init(&hs);
     SetEntry        e;
     while (hash_set_iterator_has_next(&it, &e)) {
-        K k = *(K*)e.key_ptr;
+        const K k = *(K*)e.key_ptr;
         REQUIRE(k % 3 != 0);
     }
 

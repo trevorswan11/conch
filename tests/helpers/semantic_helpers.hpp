@@ -14,10 +14,10 @@ class SemanticFixture {
 
     ~SemanticFixture() { seman_deinit(&seman); }
 
-    SemanticAnalyzer* analyzer() { return &seman; }
-    Parser*           parser() { return pf.parser(); }
-    AST*              ast() { return pf.ast(); }
-    Lexer*            lexer() { return pf.lexer(); }
+    const SemanticAnalyzer* analyzer() { return &seman; }
+    const Parser*           parser() { return pf.parser(); }
+    const AST*              ast() { return pf.ast(); }
+    const Lexer*            lexer() { return pf.lexer(); }
 
     void check_errors(std::vector<std::string> expected_errors = {});
     void check_errors(std::vector<std::string> expected_errors, bool print_anyways);

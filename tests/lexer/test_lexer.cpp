@@ -1,8 +1,7 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdio.h>
-#include <string.h>
-
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -36,7 +35,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -82,12 +81,12 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l_accumulator;
-        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input, STANDARD_ALLOCATOR)));
         REQUIRE(STATUS_OK(lexer_consume(&l_accumulator)));
         ArrayList* accumulated_tokens = &l_accumulator.token_accumulator;
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -108,7 +107,7 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Numbers and lexer consumer resets") {
     Lexer reseting_lexer;
-    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer, standard_allocator)));
+    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer, STANDARD_ALLOCATOR)));
 
     FileIO dbgio;
     REQUIRE(STATUS_OK(file_io_init(&dbgio, stdin, stdout, stderr)));
@@ -135,7 +134,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -173,7 +172,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -220,7 +219,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -259,7 +258,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (size_t i = 0; i < expecteds.size(); i++) {
             const auto& [t, s] = expecteds[i];
@@ -302,7 +301,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -330,7 +329,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -353,7 +352,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -381,7 +380,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -467,11 +466,10 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
-        for (size_t i = 0; i < expecteds.size(); i++) {
-            const auto& [t, s] = expecteds[i];
-            Token token        = lexer_next_token(&l);
+        for (auto [t, s] : expecteds) {
+            Token token = lexer_next_token(&l);
             REQUIRE(slice_equals_str_z(&token.slice, s));
         }
 
@@ -507,7 +505,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -531,7 +529,7 @@ TEST_CASE("Advanced literals") {
             {TokenType::VAR, "var"},
             {TokenType::IDENT, "ten"},
             {TokenType::ASSIGN, "="},
-            {TokenType::STRING, "\"Hello\\n, World!\\0\""},
+            {TokenType::STRING, R"("Hello\n, World!\0")"},
             {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},
             {TokenType::IDENT, "one"},
@@ -541,7 +539,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
 
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
@@ -582,7 +580,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
         for (const auto& [t, s] : expecteds) {
             Token token = lexer_next_token(&l);
             REQUIRE(t == token.type);
@@ -594,7 +592,7 @@ TEST_CASE("Advanced literals") {
     SECTION("Promotion of invalid tokens") {
         Token    string_tok = token_init(TokenType::INT_10, "1", strlen("1"), 0, 0);
         MutSlice promoted_string;
-        REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
+        REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
                 Status::TYPE_MISMATCH);
     }
 
@@ -604,7 +602,7 @@ TEST_CASE("Advanced literals") {
                 TokenType::STRING, "\"Hello, World!\"", strlen("\"Hello, World!\""), 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello, World!");
             free(promoted_string.ptr);
@@ -612,10 +610,10 @@ TEST_CASE("Advanced literals") {
 
         SECTION("Escaped case") {
             Token string_tok = token_init(
-                TokenType::STRING, "\"\"Hello, World!\"\"", strlen("\"\"Hello, World!\"\""), 0, 0);
+                TokenType::STRING, R"(""Hello, World!"")", strlen(R"(""Hello, World!"")"), 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "\"Hello, World!\"");
             free(promoted_string.ptr);
@@ -625,7 +623,7 @@ TEST_CASE("Advanced literals") {
             Token    string_tok = token_init(TokenType::STRING, "\"\"", strlen("\"\""), 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "");
             free(promoted_string.ptr);
@@ -634,7 +632,7 @@ TEST_CASE("Advanced literals") {
         SECTION("Malformed case") {
             Token    string_tok = token_init(TokenType::STRING, "\"", strlen("\""), 0, 0);
             MutSlice promoted_string;
-            REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
+            REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
                     Status::UNEXPECTED_TOKEN);
         }
     }
@@ -642,15 +640,15 @@ TEST_CASE("Advanced literals") {
     SECTION("Promotion of multistring literals") {
         SECTION("Normal case no newline") {
             Token    string_tok = token_init(TokenType::MULTILINE_STRING,
-                                          "\\\\Hello,\"World!\"",
-                                          strlen("\\\\Hello,\"World!\""),
+                                          R"(\\Hello,"World!")",
+                                          strlen(R"(\\Hello,"World!")"),
                                           0,
                                           0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
-            mut_slice_equals_str_z(&promoted_string, "Hello,\"World!\"");
+            mut_slice_equals_str_z(&promoted_string, R"(Hello,"World!")");
             free(promoted_string.ptr);
         }
 
@@ -662,7 +660,7 @@ TEST_CASE("Advanced literals") {
                                           0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "Hello,\nWorld!\n");
             free(promoted_string.ptr);
@@ -672,7 +670,7 @@ TEST_CASE("Advanced literals") {
             Token    string_tok = token_init(TokenType::MULTILINE_STRING, "", strlen(""), 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
             mut_slice_equals_str_z(&promoted_string, "");
             free(promoted_string.ptr);
@@ -683,16 +681,17 @@ TEST_CASE("Advanced literals") {
 TEST_CASE("Token dumping") {
     const char* input = "true false and or orelse";
     Lexer       l;
-    REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
+    REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
     REQUIRE(STATUS_OK(lexer_consume(&l)));
 
-    TempFile temp_out("TMP_token_dump_out"), temp_err("TMP_token_dump_err");
+    TempFile temp_out("TMP_token_dump_out");
+    TempFile temp_err("TMP_token_dump_err");
 
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
     FileIO io;
-    REQUIRE(STATUS_OK(file_io_init(&io, NULL, out, err)));
+    REQUIRE(STATUS_OK(file_io_init(&io, nullptr, out, err)));
 
     REQUIRE(STATUS_OK(lexer_print_tokens(&l, &io)));
     std::ifstream out_fs(temp_out.path(), std::ios::binary);
@@ -713,9 +712,7 @@ TEST_CASE("Token dumping") {
     std::string              line;
 
     while (std::getline(stream, line)) {
-        if (line.length() > 0) {
-            actual_lines.push_back(line);
-        }
+        if (line.length() > 0) { actual_lines.push_back(line); }
     }
 
     REQUIRE(expected_lines.size() == actual_lines.size());

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SEMA_CONTEXT_H
+#define SEMA_CONTEXT_H
 
 #include <stdbool.h>
 
@@ -32,3 +33,5 @@ bool semantic_context_find(SemanticContext* context,
                            MutSlice         symbol,
                            SemanticType**   type);
 bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol);
+
+#endif

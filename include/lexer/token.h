@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TOKEN_H
+#define TOKEN_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -95,3 +96,5 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator allocator);
 
 Base integer_token_to_base(TokenType type);
+
+#endif

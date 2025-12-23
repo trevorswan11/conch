@@ -46,9 +46,7 @@ NODISCARD Status program_init(Program* program, FileIO* io, Allocator allocator)
 }
 
 void program_deinit(Program* program) {
-    if (!program) {
-        return;
-    }
+    if (!program) { return; }
 
     lexer_deinit(&program->lexer);
     parser_deinit(&program->parser);
@@ -59,9 +57,7 @@ void program_deinit(Program* program) {
 
 NODISCARD Status program_run(Program* program, Slice input) {
     assert(program);
-    if (input.length == 0) {
-        return SUCCESS;
-    }
+    if (input.length == 0) { return SUCCESS; }
 
     program->lexer.input        = input.ptr;
     program->lexer.input_length = input.length;
@@ -100,18 +96,14 @@ NODISCARD Status program_run(Program* program, Slice input) {
 
 NODISCARD Status program_print_errors(ArrayList* errors, FileIO* io) {
     assert(errors && errors->data && io);
-    if (errors->length == 0) {
-        return SUCCESS;
-    }
+    if (errors->length == 0) { return SUCCESS; }
 
     for (size_t i = 0; i < errors->length; i++) {
         MutSlice error;
         TRY(array_list_get(errors, i, &error));
         TRY_IO(fprintf(io->err, "\t%.*s", (int)error.length, error.ptr));
 
-        if (i < errors->length - 1) {
-            TRY_IO(fprintf(io->err, "\n"));
-        }
+        if (i < errors->length - 1) { TRY_IO(fprintf(io->err, "\n")); }
     }
 
     return SUCCESS;

@@ -24,13 +24,9 @@ NODISCARD Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
 }
 
 void file_io_deinit(FileIO* io) {
-    if (!io) {
-        return;
-    }
+    if (!io) { return; }
 
-    if (io->in) {
-        fclose(io->in);
-    }
+    if (io->in) { fclose(io->in); }
     fclose(io->out);
     fclose(io->err);
 }

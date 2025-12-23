@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ARRAY_LIST_H
+#define ARRAY_LIST_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -125,3 +126,5 @@ bool              array_list_iterator_exhausted(const ArrayListIterator* it);
 
 ArrayListConstIterator array_list_const_iterator_init(const ArrayList* a);
 bool                   array_list_const_iterator_has_next(ArrayListConstIterator* it, void* next);
+
+#endif

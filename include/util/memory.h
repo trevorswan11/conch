@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MEMORY_H
+#define MEMORY_H
 
 #include <assert.h>
 #include <stdbool.h>
@@ -35,7 +36,7 @@ typedef struct Allocator {
     free_alloc_fn       free_alloc;
 } Allocator;
 
-static const Allocator standard_allocator = {
+static const Allocator STANDARD_ALLOCATOR = {
     .memory_alloc     = &malloc,
     .continuous_alloc = &calloc,
     .re_alloc         = &realloc,
@@ -153,4 +154,6 @@ void rc_release(void* rc_obj, free_alloc_fn free_alloc);
             (rc_obj) = NULL;                    \
         }                                       \
     } while (0)
+#endif
+
 #endif

@@ -19,9 +19,7 @@ NODISCARD Status assignment_expression_create(Token                  start_token
     ASSERT_EXPRESSION(rhs);
 
     AssignmentExpression* assign = memory_alloc(sizeof(AssignmentExpression));
-    if (!assign) {
-        return ALLOCATION_FAILED;
-    }
+    if (!assign) { return ALLOCATION_FAILED; }
 
     *assign = (AssignmentExpression){
         .base = EXPRESSION_INIT(ASSIGNMENT_VTABLE, start_token),
@@ -35,9 +33,7 @@ NODISCARD Status assignment_expression_create(Token                  start_token
 }
 
 void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     AssignmentExpression* assign = (AssignmentExpression*)node;
@@ -56,9 +52,7 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
     AssignmentExpression* assign = (AssignmentExpression*)node;
     Slice                 op     = poll_tt_symbol(symbol_map, assign->op);
 
-    if (group_expressions) {
-        TRY(string_builder_append(sb, '('));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, '(')); }
     ASSERT_EXPRESSION(assign->lhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(assign->lhs, symbol_map, sb));
 
@@ -68,9 +62,7 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
 
     ASSERT_EXPRESSION(assign->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(assign->rhs, symbol_map, sb));
-    if (group_expressions) {
-        TRY(string_builder_append(sb, ')'));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, ')')); }
 
     return SUCCESS;
 }

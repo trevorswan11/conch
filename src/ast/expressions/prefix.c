@@ -19,9 +19,7 @@ NODISCARD Status prefix_expression_create(Token              start_token,
     ASSERT_EXPRESSION(rhs);
 
     PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
-    if (!prefix) {
-        return ALLOCATION_FAILED;
-    }
+    if (!prefix) { return ALLOCATION_FAILED; }
 
     *prefix = (PrefixExpression){
         .base = EXPRESSION_INIT(PREFIX_VTABLE, start_token),
@@ -33,9 +31,7 @@ NODISCARD Status prefix_expression_create(Token              start_token,
 }
 
 void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     PrefixExpression* prefix = (PrefixExpression*)node;
@@ -53,17 +49,13 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
     PrefixExpression* prefix = (PrefixExpression*)node;
     Slice             op     = poll_tt_symbol(symbol_map, node->start_token.type);
 
-    if (group_expressions) {
-        TRY(string_builder_append(sb, '('));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, '(')); }
 
     TRY(string_builder_append_slice(sb, op));
     ASSERT_EXPRESSION(prefix->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(prefix->rhs, symbol_map, sb));
 
-    if (group_expressions) {
-        TRY(string_builder_append(sb, ')'));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, ')')); }
 
     return SUCCESS;
 }
@@ -98,7 +90,10 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
         RC_RELEASE(operand_type, allocator.free_alloc);
         parent->analyzed_type = resulting_type;
         return SUCCESS;
-    } else if (!operand_type->valued || operand_type->nullable) {
+    }
+
+    // It doesn't make sense to operate on types or potential nil values
+    if (!operand_type->valued || operand_type->nullable) {
         PUT_STATUS_PROPAGATE(errors,
                              ILLEGAL_PREFIX_OPERAND,
                              value_tok,

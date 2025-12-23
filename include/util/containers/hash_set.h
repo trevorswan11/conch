@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HASH_SET_H
+#define HASH_SET_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -136,3 +137,5 @@ NODISCARD Status hash_set_remove(HashSet* hs, const void* key);
 
 HashSetIterator hash_set_iterator_init(HashSet* hs);
 bool            hash_set_iterator_has_next(HashSetIterator* it, SetEntry* next);
+
+#endif

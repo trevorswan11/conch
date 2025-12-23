@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SEMA_SYMBOL_H
+#define SEMA_SYMBOL_H
 
 #include "util/containers/hash_map.h"
 #include "util/memory.h"
@@ -28,3 +29,5 @@ NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType
 bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType** type);
 
 bool symbol_table_has(SymbolTable* st, MutSlice symbol);
+
+#endif

@@ -12,9 +12,7 @@ NODISCARD Status string_literal_expression_create(Token                     star
                                                   Allocator                 allocator) {
     ASSERT_ALLOCATOR(allocator);
     StringLiteralExpression* string = allocator.memory_alloc(sizeof(StringLiteralExpression));
-    if (!string) {
-        return ALLOCATION_FAILED;
-    }
+    if (!string) { return ALLOCATION_FAILED; }
 
     MutSlice slice;
     TRY_DO(promote_token_string(start_token, &slice, allocator), allocator.free_alloc(string));
@@ -29,15 +27,11 @@ NODISCARD Status string_literal_expression_create(Token                     star
 }
 
 void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     StringLiteralExpression* string_expr = (StringLiteralExpression*)node;
-    if (string_expr->slice.ptr) {
-        free_alloc(string_expr->slice.ptr);
-    }
+    if (string_expr->slice.ptr) { free_alloc(string_expr->slice.ptr); }
 
     free_alloc(string_expr);
 }
@@ -55,9 +49,7 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
     }
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
-    if (node->start_token.type == MULTILINE_STRING) {
-        TRY(string_builder_append(sb, '\n'));
-    }
+    if (node->start_token.type == MULTILINE_STRING) { TRY(string_builder_append(sb, '\n')); }
     return SUCCESS;
 }
 

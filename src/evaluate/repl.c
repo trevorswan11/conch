@@ -21,7 +21,7 @@ NODISCARD Status repl_start(void) {
 
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), standard_allocator));
+    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), STANDARD_ALLOCATOR));
 
     FileIO io = file_io_std();
     TRY_DO(repl_run(&io, buf_in, &buf_out), array_list_deinit(&buf_out));
@@ -39,7 +39,7 @@ NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_rec
     }
 
     Program program;
-    TRY(program_init(&program, io, standard_allocator));
+    TRY(program_init(&program, io, STANDARD_ALLOCATOR));
 
     TRY_IO(fprintf(io->out, WELCOME_MESSAGE));
     TRY_IO(fprintf(io->out, "\n"));
@@ -63,13 +63,10 @@ NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_rec
 
         const char*  line        = (const char*)stream_receiver->data;
         const size_t line_length = strlen(line);
-        if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) {
-            break;
-        } else if (line_length == 1 && strncmp(line, "\n", 1) == 0) {
-            continue;
-        } else if (line_length == 2 && strncmp(line, "\r\n", 2) == 0) {
-            continue;
-        }
+
+        if (strncmp(line, EXIT_TOKEN, sizeof(EXIT_TOKEN) - 1) == 0) { break; }
+        if (line_length == 1 && strncmp(line, "\n", 1) == 0) { continue; }
+        if (line_length == 2 && strncmp(line, "\r\n", 2) == 0) { continue; }
 
         TRY_DO(program_run(&program, slice_from_str_s(line, line_length)),
                program_deinit(&program));
@@ -106,16 +103,11 @@ NODISCARD Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* s
             stream_receiver->length += n;
         }
 
-        if (n == 0) {
-            break;
-        } else if (!chunk_includes_newline) {
-            continue;
-        }
+        if (n == 0) { break; }
+        if (!chunk_includes_newline) { continue; }
 
         // A line consisting only of double backslash means that its a multiline continuation
-        if (n == 2 && stream_buffer[0] == '\\' && stream_buffer[1] == '\\') {
-            break;
-        }
+        if (n == 2 && stream_buffer[0] == '\\' && stream_buffer[1] == '\\') { break; }
 
         // At this point, we saw a newline and have to check for line continuation
         if (n >= 1 && stream_buffer[n - 1] == '\\') {

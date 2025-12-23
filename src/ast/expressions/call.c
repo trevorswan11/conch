@@ -31,9 +31,7 @@ NODISCARD Status call_expression_create(Token            start_token,
     ASSERT_EXPRESSION(function);
 
     CallExpression* call = memory_alloc(sizeof(CallExpression));
-    if (!call) {
-        return ALLOCATION_FAILED;
-    }
+    if (!call) { return ALLOCATION_FAILED; }
 
     *call = (CallExpression){
         .base      = EXPRESSION_INIT(CALL_VTABLE, start_token),
@@ -47,9 +45,7 @@ NODISCARD Status call_expression_create(Token            start_token,
 }
 
 void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     CallExpression* call = (CallExpression*)node;
@@ -74,23 +70,17 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
     ArrayListIterator it = array_list_iterator_init(&call->arguments);
     CallArgument      argument;
     while (array_list_iterator_has_next(&it, &argument)) {
-        if (argument.is_ref) {
-            TRY(string_builder_append_str_z(sb, "ref "));
-        }
+        if (argument.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
         ASSERT_EXPRESSION(argument.argument);
         TRY(NODE_VIRTUAL_RECONSTRUCT(argument.argument, symbol_map, sb));
 
-        if (!array_list_iterator_exhausted(&it)) {
-            TRY(string_builder_append_str_z(sb, ", "));
-        }
+        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
     }
 
     TRY(string_builder_append(sb, ')'));
 
-    if (call->generics.length > 0) {
-        TRY(string_builder_append_str_z(sb, " with "));
-    }
+    if (call->generics.length > 0) { TRY(string_builder_append_str_z(sb, " with ")); }
     TRY(generics_reconstruct(&call->generics, symbol_map, sb));
 
     return SUCCESS;

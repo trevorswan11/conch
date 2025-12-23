@@ -34,9 +34,7 @@ NODISCARD Status enum_expression_create(Token            start_token,
     assert(variants.length > 0);
 
     EnumExpression* enum_local = memory_alloc(sizeof(EnumExpression));
-    if (!enum_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!enum_local) { return ALLOCATION_FAILED; }
 
     *enum_local = (EnumExpression){
         .base     = EXPRESSION_INIT(ENUM_VTABLE, start_token),
@@ -48,9 +46,7 @@ NODISCARD Status enum_expression_create(Token            start_token,
 }
 
 void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     EnumExpression* enum_expr = (EnumExpression*)node;

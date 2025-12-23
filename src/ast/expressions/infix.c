@@ -18,9 +18,7 @@ NODISCARD Status infix_expression_create(Token             start_token,
     assert(lhs && rhs);
 
     InfixExpression* infix = memory_alloc(sizeof(InfixExpression));
-    if (!infix) {
-        return ALLOCATION_FAILED;
-    }
+    if (!infix) { return ALLOCATION_FAILED; }
 
     *infix = (InfixExpression){
         .base = EXPRESSION_INIT(INFIX_VTABLE, start_token),
@@ -34,9 +32,7 @@ NODISCARD Status infix_expression_create(Token             start_token,
 }
 
 void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     InfixExpression* infix = (InfixExpression*)node;
@@ -55,9 +51,7 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
     InfixExpression* infix = (InfixExpression*)node;
     Slice            op    = poll_tt_symbol(symbol_map, infix->op);
 
-    if (group_expressions) {
-        TRY(string_builder_append(sb, '('));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, '(')); }
     ASSERT_EXPRESSION(infix->lhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(infix->lhs, symbol_map, sb));
 
@@ -71,9 +65,7 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
 
     ASSERT_EXPRESSION(infix->rhs);
     TRY(NODE_VIRTUAL_RECONSTRUCT(infix->rhs, symbol_map, sb));
-    if (group_expressions) {
-        TRY(string_builder_append(sb, ')'));
-    }
+    if (group_expressions) { TRY(string_builder_append(sb, ')')); }
 
     return SUCCESS;
 }
@@ -142,7 +134,9 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
             });
             resulting_type = new_type;
             break;
-        } else if (semantic_type_is_primitive(lhs_type) && rhs_type->tag == STYPE_STR) {
+        }
+
+        if (semantic_type_is_primitive(lhs_type) && rhs_type->tag == STYPE_STR) {
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_LHS_INFIX_OPERAND, start_token, {
                 RC_RELEASE(lhs_type, allocator.free_alloc);
                 RC_RELEASE(rhs_type, allocator.free_alloc);

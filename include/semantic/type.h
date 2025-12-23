@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SEMA_TYPE_H
+#define SEMA_TYPE_H
 
 #include <stdbool.h>
 
@@ -141,3 +142,5 @@ bool type_assignable(const SemanticType* lhs, const SemanticType* rhs);
 
 // Checks two types against each other, not comparing const-ness
 bool type_equal(const SemanticType* lhs, const SemanticType* rhs);
+
+#endif

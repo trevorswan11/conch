@@ -1,11 +1,10 @@
 #include "catch_amalgamated.hpp"
 
-#include <cstdint>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <array>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <utility>
@@ -66,7 +65,7 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto        ast                    = pf.ast();
+        const auto* ast                    = pf.ast();
         const char* expected_identifiers[] = {"x", "y", "foobar"};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
@@ -102,7 +101,7 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto        ast                    = pf.ast();
+        const auto* ast                    = pf.ast();
         const char* expected_identifiers[] = {"x", "y", "foobar"};
         bool        is_const[]             = {false, true, false};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
@@ -137,7 +136,7 @@ TEST_CASE("Declarations") {
         std::array<ExplicitTypeTag, std::size(tags)> explicit_tags;
         explicit_tags.fill(ExplicitTypeTag::EXPLICIT_IDENT);
 
-        auto        ast                   = pf.ast();
+        const auto* ast                   = pf.ast();
         std::string expected_type_names[] = {"int", "uint", "bool", {}, "LongNum", "Conch"};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
@@ -184,12 +183,12 @@ TEST_CASE("Declarations") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
+            const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
             test_identifier_expression((Expression*)type_decl_stmt->ident, "a");
             REQUIRE(type_decl_stmt->primitive_alias);
 
@@ -202,12 +201,12 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
+        const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
         test_identifier_expression((Expression*)type_decl_stmt->ident, "N");
         REQUIRE_FALSE(type_decl_stmt->primitive_alias);
 
@@ -230,7 +229,7 @@ TEST_CASE("Jump statements") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 5);
 
         const std::optional<int64_t> values[] = {std::nullopt, 5, std::nullopt, 10, 993322};
@@ -238,7 +237,7 @@ TEST_CASE("Jump statements") {
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
-            JumpStatement* jump_stmt = (JumpStatement*)stmt;
+            const auto* jump_stmt = (const JumpStatement*)stmt;
             if (values[i].has_value()) {
                 test_number_expression<int64_t>(jump_stmt->value, values[i].value());
             }
@@ -249,12 +248,12 @@ TEST_CASE("Jump statements") {
         const char*   input = "return 5";
         ParserFixture pf(input);
         pf.check_errors();
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
 
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        JumpStatement* jump_stmt = (JumpStatement*)stmt;
+        const auto* jump_stmt = (const JumpStatement*)stmt;
         test_number_expression<int64_t>(jump_stmt->value, 5);
     }
 
@@ -262,13 +261,13 @@ TEST_CASE("Jump statements") {
         const char*   input = "break -5";
         ParserFixture pf(input);
         pf.check_errors();
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
 
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        JumpStatement*    jump_stmt = (JumpStatement*)stmt;
-        PrefixExpression* prefix    = (PrefixExpression*)jump_stmt->value;
+        const auto* jump_stmt = (const JumpStatement*)stmt;
+        const auto* prefix    = (const PrefixExpression*)jump_stmt->value;
         test_number_expression<int64_t>(prefix->rhs, 5);
     }
 
@@ -277,12 +276,12 @@ TEST_CASE("Jump statements") {
             const char*   input = "continue";
             ParserFixture pf(input);
             pf.check_errors();
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            JumpStatement* jump_stmt = (JumpStatement*)stmt;
+            const auto* jump_stmt = (const JumpStatement*)stmt;
             REQUIRE_FALSE(jump_stmt->value);
         }
 
@@ -290,16 +289,16 @@ TEST_CASE("Jump statements") {
             const char*   input = "continue 2";
             ParserFixture pf(input);
             pf.check_errors();
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
 
             REQUIRE(ast->statements.length == 2);
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            JumpStatement* jump_stmt = (JumpStatement*)stmt;
+            const auto* jump_stmt = (const JumpStatement*)stmt;
             REQUIRE_FALSE(jump_stmt->value);
 
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 1, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
             test_number_expression<int64_t>(expr_stmt->expression, 2);
         }
     }
@@ -310,13 +309,13 @@ TEST_CASE("Identifier Expressions") {
     ParserFixture pf(input);
     pf.check_errors();
 
-    auto ast = pf.ast();
+    const auto* ast = pf.ast();
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+    const auto* expr_stmt = (const ExpressionStatement*)stmt;
     test_identifier_expression(expr_stmt->expression, "foobar");
 }
 
@@ -325,14 +324,14 @@ TEST_CASE("Index expression") {
     ParserFixture pf(input);
     pf.check_errors();
 
-    auto ast = pf.ast();
+    const auto* ast = pf.ast();
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-    IndexExpression*     index     = (IndexExpression*)expr_stmt->expression;
+    const auto* expr_stmt = (const ExpressionStatement*)stmt;
+    const auto* index     = (const IndexExpression*)expr_stmt->expression;
     test_identifier_expression(index->array, "foo");
     test_identifier_expression(index->idx, "bar");
 }
@@ -365,13 +364,13 @@ TEST_CASE("Number-based expressions") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement*   expr_stmt = (ExpressionStatement*)stmt;
-            ByteLiteralExpression* byte      = (ByteLiteralExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* byte      = (const ByteLiteralExpression*)expr_stmt->expression;
 
             REQUIRE(byte->value == expected);
         };
@@ -402,24 +401,24 @@ TEST_CASE("Basic prefix / infix expressions") {
         };
 
         const TestCase cases[] = {
-            {"!5", TokenType::BANG, 5ll},
-            {"-15u", TokenType::MINUS, 15ull},
-            {"!3.4", TokenType::BANG, 3.4},
-            {"~0b101101", TokenType::NOT, 0b101101ll},
-            {"!1.2345e100", TokenType::BANG, 1.2345e100},
+            {.input = "!5", .op = TokenType::BANG, .value = 5LL},
+            {.input = "-15u", .op = TokenType::MINUS, .value = 15ULL},
+            {.input = "!3.4", .op = TokenType::BANG, .value = 3.4},
+            {.input = "~0b101101", .op = TokenType::NOT, .value = 0b101101LL},
+            {.input = "!1.2345e100", .op = TokenType::BANG, .value = 1.2345e100},
         };
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            PrefixExpression*    expr      = (PrefixExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* expr      = (const PrefixExpression*)expr_stmt->expression;
 
             REQUIRE(((Node*)expr)->start_token.type == t.op);
             if (std::holds_alternative<int64_t>(t.value)) {
@@ -443,67 +442,133 @@ TEST_CASE("Basic prefix / infix expressions") {
         };
 
         const TestCase standard_cases[] = {
-            {"5 + 5;", 5ll, TokenType::PLUS, 5ll},
-            {"5 - 5;", 5ll, TokenType::MINUS, 5ll},
-            {"5.0 * 5.2;", 5.0, TokenType::STAR, 5.2},
-            {"5.0 ** 5.2;", 5.0, TokenType::STAR_STAR, 5.2},
-            {"4.9e2 / 5.1e3;", 4.9e2, TokenType::SLASH, 5.1e3},
-            {"0x231 % 0xF;", 0x231, TokenType::PERCENT, 0xF},
-            {"5 < 5;", 5ll, TokenType::LT, 5ll},
-            {"5 <= 5;", 5ll, TokenType::LTEQ, 5ll},
-            {"5 > 5;", 5ll, TokenType::GT, 5ll},
-            {"5 >= 5;", 5ll, TokenType::GTEQ, 5ll},
-            {"5 == 5;", 5ll, TokenType::EQ, 5ll},
-            {"5 != 5;", 5ll, TokenType::NEQ, 5ll},
-            {"0b10111u & 0b10110u;", 0b10111ull, TokenType::AND, 0b10110ull},
-            {"0b10111u | 0b10110u;", 0b10111ull, TokenType::OR, 0b10110ull},
-            {"0b10111u ^ 0b10110u;", 0b10111ull, TokenType::XOR, 0b10110ull},
-            {"0b10111u >> 5u;", 0b10111ull, TokenType::SHR, 5ull},
-            {"0b10111u << 4u;", 0b10111ull, TokenType::SHL, 4ull},
-            {"0b10111u..4u;", 0b10111ull, TokenType::DOT_DOT, 4ull},
-            {"0b10111u..=4u;", 0b10111ull, TokenType::DOT_DOT_EQ, 4ull},
-            {"0b10111u is 4u;", 0b10111ull, TokenType::IS, 4ull},
-            {"0b10111u in 4u;", 0b10111ull, TokenType::IN, 4ull},
-            {"0b10111u and 4u;", 0b10111ull, TokenType::BOOLEAN_AND, 4ull},
-            {"0b10111u or 4u;", 0b10111ull, TokenType::BOOLEAN_OR, 4ull},
-            {"0b10111u orelse 4u;", 0b10111ull, TokenType::ORELSE, 4ull},
+            {.input = "5 + 5;", .lvalue = 5LL, .op = TokenType::PLUS, .rvalue = 5LL},
+            {.input = "5 - 5;", .lvalue = 5LL, .op = TokenType::MINUS, .rvalue = 5LL},
+            {.input = "5.0 * 5.2;", .lvalue = 5.0, .op = TokenType::STAR, .rvalue = 5.2},
+            {.input = "5.0 ** 5.2;", .lvalue = 5.0, .op = TokenType::STAR_STAR, .rvalue = 5.2},
+            {.input = "4.9e2 / 5.1e3;", .lvalue = 4.9e2, .op = TokenType::SLASH, .rvalue = 5.1e3},
+            {.input = "0x231 % 0xF;", .lvalue = 0x231, .op = TokenType::PERCENT, .rvalue = 0xF},
+            {.input = "5 < 5;", .lvalue = 5LL, .op = TokenType::LT, .rvalue = 5LL},
+            {.input = "5 <= 5;", .lvalue = 5LL, .op = TokenType::LTEQ, .rvalue = 5LL},
+            {.input = "5 > 5;", .lvalue = 5LL, .op = TokenType::GT, .rvalue = 5LL},
+            {.input = "5 >= 5;", .lvalue = 5LL, .op = TokenType::GTEQ, .rvalue = 5LL},
+            {.input = "5 == 5;", .lvalue = 5LL, .op = TokenType::EQ, .rvalue = 5LL},
+            {.input = "5 != 5;", .lvalue = 5LL, .op = TokenType::NEQ, .rvalue = 5LL},
+            {.input  = "0b10111u & 0b10110u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::AND,
+             .rvalue = 0b10110ULL},
+            {.input  = "0b10111u | 0b10110u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::OR,
+             .rvalue = 0b10110ULL},
+            {.input  = "0b10111u ^ 0b10110u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::XOR,
+             .rvalue = 0b10110ULL},
+            {.input  = "0b10111u >> 5u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::SHR,
+             .rvalue = 5ULL},
+            {.input  = "0b10111u << 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::SHL,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u..4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::DOT_DOT,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u..=4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::DOT_DOT_EQ,
+             .rvalue = 4ULL},
+            {.input = "0b10111u is 4u;", .lvalue = 0b10111ULL, .op = TokenType::IS, .rvalue = 4ULL},
+            {.input = "0b10111u in 4u;", .lvalue = 0b10111ULL, .op = TokenType::IN, .rvalue = 4ULL},
+
+            {.input  = "0b10111u and 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::BOOLEAN_AND,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u or 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::BOOLEAN_OR,
+             .rvalue = 4ULL},
+
+            {.input  = "0b10111u orelse 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::ORELSE,
+             .rvalue = 4ULL},
         };
 
         const TestCase assignment_cases[] = {
-            {"0b10111u = 4u;", 0b10111ull, TokenType::ASSIGN, 4ull},
-            {"0b10111u += 4u;", 0b10111ull, TokenType::PLUS_ASSIGN, 4ull},
-            {"0b10111u -= 4u;", 0b10111ull, TokenType::MINUS_ASSIGN, 4ull},
-            {"0b10111u *= 4u;", 0b10111ull, TokenType::STAR_ASSIGN, 4ull},
-            {"0b10111u /= 4u;", 0b10111ull, TokenType::SLASH_ASSIGN, 4ull},
-            {"0b10111u %= 4u;", 0b10111ull, TokenType::PERCENT_ASSIGN, 4ull},
-            {"0b10111u &= 4u;", 0b10111ull, TokenType::AND_ASSIGN, 4ull},
-            {"0b10111u |= 4u;", 0b10111ull, TokenType::OR_ASSIGN, 4ull},
-            {"0b10111u <<= 4u;", 0b10111ull, TokenType::SHL_ASSIGN, 4ull},
-            {"0b10111u >>= 4u;", 0b10111ull, TokenType::SHR_ASSIGN, 4ull},
-            {"0b10111u ~= 4u;", 0b10111ull, TokenType::NOT_ASSIGN, 4ull},
-            {"0b10111u ^= 4u;", 0b10111ull, TokenType::XOR_ASSIGN, 4ull},
+            {.input  = "0b10111u = 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u += 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::PLUS_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u -= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::MINUS_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u *= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::STAR_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u /= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::SLASH_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u %= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::PERCENT_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u &= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::AND_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u |= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::OR_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u <<= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::SHL_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u >>= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::SHR_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u ~= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::NOT_ASSIGN,
+             .rvalue = 4ULL},
+            {.input  = "0b10111u ^= 4u;",
+             .lvalue = 0b10111ULL,
+             .op     = TokenType::XOR_ASSIGN,
+             .rvalue = 4ULL},
         };
 
         const auto test_infix = []<typename T>(TestCase t) {
             ParserFixture pf(t.input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            T*                   expr      = (T*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            T*          expr      = (T*)expr_stmt->expression;
 
             const std::pair<std::variant<int64_t, uint64_t, double>, Expression*> pairs[] = {
                 {t.lvalue, expr->lhs},
                 {t.rvalue, expr->rhs},
             };
 
-            if constexpr (requires { expr->op; }) {
-                REQUIRE(expr->op == t.op);
-            }
+            if constexpr (requires { expr->op; }) { REQUIRE(expr->op == t.op); }
 
             for (const auto& p : pairs) {
                 if (std::holds_alternative<int64_t>(p.first)) {
@@ -532,13 +597,13 @@ TEST_CASE("Basic prefix / infix expressions") {
         ParserFixture pf("Outer::inner");
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt      = (ExpressionStatement*)stmt;
-        NamespaceExpression* namespace_expr = (NamespaceExpression*)expr_stmt->expression;
+        const auto* expr_stmt      = (const ExpressionStatement*)stmt;
+        const auto* namespace_expr = (const NamespaceExpression*)expr_stmt->expression;
 
         test_identifier_expression(namespace_expr->outer, "Outer");
         test_identifier_expression((Expression*)namespace_expr->inner, "inner");
@@ -551,28 +616,30 @@ TEST_CASE("Basic prefix / infix expressions") {
         };
 
         const TestCase cases[] = {
-            {"-a * b", "((-a) * b)"},
-            {"!-a", "(!(-a))"},
-            {"a + b + c", "((a + b) + c)"},
-            {"a + b - c", "((a + b) - c)"},
-            {"a * b * c", "((a * b) * c)"},
-            {"a * b / c", "((a * b) / c)"},
-            {"a + b / c", "(a + (b / c))"},
-            {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
-            {"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
-            {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
-            {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
-            {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
-            {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
-            {"(5 + 5) * 2", "((5 + 5) * 2)"},
-            {"5 * 5 ** 2", "(5 * (5 ** 2))"},
-            {"2 / (5 + 5)", "(2 / (5 + 5))"},
-            {"-(5 + 5)", "(-(5 + 5))"},
-            {"!(true == true)", "(!(true == true))"},
-            {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
-            {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
-             "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-            {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+            {.input = "-a * b", .expected = "((-a) * b)"},
+            {.input = "!-a", .expected = "(!(-a))"},
+            {.input = "a + b + c", .expected = "((a + b) + c)"},
+            {.input = "a + b - c", .expected = "((a + b) - c)"},
+            {.input = "a * b * c", .expected = "((a * b) * c)"},
+            {.input = "a * b / c", .expected = "((a * b) / c)"},
+            {.input = "a + b / c", .expected = "(a + (b / c))"},
+            {.input = "a + b * c + d / e - f", .expected = "(((a + (b * c)) + (d / e)) - f)"},
+            {.input = "3 + 4; -5 * 5", .expected = "(3 + 4)((-5) * 5)"},
+            {.input = "5 > 4 == 3 < 4", .expected = "((5 > 4) == (3 < 4))"},
+            {.input = "5 < 4 != 3 > 4", .expected = "((5 < 4) != (3 > 4))"},
+            {.input    = "3 + 4 * 5 == 3 * 1 + 4 * 5",
+             .expected = "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+            {.input = "1 + (2 + 3) + 4", .expected = "((1 + (2 + 3)) + 4)"},
+            {.input = "(5 + 5) * 2", .expected = "((5 + 5) * 2)"},
+            {.input = "5 * 5 ** 2", .expected = "(5 * (5 ** 2))"},
+            {.input = "2 / (5 + 5)", .expected = "(2 / (5 + 5))"},
+            {.input = "-(5 + 5)", .expected = "(-(5 + 5))"},
+            {.input = "!(true == true)", .expected = "(!(true == true))"},
+            {.input = "a + add(b * c) + d", .expected = "((a + add((b * c))) + d)"},
+            {.input    = "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+             .expected = "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+            {.input    = "add(a + b + c * d / f + g)",
+             .expected = "add((((a + b) + ((c * d) / f)) + g))"},
         };
 
         for (const auto& t : cases) {
@@ -581,7 +648,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             pf.check_errors();
 
             SBFixture sb(t.expected.length());
-            REQUIRE(STATUS_OK(ast_reconstruct(pf.ast(), sb.sb())));
+            REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
             REQUIRE(t.expected == sb.to_string());
         }
     }
@@ -606,12 +673,12 @@ TEST_CASE("Typeof expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        const auto* type_decl = (const TypeDeclStatement*)stmt;
         test_identifier_expression((Expression*)type_decl->ident, "a");
         REQUIRE_FALSE(type_decl->primitive_alias);
 
@@ -622,7 +689,7 @@ TEST_CASE("Typeof expressions") {
                              ExplicitTypeTag::EXPLICIT_TYPEOF,
                              {});
 
-        TypeExpression* type = (TypeExpression*)type_decl->value;
+        const auto* type = (const TypeExpression*)type_decl->value;
         test_number_expression<uint64_t>(type->variant.explicit_type.variant.referred_type, 4);
     }
 
@@ -633,20 +700,23 @@ TEST_CASE("Typeof expressions") {
         };
 
         const TestCase cases[] = {
-            {"typeof 1", {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
-            {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-            {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-            {"type a = typeof enum { a, }",
-             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-            {"type a = typeof fn(): int",
-             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-              "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
-              "Expected token LBRACE, found END [Ln 1, Col 26]"}},
-            {"type a = typeof struct { a: int, }",
-             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-            {"type a = typeof ?enum {a, }",
-             {"No prefix parse function for WHAT found [Ln 1, Col 17]",
-              "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {.input  = "typeof 1",
+             .errors = {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
+            {.input = "const a: typeof 1 = 3", .errors = {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {.input = "var v: typeof g", .errors = {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {.input  = "type a = typeof enum { a, }",
+             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {.input  = "type a = typeof fn(): int",
+             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
+                        "Expected token LBRACE, found END [Ln 1, Col 26]"}},
+            {.input  = "type a = typeof struct { a: int, }",
+             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {.input  = "type a = typeof ?enum {a, }",
+             .errors = {"No prefix parse function for WHAT found [Ln 1, Col 17]",
+                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
         };
 
         for (const auto& t : cases) {
@@ -663,7 +733,7 @@ TEST_CASE("Bool expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 2);
 
         const bool expected_values[] = {true, false};
@@ -672,7 +742,7 @@ TEST_CASE("Bool expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
             test_bool_expression(expr_stmt->expression, expected_values[i]);
         }
     }
@@ -686,7 +756,7 @@ TEST_CASE("String expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
 
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!", ""};
@@ -700,7 +770,7 @@ TEST_CASE("String expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
             test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
@@ -716,7 +786,7 @@ TEST_CASE("String expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
 
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!\n", ""};
@@ -730,7 +800,7 @@ TEST_CASE("String expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
             test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
@@ -742,25 +812,25 @@ TEST_CASE("Conditional expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
 
-        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
         REQUIRE_FALSE(if_expr->alternate);
 
-        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        const auto* condition = (const InfixExpression*)if_expr->condition;
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        BlockStatement* consequence = (BlockStatement*)if_expr->consequence;
+        const auto* consequence = (const BlockStatement*)if_expr->consequence;
         REQUIRE(consequence->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
-        expr_stmt = (ExpressionStatement*)stmt;
+        expr_stmt = (const ExpressionStatement*)stmt;
         test_identifier_expression(expr_stmt->expression, "x");
     }
 
@@ -769,31 +839,31 @@ TEST_CASE("Conditional expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
 
-        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
         REQUIRE(if_expr->alternate);
 
-        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        const auto* condition = (const InfixExpression*)if_expr->condition;
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        BlockStatement* consequence = (BlockStatement*)if_expr->consequence;
+        const auto* consequence = (const BlockStatement*)if_expr->consequence;
         REQUIRE(consequence->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
-        expr_stmt = (ExpressionStatement*)stmt;
+        expr_stmt = (const ExpressionStatement*)stmt;
         test_identifier_expression(expr_stmt->expression, "x");
 
-        BlockStatement* alternate = (BlockStatement*)if_expr->alternate;
+        const auto* alternate = (const BlockStatement*)if_expr->alternate;
         REQUIRE(alternate->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate->statements, 0, &stmt)));
-        expr_stmt = (ExpressionStatement*)stmt;
+        expr_stmt = (const ExpressionStatement*)stmt;
         test_identifier_expression(expr_stmt->expression, "y");
     }
 
@@ -802,27 +872,27 @@ TEST_CASE("Conditional expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, true, "val");
-        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+        const auto* decl_stmt = (const DeclStatement*)stmt;
         REQUIRE(decl_stmt->type->tag == IMPLICIT);
 
-        IfExpression* if_expr = (IfExpression*)decl_stmt->value;
+        const auto* if_expr = (const IfExpression*)decl_stmt->value;
         REQUIRE(if_expr->alternate);
 
-        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        const auto* condition = (const InfixExpression*)if_expr->condition;
         REQUIRE(condition->op == TokenType::GTEQ);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        ExpressionStatement* consequence = (ExpressionStatement*)if_expr->consequence;
+        const auto* consequence = (const ExpressionStatement*)if_expr->consequence;
         test_number_expression<int64_t>(consequence->expression, 1);
 
-        ExpressionStatement* alternate = (ExpressionStatement*)if_expr->alternate;
+        const auto* alternate = (const ExpressionStatement*)if_expr->alternate;
         test_number_expression<int64_t>(alternate->expression, 2);
     }
 
@@ -831,23 +901,23 @@ TEST_CASE("Conditional expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
 
-        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
         REQUIRE(if_expr->alternate);
 
-        BoolLiteralExpression* condition = (BoolLiteralExpression*)if_expr->condition;
+        const auto* condition = (const BoolLiteralExpression*)if_expr->condition;
         REQUIRE(condition->value);
 
-        JumpStatement* consequence = (JumpStatement*)if_expr->consequence;
+        const auto* consequence = (const JumpStatement*)if_expr->consequence;
         test_number_expression<int64_t>(consequence->value, 1);
 
-        JumpStatement* alternate = (JumpStatement*)if_expr->alternate;
+        const auto* alternate = (const JumpStatement*)if_expr->alternate;
         test_number_expression<int64_t>(alternate->value, 2);
     }
 
@@ -856,34 +926,34 @@ TEST_CASE("Conditional expressions") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
 
         // Verify the first condition
-        IfExpression* if_expr = (IfExpression*)expr_stmt->expression;
+        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
         REQUIRE(if_expr->alternate);
 
-        InfixExpression* condition = (InfixExpression*)if_expr->condition;
+        const auto* condition = (const InfixExpression*)if_expr->condition;
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
         // Verify the first consequence
-        BlockStatement* consequence_one = (BlockStatement*)if_expr->consequence;
+        const auto* consequence_one = (const BlockStatement*)if_expr->consequence;
         REQUIRE(consequence_one->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
-        JumpStatement*    jump_stmt = (JumpStatement*)stmt;
-        PrefixExpression* neg_num   = (PrefixExpression*)jump_stmt->value;
+        const auto* jump_stmt = (const JumpStatement*)stmt;
+        const auto* neg_num   = (const PrefixExpression*)jump_stmt->value;
         REQUIRE(((Node*)neg_num)->start_token.type == TokenType::MINUS);
         test_number_expression<int64_t>(neg_num->rhs, 1);
 
         // Verify the first alternate and its condition
-        ExpressionStatement* alternate_one = (ExpressionStatement*)if_expr->alternate;
-        if_expr                            = (IfExpression*)alternate_one->expression;
+        const auto* alternate_one = (const ExpressionStatement*)if_expr->alternate;
+        if_expr                   = (IfExpression*)alternate_one->expression;
         REQUIRE(if_expr->alternate);
 
         condition = (InfixExpression*)if_expr->condition;
@@ -892,14 +962,14 @@ TEST_CASE("Conditional expressions") {
         test_identifier_expression(condition->rhs, "y");
 
         // Verify the second consequence
-        BlockStatement* consequence_two = (BlockStatement*)if_expr->consequence;
+        const auto* consequence_two = (const BlockStatement*)if_expr->consequence;
         REQUIRE(consequence_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
-        jump_stmt = (JumpStatement*)stmt;
+        jump_stmt = (const JumpStatement*)stmt;
         test_number_expression<int64_t>(jump_stmt->value, 1);
 
         // Verify the second alternate
-        BlockStatement* alternate_two = (BlockStatement*)if_expr->alternate;
+        const auto* alternate_two = (const BlockStatement*)if_expr->alternate;
         REQUIRE(alternate_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
         jump_stmt = (JumpStatement*)stmt;
@@ -926,7 +996,7 @@ TEST_CASE("Function literals") {
         for (size_t i = 0; i < actuals->length; i++) {
             Parameter parameter;
             REQUIRE(STATUS_OK(array_list_get(actuals, i, &parameter)));
-            TestParameter expected_parameter = expecteds[i];
+            const TestParameter& expected_parameter = expecteds[i];
 
             REQUIRE(parameter.is_ref == expected_parameter.is_ref);
             test_identifier_expression((Expression*)parameter.ident, expected_parameter.name);
@@ -949,13 +1019,13 @@ TEST_CASE("Function literals") {
 
     SECTION("Functions as types") {
         SECTION("Correct declaration") {
-            std::vector<TestParameter> expected_params = {TestParameter{"a", true},
-                                                          TestParameter{"b"}};
+            std::vector<TestParameter> expected_params = {
+                TestParameter{.name = "a", .is_ref = true}, TestParameter{.name = "b"}};
 
             const char*   input = "var add: fn(ref a: int, b: int): int;";
             ParserFixture pf(input);
             pf.check_errors();
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
@@ -969,10 +1039,10 @@ TEST_CASE("Function literals") {
                                 TypeExpressionTag::EXPLICIT,
                                 ExplicitTypeTag::EXPLICIT_FN,
                                 {});
-            DeclStatement* decl_stmt = (DeclStatement*)stmt;
+            const auto* decl_stmt = (const DeclStatement*)stmt;
             REQUIRE_FALSE(decl_stmt->value);
 
-            TypeExpression*      type_expr     = (TypeExpression*)decl_stmt->type;
+            TypeExpression*      type_expr     = decl_stmt->type;
             ExplicitType         explicit_type = type_expr->variant.explicit_type;
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
             test_parameters(&function_type.parameters, expected_params);
@@ -1024,34 +1094,40 @@ TEST_CASE("Function literals") {
         };
 
         const TestCase cases[] = {
-            {"fn(): void {};", {}, {"void", false, true}},
-            {"fn(x: int): Blk {};", {TestParameter{"x"}}, {"Blk", false, false}},
-            {"fn(x: int, y: int, z: int): int {};",
-             {TestParameter{"x"}, TestParameter{"y"}, TestParameter{"z"}},
-             {"int", false, true}},
-            {"fn(x: int, ref y: int = 2, z: int): ?Sock {};",
-             {TestParameter{"x"},
-              TestParameter{.name = "y", .is_ref = true, .default_value = 2},
-              TestParameter{"z"}},
-             {"Sock", true, false}},
-            {"fn(x: int, y: int, z: int = 3): ?uint {};",
-             {TestParameter{"x"},
-              TestParameter{"y"},
-              TestParameter{.name = "z", .default_value = 3}},
-             {"uint", true, true}},
+            {.input           = "fn(): void {};",
+             .expected_params = {},
+             .expected_return = {.type_name = "void", .nullable = false, .primitive = true}},
+            {.input           = "fn(x: int): Blk {};",
+             .expected_params = {TestParameter{.name = "x"}},
+             .expected_return = {.type_name = "Blk", .nullable = false, .primitive = false}},
+            {.input           = "fn(x: int, y: int, z: int): int {};",
+             .expected_params = {TestParameter{.name = "x"},
+                                 TestParameter{.name = "y"},
+                                 TestParameter{.name = "z"}},
+             .expected_return = {.type_name = "int", .nullable = false, .primitive = true}},
+            {.input           = "fn(x: int, ref y: int = 2, z: int): ?Sock {};",
+             .expected_params = {TestParameter{.name = "x"},
+                                 TestParameter{.name = "y", .is_ref = true, .default_value = 2},
+                                 TestParameter{.name = "z"}},
+             .expected_return = {.type_name = "Sock", .nullable = true, .primitive = false}},
+            {.input           = "fn(x: int, y: int, z: int = 3): ?uint {};",
+             .expected_params = {TestParameter{.name = "x"},
+                                 TestParameter{.name = "y"},
+                                 TestParameter{.name = "z", .default_value = 3}},
+             .expected_return = {.type_name = "uint", .nullable = true, .primitive = true}},
         };
 
         for (const auto& t : cases) {
             ParserFixture pf(t.input);
             pf.check_errors();
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            FunctionExpression*  function  = (FunctionExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* function  = (const FunctionExpression*)expr_stmt->expression;
             REQUIRE(function->body->statements.length == 0);
 
             ArrayList parameters = function->parameters;
@@ -1081,17 +1157,17 @@ TEST_CASE("Function literals") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        CallExpression*      call      = (CallExpression*)expr_stmt->expression;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* call      = (const CallExpression*)expr_stmt->expression;
 
         // Verify function identifier
-        IdentifierExpression* function               = (IdentifierExpression*)call->function;
-        std::string           expected_function_name = "add";
+        const auto* function               = (const IdentifierExpression*)call->function;
+        std::string expected_function_name = "add";
         REQUIRE(expected_function_name == function->name.ptr);
 
         ArrayList arguments = call->arguments;
@@ -1106,7 +1182,7 @@ TEST_CASE("Function literals") {
         CallArgument second;
         REQUIRE(STATUS_OK(array_list_get(&arguments, 1, &second)));
         REQUIRE_FALSE(second.is_ref);
-        InfixExpression* argument = (InfixExpression*)second.argument;
+        const auto* argument = (const InfixExpression*)second.argument;
         test_number_expression<int64_t>(argument->lhs, 2);
         REQUIRE(argument->op == TokenType::STAR);
         test_number_expression<int64_t>(argument->rhs, 3);
@@ -1172,13 +1248,13 @@ TEST_CASE("Enum declarations") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            EnumExpression*      enum_expr = (EnumExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* enum_expr = (const EnumExpression*)expr_stmt->expression;
 
             test_enum_variants(&enum_expr->variants, expected_variants);
         }
@@ -1192,13 +1268,13 @@ TEST_CASE("Enum declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, false, "a");
-        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+        const auto* decl_stmt = (const DeclStatement*)stmt;
 
         TypeExpression* type_expr = decl_stmt->type;
         test_type_expression((Expression*)type_expr,
@@ -1220,17 +1296,17 @@ TEST_CASE("Enum declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        TypeDeclStatement* type_decl_stmt = (TypeDeclStatement*)stmt;
-        test_identifier_expression((Expression*)type_decl_stmt->ident, "Colors");
+        const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
+        test_identifier_expression((const Expression*)type_decl_stmt->ident, "Colors");
         REQUIRE_FALSE(type_decl_stmt->primitive_alias);
 
-        TypeExpression* type_expr = (TypeExpression*)type_decl_stmt->value;
-        test_type_expression((Expression*)type_expr,
+        const auto* type_expr = (const TypeExpression*)type_decl_stmt->value;
+        test_type_expression((const Expression*)type_expr,
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
@@ -1296,7 +1372,7 @@ TEST_CASE("Struct declarations") {
             REQUIRE(member.name);
             REQUIRE(member.type);
 
-            StructMemberTestCase expected = expected_members[i];
+            const StructMemberTestCase& expected = expected_members[i];
             test_identifier_expression((Expression*)member.name, expected.member_name);
             test_type_expression((Expression*)member.type,
                                  expected.nullable,
@@ -1334,13 +1410,13 @@ TEST_CASE("Struct declarations") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
-            StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+            const auto* expr_stmt   = (const ExpressionStatement*)stmt;
+            const auto* struct_expr = (const StructExpression*)expr_stmt->expression;
 
             test_struct_members(&struct_expr->members, expected_members);
         }
@@ -1354,16 +1430,16 @@ TEST_CASE("Struct declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, false, "a");
-        DeclStatement* decl_stmt = (DeclStatement*)stmt;
+        const auto* decl_stmt = (const DeclStatement*)stmt;
 
         TypeExpression* type_expr = decl_stmt->type;
-        test_type_expression((Expression*)type_expr,
+        test_type_expression((const Expression*)type_expr,
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
@@ -1434,12 +1510,12 @@ TEST_CASE("Nil expressions") {
     ParserFixture pf(input);
     pf.check_errors();
 
-    auto ast = pf.ast();
+    const auto* ast = pf.ast();
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-    ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+    const auto* expr_stmt = (const ExpressionStatement*)stmt;
 
     Node* nil_node = (Node*)expr_stmt->expression;
     REQUIRE(slice_equals_str_z(&nil_node->start_token.slice, "nil"));
@@ -1451,12 +1527,12 @@ TEST_CASE("Impl statements") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ImplStatement* impl_stmt = (ImplStatement*)stmt;
+        const auto* impl_stmt = (const ImplStatement*)stmt;
 
         test_identifier_expression((Expression*)impl_stmt->parent, "Obj");
 
@@ -1503,10 +1579,14 @@ TEST_CASE("Import Statements") {
         };
 
         const ImportTestCase expected_imports[] = {
-            {ImportTag::STANDARD, "std"},
-            {ImportTag::STANDARD, "array"},
-            {ImportTag::USER, "util/test.cch", "test"},
-            {ImportTag::STANDARD, "hash", "Hash"},
+            {.expected_tag = ImportTag::STANDARD, .expected_literal = "std"},
+            {.expected_tag = ImportTag::STANDARD, .expected_literal = "array"},
+            {.expected_tag     = ImportTag::USER,
+             .expected_literal = "util/test.cch",
+             .expected_alias   = "test"},
+            {.expected_tag     = ImportTag::STANDARD,
+             .expected_literal = "hash",
+             .expected_alias   = "Hash"},
         };
 
         REQUIRE(std::size(inputs) == std::size(expected_imports));
@@ -1517,12 +1597,12 @@ TEST_CASE("Import Statements") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ImportStatement* import_stmt = (ImportStatement*)stmt;
+            const auto* import_stmt = (const ImportStatement*)stmt;
 
             REQUIRE(import_stmt->tag == expected.expected_tag);
             if (import_stmt->tag == ImportTag::STANDARD) {
@@ -1533,7 +1613,7 @@ TEST_CASE("Import Statements") {
                                        expected.expected_literal);
             }
 
-            if (import_stmt->alias) {
+            if (import_stmt->alias != nullptr) {
                 REQUIRE(expected.expected_alias.has_value());
                 test_identifier_expression((Expression*)import_stmt->alias,
                                            expected.expected_alias.value());
@@ -1576,9 +1656,11 @@ TEST_CASE("Match expressions") {
         };
 
         const MatchTestCase expected_matches[] = {
-            {"In", {{1, 90ull}}},
-            {"Out", {{1, 90ull}, {2, 0b1011ull}}},
-            {"Out", {{1, 90ull}, {2, 0b1011ull}}, 5},
+            {.expected_expr_name = "In", .expected_arms = {{1, 90ULL}}},
+            {.expected_expr_name = "Out", .expected_arms = {{1, 90ULL}, {2, 0b1011ULL}}},
+            {.expected_expr_name = "Out",
+             .expected_arms      = {{1, 90ULL}, {2, 0b1011ULL}},
+             .otherwise          = 5},
         };
 
         REQUIRE(std::size(inputs) == std::size(expected_matches));
@@ -1589,13 +1671,13 @@ TEST_CASE("Match expressions") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
-            MatchExpression*     match_expr = (MatchExpression*)expr_stmt->expression;
+            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+            const auto* match_expr = (const MatchExpression*)expr_stmt->expression;
 
             test_identifier_expression(match_expr->expression, expected.expected_expr_name);
             REQUIRE(match_expr->arms.length == expected.expected_arms.size());
@@ -1607,13 +1689,13 @@ TEST_CASE("Match expressions") {
                 REQUIRE(STATUS_OK(array_list_get(&match_expr->arms, arm_idx, &arm)));
                 test_number_expression<int64_t>(arm.pattern, expected_arm.lhs);
 
-                JumpStatement* jump = (JumpStatement*)arm.dispatch;
+                const auto* jump = (const JumpStatement*)arm.dispatch;
                 test_number_expression<uint64_t>(jump->value, expected_arm.expected_return_value);
             }
 
-            if (match_expr->catch_all) {
+            if (match_expr->catch_all != nullptr) {
                 REQUIRE(expected.otherwise.has_value());
-                ExpressionStatement* otherwise = (ExpressionStatement*)match_expr->catch_all;
+                const auto* otherwise = (const ExpressionStatement*)match_expr->catch_all;
                 test_number_expression<int64_t>(otherwise->expression, expected.otherwise.value());
             } else {
                 REQUIRE_FALSE(expected.otherwise.has_value());
@@ -1687,9 +1769,9 @@ TEST_CASE("Array expressions") {
         };
 
         const ArrayTestCase expected_arrays[] = {
-            {1, {1}},
-            {0b11, {1, 2, 3}},
-            {std::nullopt, {1, 2}},
+            {.expected_size = 1, .expected_items = {1}},
+            {.expected_size = 0b11, .expected_items = {1, 2, 3}},
+            {.expected_size = std::nullopt, .expected_items = {1, 2}},
         };
 
         REQUIRE(std::size(inputs) == std::size(expected_arrays));
@@ -1700,13 +1782,13 @@ TEST_CASE("Array expressions") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement*    expr_stmt  = (ExpressionStatement*)stmt;
-            ArrayLiteralExpression* array_expr = (ArrayLiteralExpression*)expr_stmt->expression;
+            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+            const auto* array_expr = (const ArrayLiteralExpression*)expr_stmt->expression;
 
             if (array_expr->inferred_size) {
                 REQUIRE_FALSE(expected.expected_size.has_value());
@@ -1741,11 +1823,26 @@ TEST_CASE("Array expressions") {
             };
 
             const ArrayTypeTestCase expected_dims[] = {
-                {"a", {1}, false, false},
-                {"a", {1, 2}, false, false},
-                {"a", {1, 2}, true, false},
-                {"a", {1, 2}, false, true},
-                {"a", {1, 2}, true, true},
+                {.decl_name      = "a",
+                 .expected_dims  = {1},
+                 .array_nullable = false,
+                 .inner_nullable = false},
+                {.decl_name      = "a",
+                 .expected_dims  = {1, 2},
+                 .array_nullable = false,
+                 .inner_nullable = false},
+                {.decl_name      = "a",
+                 .expected_dims  = {1, 2},
+                 .array_nullable = true,
+                 .inner_nullable = false},
+                {.decl_name      = "a",
+                 .expected_dims  = {1, 2},
+                 .array_nullable = false,
+                 .inner_nullable = true},
+                {.decl_name      = "a",
+                 .expected_dims  = {1, 2},
+                 .array_nullable = true,
+                 .inner_nullable = true},
             };
 
             REQUIRE(std::size(inputs) == std::size(expected_dims));
@@ -1756,13 +1853,13 @@ TEST_CASE("Array expressions") {
                 ParserFixture pf(input);
                 pf.check_errors();
 
-                auto ast = pf.ast();
+                const auto* ast = pf.ast();
                 REQUIRE(ast->statements.length == 1);
 
                 Statement* stmt;
                 REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
                 test_decl_statement(stmt, false, expected.decl_name);
-                DeclStatement* decl_stmt = (DeclStatement*)stmt;
+                const auto* decl_stmt = (const DeclStatement*)stmt;
 
                 TypeExpression* decl_type = decl_stmt->type;
                 REQUIRE(decl_type->tag == TypeExpressionTag::EXPLICIT);
@@ -1869,12 +1966,12 @@ TEST_CASE("Discard statements") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        DiscardStatement* discard_stmt = (DiscardStatement*)stmt;
+        const auto* discard_stmt = (const DiscardStatement*)stmt;
         test_number_expression<int64_t>(discard_stmt->to_discard, 90);
     }
 
@@ -1893,13 +1990,13 @@ TEST_CASE("For loops") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
         REQUIRE(for_loop->iterables.length == 1);
         REQUIRE(for_loop->captures.length == 0);
@@ -1922,13 +2019,13 @@ TEST_CASE("For loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
             REQUIRE(for_loop->iterables.length == 1);
             REQUIRE(for_loop->captures.length == 1);
@@ -1955,13 +2052,13 @@ TEST_CASE("For loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
             REQUIRE(for_loop->iterables.length == 2);
             REQUIRE(for_loop->captures.length == 2);
@@ -1981,13 +2078,13 @@ TEST_CASE("For loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
             REQUIRE(for_loop->iterables.length == 2);
             REQUIRE(for_loop->captures.length == 2);
@@ -2013,7 +2110,7 @@ TEST_CASE("For loops") {
             expr_stmt = (ExpressionStatement*)statement;
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            BlockStatement* non_break = (BlockStatement*)for_loop->non_break;
+            const auto* non_break = (const BlockStatement*)for_loop->non_break;
             REQUIRE(non_break->statements.length == 1);
             REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
             expr_stmt = (ExpressionStatement*)statement;
@@ -2025,15 +2122,15 @@ TEST_CASE("For loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-            ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
-            ExpressionStatement* non_break_expr_stmt = (ExpressionStatement*)for_loop->non_break;
+            const auto* non_break_expr_stmt = (const ExpressionStatement*)for_loop->non_break;
             test_number_expression<int64_t>(non_break_expr_stmt->expression, 1);
         }
     }
@@ -2043,13 +2140,13 @@ TEST_CASE("For loops") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        ForLoopExpression*   for_loop  = (ForLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
 
         ForLoopCapture capture;
         REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
@@ -2096,13 +2193,13 @@ TEST_CASE("While loops") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
-        WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+        const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
 
         REQUIRE(while_loop->condition);
         REQUIRE_FALSE(while_loop->continuation);
@@ -2113,7 +2210,7 @@ TEST_CASE("While loops") {
 
         Statement* statement;
         REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-        expr_stmt = (ExpressionStatement*)statement;
+        expr_stmt = (const ExpressionStatement*)statement;
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2122,13 +2219,13 @@ TEST_CASE("While loops") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
-        WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+        const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
 
         REQUIRE(while_loop->condition);
         REQUIRE(while_loop->continuation);
@@ -2150,13 +2247,13 @@ TEST_CASE("While loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
-            WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+            const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
 
             REQUIRE(while_loop->condition);
             REQUIRE(while_loop->continuation);
@@ -2171,7 +2268,7 @@ TEST_CASE("While loops") {
             expr_stmt = (ExpressionStatement*)statement;
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            BlockStatement* non_break = (BlockStatement*)while_loop->non_break;
+            const auto* non_break = (const BlockStatement*)while_loop->non_break;
             REQUIRE(non_break->statements.length == 1);
             REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
             expr_stmt = (ExpressionStatement*)statement;
@@ -2183,13 +2280,13 @@ TEST_CASE("While loops") {
             ParserFixture pf(input);
             pf.check_errors();
 
-            auto ast = pf.ast();
+            const auto* ast = pf.ast();
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            ExpressionStatement* expr_stmt  = (ExpressionStatement*)stmt;
-            WhileLoopExpression* while_loop = (WhileLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
+            const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
 
             REQUIRE(while_loop->condition);
             REQUIRE(while_loop->continuation);
@@ -2204,7 +2301,7 @@ TEST_CASE("While loops") {
             expr_stmt = (ExpressionStatement*)statement;
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            ExpressionStatement* non_break = (ExpressionStatement*)while_loop->non_break;
+            const auto* non_break = (const ExpressionStatement*)while_loop->non_break;
             test_number_expression<uint64_t>(non_break->expression, 1);
         }
     }
@@ -2242,13 +2339,13 @@ TEST_CASE("Do while loops") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement*   expr_stmt     = (ExpressionStatement*)stmt;
-        DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt     = (const ExpressionStatement*)stmt;
+        const auto* do_while_loop = (const DoWhileLoopExpression*)expr_stmt->expression;
 
         REQUIRE(do_while_loop->block->statements.length == 1);
         REQUIRE(do_while_loop->condition);
@@ -2284,13 +2381,13 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        FunctionExpression*  function  = (FunctionExpression*)expr_stmt->expression;
+        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* function  = (const FunctionExpression*)expr_stmt->expression;
 
         REQUIRE(function->generics.length == 2);
 
@@ -2306,7 +2403,7 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
@@ -2320,7 +2417,7 @@ TEST_CASE("Generics") {
                             ExplicitTypeTag::EXPLICIT_FN,
                             {});
 
-        DeclStatement*       decl_stmt = (DeclStatement*)stmt;
+        const auto*          decl_stmt = (const DeclStatement*)stmt;
         ExplicitFunctionType explicit_fn =
             decl_stmt->type->variant.explicit_type.variant.function_type;
 
@@ -2346,16 +2443,16 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        const TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
         REQUIRE_FALSE(type_decl->primitive_alias);
         test_identifier_expression((Expression*)type_decl->ident, "F");
 
-        TypeExpression* function_type = (TypeExpression*)type_decl->value;
+        const auto* function_type = (const TypeExpression*)type_decl->value;
         test_type_expression((Expression*)function_type,
                              false,
                              false,
@@ -2363,7 +2460,8 @@ TEST_CASE("Generics") {
                              ExplicitTypeTag::EXPLICIT_FN,
                              {});
 
-        ExplicitFunctionType function = function_type->variant.explicit_type.variant.function_type;
+        const ExplicitFunctionType function =
+            function_type->variant.explicit_type.variant.function_type;
         REQUIRE(function.generics.length == 2);
 
         Expression* generic;
@@ -2378,13 +2476,13 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
-        StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+        const ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
+        const StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
@@ -2398,24 +2496,25 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        const TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
         REQUIRE_FALSE(type_decl->primitive_alias);
         test_identifier_expression((Expression*)type_decl->ident, "S");
 
-        TypeExpression* struct_type = (TypeExpression*)type_decl->value;
-        test_type_expression((Expression*)struct_type,
+        const auto* struct_type = (const TypeExpression*)type_decl->value;
+        test_type_expression((const Expression*)struct_type,
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_STRUCT,
                              {});
 
-        StructExpression* struct_expr = struct_type->variant.explicit_type.variant.struct_type;
+        const StructExpression* struct_expr =
+            struct_type->variant.explicit_type.variant.struct_type;
         REQUIRE(struct_expr->generics.length == 2);
 
         Expression* generic;
@@ -2430,13 +2529,13 @@ TEST_CASE("Generics") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        auto ast = pf.ast();
+        const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        CallExpression*      call_expr = (CallExpression*)expr_stmt->expression;
+        const ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
+        const CallExpression*      call_expr = (CallExpression*)expr_stmt->expression;
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&call_expr->generics, 0, &generic)));
@@ -2542,6 +2641,6 @@ TEST_CASE("Null passed to destructors") {
     };
 
     for (const auto d : destructors) {
-        d(NULL, free);
+        d(nullptr, free);
     }
 }

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef IMPL_STMT_H
+#define IMPL_STMT_H
 
 #include "ast/statements/statement.h"
 
@@ -31,3 +32,5 @@ static const StatementVTable IMPL_VTABLE = {
             .analyze     = impl_statement_analyze,
         },
 };
+
+#endif

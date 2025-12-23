@@ -16,9 +16,7 @@ NODISCARD Status float_literal_expression_create(Token                    start_
     assert(start_token.slice.ptr);
 
     FloatLiteralExpression* float_local = memory_alloc(sizeof(FloatLiteralExpression));
-    if (!float_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!float_local) { return ALLOCATION_FAILED; }
 
     *float_local = (FloatLiteralExpression){
         .base  = EXPRESSION_INIT(FLOAT_VTABLE, start_token),
@@ -30,9 +28,7 @@ NODISCARD Status float_literal_expression_create(Token                    start_
 }
 
 void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;

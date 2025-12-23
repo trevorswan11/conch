@@ -33,9 +33,7 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
     ArrayListIterator it = array_list_iterator_init(parameters);
     Parameter         parameter;
     while (array_list_iterator_has_next(&it, &parameter)) {
-        if (parameter.is_ref) {
-            TRY(string_builder_append_str_z(sb, "ref "));
-        }
+        if (parameter.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
         ASSERT_EXPRESSION(parameter.ident);
         TRY(NODE_VIRTUAL_RECONSTRUCT(parameter.ident, symbol_map, sb));
@@ -50,9 +48,7 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
             TRY(NODE_VIRTUAL_RECONSTRUCT(parameter.default_value, symbol_map, sb));
         }
 
-        if (!array_list_iterator_exhausted(&it)) {
-            TRY(string_builder_append_str_z(sb, ", "));
-        }
+        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
     }
 
     return SUCCESS;
@@ -72,9 +68,7 @@ NODISCARD Status function_expression_create(Token                start_token,
     ASSERT_STATEMENT(body);
 
     FunctionExpression* func = memory_alloc(sizeof(FunctionExpression));
-    if (!func) {
-        return ALLOCATION_FAILED;
-    }
+    if (!func) { return ALLOCATION_FAILED; }
 
     *func = (FunctionExpression){
         .base        = EXPRESSION_INIT(FUNCTION_VTABLE, start_token),
@@ -89,9 +83,7 @@ NODISCARD Status function_expression_create(Token                start_token,
 }
 
 void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     FunctionExpression* func = (FunctionExpression*)node;

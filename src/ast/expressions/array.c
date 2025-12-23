@@ -16,9 +16,7 @@ NODISCARD Status array_literal_expression_create(Token                    start_
     assert(items.item_size == sizeof(Expression*));
 
     ArrayLiteralExpression* array = memory_alloc(sizeof(ArrayLiteralExpression));
-    if (!array) {
-        return ALLOCATION_FAILED;
-    }
+    if (!array) { return ALLOCATION_FAILED; }
 
     *array = (ArrayLiteralExpression){
         .base          = EXPRESSION_INIT(ARRAY_VTABLE, start_token),
@@ -31,9 +29,7 @@ NODISCARD Status array_literal_expression_create(Token                    start_
 }
 
 void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;

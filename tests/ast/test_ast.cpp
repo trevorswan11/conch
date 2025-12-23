@@ -1,6 +1,6 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 
 #include "parser_helpers.hpp"

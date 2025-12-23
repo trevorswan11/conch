@@ -1,9 +1,9 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <string.h>
-
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
+
 #include <vector>
 
 extern "C" {
@@ -41,8 +41,8 @@ TEST_CASE("Push ops w/o resize") {
 
     // Push a handful of elements and check
     const uint8_t expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3};
-    for (size_t i = 0; i < std::size(expecteds); i++) {
-        array_list_push_assume_capacity(&a, &expecteds[i]);
+    for (const unsigned char& expected : expecteds) {
+        array_list_push_assume_capacity(&a, &expected);
     }
 
     for (size_t i = 0; i < a.length; i++) {
@@ -132,11 +132,11 @@ TEST_CASE("Remove ops") {
     // Push many items and arbitrarily remove
     std::vector<uint32_t> expecteds = {4, 5, 7, 2, 6, 10, 22, 3};
     std::vector<uint32_t> original  = expecteds;
-    for (size_t i = 0; i < expecteds.size(); i++) {
-        REQUIRE(STATUS_OK(array_list_push(&a, &expecteds[i])));
+    for (unsigned int& expected : expecteds) {
+        REQUIRE(STATUS_OK(array_list_push(&a, &expected)));
     }
 
-    REQUIRE(STATUS_OK(array_list_remove(&a, 0, NULL)));
+    REQUIRE(STATUS_OK(array_list_remove(&a, 0, nullptr)));
     REQUIRE(STATUS_OK(array_list_remove(&a, 0, &out)));
     REQUIRE(out == 5);
     REQUIRE(array_list_remove(&a, 100, &out) == Status::INDEX_OUT_OF_BOUNDS);
@@ -202,7 +202,8 @@ TEST_CASE("Stable insertion") {
 }
 
 TEST_CASE("Unstable insertion") {
-    ArrayList a, b;
+    ArrayList a;
+    ArrayList b;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
     REQUIRE(STATUS_OK(array_list_init(&b, 4, sizeof(uint32_t))));
 
@@ -227,8 +228,8 @@ TEST_CASE("Unstable insertion") {
     }
     std::vector<uint32_t> expected_contents = initial;
     expected_contents.push_back(new_val_u);
-    std::sort(observed.begin(), observed.end());
-    std::sort(expected_contents.begin(), expected_contents.end());
+    std::ranges::sort(observed);
+    std::ranges::sort(expected_contents);
     REQUIRE(observed == expected_contents);
 
     REQUIRE(STATUS_OK(array_list_ensure_total_capacity(&b, 10)));
@@ -239,7 +240,8 @@ TEST_CASE("Unstable insertion") {
     array_list_insert_unstable_assume_capacity(&b, b.length, &back);
     REQUIRE(b.length == initial.size() + 3);
 
-    uint32_t first, last_u;
+    uint32_t first;
+    uint32_t last_u;
     REQUIRE(STATUS_OK(array_list_get(&b, 0, &first)));
     REQUIRE(STATUS_OK(array_list_get(&b, b.length - 1, &last_u)));
     REQUIRE(first == front);
@@ -257,9 +259,9 @@ TEST_CASE("Malformed find") {
 
     size_t  maybe_idx;
     int32_t maybe_item = 0;
-    REQUIRE(array_list_find(&a, NULL, &maybe_item, compare_int32_t) == Status::NULL_PARAMETER);
-    REQUIRE(array_list_find(&a, &maybe_idx, NULL, compare_int32_t) == Status::NULL_PARAMETER);
-    REQUIRE(array_list_find(&a, &maybe_idx, &maybe_item, NULL) == Status::NULL_PARAMETER);
+    REQUIRE(array_list_find(&a, nullptr, &maybe_item, compare_int32_t) == Status::NULL_PARAMETER);
+    REQUIRE(array_list_find(&a, &maybe_idx, nullptr, compare_int32_t) == Status::NULL_PARAMETER);
+    REQUIRE(array_list_find(&a, &maybe_idx, &maybe_item, nullptr) == Status::NULL_PARAMETER);
 
     array_list_deinit(&a);
 }
@@ -269,8 +271,8 @@ TEST_CASE("Find") {
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
 
     const int32_t values[] = {10, 20, 30, 40};
-    for (size_t i = 0; i < std::size(values); i++) {
-        REQUIRE(STATUS_OK(array_list_push(&a, &values[i])));
+    for (const int& value : values) {
+        REQUIRE(STATUS_OK(array_list_push(&a, &value)));
     }
 
     int32_t present_target = 30;
@@ -292,22 +294,24 @@ TEST_CASE("Sorting and binary search") {
 
     // Pack a vector and array list with random numbers for sorting
     std::vector<uint32_t> random;
+    random.reserve(total_size);
     for (size_t i = 0; i < total_size; ++i) {
         random.push_back(std::rand() % 10 * total_size);
     }
 
-    for (size_t i = 0; i < random.size(); i++) {
-        REQUIRE(STATUS_OK(array_list_push(&a, &random[i])));
+    for (unsigned int& i : random) {
+        REQUIRE(STATUS_OK(array_list_push(&a, &i)));
     }
 
     // Sort both containers and compare
-    std::sort(random.begin(), random.end());
+    std::ranges::sort(random);
     REQUIRE_FALSE(array_list_is_sorted(&a, compare_uint32_t));
     array_list_sort(&a, compare_uint32_t);
     REQUIRE(array_list_is_sorted(&a, compare_uint32_t));
 
     size_t   search_index;
-    uint32_t elem, search_elem;
+    uint32_t elem;
+    uint32_t search_elem;
     for (size_t i = 0; i < random.size(); i++) {
         REQUIRE(STATUS_OK(array_list_get(&a, i, &elem)));
         REQUIRE(random[i] == elem);

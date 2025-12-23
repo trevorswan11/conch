@@ -8,23 +8,19 @@
 NODISCARD Status string_builder_init_allocator(StringBuilder* sb,
                                                size_t         initial_length,
                                                Allocator      allocator) {
-    if (!sb) {
-        return NULL_PARAMETER;
-    } else if (initial_length == 0) {
-        return EMPTY;
-    }
+    if (!sb) { return NULL_PARAMETER; }
 
-    return array_list_init_allocator(&sb->buffer, initial_length, sizeof(char), allocator);
+    return initial_length == 0
+               ? EMPTY
+               : array_list_init_allocator(&sb->buffer, initial_length, sizeof(char), allocator);
 }
 
 NODISCARD Status string_builder_init(StringBuilder* sb, size_t initial_length) {
-    return string_builder_init_allocator(sb, initial_length, standard_allocator);
+    return string_builder_init_allocator(sb, initial_length, STANDARD_ALLOCATOR);
 }
 
 void string_builder_deinit(StringBuilder* sb) {
-    if (!sb) {
-        return;
-    }
+    if (!sb) { return; }
     array_list_deinit(&sb->buffer);
 }
 
@@ -36,9 +32,7 @@ NODISCARD Status string_builder_append(StringBuilder* sb, char byte) {
 NODISCARD Status string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
     assert(sb);
 
-    if (!bytes) {
-        return NULL_PARAMETER;
-    }
+    if (!bytes) { return NULL_PARAMETER; }
 
     TRY(array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + length));
 
@@ -97,9 +91,7 @@ NODISCARD Status string_builder_append_unsigned(StringBuilder* sb, uint64_t valu
 NODISCARD Status string_builder_append_signed(StringBuilder* sb, int64_t value) {
     char   buffer[32];
     size_t written = snprintf(buffer, sizeof(buffer), "%" PRId64, value);
-    if (written > sizeof(buffer)) {
-        return BUFFER_OVERFLOW;
-    }
+    if (written > sizeof(buffer)) { return BUFFER_OVERFLOW; }
 
     TRY(string_builder_append_many(sb, buffer, written));
     return SUCCESS;

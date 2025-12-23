@@ -14,13 +14,9 @@ NODISCARD Status array_list_init_allocator(ArrayList* a,
                                            size_t     item_size,
                                            Allocator  allocator) {
     ASSERT_ALLOCATOR(allocator);
-    if (item_size == 0) {
-        return ZERO_ITEM_SIZE;
-    }
+    if (item_size == 0) { return ZERO_ITEM_SIZE; }
     void* data = allocator.memory_alloc(capacity * item_size);
-    if (!data && capacity > 0) {
-        return ALLOCATION_FAILED;
-    }
+    if (!data && capacity > 0) { return ALLOCATION_FAILED; }
 
     *a = (ArrayList){
         .data      = data,
@@ -33,13 +29,11 @@ NODISCARD Status array_list_init_allocator(ArrayList* a,
 }
 
 NODISCARD Status array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
-    return array_list_init_allocator(a, capacity, item_size, standard_allocator);
+    return array_list_init_allocator(a, capacity, item_size, STANDARD_ALLOCATOR);
 }
 
 void array_list_deinit(ArrayList* a) {
-    if (!a || !a->data) {
-        return;
-    }
+    if (!a || !a->data) { return; }
     ASSERT_ALLOCATOR(a->allocator);
 
     a->allocator.free_alloc(a->data);
@@ -59,33 +53,28 @@ size_t array_list_length(const ArrayList* a) {
 }
 
 NODISCARD Status array_list_resize(ArrayList* a, size_t new_capacity) {
-    if (!a) {
-        return NULL_PARAMETER;
-    } else if (new_capacity == 0) {
+    assert(a);
+    ASSERT_ALLOCATOR(a->allocator);
+
+    if (!a) { return NULL_PARAMETER; }
+    if (new_capacity == 0) {
         array_list_deinit(a);
         return SUCCESS;
     }
-    ASSERT_ALLOCATOR(a->allocator);
 
     void* new_data = a->allocator.re_alloc(a->data, new_capacity * a->item_size);
-    if (!new_data) {
-        return REALLOCATION_FAILED;
-    }
+    if (!new_data) { return REALLOCATION_FAILED; }
 
     a->data     = new_data;
     a->capacity = new_capacity;
 
-    if (a->length > new_capacity) {
-        a->length = new_capacity;
-    }
+    if (a->length > new_capacity) { a->length = new_capacity; }
     return SUCCESS;
 }
 
 NODISCARD Status array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
     assert(a && a->data);
-    if (a->capacity < new_capacity) {
-        return array_list_resize(a, new_capacity);
-    }
+    if (a->capacity < new_capacity) { return array_list_resize(a, new_capacity); }
     return SUCCESS;
 }
 
@@ -96,18 +85,16 @@ void array_list_clear_retaining_capacity(ArrayList* a) {
 
 NODISCARD Status array_list_shrink_to_fit(ArrayList* a) {
     assert(a && a->data);
-    if (a->length < a->capacity) {
-        return array_list_resize(a, a->length);
-    }
+    if (a->length < a->capacity) { return array_list_resize(a, a->length); }
     return SUCCESS;
 }
 
-static inline void* _array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
+static inline void* array_list_get_ptr_unsafe(ArrayList* a, size_t index) {
     assert(a && a->data);
     return ptr_offset(a->data, index * a->item_size);
 }
 
-static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t index) {
+static inline const void* array_list_get_unsafe(const ArrayList* a, size_t index) {
     assert(a && a->data);
     return ptr_offset(a->data, index * a->item_size);
 }
@@ -115,11 +102,9 @@ static inline const void* _array_list_get_unsafe(const ArrayList* a, size_t inde
 NODISCARD Status array_list_push(ArrayList* a, const void* item) {
     assert(a && a->data);
 
-    if (a->length == a->capacity) {
-        TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4)));
-    }
+    if (a->length == a->capacity) { TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4))); }
 
-    void* dest = _array_list_get_ptr_unsafe(a, a->length);
+    void* dest = array_list_get_ptr_unsafe(a, a->length);
     memcpy(dest, item, a->item_size);
     a->length += 1;
     return SUCCESS;
@@ -127,7 +112,7 @@ NODISCARD Status array_list_push(ArrayList* a, const void* item) {
 
 void array_list_push_assume_capacity(ArrayList* a, const void* item) {
     assert(a && a->data && a->length < a->capacity);
-    void* dest = _array_list_get_ptr_unsafe(a, a->length);
+    void* dest = array_list_get_ptr_unsafe(a, a->length);
     memcpy(dest, item, a->item_size);
     a->length += 1;
 }
@@ -136,9 +121,7 @@ NODISCARD Status array_list_insert_stable(ArrayList* a, size_t index, const void
     assert(a && a->data);
     assert(index <= a->length);
 
-    if (a->length == a->capacity) {
-        TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4)));
-    }
+    if (a->length == a->capacity) { TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4))); }
 
     array_list_insert_stable_assume_capacity(a, index, item);
     return SUCCESS;
@@ -148,8 +131,8 @@ void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const 
     assert(a && a->data);
     assert(index <= a->length);
 
-    void* dest       = _array_list_get_ptr_unsafe(a, index);
-    void* shift_dest = _array_list_get_ptr_unsafe(a, index + 1);
+    void* dest       = array_list_get_ptr_unsafe(a, index);
+    void* shift_dest = array_list_get_ptr_unsafe(a, index + 1);
     memmove(shift_dest, dest, (a->length - index) * a->item_size);
 
     memcpy(dest, item, a->item_size);
@@ -164,8 +147,8 @@ NODISCARD Status array_list_insert_unstable(ArrayList* a, size_t index, const vo
 
     const size_t back = a->length - 1;
     if (index != back) {
-        void* current = _array_list_get_ptr_unsafe(a, index);
-        void* new     = _array_list_get_ptr_unsafe(a, a->length - 1);
+        void* current = array_list_get_ptr_unsafe(a, index);
+        void* new     = array_list_get_ptr_unsafe(a, a->length - 1);
         swap(current, new, a->item_size);
     }
     return SUCCESS;
@@ -179,19 +162,17 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
     const size_t back = a->length - 1;
 
     if (index != back) {
-        void* current = _array_list_get_ptr_unsafe(a, index);
-        void* new     = _array_list_get_ptr_unsafe(a, a->length - 1);
+        void* current = array_list_get_ptr_unsafe(a, index);
+        void* new     = array_list_get_ptr_unsafe(a, a->length - 1);
         swap(current, new, a->item_size);
     }
 }
 
 NODISCARD Status array_list_pop(ArrayList* a, void* item) {
     assert(a && a->data);
-    if (a->length == 0) {
-        return EMPTY;
-    }
+    if (a->length == 0) { return EMPTY; }
 
-    void* last = _array_list_get_ptr_unsafe(a, a->length - 1);
+    void* last = array_list_get_ptr_unsafe(a, a->length - 1);
     memcpy(item, last, a->item_size);
     a->length -= 1;
     return SUCCESS;
@@ -199,18 +180,14 @@ NODISCARD Status array_list_pop(ArrayList* a, void* item) {
 
 NODISCARD Status array_list_remove(ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
-    if (index >= a->length) {
-        return INDEX_OUT_OF_BOUNDS;
-    }
+    if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
-    const void* at = _array_list_get_ptr_unsafe(a, index);
-    if (item) {
-        memcpy(item, at, a->item_size);
-    }
+    const void* at = array_list_get_ptr_unsafe(a, index);
+    if (item) { memcpy(item, at, a->item_size); }
 
     for (size_t i = index; i < a->length - 1; i++) {
-        const void* src  = _array_list_get_ptr_unsafe(a, i + 1);
-        void*       dest = _array_list_get_ptr_unsafe(a, i);
+        const void* src  = array_list_get_ptr_unsafe(a, i + 1);
+        void*       dest = array_list_get_ptr_unsafe(a, i);
         memcpy(dest, src, a->item_size);
     }
 
@@ -228,31 +205,25 @@ NODISCARD Status array_list_remove_item(ArrayList*  a,
 
 NODISCARD Status array_list_get(const ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
-    if (index >= a->length) {
-        return INDEX_OUT_OF_BOUNDS;
-    }
+    if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
-    memcpy(item, _array_list_get_unsafe(a, index), a->item_size);
+    memcpy(item, array_list_get_unsafe(a, index), a->item_size);
     return SUCCESS;
 }
 
 NODISCARD Status array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     assert(a && a->data);
-    if (index >= a->length) {
-        return INDEX_OUT_OF_BOUNDS;
-    }
+    if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
-    *item = _array_list_get_ptr_unsafe(a, index);
+    *item = array_list_get_ptr_unsafe(a, index);
     return SUCCESS;
 }
 
 NODISCARD Status array_list_set(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
-    if (index >= a->length) {
-        return INDEX_OUT_OF_BOUNDS;
-    }
+    if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
-    void* dest = _array_list_get_ptr_unsafe(a, index);
+    void* dest = array_list_get_ptr_unsafe(a, index);
     memcpy(dest, item, a->item_size);
     return SUCCESS;
 }
@@ -262,12 +233,10 @@ NODISCARD Status array_list_find(const ArrayList* a,
                                  const void*      item,
                                  int (*compare)(const void*, const void*)) {
     assert(a && a->data);
-    if (!index || !item || !compare) {
-        return NULL_PARAMETER;
-    }
+    if (!index || !item || !compare) { return NULL_PARAMETER; }
 
     for (size_t i = 0; i < a->length; i++) {
-        if (compare(item, _array_list_get_unsafe(a, i)) == 0) {
+        if (compare(item, array_list_get_unsafe(a, i)) == 0) {
             *index = i;
             return SUCCESS;
         }
@@ -280,17 +249,20 @@ bool array_list_bsearch(const ArrayList* a,
                         const void*      item,
                         int (*compare)(const void*, const void*)) {
     assert(a && a->data && item && compare);
-    size_t low = 0, high = a->length;
+    size_t low  = 0;
+    size_t high = a->length;
 
     while (low < high) {
-        size_t      mid        = low + (high - low) / 2;
-        const void* elem       = _array_list_get_unsafe(a, mid);
+        size_t      mid        = low + ((high - low) / 2);
+        const void* elem       = array_list_get_unsafe(a, mid);
         const int   comparison = compare(elem, item);
 
         if (comparison == 0) {
             *index = mid;
             return true;
-        } else if (comparison < 0) {
+        }
+
+        if (comparison < 0) {
             low = mid + 1;
         } else {
             high = mid;
@@ -308,16 +280,12 @@ void array_list_sort(ArrayList* a, int (*compare)(const void*, const void*)) {
 
 bool array_list_is_sorted(const ArrayList* a, int (*compare)(const void*, const void*)) {
     assert(a && a->data && compare);
-    if (a->length == 0) {
-        return true;
-    }
+    if (a->length == 0) { return true; }
 
     for (size_t i = 0; i < a->length - 1; i++) {
-        const void* curr = _array_list_get_unsafe(a, i);
-        const void* next = _array_list_get_unsafe(a, i + 1);
-        if (compare(curr, next) > 0) {
-            return false;
-        }
+        const void* curr = array_list_get_unsafe(a, i);
+        const void* next = array_list_get_unsafe(a, i + 1);
+        if (compare(curr, next) > 0) { return false; }
     }
 
     return true;

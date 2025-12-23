@@ -1,4 +1,5 @@
-#pragma once
+#ifndef IF_EXPR_H
+#define IF_EXPR_H
 
 #include <stdint.h>
 
@@ -33,3 +34,5 @@ static const ExpressionVTable IF_VTABLE = {
             .analyze     = if_expression_analyze,
         },
 };
+
+#endif

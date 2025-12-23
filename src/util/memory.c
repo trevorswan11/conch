@@ -21,18 +21,14 @@ bool slice_equals(const Slice* a, const Slice* b) {
 
 bool slice_equals_str_z(const Slice* slice, const char* str) {
     assert(slice);
-    if (!slice->ptr && !str) {
-        return true;
-    }
+    if (!slice->ptr && !str) { return true; }
 
     return slice_equals_str_s(slice, str, strlen(str));
 }
 
 bool slice_equals_str_s(const Slice* slice, const char* str, size_t size) {
     assert(slice);
-    if (!slice->ptr && !str) {
-        return true;
-    }
+    if (!slice->ptr && !str) { return true; }
 
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
@@ -50,18 +46,14 @@ bool mut_slice_equals(const MutSlice* a, const MutSlice* b) {
 
 bool mut_slice_equals_str_z(const MutSlice* slice, const char* str) {
     assert(slice);
-    if (!slice->ptr && !str) {
-        return true;
-    }
+    if (!slice->ptr && !str) { return true; }
 
     return mut_slice_equals_str_s(slice, str, strlen(str));
 }
 
 bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size) {
     assert(slice);
-    if (!slice->ptr && !str) {
-        return true;
-    }
+    if (!slice->ptr && !str) { return true; }
 
     return slice->length == size && (memcmp(slice->ptr, str, slice->length) == 0);
 }
@@ -89,9 +81,7 @@ void* align_ptr(void* ptr, size_t alignment) { return (void*)align_up((uintptr_t
 void* ptr_offset(void* p, size_t offset) { return (void*)((uintptr_t)p + offset); }
 
 void swap(void* a, void* b, size_t size) {
-    if (!a || !b) {
-        return;
-    }
+    if (!a || !b) { return; }
 
     uint8_t* pa = (uint8_t*)a;
     uint8_t* pb = (uint8_t*)b;
@@ -104,26 +94,20 @@ void swap(void* a, void* b, size_t size) {
 }
 
 NODISCARD char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
-    if (!str) {
-        return NULL;
-    }
+    if (!str) { return NULL; }
     return strdup_s_allocator(str, strlen(str), memory_alloc);
 }
 
 NODISCARD char* strdup_z(const char* str) {
-    return strdup_z_allocator(str, standard_allocator.memory_alloc);
+    return strdup_z_allocator(str, STANDARD_ALLOCATOR.memory_alloc);
 }
 
 NODISCARD char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
-    if (!str) {
-        return NULL;
-    }
+    if (!str) { return NULL; }
 
     char* copy = memory_alloc(size + 1);
-    if (!copy) {
-        return NULL;
-    }
+    if (!copy) { return NULL; }
 
     memcpy(copy, str, size);
     copy[size] = '\0';
@@ -131,15 +115,13 @@ NODISCARD char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn
 }
 
 NODISCARD char* strdup_s(const char* str, size_t size) {
-    return strdup_s_allocator(str, size, standard_allocator.memory_alloc);
+    return strdup_s_allocator(str, size, STANDARD_ALLOCATOR.memory_alloc);
 }
 
 NODISCARD Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc) {
     assert(src && dest);
     char* duped = strdup_s_allocator(src->ptr, src->length, memory_alloc);
-    if (!duped) {
-        return ALLOCATION_FAILED;
-    }
+    if (!duped) { return ALLOCATION_FAILED; }
 
     *dest = mut_slice_from_str_s(duped, src->length);
     return SUCCESS;
@@ -165,17 +147,13 @@ NODISCARD void* rc_retain(void* rc_obj) {
 }
 
 void rc_release(void* rc_obj, free_alloc_fn free_alloc) {
-    if (!rc_obj) {
-        return;
-    }
+    if (!rc_obj) { return; }
 
     RcControlBlock* rc = (RcControlBlock*)rc_obj;
     rc->ref_count -= 1;
 
     if (rc->ref_count == 0) {
-        if (rc->dtor) {
-            rc->dtor(rc_obj, free_alloc);
-        }
+        if (rc->dtor) { rc->dtor(rc_obj, free_alloc); }
 
         free_alloc(rc_obj);
     }

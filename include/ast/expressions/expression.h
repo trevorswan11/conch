@@ -1,4 +1,5 @@
-#pragma once
+#ifndef EXPRESSION_H
+#define EXPRESSION_H
 
 #include "ast/node.h"
 
@@ -27,3 +28,5 @@ typedef struct Expression {
     Node                    base;
     const ExpressionVTable* vtable;
 } Expression;
+
+#endif

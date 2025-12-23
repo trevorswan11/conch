@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STATEMENT_H
+#define STATEMENT_H
 
 #include "ast/node.h"
 
@@ -27,3 +28,5 @@ struct Statement {
     Node                   base;
     const StatementVTable* vtable;
 };
+
+#endif

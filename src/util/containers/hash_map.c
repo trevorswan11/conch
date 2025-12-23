@@ -15,13 +15,13 @@ static_assert(alignof(Metadata) == 1, "Metadata must be a single byte alignment.
 MAX_FN(size_t, size_t)
 
 // Determines the new capacity based on the current size.
-static inline size_t _hash_map_capacity_for_size(size_t size) {
-    size_t new_cap = (size * 100) / HASH_MAP_MAX_LOAD_PERCENTAGE + 1;
+static inline size_t hash_map_capacity_for_size(size_t size) {
+    size_t new_cap = ((size * 100) / HASH_MAP_MAX_LOAD_PERCENTAGE) + 1;
     return ceil_power_of_two_size(new_cap);
 }
 
 // Grows the map to the new capacity, rehashing along the way.
-static inline NODISCARD Status _hash_map_grow(HashMap* hm, size_t new_capacity) {
+static inline NODISCARD Status hash_map_grow(HashMap* hm, size_t new_capacity) {
     assert(hm);
     new_capacity = max_size_t(2, new_capacity, HASH_MAP_MINIMUM_CAPACITY);
     assert(new_capacity > hm->header->capacity);
@@ -41,20 +41,16 @@ static inline NODISCARD Status _hash_map_grow(HashMap* hm, size_t new_capacity) 
     if (hm->size != 0) {
         const size_t old_capacity = hm->header->capacity;
         for (size_t i = 0; i < old_capacity; i++) {
-            if (!metadata_used(hm->metadata[i])) {
-                continue;
-            }
+            if (!metadata_used(hm->metadata[i])) { continue; }
 
             const void* key   = ptr_offset(hm->header->keys, i * hm->header->key_size);
             const void* value = ptr_offset(hm->header->values, i * hm->header->value_size);
             hash_map_put_assume_capacity_no_clobber(&map, key, value);
 
-            if (map.size == hm->size) {
-                break;
-            }
+            if (map.size == hm->size) { break; }
         }
     }
-    map.available = (new_capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100 - map.size;
+    map.available = ((new_capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100) - map.size;
 
     hash_map_deinit(hm);
     *hm = map;
@@ -62,19 +58,17 @@ static inline NODISCARD Status _hash_map_grow(HashMap* hm, size_t new_capacity) 
 }
 
 // Only grows if the requested count exceeds the current number of available slots.
-static inline NODISCARD Status _hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
+static inline NODISCARD Status hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
     assert(hm);
     const size_t max_load = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
-    if (hm->size + new_count <= max_load) {
-        return SUCCESS;
-    }
+    if (hm->size + new_count <= max_load) { return SUCCESS; }
 
-    const size_t desired = _hash_map_capacity_for_size(hm->size + new_count);
-    TRY(_hash_map_grow(hm, desired));
+    const size_t desired = hash_map_capacity_for_size(hm->size + new_count);
+    TRY(hash_map_grow(hm, desired));
     return SUCCESS;
 }
 
-static inline void _hash_map_init_metadatas(HashMap* hm) {
+static inline void hash_map_init_metadatas(HashMap* hm) {
     assert(hm);
     assert(METADATA_SLOT_OPEN.fingerprint == 0);
     assert(METADATA_SLOT_OPEN.used == 0);
@@ -91,18 +85,12 @@ NODISCARD Status hash_map_init_allocator(HashMap* hm,
                                          int (*compare)(const void*, const void*),
                                          Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
-    if (!hm || !hash || !compare) {
-        return NULL_PARAMETER;
-    } else if (key_size == 0 || value_size == 0) {
-        return ZERO_ITEM_SIZE;
-    } else if (key_align == 0 || value_align == 0) {
-        return ZERO_ITEM_ALIGN;
-    }
+    if (!hm || !hash || !compare) { return NULL_PARAMETER; }
+    if (key_size == 0 || value_size == 0) { return ZERO_ITEM_SIZE; }
+    if (key_align == 0 || value_align == 0) { return ZERO_ITEM_ALIGN; }
 
     capacity = capacity < HASH_MAP_MINIMUM_CAPACITY ? HASH_MAP_MINIMUM_CAPACITY : capacity;
-    if (!is_power_of_two(capacity)) {
-        capacity = ceil_power_of_two_size(capacity);
-    }
+    if (!is_power_of_two(capacity)) { capacity = ceil_power_of_two_size(capacity); }
 
     const size_t header_size   = sizeof(MapHeader);
     const size_t metadata_size = sizeof(Metadata) * capacity;
@@ -110,20 +98,14 @@ NODISCARD Status hash_map_init_allocator(HashMap* hm,
     const size_t values_size   = value_size * capacity;
 
     // Safety checks before allocating for overflow guard
-    if (capacity > SIZE_MAX / key_size) {
-        return SIZE_OVERFLOW;
-    } else if (capacity > SIZE_MAX / value_size) {
-        return SIZE_OVERFLOW;
-    } else if (metadata_size > SIZE_MAX - header_size) {
-        return SIZE_OVERFLOW;
-    }
+    if (capacity > SIZE_MAX / key_size) { return SIZE_OVERFLOW; }
+    if (capacity > SIZE_MAX / value_size) { return SIZE_OVERFLOW; }
+    if (metadata_size > SIZE_MAX - header_size) { return SIZE_OVERFLOW; }
 
     const size_t total_size =
         header_size + metadata_size + (keys_size + key_align - 1) + (values_size + value_align - 1);
     void* buffer = allocator.continuous_alloc(1, total_size);
-    if (!buffer) {
-        return ALLOCATION_FAILED;
-    }
+    if (!buffer) { return ALLOCATION_FAILED; }
 
     // Unpack the allocated block of memory
     uintptr_t ptr = (uintptr_t)buffer;
@@ -166,7 +148,7 @@ NODISCARD Status hash_map_init_allocator(HashMap* hm,
         .allocator = allocator,
     };
 
-    _hash_map_init_metadatas(hm);
+    hash_map_init_metadatas(hm);
     return SUCCESS;
 }
 
@@ -186,13 +168,11 @@ NODISCARD Status hash_map_init(HashMap* hm,
                                    value_align,
                                    hash,
                                    compare,
-                                   standard_allocator);
+                                   STANDARD_ALLOCATOR);
 }
 
 void hash_map_deinit(HashMap* hm) {
-    if (!hm || !hm->buffer) {
-        return;
-    }
+    if (!hm || !hm->buffer) { return; }
     ASSERT_ALLOCATOR(hm->allocator);
 
     hm->allocator.free_alloc(hm->buffer);
@@ -214,18 +194,16 @@ size_t hash_map_count(const HashMap* hm) {
 }
 
 void hash_map_clear_retaining_capacity(HashMap* hm) {
-    _hash_map_init_metadatas(hm);
+    hash_map_init_metadatas(hm);
     hm->size      = 0;
     hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
 }
 
 NODISCARD Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
-    if (!hm || !hm->buffer) {
-        return NULL_PARAMETER;
-    }
+    if (!hm || !hm->buffer) { return NULL_PARAMETER; }
 
     if (new_size > hm->size) {
-        TRY_IS(_hash_map_grow_if_needed(hm, new_size - hm->size), ALLOCATION_FAILED);
+        TRY_IS(hash_map_grow_if_needed(hm, new_size - hm->size), ALLOCATION_FAILED);
     }
     return SUCCESS;
 }
@@ -301,17 +279,17 @@ void hash_map_rehash(HashMap* hm) {
                      ptr_offset(values_ptr, probe * hm->header->value_size),
                      hm->header->value_size);
                 continue;
-            } else {
-                metadata[probe].used  = 1;
-                const void* old_key   = ptr_offset(keys_ptr, current * hm->header->key_size);
-                const void* old_value = ptr_offset(values_ptr, current * hm->header->value_size);
-                void*       new_key   = ptr_offset(keys_ptr, probe * hm->header->key_size);
-                void*       new_value = ptr_offset(values_ptr, probe * hm->header->value_size);
-
-                memcpy(new_key, old_key, hm->header->key_size);
-                memcpy(new_value, old_value, hm->header->value_size);
-                metadata_clear(&metadata[current]);
             }
+
+            metadata[probe].used  = 1;
+            const void* old_key   = ptr_offset(keys_ptr, current * hm->header->key_size);
+            const void* old_value = ptr_offset(values_ptr, current * hm->header->value_size);
+            void*       new_key   = ptr_offset(keys_ptr, probe * hm->header->key_size);
+            void*       new_value = ptr_offset(values_ptr, probe * hm->header->value_size);
+
+            memcpy(new_key, old_key, hm->header->key_size);
+            memcpy(new_value, old_value, hm->header->value_size);
+            metadata_clear(&metadata[current]);
         }
 
         current += 1;
@@ -332,7 +310,7 @@ void hash_map_rehash(HashMap* hm) {
         }
     }
 
-    hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100 - hm->size;
+    hm->available = ((hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100) - hm->size;
 }
 
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value) {
@@ -366,7 +344,7 @@ void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const
 }
 
 NODISCARD Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
-    TRY_IS(_hash_map_grow_if_needed(hm, 1), ALLOCATION_FAILED);
+    TRY_IS(hash_map_grow_if_needed(hm, 1), ALLOCATION_FAILED);
 
     hash_map_put_assume_capacity_no_clobber(hm, key, value);
     return SUCCESS;
@@ -408,9 +386,7 @@ MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* k
     }
 
     // It's cheaper to lower probing distance after deletions by recycling a tombstone
-    if (first_tombstone_idx < hm->header->capacity) {
-        probe = first_tombstone_idx;
-    }
+    if (first_tombstone_idx < hm->header->capacity) { probe = first_tombstone_idx; }
     hm->available -= 1;
 
     metadata_fill(&hm->metadata[probe], fingerprint);
@@ -427,7 +403,7 @@ NODISCARD Status hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutRe
     assert(hm && hm->buffer && key);
 
     // If we fail to grow, still try to find the key
-    if (_hash_map_grow_if_needed(hm, 1) == ALLOCATION_FAILED) {
+    if (hash_map_grow_if_needed(hm, 1) == ALLOCATION_FAILED) {
         if (hm->available > 0) {
             *result = hash_map_get_or_put_assume_capacity(hm, key);
             return SUCCESS;
@@ -473,9 +449,7 @@ bool hash_map_contains(const HashMap* hm, const void* key) {
 
 NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
     assert(hm && hm->buffer && key);
-    if (hm->size == 0) {
-        return EMPTY;
-    }
+    if (hm->size == 0) { return EMPTY; }
 
     const Hash    hash        = hm->hash(key);
     const size_t  mask        = hm->header->capacity - 1;
@@ -492,9 +466,7 @@ NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* 
             const void* test_key = ptr_offset(hm->header->keys, probe * hm->header->key_size);
 
             if (hm->compare(key, test_key) == 0) {
-                if (index) {
-                    *index = probe;
-                }
+                if (index) { *index = probe; }
                 return SUCCESS;
             }
         }
@@ -507,25 +479,23 @@ NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* 
     return ELEMENT_MISSING;
 }
 
-static inline const void* _hash_map_get_value_ptr(const HashMap* hm, const void* key) {
+static inline const void* hash_map_get_value_ptr_impl(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (STATUS_ERR(hash_map_get_index(hm, key, &index))) {
-        return NULL;
-    }
+    if (STATUS_ERR(hash_map_get_index(hm, key, &index))) { return NULL; }
 
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }
 
 NODISCARD Status hash_map_get_value(const HashMap* hm, const void* key, void* value) {
     assert(hm && hm->buffer && key && value);
-    const void* stored = _hash_map_get_value_ptr(hm, key);
+    const void* stored = hash_map_get_value_ptr_impl(hm, key);
     if (stored) {
         memcpy(value, stored, hm->header->value_size);
         return SUCCESS;
-    } else {
-        return ELEMENT_MISSING;
     }
+
+    return ELEMENT_MISSING;
 }
 
 NODISCARD Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item) {
@@ -571,9 +541,7 @@ HashMapIterator hash_map_iterator_init(HashMap* hm) {
 bool hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next) {
     assert(it && it->hm && it->hm->buffer);
     assert(it->index <= it->hm->header->capacity);
-    if (it->hm->size == 0) {
-        return false;
-    }
+    if (it->hm->size == 0) { return false; }
 
     const size_t capacity = it->hm->header->capacity;
     while (it->index < capacity) {

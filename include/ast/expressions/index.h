@@ -1,4 +1,5 @@
-#pragma once
+#ifndef INDEX_EXPR_H
+#define INDEX_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -28,3 +29,5 @@ static const ExpressionVTable INDEX_VTABLE = {
             .analyze     = index_expression_analyze,
         },
 };
+
+#endif

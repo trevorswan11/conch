@@ -34,9 +34,7 @@ NODISCARD Status for_loop_expression_create(Token               start_token,
     assert(captures.item_size == sizeof(ForLoopCapture));
 
     ForLoopExpression* for_loop = memory_alloc(sizeof(ForLoopExpression));
-    if (!for_loop) {
-        return ALLOCATION_FAILED;
-    }
+    if (!for_loop) { return ALLOCATION_FAILED; }
 
     *for_loop = (ForLoopExpression){
         .base      = EXPRESSION_INIT(FOR_VTABLE, start_token),
@@ -51,9 +49,7 @@ NODISCARD Status for_loop_expression_create(Token               start_token,
 }
 
 void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     ForLoopExpression* for_loop = (ForLoopExpression*)node;
@@ -81,9 +77,7 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     while (array_list_iterator_has_next(&it, &iterable)) {
         ASSERT_EXPRESSION(iterable);
         TRY(NODE_VIRTUAL_RECONSTRUCT(iterable, symbol_map, sb));
-        if (!array_list_iterator_exhausted(&it)) {
-            TRY(string_builder_append_str_z(sb, ", "));
-        }
+        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
     }
 
     // A for loop may not have captures if it means to discard its iterables
@@ -94,16 +88,12 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
         it = array_list_iterator_init(&for_loop->captures);
         ForLoopCapture capture;
         while (array_list_iterator_has_next(&it, &capture)) {
-            if (capture.is_ref) {
-                TRY(string_builder_append_str_z(sb, "ref "));
-            }
+            if (capture.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
             ASSERT_EXPRESSION(capture.capture);
             TRY(NODE_VIRTUAL_RECONSTRUCT(capture.capture, symbol_map, sb));
 
-            if (!array_list_iterator_exhausted(&it)) {
-                TRY(string_builder_append_str_z(sb, ", "));
-            }
+            if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
         }
 
         TRY(string_builder_append(sb, ')'));
@@ -149,9 +139,7 @@ NODISCARD Status while_loop_expression_create(Token                 start_token,
     assert(memory_alloc);
 
     WhileLoopExpression* while_loop = memory_alloc(sizeof(WhileLoopExpression));
-    if (!while_loop) {
-        return ALLOCATION_FAILED;
-    }
+    if (!while_loop) { return ALLOCATION_FAILED; }
 
     *while_loop = (WhileLoopExpression){
         .base         = EXPRESSION_INIT(WHILE_VTABLE, start_token),
@@ -166,9 +154,7 @@ NODISCARD Status while_loop_expression_create(Token                 start_token,
 }
 
 void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
@@ -239,9 +225,7 @@ NODISCARD Status do_while_loop_expression_create(Token                   start_t
     assert(memory_alloc);
 
     DoWhileLoopExpression* do_while_loop = memory_alloc(sizeof(DoWhileLoopExpression));
-    if (!do_while_loop) {
-        return ALLOCATION_FAILED;
-    }
+    if (!do_while_loop) { return ALLOCATION_FAILED; }
 
     *do_while_loop = (DoWhileLoopExpression){
         .base      = EXPRESSION_INIT(DO_WHILE_VTABLE, start_token),
@@ -254,9 +238,7 @@ NODISCARD Status do_while_loop_expression_create(Token                   start_t
 }
 
 void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)node;

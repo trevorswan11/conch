@@ -13,9 +13,7 @@ NODISCARD Status block_statement_create(Token            start_token,
     ASSERT_ALLOCATOR(allocator);
 
     BlockStatement* block = allocator.memory_alloc(sizeof(BlockStatement));
-    if (!block) {
-        return ALLOCATION_FAILED;
-    }
+    if (!block) { return ALLOCATION_FAILED; }
 
     ArrayList statements;
     TRY_DO(array_list_init_allocator(&statements, 8, sizeof(Statement*), allocator),
@@ -31,9 +29,7 @@ NODISCARD Status block_statement_create(Token            start_token,
 }
 
 void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     BlockStatement* block = (BlockStatement*)node;

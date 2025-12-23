@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KEYWORDS_H
+#define KEYWORDS_H
 
 #include "lexer/token.h"
 
@@ -56,3 +57,5 @@ static const Keyword ALL_KEYWORDS[] = {
     KEYWORD_STRING, KEYWORD_BOOL,   KEYWORD_VOID,        KEYWORD_TYPE,       KEYWORD_WITH,
     KEYWORD_AS,
 };
+
+#endif

@@ -99,9 +99,7 @@ NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression**
 
     while (!parser_peek_token_is(p, SEMICOLON) && precedence < parser_peek_precedence(p)) {
         InfixFn infix;
-        if (!poll_infix(p, p->peek_token.type, &infix)) {
-            return SUCCESS;
-        }
+        if (!poll_infix(p, p->peek_token.type, &infix)) { return SUCCESS; }
 
         TRY(parser_next_token(p));
         if (p->peek_token.type == END) {
@@ -213,9 +211,7 @@ NODISCARD Status parameter_list_parse(Parser*    p,
             });
 
             // Parsing a type may move up to the closing parentheses
-            if (parser_current_token_is(p, RPAREN)) {
-                break;
-            }
+            if (parser_current_token_is(p, RPAREN)) { break; }
 
             // Consume the comma and advance past it if there's not a closing delim
             TRY_DO(parser_expect_current(p, COMMA),
@@ -224,9 +220,7 @@ NODISCARD Status parameter_list_parse(Parser*    p,
     }
 
     // The caller may not care about default parameter presence
-    if (contains_default_param) {
-        *contains_default_param = some_initialized;
-    }
+    if (contains_default_param) { *contains_default_param = some_initialized; }
 
     *parameters = list;
     return SUCCESS;
@@ -334,9 +328,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
 
             TRY_DO(array_list_push(&dim_array, &dim), array_list_deinit(&dim_array));
 
-            if (parser_peek_token_is(p, COMMA)) {
-                UNREACHABLE_IF_ERROR(parser_next_token(p));
-            }
+            if (parser_peek_token_is(p, COMMA)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
         }
 
         TRY_DO(parser_expect_peek(p, RBRACKET), array_list_deinit(&dim_array));
@@ -722,7 +714,7 @@ NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-static inline NODISCARD Status _if_expression_parse_branch(Parser* p, Statement** stmt) {
+static inline NODISCARD Status if_expression_parse_branch(Parser* p, Statement** stmt) {
     TRY(parser_next_token(p));
 
     Statement* alternate;
@@ -742,13 +734,13 @@ NODISCARD Status if_expression_parse(Parser* p, Expression** expression) {
     TRY_DO(parser_expect_peek(p, RPAREN), NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     Statement* consequence;
-    TRY_DO(_if_expression_parse_branch(p, &consequence),
+    TRY_DO(if_expression_parse_branch(p, &consequence),
            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     Statement* alternate = NULL;
     if (parser_peek_token_is(p, ELSE)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
-        TRY_DO(_if_expression_parse_branch(p, &alternate), {
+        TRY_DO(if_expression_parse_branch(p, &alternate), {
             NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(consequence, p->allocator.free_alloc);
         });
@@ -996,9 +988,7 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         free_expression_list(&generics, p->allocator.free_alloc);
     });
 
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     StructExpression* struct_expr;
     TRY_DO(struct_expression_create(
@@ -1063,9 +1053,7 @@ NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
 
     TRY_DO(parser_expect_peek(p, RBRACE),
            free_enum_variant_list(&variants, p->allocator.free_alloc));
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     EnumExpression* enum_expr;
     TRY_DO(enum_expression_create(start_token, variants, &enum_expr, p->allocator.memory_alloc),
@@ -1180,9 +1168,7 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
                free_match_arm_list(&arms, p->allocator.free_alloc);
            });
 
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *expression = (Expression*)match;
     return SUCCESS;
@@ -1251,9 +1237,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
            free_expression_list(&items, p->allocator.free_alloc));
 
     TRY_DO(parser_expect_peek(p, RBRACE), NODE_VIRTUAL_FREE(array, p->allocator.free_alloc));
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *expression = (Expression*)array;
     return SUCCESS;
@@ -1408,9 +1392,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
                NODE_VIRTUAL_FREE(non_break, p->allocator.free_alloc);
            });
 
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *expression = (Expression*)for_loop;
     return SUCCESS;
@@ -1501,9 +1483,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
                NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
            });
 
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        UNREACHABLE_IF_ERROR(parser_next_token(p));
-    }
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *expression = (Expression*)while_loop;
     return SUCCESS;

@@ -15,9 +15,7 @@ NODISCARD Status identifier_expression_create(Token                  start_token
     assert(start_token.slice.ptr && start_token.slice.length > 0);
 
     IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
-    if (!ident) {
-        return ALLOCATION_FAILED;
-    }
+    if (!ident) { return ALLOCATION_FAILED; }
 
     *ident = (IdentifierExpression){
         .base = EXPRESSION_INIT(IDENTIFIER_VTABLE, start_token),
@@ -29,9 +27,7 @@ NODISCARD Status identifier_expression_create(Token                  start_token
 }
 
 void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STRING_BUILDER_H
+#define STRING_BUILDER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -29,3 +30,5 @@ NODISCARD Status string_builder_append_signed(StringBuilder* sb, int64_t value);
 //
 // In successful calls, a string is returned in a slice and must be freed by the caller.
 NODISCARD Status string_builder_to_string(StringBuilder* sb, MutSlice* slice);
+
+#endif

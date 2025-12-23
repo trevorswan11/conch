@@ -11,9 +11,7 @@
     assert(memory_alloc);                                   \
     assert(start_token.slice.ptr);                          \
     type* integer = memory_alloc(sizeof(type));             \
-    if (!integer) {                                         \
-        return ALLOCATION_FAILED;                           \
-    }                                                       \
+    if (!integer) { return ALLOCATION_FAILED; }             \
                                                             \
     *integer = (type){                                      \
         .base  = EXPRESSION_INIT(custom_vtab, start_token), \
@@ -24,9 +22,7 @@
     return SUCCESS
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
     free_alloc(node);
 }

@@ -1,9 +1,8 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
 
 extern "C" {
 #include "util/containers/string_builder.h"
@@ -45,10 +44,10 @@ TEST_CASE("StringBuilder append slices") {
     StringBuilder sb;
     REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
 
-    Slice text = slice_from_str_z("hello");
+    const Slice text = slice_from_str_z("hello");
     REQUIRE(STATUS_OK(string_builder_append_slice(&sb, text)));
 
-    MutSlice mut_text = mut_slice_from_str_z((char*)", world!");
+    const MutSlice mut_text = mut_slice_from_str_z((char*)", world!");
     REQUIRE(STATUS_OK(string_builder_append_mut_slice(&sb, mut_text)));
 
     MutSlice slice;
@@ -110,11 +109,11 @@ TEST_CASE("StringBuilder empty initialization") {
 
 TEST_CASE("StringBuilder handles null inputs") {
     StringBuilder sb;
-    REQUIRE(string_builder_init(NULL, 10) == Status::NULL_PARAMETER);
+    REQUIRE(string_builder_init(nullptr, 10) == Status::NULL_PARAMETER);
     REQUIRE(string_builder_init(&sb, 0) == Status::EMPTY);
 
     REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
-    REQUIRE(string_builder_append_many(&sb, NULL, 5) == Status::NULL_PARAMETER);
+    REQUIRE(string_builder_append_many(&sb, nullptr, 5) == Status::NULL_PARAMETER);
     MutSlice slice;
     REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
     REQUIRE(slice.ptr);

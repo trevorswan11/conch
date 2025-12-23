@@ -7,7 +7,17 @@ project(conch
     LANGUAGES C CXX
 )
 
+# Qualify compile commands database for tooling
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(APPLE)
+    execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+endif()
+
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
@@ -234,4 +244,13 @@ find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
     add_custom_target(fmt COMMAND ${CLANG_FORMAT} -i ${TOOLING_SOURCES})
     add_custom_target(fmt-check COMMAND ${CLANG_FORMAT} --dry-run --Werror ${TOOLING_SOURCES})
+endif()
+
+# Static analysis
+find_program(RUN_CLANG_TIDY run-clang-tidy)
+find_program(CLANG_TIDY clang-tidy)
+if(RUN_CLANG_TIDY)
+    add_custom_target(tidy COMMAND ${RUN_CLANG_TIDY} -p ${CMAKE_BINARY_DIR} ${TOOLING_SOURCES})
+elseif(CLANG_TIDY)
+    add_custom_target(tidy COMMAND ${CLANG_TIDY} -p ${CMAKE_BINARY_DIR} ${TOOLING_SOURCES})
 endif()

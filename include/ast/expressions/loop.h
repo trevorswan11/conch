@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LOOP_EXPR_H
+#define LOOP_EXPR_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -108,3 +109,5 @@ static const ExpressionVTable DO_WHILE_VTABLE = {
             .analyze     = do_while_loop_expression_analyze,
         },
 };
+
+#endif

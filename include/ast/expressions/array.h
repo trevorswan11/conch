@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ARRAY_EXPR_H
+#define ARRAY_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -34,3 +35,5 @@ static const ExpressionVTable ARRAY_VTABLE = {
             .analyze     = array_literal_expression_analyze,
         },
 };
+
+#endif

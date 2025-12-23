@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-TempFile::TempFile(const std::string& path, const std::string& content) : filepath(path) {
+TempFile::TempFile(std::string path, const std::string& content) : filepath(std::move(path)) {
     std::ofstream ofs(filepath, std::ios::binary);
     ofs.write(content.data(), content.size());
     ofs.close();
@@ -11,8 +11,6 @@ TempFile::TempFile(const std::string& path, const std::string& content) : filepa
 
 FILE* TempFile::open(const char* permissions) {
     FILE* f = fopen(filepath.c_str(), permissions);
-    if (!f) {
-        return NULL;
-    }
+    if (f == nullptr) { return nullptr; }
     return f;
 }

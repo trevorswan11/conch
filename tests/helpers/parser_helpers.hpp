@@ -36,9 +36,10 @@ class ParserFixture {
         lexer_deinit(&l);
     }
 
-    Parser* parser() { return &p; }
-    AST*    ast() { return &a; }
-    Lexer*  lexer() { return &l; }
+    const Parser* parser() { return &p; }
+    const AST*    ast() { return &a; }
+    AST*          ast_mut() { return &a; }
+    const Lexer*  lexer() { return &l; }
 
     void check_errors(std::vector<std::string> expected_errors = {});
     void check_errors(std::vector<std::string> expected_errors, bool print_anyways);
@@ -57,16 +58,16 @@ void check_errors(const ArrayList*         actual_errors,
 void test_reconstruction(const char* input, std::string expected);
 
 // This does not verify any correctness for non-identifiers.
-void test_type_expression(Expression*       expression,
+void test_type_expression(const Expression* expression,
                           bool              expect_nullable,
                           bool              expect_primitive,
                           TypeExpressionTag expected_tag,
                           ExplicitTypeTag   expected_explicit_tag,
                           std::string       expected_type_literal);
-void test_decl_statement(Statement* stmt, bool expect_const, std::string expected_ident);
+void test_decl_statement(const Statement* stmt, bool expect_const, std::string expected_ident);
 
 // This does not verify any correctness for non-identifiers.
-void test_decl_statement(Statement*        stmt,
+void test_decl_statement(const Statement*  stmt,
                          bool              expect_const,
                          std::string       expected_ident,
                          bool              expect_nullable,
@@ -75,12 +76,12 @@ void test_decl_statement(Statement*        stmt,
                          ExplicitTypeTag   expected_explicit_tag,
                          std::string       expected_type_literal);
 
-template <typename T> void test_number_expression(Expression* expression, T expected_value);
+template <typename T> void test_number_expression(const Expression* expression, T expected_value);
 template <typename T> void test_number_expression(const char* input, T expected_value);
 
-void test_bool_expression(Expression* expression, bool expected_value);
+void test_bool_expression(const Expression* expression, bool expected_value);
 
-void test_string_expression(Expression* expression, std::string expected_string_literal);
-void test_identifier_expression(Expression* expression,
-                                std::string expected_name,
-                                TokenType   expected_type = TokenType::IDENT);
+void test_string_expression(const Expression* expression, std::string expected_string_literal);
+void test_identifier_expression(const Expression* expression,
+                                std::string       expected_name,
+                                TokenType         expected_type = TokenType::IDENT);

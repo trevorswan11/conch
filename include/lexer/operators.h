@@ -1,4 +1,5 @@
-#pragma once
+#ifndef OPERATORS_H
+#define OPERATORS_H
 
 #include "lexer/token.h"
 
@@ -102,3 +103,5 @@ static const Operator ALL_OPERATORS[] = {
     OPERATOR_MULTILINE_STRING,
     OPERATOR_REF,
 };
+
+#endif

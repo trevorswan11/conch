@@ -10,9 +10,7 @@
 #define SINGLE_STMT_CREATE(type, custom_vtab, out_expr)            \
     assert(memory_alloc);                                          \
     type* temp = memory_alloc(sizeof(type));                       \
-    if (!temp) {                                                   \
-        return ALLOCATION_FAILED;                                  \
-    }                                                              \
+    if (!temp) { return ALLOCATION_FAILED; }                       \
                                                                    \
     *temp     = (type){EXPRESSION_INIT(custom_vtab, start_token)}; \
     *out_expr = temp;                                              \
@@ -28,9 +26,7 @@
     return SUCCESS
 
 void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
     free_alloc(node);
 }

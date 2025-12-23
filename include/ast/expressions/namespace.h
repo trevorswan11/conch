@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NAMESPACE_EXPR_H
+#define NAMESPACE_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -32,3 +33,5 @@ static const ExpressionVTable NAMESPACE_VTABLE = {
             .analyze     = namespace_expression_analyze,
         },
 };
+
+#endif

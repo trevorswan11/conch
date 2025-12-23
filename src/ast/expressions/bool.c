@@ -14,9 +14,7 @@ NODISCARD Status bool_literal_expression_create(Token                   start_to
     assert(start_token.type == TRUE || start_token.type == FALSE);
 
     BoolLiteralExpression* bool_local = memory_alloc(sizeof(BoolLiteralExpression));
-    if (!bool_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!bool_local) { return ALLOCATION_FAILED; }
 
     *bool_local = (BoolLiteralExpression){
         .base  = EXPRESSION_INIT(BOOL_VTABLE, start_token),
@@ -28,9 +26,7 @@ NODISCARD Status bool_literal_expression_create(Token                   start_to
 }
 
 void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;

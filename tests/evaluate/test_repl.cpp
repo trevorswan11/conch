@@ -1,7 +1,5 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdio.h>
-
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -20,18 +18,19 @@ extern "C" {
 }
 
 TEST_CASE("Null program component deinit") {
-    lexer_deinit(NULL);
-    parser_deinit(NULL);
-    ast_deinit(NULL);
-    program_deinit(NULL);
-    file_io_deinit(NULL);
+    lexer_deinit(nullptr);
+    parser_deinit(nullptr);
+    ast_deinit(nullptr);
+    program_deinit(nullptr);
+    file_io_deinit(nullptr);
 }
 
 TEST_CASE("REPL with acceptable input") {
     const char* input_text = "var x: int = 123;\\\nconst y := 3;\nexit\n";
 
     TempFile temp_in("TMP_repl_in", input_text);
-    TempFile temp_out("TMP_repl_out"), temp_err("TMP_repl_err");
+    TempFile temp_out("TMP_repl_out");
+    TempFile temp_err("TMP_repl_err");
 
     FILE* in  = temp_in.open("rb+");
     FILE* out = temp_out.open("wb");
@@ -46,13 +45,13 @@ TEST_CASE("REPL with acceptable input") {
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
-    std::ifstream out_fs(temp_out.path(), std::ios::binary);
-    std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
-                             std::istreambuf_iterator<char>());
+    std::ifstream     out_fs(temp_out.path(), std::ios::binary);
+    const std::string captured_out((std::istreambuf_iterator<char>(out_fs)),
+                                   std::istreambuf_iterator<char>());
 
-    std::ifstream err_fs(temp_err.path(), std::ios::binary);
-    std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
-                             std::istreambuf_iterator<char>());
+    std::ifstream     err_fs(temp_err.path(), std::ios::binary);
+    const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
+                                   std::istreambuf_iterator<char>());
 
     REQUIRE(captured_out.find(WELCOME_MESSAGE) != std::string::npos);
     REQUIRE(captured_out.find("var") != std::string::npos);
@@ -66,7 +65,8 @@ TEST_CASE("REPL with error input") {
     const char* input_text = "var x = 123;\nexit\n";
 
     TempFile temp_in("TMP_repl_in", input_text);
-    TempFile temp_out("TMP_repl_out"), temp_err("TMP_repl_err");
+    TempFile temp_out("TMP_repl_out");
+    TempFile temp_err("TMP_repl_err");
 
     FILE* in  = temp_in.open("rb+");
     FILE* out = temp_out.open("wb");
@@ -81,13 +81,13 @@ TEST_CASE("REPL with error input") {
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
-    std::ifstream out_fs(temp_out.path(), std::ios::binary);
-    std::string   captured_out((std::istreambuf_iterator<char>(out_fs)),
-                             std::istreambuf_iterator<char>());
+    std::ifstream     out_fs(temp_out.path(), std::ios::binary);
+    const std::string captured_out((std::istreambuf_iterator<char>(out_fs)),
+                                   std::istreambuf_iterator<char>());
 
-    std::ifstream err_fs(temp_err.path(), std::ios::binary);
-    std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
-                             std::istreambuf_iterator<char>());
+    std::ifstream     err_fs(temp_err.path(), std::ios::binary);
+    const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
+                                   std::istreambuf_iterator<char>());
 
     REQUIRE(captured_out.find(WELCOME_MESSAGE) != std::string::npos);
     REQUIRE(captured_err.find("Parser errors:") != std::string::npos);
@@ -98,7 +98,8 @@ TEST_CASE("REPL with error input") {
 
 TEST_CASE("REPL with incorrect buffer") {
     TempFile temp_in("TMP_repl_in", "2");
-    TempFile temp_out("TMP_repl_out"), temp_err("TMP_repl_err");
+    TempFile temp_out("TMP_repl_out");
+    TempFile temp_err("TMP_repl_err");
 
     FILE* in  = temp_in.open("rb+");
     FILE* out = temp_out.open("wb");
@@ -113,9 +114,9 @@ TEST_CASE("REPL with incorrect buffer") {
 
     REQUIRE(repl_run(&io, buf, &output) == Status::TYPE_MISMATCH);
 
-    std::ifstream err_fs(temp_err.path(), std::ios::binary);
-    std::string   captured_err((std::istreambuf_iterator<char>(err_fs)),
-                             std::istreambuf_iterator<char>());
+    std::ifstream     err_fs(temp_err.path(), std::ios::binary);
+    const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
+                                   std::istreambuf_iterator<char>());
     REQUIRE(captured_err.find("ArrayList must be initialized for bytes") != std::string::npos);
 
     array_list_deinit(&output);

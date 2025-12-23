@@ -80,7 +80,7 @@ TEST_CASE("Assignment expressions") {
                 "var v := 3; v = 5",
                 "var v := 3u; v = 6u",
                 "var v := 3uz; v = 6uz",
-                "var v := \"3\"; v = \"woah\"",
+                R"(var v := "3"; v = "woah")",
                 "var v := '3'; v = '\\0'",
                 "var v := true; v = false",
                 "var v := 5.234; v = 2.34e30",
@@ -105,10 +105,10 @@ TEST_CASE("Assignment expressions") {
     SECTION("Compound assignments") {
         SECTION("Correct assignment") {
             // Adding nil to a nullable value will be a runtime check
-            const char* inputs[] = {
+            const char* const inputs[] = {
                 "var v: int = 3; v += 7",
                 "var v: uint = 3u; v += 9u",
-                "var v: string = \"H\"; v += \"i\"",
+                R"(var v: string = "H"; v += "i")",
             };
 
             for (const auto& i : inputs) {
@@ -170,7 +170,7 @@ TEST_CASE("Block statements") {
 
 TEST_CASE("Type aliases") {
     SECTION("Primitive aliases") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "type custom = int; const v: custom = 3;",
             "type custom = uint; const v: custom = 3u;",
             "type custom = size; const v: custom = 3uz;",
@@ -209,7 +209,7 @@ TEST_CASE("Enum types") {
     }
 
     SECTION("Assignment flavors") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "type A = enum { a, }; const b: A = A::a",
             "type A = ?enum { a, }; var b: A = A::a; b = nil",
             "type A = enum { RED, BLUE, GREEN, }; var b: A = A::RED; b = A::BLUE; b = A::GREEN",
@@ -371,7 +371,7 @@ TEST_CASE("Infix operators") {
         test_analyze("7u and 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("type a = enum { ONE, }; const b: a = a::ONE; b == 4",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 46]"});
-        test_analyze("\"tre\" < \"vor\"", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze(R"("tre" < "vor")", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3 < 4.3", {"TYPE_MISMATCH [Ln 1, Col 1]"});
         test_analyze("3.3..=4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3..=4.3", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});

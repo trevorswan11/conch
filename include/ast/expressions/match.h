@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATCH_EXPR_H
+#define MATCH_EXPR_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -40,3 +41,5 @@ static const ExpressionVTable MATCH_VTABLE = {
             .analyze     = match_expression_analyze,
         },
 };
+
+#endif

@@ -14,9 +14,7 @@
 bool group_expressions = false;
 
 void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
-    if (!errors) {
-        return;
-    }
+    if (!errors) { return; }
     assert(free_alloc);
 
     ArrayListIterator it = array_list_iterator_init(errors);
@@ -30,9 +28,7 @@ void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
 
 void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
     assert(free_alloc);
-    if (!errors || !errors->data) {
-        return;
-    }
+    if (!errors || !errors->data) { return; }
 
     clear_error_list(errors, free_alloc);
     array_list_deinit(errors);
@@ -78,9 +74,7 @@ NODISCARD Status ast_init(AST* ast, Allocator allocator) {
 }
 
 void ast_deinit(AST* ast) {
-    if (!ast) {
-        return;
-    }
+    if (!ast) { return; }
     ASSERT_ALLOCATOR(ast->allocator);
 
     free_statement_list(&ast->statements, ast->allocator.free_alloc);
@@ -107,9 +101,7 @@ Slice poll_tt_symbol(const HashMap* symbol_map, TokenType t) {
     assert(symbol_map && symbol_map->buffer);
 
     Slice slice;
-    if (STATUS_OK(hash_map_get_value(symbol_map, &t, &slice))) {
-        return slice;
-    }
+    if (STATUS_OK(hash_map_get_value(symbol_map, &t, &slice))) { return slice; }
 
     const char* name = token_type_name(t);
     return slice_from_str_z(name);
@@ -145,9 +137,7 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
 
 void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
     assert(free_alloc);
-    if (!statements || !statements->data) {
-        return;
-    }
+    if (!statements || !statements->data) { return; }
 
     clear_statement_list(statements, free_alloc);
     array_list_deinit(statements);
@@ -155,9 +145,7 @@ void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
 
 void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     assert(free_alloc);
-    if (!expressions || !expressions->data) {
-        return;
-    }
+    if (!expressions || !expressions->data) { return; }
 
     clear_expression_list(expressions, free_alloc);
     array_list_deinit(expressions);
@@ -176,9 +164,7 @@ NODISCARD Status generics_reconstruct(ArrayList*     generics,
         Expression*       generic;
         while (array_list_iterator_has_next(&it, &generic)) {
             TRY(NODE_VIRTUAL_RECONSTRUCT(generic, symbol_map, sb));
-            if (!array_list_iterator_exhausted(&it)) {
-                TRY(string_builder_append_str_z(sb, ", "));
-            }
+            if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
         }
 
         TRY(string_builder_append(sb, '>'));

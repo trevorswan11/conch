@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HASH_MAP_H
+#define HASH_MAP_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -187,3 +188,5 @@ NODISCARD Status hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
 bool            hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next);
+
+#endif

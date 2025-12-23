@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ALPHANUM_H
+#define ALPHANUM_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -71,3 +72,5 @@ NODISCARD Status strntod(const char*     str,
 //
 // Asserts that the input is surrounded by single quotes and is a single logical ASCII character.
 NODISCARD Status strntochr(const char* str, size_t n, uint8_t* out);
+
+#endif

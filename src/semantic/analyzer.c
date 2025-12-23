@@ -35,9 +35,7 @@ NODISCARD Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator
 }
 
 void seman_deinit(SemanticAnalyzer* analyzer) {
-    if (!analyzer) {
-        return;
-    }
+    if (!analyzer) { return; }
     free_alloc_fn free_alloc = analyzer->allocator.free_alloc;
 
     semantic_context_destroy(analyzer->global_ctx, free_alloc);

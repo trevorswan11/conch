@@ -9,9 +9,7 @@
 NODISCARD Status symbol_table_create(SymbolTable** table, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     SymbolTable* st = allocator.memory_alloc(sizeof(SymbolTable));
-    if (!st) {
-        return ALLOCATION_FAILED;
-    }
+    if (!st) { return ALLOCATION_FAILED; }
 
     HashMap symbols;
     TRY_DO(hash_map_init_allocator(&symbols,
@@ -34,9 +32,7 @@ NODISCARD Status symbol_table_create(SymbolTable** table, Allocator allocator) {
 }
 
 void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
-    if (!table) {
-        return;
-    }
+    if (!table) { return; }
 
     MapEntry        next;
     HashMapIterator it = hash_map_iterator_init(&table->symbols);
@@ -72,9 +68,7 @@ NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType
 
 bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType** type) {
     assert(st);
-    if (!symbol_table_has(st, symbol)) {
-        return false;
-    }
+    if (!symbol_table_has(st, symbol)) { return false; }
 
     IGNORE_STATUS(symbol_table_get(st, symbol, type));
     return true;

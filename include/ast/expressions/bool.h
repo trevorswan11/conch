@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BOOL_EXPR_H
+#define BOOL_EXPR_H
 
 #include <stdbool.h>
 
@@ -29,3 +30,5 @@ static const ExpressionVTable BOOL_VTABLE = {
             .analyze     = bool_literal_expression_analyze,
         },
 };
+
+#endif

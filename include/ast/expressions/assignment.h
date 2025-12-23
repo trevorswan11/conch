@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ASSIGNMENT_EXPR_H
+#define ASSIGNMENT_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -35,3 +36,5 @@ static const ExpressionVTable ASSIGNMENT_VTABLE = {
             .analyze     = assignment_expression_analyze,
         },
 };
+
+#endif

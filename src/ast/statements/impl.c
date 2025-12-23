@@ -19,9 +19,7 @@ NODISCARD Status impl_statement_create(Token                 start_token,
     assert(implementation->statements.length > 0);
 
     ImplStatement* impl = memory_alloc(sizeof(ImplStatement));
-    if (!impl) {
-        return ALLOCATION_FAILED;
-    }
+    if (!impl) { return ALLOCATION_FAILED; }
 
     *impl = (ImplStatement){
         .base           = STATEMENT_INIT(IMPL_VTABLE, start_token),
@@ -34,9 +32,7 @@ NODISCARD Status impl_statement_create(Token                 start_token,
 }
 
 void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     ImplStatement* impl = (ImplStatement*)node;

@@ -15,9 +15,7 @@ NODISCARD Status import_statement_create(Token                 start_token,
                                          memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     ImportStatement* import = memory_alloc(sizeof(ImportStatement));
-    if (!import) {
-        return ALLOCATION_FAILED;
-    }
+    if (!import) { return ALLOCATION_FAILED; }
 
     *import = (ImportStatement){
         .base    = STATEMENT_INIT(IMPORT_VTABLE, start_token),
@@ -31,9 +29,7 @@ NODISCARD Status import_statement_create(Token                 start_token,
 }
 
 void import_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     ImportStatement* import = (ImportStatement*)node;

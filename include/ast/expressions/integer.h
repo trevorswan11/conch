@@ -1,4 +1,5 @@
-#pragma once
+#ifndef INTEGER_EXPR_H
+#define INTEGER_EXPR_H
 
 #include <stdint.h>
 
@@ -101,3 +102,5 @@ static const ExpressionVTable BYTE_VTABLE = {
             .analyze     = byte_literal_expression_analyze,
         },
 };
+
+#endif

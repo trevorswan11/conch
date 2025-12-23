@@ -14,9 +14,7 @@ NODISCARD Status discard_statement_create(Token              start_token,
     assert(to_discard);
 
     DiscardStatement* discard = memory_alloc(sizeof(DiscardStatement));
-    if (!discard) {
-        return ALLOCATION_FAILED;
-    }
+    if (!discard) { return ALLOCATION_FAILED; }
 
     *discard = (DiscardStatement){
         .base       = STATEMENT_INIT(DISCARD_VTABLE, start_token),
@@ -28,9 +26,7 @@ NODISCARD Status discard_statement_create(Token              start_token,
 }
 
 void discard_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     DiscardStatement* discard = (DiscardStatement*)node;

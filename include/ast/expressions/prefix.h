@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PREFIX_EXPR_H
+#define PREFIX_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -26,3 +27,5 @@ static const ExpressionVTable PREFIX_VTABLE = {
             .analyze     = prefix_expression_analyze,
         },
 };
+
+#endif

@@ -32,9 +32,7 @@ NODISCARD Status match_expression_create(Token             start_token,
     assert(arms.length > 0);
 
     MatchExpression* match = memory_alloc(sizeof(MatchExpression));
-    if (!match) {
-        return ALLOCATION_FAILED;
-    }
+    if (!match) { return ALLOCATION_FAILED; }
 
     *match = (MatchExpression){
         .base       = EXPRESSION_INIT(MATCH_VTABLE, start_token),
@@ -48,9 +46,7 @@ NODISCARD Status match_expression_create(Token             start_token,
 }
 
 void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     MatchExpression* match = (MatchExpression*)node;
