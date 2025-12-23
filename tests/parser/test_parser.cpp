@@ -65,8 +65,8 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        const auto* ast                    = pf.ast();
-        const char* expected_identifiers[] = {"x", "y", "foobar"};
+        const auto*       ast                    = pf.ast();
+        const char* const expected_identifiers[] = {"x", "y", "foobar"};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
@@ -83,7 +83,7 @@ TEST_CASE("Declarations") {
                               "var z := 6";
         ParserFixture pf(input);
 
-        std::vector<std::string> expected_errors = {
+        const std::vector<std::string> expected_errors = {
             "Expected token COLON, found INT_10 [Ln 1, Col 7]",
             "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
             "No prefix parse function for ASSIGN found [Ln 2, Col 5]",
@@ -101,9 +101,9 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        const auto* ast                    = pf.ast();
-        const char* expected_identifiers[] = {"x", "y", "foobar"};
-        bool        is_const[]             = {false, true, false};
+        const auto*       ast                    = pf.ast();
+        const char* const expected_identifiers[] = {"x", "y", "foobar"};
+        const bool        is_const[]             = {false, true, false};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
@@ -123,21 +123,21 @@ TEST_CASE("Declarations") {
         ParserFixture pf(input);
         pf.check_errors();
 
-        std::string       expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
-        bool              is_const[]             = {false, false, true, false, false, true};
-        bool              is_nullable[]          = {false, false, false, false, true, false};
-        bool              is_primitive[]         = {true, true, true, false, false, false};
-        TypeExpressionTag tags[]                 = {TypeExpressionTag::EXPLICIT,
-                                                    TypeExpressionTag::EXPLICIT,
-                                                    TypeExpressionTag::EXPLICIT,
-                                                    TypeExpressionTag::IMPLICIT,
-                                                    TypeExpressionTag::EXPLICIT,
-                                                    TypeExpressionTag::EXPLICIT};
+        const std::string       expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
+        const bool              is_const[]             = {false, false, true, false, false, true};
+        const bool              is_nullable[]          = {false, false, false, false, true, false};
+        const bool              is_primitive[]         = {true, true, true, false, false, false};
+        const TypeExpressionTag tags[]                 = {TypeExpressionTag::EXPLICIT,
+                                                          TypeExpressionTag::EXPLICIT,
+                                                          TypeExpressionTag::EXPLICIT,
+                                                          TypeExpressionTag::IMPLICIT,
+                                                          TypeExpressionTag::EXPLICIT,
+                                                          TypeExpressionTag::EXPLICIT};
         std::array<ExplicitTypeTag, std::size(tags)> explicit_tags;
         explicit_tags.fill(ExplicitTypeTag::EXPLICIT_IDENT);
 
-        const auto* ast                   = pf.ast();
-        std::string expected_type_names[] = {"int", "uint", "bool", {}, "LongNum", "Conch"};
+        const auto*       ast                   = pf.ast();
+        const std::string expected_type_names[] = {"int", "uint", "bool", {}, "LongNum", "Conch"};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
@@ -155,7 +155,7 @@ TEST_CASE("Declarations") {
     }
 
     SECTION("Primitive alias type decls") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "type a = int",
             "type a = uint",
             "type a = float",
@@ -188,8 +188,9 @@ TEST_CASE("Declarations") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
-            test_identifier_expression((Expression*)type_decl_stmt->ident, "a");
+            const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
+            test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident),
+                                       "a");
             REQUIRE(type_decl_stmt->primitive_alias);
 
             test_identifier_expression(type_decl_stmt->value, expected.first, expected.second);
@@ -206,8 +207,8 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
-        test_identifier_expression((Expression*)type_decl_stmt->ident, "N");
+        const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
+        test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident), "N");
         REQUIRE_FALSE(type_decl_stmt->primitive_alias);
 
         test_type_expression(type_decl_stmt->value,
@@ -237,7 +238,7 @@ TEST_CASE("Jump statements") {
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
-            const auto* jump_stmt = (const JumpStatement*)stmt;
+            const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             if (values[i].has_value()) {
                 test_number_expression<int64_t>(jump_stmt->value, values[i].value());
             }
@@ -253,7 +254,7 @@ TEST_CASE("Jump statements") {
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* jump_stmt = (const JumpStatement*)stmt;
+        const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 5);
     }
 
@@ -266,8 +267,8 @@ TEST_CASE("Jump statements") {
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* jump_stmt = (const JumpStatement*)stmt;
-        const auto* prefix    = (const PrefixExpression*)jump_stmt->value;
+        const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
+        const auto* prefix    = reinterpret_cast<const PrefixExpression*>(jump_stmt->value);
         test_number_expression<int64_t>(prefix->rhs, 5);
     }
 
@@ -281,7 +282,7 @@ TEST_CASE("Jump statements") {
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* jump_stmt = (const JumpStatement*)stmt;
+            const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             REQUIRE_FALSE(jump_stmt->value);
         }
 
@@ -294,11 +295,11 @@ TEST_CASE("Jump statements") {
             REQUIRE(ast->statements.length == 2);
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* jump_stmt = (const JumpStatement*)stmt;
+            const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             REQUIRE_FALSE(jump_stmt->value);
 
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 1, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 2);
         }
     }
@@ -315,7 +316,7 @@ TEST_CASE("Identifier Expressions") {
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-    const auto* expr_stmt = (const ExpressionStatement*)stmt;
+    const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
     test_identifier_expression(expr_stmt->expression, "foobar");
 }
 
@@ -330,8 +331,8 @@ TEST_CASE("Index expression") {
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-    const auto* expr_stmt = (const ExpressionStatement*)stmt;
-    const auto* index     = (const IndexExpression*)expr_stmt->expression;
+    const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+    const auto* index     = reinterpret_cast<const IndexExpression*>(expr_stmt->expression);
     test_identifier_expression(index->array, "foo");
     test_identifier_expression(index->idx, "bar");
 }
@@ -369,8 +370,9 @@ TEST_CASE("Number-based expressions") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* byte      = (const ByteLiteralExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* byte =
+                reinterpret_cast<const ByteLiteralExpression*>(expr_stmt->expression);
 
             REQUIRE(byte->value == expected);
         };
@@ -417,10 +419,10 @@ TEST_CASE("Basic prefix / infix expressions") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* expr      = (const PrefixExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* expr = reinterpret_cast<const PrefixExpression*>(expr_stmt->expression);
 
-            REQUIRE(((Node*)expr)->start_token.type == t.op);
+            REQUIRE(NODE_TOKEN(expr).type == t.op);
             if (std::holds_alternative<int64_t>(t.value)) {
                 test_number_expression<int64_t>(expr->rhs, std::get<int64_t>(t.value));
             } else if (std::holds_alternative<uint64_t>(t.value)) {
@@ -560,8 +562,8 @@ TEST_CASE("Basic prefix / infix expressions") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            T*          expr      = (T*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            T*          expr      = reinterpret_cast<T*>(expr_stmt->expression);
 
             const std::pair<std::variant<int64_t, uint64_t, double>, Expression*> pairs[] = {
                 {t.lvalue, expr->lhs},
@@ -602,11 +604,13 @@ TEST_CASE("Basic prefix / infix expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt      = (const ExpressionStatement*)stmt;
-        const auto* namespace_expr = (const NamespaceExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* namespace_expr =
+            reinterpret_cast<const NamespaceExpression*>(expr_stmt->expression);
 
         test_identifier_expression(namespace_expr->outer, "Outer");
-        test_identifier_expression((Expression*)namespace_expr->inner, "inner");
+        test_identifier_expression(reinterpret_cast<const Expression*>(namespace_expr->inner),
+                                   "inner");
     }
 
     SECTION("Operator precedence parsing") {
@@ -654,7 +658,7 @@ TEST_CASE("Basic prefix / infix expressions") {
     }
 
     SECTION("Malformed expressions") {
-        std::pair<const char*, std::string> cases[] = {
+        const std::pair<const char*, std::string> cases[] = {
             {"!", "PREFIX_MISSING_OPERAND [Ln 1, Col 1]"},
             {"3+", "INFIX_MISSING_RHS [Ln 1, Col 2]"},
             {"3+4-", "INFIX_MISSING_RHS [Ln 1, Col 4]"},
@@ -678,8 +682,8 @@ TEST_CASE("Typeof expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* type_decl = (const TypeDeclStatement*)stmt;
-        test_identifier_expression((Expression*)type_decl->ident, "a");
+        const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
+        test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "a");
         REQUIRE_FALSE(type_decl->primitive_alias);
 
         test_type_expression(type_decl->value,
@@ -689,7 +693,7 @@ TEST_CASE("Typeof expressions") {
                              ExplicitTypeTag::EXPLICIT_TYPEOF,
                              {});
 
-        const auto* type = (const TypeExpression*)type_decl->value;
+        const auto* type = reinterpret_cast<const TypeExpression*>(type_decl->value);
         test_number_expression<uint64_t>(type->variant.explicit_type.variant.referred_type, 4);
     }
 
@@ -742,7 +746,7 @@ TEST_CASE("Bool expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_bool_expression(expr_stmt->expression, expected_values[i]);
         }
     }
@@ -750,9 +754,9 @@ TEST_CASE("Bool expressions") {
 
 TEST_CASE("String expressions") {
     SECTION("Single-line strings") {
-        const char*   input = "\"This is a string\";\n"
-                              "\"Hello, 'World'!\";\n"
-                              "\"\";";
+        const char*   input = R"("This is a string";
+                              "Hello, 'World'!";
+                              "";)";
         ParserFixture pf(input);
         pf.check_errors();
 
@@ -761,16 +765,16 @@ TEST_CASE("String expressions") {
 
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!", ""};
         const std::string expected_literals[] = {
-            "\"This is a string\"",
-            "\"Hello, 'World'!\"",
-            "\"\"",
+            R"("This is a string")",
+            R"("Hello, 'World'!")",
+            R"("")",
         };
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
@@ -792,7 +796,8 @@ TEST_CASE("String expressions") {
         const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!\n", ""};
         const std::string expected_literals[] = {
             "This is a string",
-            "Hello, 'World'!\n\\\\",
+            R"(Hello, 'World'!
+            \\)",
             "",
         };
 
@@ -800,7 +805,7 @@ TEST_CASE("String expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
 
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_string_expression(expr_stmt->expression, expected_strings[i]);
         }
     }
@@ -817,20 +822,20 @@ TEST_CASE("Conditional expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
-        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
+        const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
         REQUIRE_FALSE(if_expr->alternate);
 
-        const auto* condition = (const InfixExpression*)if_expr->condition;
+        const auto* condition = reinterpret_cast<const InfixExpression*>(if_expr->condition);
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        const auto* consequence = (const BlockStatement*)if_expr->consequence;
+        const auto* consequence = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
-        expr_stmt = (const ExpressionStatement*)stmt;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "x");
     }
 
@@ -844,26 +849,26 @@ TEST_CASE("Conditional expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
-        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
+        const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
         REQUIRE(if_expr->alternate);
 
-        const auto* condition = (const InfixExpression*)if_expr->condition;
+        const auto* condition = reinterpret_cast<const InfixExpression*>(if_expr->condition);
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        const auto* consequence = (const BlockStatement*)if_expr->consequence;
+        const auto* consequence = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
-        expr_stmt = (const ExpressionStatement*)stmt;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "x");
 
-        const auto* alternate = (const BlockStatement*)if_expr->alternate;
+        const auto* alternate = reinterpret_cast<const BlockStatement*>(if_expr->alternate);
         REQUIRE(alternate->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate->statements, 0, &stmt)));
-        expr_stmt = (const ExpressionStatement*)stmt;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "y");
     }
 
@@ -878,21 +883,22 @@ TEST_CASE("Conditional expressions") {
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, true, "val");
-        const auto* decl_stmt = (const DeclStatement*)stmt;
+        const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
         REQUIRE(decl_stmt->type->tag == IMPLICIT);
 
-        const auto* if_expr = (const IfExpression*)decl_stmt->value;
+        const auto* if_expr = reinterpret_cast<const IfExpression*>(decl_stmt->value);
         REQUIRE(if_expr->alternate);
 
-        const auto* condition = (const InfixExpression*)if_expr->condition;
+        const auto* condition = reinterpret_cast<const InfixExpression*>(if_expr->condition);
         REQUIRE(condition->op == TokenType::GTEQ);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
-        const auto* consequence = (const ExpressionStatement*)if_expr->consequence;
+        const auto* consequence =
+            reinterpret_cast<const ExpressionStatement*>(if_expr->consequence);
         test_number_expression<int64_t>(consequence->expression, 1);
 
-        const auto* alternate = (const ExpressionStatement*)if_expr->alternate;
+        const auto* alternate = reinterpret_cast<const ExpressionStatement*>(if_expr->alternate);
         test_number_expression<int64_t>(alternate->expression, 2);
     }
 
@@ -906,18 +912,18 @@ TEST_CASE("Conditional expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
-        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
+        const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
         REQUIRE(if_expr->alternate);
 
-        const auto* condition = (const BoolLiteralExpression*)if_expr->condition;
+        const auto* condition = reinterpret_cast<const BoolLiteralExpression*>(if_expr->condition);
         REQUIRE(condition->value);
 
-        const auto* consequence = (const JumpStatement*)if_expr->consequence;
+        const auto* consequence = reinterpret_cast<const JumpStatement*>(if_expr->consequence);
         test_number_expression<int64_t>(consequence->value, 1);
 
-        const auto* alternate = (const JumpStatement*)if_expr->alternate;
+        const auto* alternate = reinterpret_cast<const JumpStatement*>(if_expr->alternate);
         test_number_expression<int64_t>(alternate->value, 2);
     }
 
@@ -931,48 +937,49 @@ TEST_CASE("Conditional expressions") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
         // Verify the first condition
-        const auto* if_expr = (const IfExpression*)expr_stmt->expression;
+        const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
         REQUIRE(if_expr->alternate);
 
-        const auto* condition = (const InfixExpression*)if_expr->condition;
+        const auto* condition = reinterpret_cast<const InfixExpression*>(if_expr->condition);
         REQUIRE(condition->op == TokenType::LT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
         // Verify the first consequence
-        const auto* consequence_one = (const BlockStatement*)if_expr->consequence;
+        const auto* consequence_one = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence_one->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
-        const auto* jump_stmt = (const JumpStatement*)stmt;
-        const auto* neg_num   = (const PrefixExpression*)jump_stmt->value;
-        REQUIRE(((Node*)neg_num)->start_token.type == TokenType::MINUS);
+        const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
+        const auto* neg_num   = reinterpret_cast<const PrefixExpression*>(jump_stmt->value);
+        REQUIRE(NODE_TOKEN(neg_num).type == TokenType::MINUS);
         test_number_expression<int64_t>(neg_num->rhs, 1);
 
         // Verify the first alternate and its condition
-        const auto* alternate_one = (const ExpressionStatement*)if_expr->alternate;
-        if_expr                   = (IfExpression*)alternate_one->expression;
+        const auto* alternate_one =
+            reinterpret_cast<const ExpressionStatement*>(if_expr->alternate);
+        if_expr = reinterpret_cast<const IfExpression*>(alternate_one->expression);
         REQUIRE(if_expr->alternate);
 
-        condition = (InfixExpression*)if_expr->condition;
+        condition = reinterpret_cast<const InfixExpression*>(if_expr->condition);
         REQUIRE(condition->op == TokenType::GT);
         test_identifier_expression(condition->lhs, "x");
         test_identifier_expression(condition->rhs, "y");
 
         // Verify the second consequence
-        const auto* consequence_two = (const BlockStatement*)if_expr->consequence;
+        const auto* consequence_two = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
-        jump_stmt = (const JumpStatement*)stmt;
+        jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 1);
 
         // Verify the second alternate
-        const auto* alternate_two = (const BlockStatement*)if_expr->alternate;
+        const auto* alternate_two = reinterpret_cast<const BlockStatement*>(if_expr->alternate);
         REQUIRE(alternate_two->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
-        jump_stmt = (JumpStatement*)stmt;
+        jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 0);
     }
 }
@@ -996,11 +1003,12 @@ TEST_CASE("Function literals") {
         for (size_t i = 0; i < actuals->length; i++) {
             Parameter parameter;
             REQUIRE(STATUS_OK(array_list_get(actuals, i, &parameter)));
-            const TestParameter& expected_parameter = expecteds[i];
+            const auto& expected_parameter = expecteds[i];
 
             REQUIRE(parameter.is_ref == expected_parameter.is_ref);
-            test_identifier_expression((Expression*)parameter.ident, expected_parameter.name);
-            test_type_expression((Expression*)parameter.type,
+            test_identifier_expression(reinterpret_cast<const Expression*>(parameter.ident),
+                                       expected_parameter.name);
+            test_type_expression(reinterpret_cast<const Expression*>(parameter.type),
                                  expected_parameter.nullable,
                                  expected_parameter.primitive,
                                  expected_parameter.tag,
@@ -1019,7 +1027,7 @@ TEST_CASE("Function literals") {
 
     SECTION("Functions as types") {
         SECTION("Correct declaration") {
-            std::vector<TestParameter> expected_params = {
+            const std::vector<TestParameter> expected_params = {
                 TestParameter{.name = "a", .is_ref = true}, TestParameter{.name = "b"}};
 
             const char*   input = "var add: fn(ref a: int, b: int): int;";
@@ -1039,14 +1047,14 @@ TEST_CASE("Function literals") {
                                 TypeExpressionTag::EXPLICIT,
                                 ExplicitTypeTag::EXPLICIT_FN,
                                 {});
-            const auto* decl_stmt = (const DeclStatement*)stmt;
+            const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
             REQUIRE_FALSE(decl_stmt->value);
 
-            TypeExpression*      type_expr     = decl_stmt->type;
-            ExplicitType         explicit_type = type_expr->variant.explicit_type;
-            ExplicitFunctionType function_type = explicit_type.variant.function_type;
+            const auto* type_expr     = decl_stmt->type;
+            const auto  explicit_type = type_expr->variant.explicit_type;
+            const auto  function_type = explicit_type.variant.function_type;
             test_parameters(&function_type.parameters, expected_params);
-            test_type_expression((Expression*)function_type.return_type,
+            test_type_expression(reinterpret_cast<const Expression*>(function_type.return_type),
                                  false,
                                  true,
                                  TypeExpressionTag::EXPLICIT,
@@ -1126,14 +1134,15 @@ TEST_CASE("Function literals") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
 
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* function  = (const FunctionExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* function =
+                reinterpret_cast<const FunctionExpression*>(expr_stmt->expression);
             REQUIRE(function->body->statements.length == 0);
 
-            ArrayList parameters = function->parameters;
-            test_parameters(&parameters, t.expected_params);
+            const auto* parameters = &function->parameters;
+            test_parameters(parameters, t.expected_params);
 
-            test_type_expression((Expression*)function->return_type,
+            test_type_expression(reinterpret_cast<const Expression*>(function->return_type),
                                  t.expected_return.nullable,
                                  t.expected_return.primitive,
                                  TypeExpressionTag::EXPLICIT,
@@ -1162,40 +1171,40 @@ TEST_CASE("Function literals") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
-        const auto* call      = (const CallExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* call      = reinterpret_cast<const CallExpression*>(expr_stmt->expression);
 
         // Verify function identifier
-        const auto* function               = (const IdentifierExpression*)call->function;
+        const auto* function = reinterpret_cast<const IdentifierExpression*>(call->function);
         std::string expected_function_name = "add";
         REQUIRE(expected_function_name == function->name.ptr);
 
-        ArrayList arguments = call->arguments;
-        REQUIRE(arguments.length == 4);
+        const ArrayList* arguments = &call->arguments;
+        REQUIRE(arguments->length == 4);
 
         // Verify arguments
         CallArgument first;
-        REQUIRE(STATUS_OK(array_list_get(&arguments, 0, &first)));
+        REQUIRE(STATUS_OK(array_list_get(arguments, 0, &first)));
         REQUIRE_FALSE(first.is_ref);
         test_number_expression<int64_t>(first.argument, 1);
 
         CallArgument second;
-        REQUIRE(STATUS_OK(array_list_get(&arguments, 1, &second)));
+        REQUIRE(STATUS_OK(array_list_get(arguments, 1, &second)));
         REQUIRE_FALSE(second.is_ref);
-        const auto* argument = (const InfixExpression*)second.argument;
+        const auto* argument = reinterpret_cast<const InfixExpression*>(second.argument);
         test_number_expression<int64_t>(argument->lhs, 2);
         REQUIRE(argument->op == TokenType::STAR);
         test_number_expression<int64_t>(argument->rhs, 3);
 
         CallArgument third;
-        REQUIRE(STATUS_OK(array_list_get(&arguments, 2, &third)));
+        REQUIRE(STATUS_OK(array_list_get(arguments, 2, &third)));
         REQUIRE(third.is_ref);
         test_identifier_expression(third.argument, "w");
 
         CallArgument fourth;
-        REQUIRE(STATUS_OK(array_list_get(&arguments, 3, &fourth)));
+        REQUIRE(STATUS_OK(array_list_get(arguments, 3, &fourth)));
         REQUIRE_FALSE(fourth.is_ref);
-        argument = (InfixExpression*)fourth.argument;
+        argument = reinterpret_cast<const InfixExpression*>(fourth.argument);
         test_number_expression<int64_t>(argument->lhs, 4);
         REQUIRE(argument->op == TokenType::PLUS);
         test_number_expression<int64_t>(argument->rhs, 5);
@@ -1228,7 +1237,7 @@ TEST_CASE("Enum declarations") {
     };
 
     SECTION("Correctly formed enums") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "enum { RED, BLUE, GREEN, }",
             "enum { RED, BLUE = 1, GREEN, }",
             "enum { RED = 100, BLUE = 20, GREEN = 3, }",
@@ -1253,8 +1262,8 @@ TEST_CASE("Enum declarations") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* enum_expr = (const EnumExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* enum_expr = reinterpret_cast<const EnumExpression*>(expr_stmt->expression);
 
             test_enum_variants(&enum_expr->variants, expected_variants);
         }
@@ -1274,17 +1283,17 @@ TEST_CASE("Enum declarations") {
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, false, "a");
-        const auto* decl_stmt = (const DeclStatement*)stmt;
+        const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
-        TypeExpression* type_expr = decl_stmt->type;
-        test_type_expression((Expression*)type_expr,
+        const auto* type_expr = decl_stmt->type;
+        test_type_expression(reinterpret_cast<const Expression*>(type_expr),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_ENUM,
                              {});
-        EnumExpression* enum_type = type_expr->variant.explicit_type.variant.enum_type;
 
+        const auto* enum_type = type_expr->variant.explicit_type.variant.enum_type;
         test_enum_variants(&enum_type->variants, expected_variants_list);
     }
 
@@ -1301,19 +1310,20 @@ TEST_CASE("Enum declarations") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* type_decl_stmt = (const TypeDeclStatement*)stmt;
-        test_identifier_expression((const Expression*)type_decl_stmt->ident, "Colors");
+        const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
+        test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident),
+                                   "Colors");
         REQUIRE_FALSE(type_decl_stmt->primitive_alias);
 
-        const auto* type_expr = (const TypeExpression*)type_decl_stmt->value;
-        test_type_expression((const Expression*)type_expr,
+        const auto* type_expr = reinterpret_cast<const TypeExpression*>(type_decl_stmt->value);
+        test_type_expression(reinterpret_cast<const Expression*>(type_expr),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_ENUM,
                              {});
-        EnumExpression* enum_type = type_expr->variant.explicit_type.variant.enum_type;
 
+        const auto* enum_type = type_expr->variant.explicit_type.variant.enum_type;
         test_enum_variants(&enum_type->variants, expected_variants_list);
     }
 
@@ -1363,8 +1373,8 @@ TEST_CASE("Struct declarations") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
-    const auto test_struct_members = [](const ArrayList*                  members,
-                                        std::vector<StructMemberTestCase> expected_members) {
+    const auto test_struct_members = [](const ArrayList*                         members,
+                                        const std::vector<StructMemberTestCase>& expected_members) {
         REQUIRE(members->length == expected_members.size());
         for (size_t i = 0; i < members->length; i++) {
             StructMember member;
@@ -1372,9 +1382,10 @@ TEST_CASE("Struct declarations") {
             REQUIRE(member.name);
             REQUIRE(member.type);
 
-            const StructMemberTestCase& expected = expected_members[i];
-            test_identifier_expression((Expression*)member.name, expected.member_name);
-            test_type_expression((Expression*)member.type,
+            const auto& expected = expected_members[i];
+            test_identifier_expression(reinterpret_cast<const Expression*>(member.name),
+                                       expected.member_name);
+            test_type_expression(reinterpret_cast<const Expression*>(member.type),
                                  expected.nullable,
                                  expected.primitive,
                                  TypeExpressionTag::EXPLICIT,
@@ -1392,7 +1403,7 @@ TEST_CASE("Struct declarations") {
     };
 
     SECTION("Correctly formed structs") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "struct { a: int, }",
             "struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
         };
@@ -1415,9 +1426,9 @@ TEST_CASE("Struct declarations") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt   = (const ExpressionStatement*)stmt;
-            const auto* struct_expr = (const StructExpression*)expr_stmt->expression;
-
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* struct_expr =
+                reinterpret_cast<const StructExpression*>(expr_stmt->expression);
             test_struct_members(&struct_expr->members, expected_members);
         }
     }
@@ -1436,17 +1447,17 @@ TEST_CASE("Struct declarations") {
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
         test_decl_statement(stmt, false, "a");
-        const auto* decl_stmt = (const DeclStatement*)stmt;
+        const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
-        TypeExpression* type_expr = decl_stmt->type;
-        test_type_expression((const Expression*)type_expr,
+        const auto* type_expr = decl_stmt->type;
+        test_type_expression(reinterpret_cast<const Expression*>(type_expr),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_STRUCT,
                              {});
-        StructExpression* struct_type = type_expr->variant.explicit_type.variant.struct_type;
 
+        const auto* struct_type = type_expr->variant.explicit_type.variant.struct_type;
         test_struct_members(&struct_type->members, expected_member_list);
     }
 
@@ -1515,10 +1526,8 @@ TEST_CASE("Nil expressions") {
 
     Statement* stmt;
     REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-    const auto* expr_stmt = (const ExpressionStatement*)stmt;
-
-    Node* nil_node = (Node*)expr_stmt->expression;
-    REQUIRE(slice_equals_str_z(&nil_node->start_token.slice, "nil"));
+    const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+    REQUIRE(slice_equals_str_z(&NODE_TOKEN(expr_stmt->expression).slice, "nil"));
 }
 
 TEST_CASE("Impl statements") {
@@ -1532,9 +1541,9 @@ TEST_CASE("Impl statements") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* impl_stmt = (const ImplStatement*)stmt;
+        const auto* impl_stmt = reinterpret_cast<const ImplStatement*>(stmt);
 
-        test_identifier_expression((Expression*)impl_stmt->parent, "Obj");
+        test_identifier_expression(reinterpret_cast<const Expression*>(impl_stmt->parent), "Obj");
 
         REQUIRE(impl_stmt->implementation->statements.length == 1);
         REQUIRE(STATUS_OK(array_list_get(&impl_stmt->implementation->statements, 0, &stmt)));
@@ -1571,10 +1580,10 @@ TEST_CASE("Import Statements") {
     };
 
     SECTION("Correct imports") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "import std",
             "import array;",
-            "import \"util/test.cch\" as test",
+            R"(import "util/test.cch" as test)",
             "import hash as Hash",
         };
 
@@ -1602,20 +1611,22 @@ TEST_CASE("Import Statements") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* import_stmt = (const ImportStatement*)stmt;
+            const auto* import_stmt = reinterpret_cast<const ImportStatement*>(stmt);
 
             REQUIRE(import_stmt->tag == expected.expected_tag);
             if (import_stmt->tag == ImportTag::STANDARD) {
-                test_identifier_expression((Expression*)import_stmt->variant.standard_import,
-                                           expected.expected_literal);
+                test_identifier_expression(
+                    reinterpret_cast<const Expression*>(import_stmt->variant.standard_import),
+                    expected.expected_literal);
             } else {
-                test_string_expression((Expression*)import_stmt->variant.user_import,
-                                       expected.expected_literal);
+                test_string_expression(
+                    reinterpret_cast<const Expression*>(import_stmt->variant.user_import),
+                    expected.expected_literal);
             }
 
             if (import_stmt->alias != nullptr) {
                 REQUIRE(expected.expected_alias.has_value());
-                test_identifier_expression((Expression*)import_stmt->alias,
+                test_identifier_expression(reinterpret_cast<const Expression*>(import_stmt->alias),
                                            expected.expected_alias.value());
             } else {
                 REQUIRE_FALSE(expected.expected_alias.has_value());
@@ -1630,7 +1641,7 @@ TEST_CASE("Import Statements") {
     }
 
     SECTION("User import without alias") {
-        const char*   input = "import \"some_file.cch\"";
+        const char*   input = R"(import "some_file.cch")";
         ParserFixture pf(input);
         pf.check_errors({"USER_IMPORT_MISSING_ALIAS [Ln 1, Col 1]"});
     }
@@ -1649,7 +1660,7 @@ TEST_CASE("Match expressions") {
     };
 
     SECTION("Correct match") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "match In { 1 => return 90u;, }",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, } else 5",
@@ -1676,26 +1687,28 @@ TEST_CASE("Match expressions") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-            const auto* match_expr = (const MatchExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* match_expr =
+                reinterpret_cast<const MatchExpression*>(expr_stmt->expression);
 
             test_identifier_expression(match_expr->expression, expected.expected_expr_name);
             REQUIRE(match_expr->arms.length == expected.expected_arms.size());
 
             MatchArm arm;
             for (size_t arm_idx = 0; arm_idx < match_expr->arms.length; arm_idx++) {
-                MatchArmTestCase expected_arm = expected.expected_arms[arm_idx];
+                const auto& expected_arm = expected.expected_arms[arm_idx];
 
                 REQUIRE(STATUS_OK(array_list_get(&match_expr->arms, arm_idx, &arm)));
                 test_number_expression<int64_t>(arm.pattern, expected_arm.lhs);
 
-                const auto* jump = (const JumpStatement*)arm.dispatch;
+                const auto* jump = reinterpret_cast<const JumpStatement*>(arm.dispatch);
                 test_number_expression<uint64_t>(jump->value, expected_arm.expected_return_value);
             }
 
             if (match_expr->catch_all != nullptr) {
                 REQUIRE(expected.otherwise.has_value());
-                const auto* otherwise = (const ExpressionStatement*)match_expr->catch_all;
+                const auto* otherwise =
+                    reinterpret_cast<const ExpressionStatement*>(match_expr->catch_all);
                 test_number_expression<int64_t>(otherwise->expression, expected.otherwise.value());
             } else {
                 REQUIRE_FALSE(expected.otherwise.has_value());
@@ -1762,7 +1775,7 @@ TEST_CASE("Array expressions") {
     };
 
     SECTION("Correct int arrays") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "[1uz]{1,}",
             "[0b11uz]{1, 2, 3, }",
             "[_]{1, 2, }",
@@ -1787,8 +1800,9 @@ TEST_CASE("Array expressions") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-            const auto* array_expr = (const ArrayLiteralExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* array_expr =
+                reinterpret_cast<const ArrayLiteralExpression*>(expr_stmt->expression);
 
             if (array_expr->inferred_size) {
                 REQUIRE_FALSE(expected.expected_size.has_value());
@@ -1814,7 +1828,7 @@ TEST_CASE("Array expressions") {
         };
 
         SECTION("Correct array types") {
-            const char* inputs[] = {
+            const char* const inputs[] = {
                 "var a: [1uz]int;",
                 "var a: [1uz, 2uz]int;",
                 "var a: ?[1uz, 2uz]int;",
@@ -1859,15 +1873,15 @@ TEST_CASE("Array expressions") {
                 Statement* stmt;
                 REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
                 test_decl_statement(stmt, false, expected.decl_name);
-                const auto* decl_stmt = (const DeclStatement*)stmt;
+                const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
-                TypeExpression* decl_type = decl_stmt->type;
+                const auto* decl_type = decl_stmt->type;
                 REQUIRE(decl_type->tag == TypeExpressionTag::EXPLICIT);
-                ExplicitType explicit_type = decl_type->variant.explicit_type;
+                const auto explicit_type = decl_type->variant.explicit_type;
                 REQUIRE(explicit_type.nullable == expected.array_nullable);
                 REQUIRE_FALSE(explicit_type.primitive);
                 REQUIRE(explicit_type.tag == ExplicitTypeTag::EXPLICIT_ARRAY);
-                ExplicitArrayType explicit_array = explicit_type.variant.array_type;
+                const auto explicit_array = explicit_type.variant.array_type;
 
                 REQUIRE(explicit_array.dimensions.length == expected.expected_dims.size());
                 for (size_t i = 0; i < explicit_array.dimensions.length; i++) {
@@ -1876,7 +1890,7 @@ TEST_CASE("Array expressions") {
                     REQUIRE(dim == expected.expected_dims[i]);
                 }
 
-                test_type_expression((Expression*)explicit_array.inner_type,
+                test_type_expression(reinterpret_cast<const Expression*>(explicit_array.inner_type),
                                      expected.inner_nullable,
                                      true,
                                      TypeExpressionTag::EXPLICIT,
@@ -1895,7 +1909,7 @@ TEST_CASE("Array expressions") {
             }
 
             SECTION("Incorrect token type") {
-                const char*   input = "var a: [\"wrong\"]int";
+                const char*   input = R"(var a: ["wrong"]int)";
                 ParserFixture pf(input);
                 pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
                                  "No prefix parse function for RBRACKET found [Ln 1, Col 16]",
@@ -1927,7 +1941,7 @@ TEST_CASE("Array expressions") {
         }
 
         SECTION("Incorrect token type") {
-            const char*   input = "[\"wrong\"]{1, 2, 3, }";
+            const char*   input = R"(["wrong"]{1, 2, 3, })";
             ParserFixture pf(input);
             pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
                              "No prefix parse function for RBRACKET found [Ln 1, Col 9]",
@@ -1971,7 +1985,7 @@ TEST_CASE("Discard statements") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* discard_stmt = (const DiscardStatement*)stmt;
+        const auto* discard_stmt = reinterpret_cast<const DiscardStatement*>(stmt);
         test_number_expression<int64_t>(discard_stmt->to_discard, 90);
     }
 
@@ -1995,8 +2009,8 @@ TEST_CASE("For loops") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
-        const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* for_loop  = reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
         REQUIRE(for_loop->iterables.length == 1);
         REQUIRE(for_loop->captures.length == 0);
@@ -2009,7 +2023,7 @@ TEST_CASE("For loops") {
 
         Statement* statement;
         REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-        expr_stmt = (ExpressionStatement*)statement;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2024,8 +2038,9 @@ TEST_CASE("For loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* for_loop =
+                reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
             REQUIRE(for_loop->iterables.length == 1);
             REQUIRE(for_loop->captures.length == 1);
@@ -2043,7 +2058,7 @@ TEST_CASE("For loops") {
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2057,8 +2072,9 @@ TEST_CASE("For loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* for_loop =
+                reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
             REQUIRE(for_loop->iterables.length == 2);
             REQUIRE(for_loop->captures.length == 2);
@@ -2083,8 +2099,9 @@ TEST_CASE("For loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* for_loop =
+                reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
             REQUIRE(for_loop->iterables.length == 2);
             REQUIRE(for_loop->captures.length == 2);
@@ -2107,13 +2124,13 @@ TEST_CASE("For loops") {
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            const auto* non_break = (const BlockStatement*)for_loop->non_break;
+            const auto* non_break = reinterpret_cast<const BlockStatement*>(for_loop->non_break);
             REQUIRE(non_break->statements.length == 1);
             REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2127,10 +2144,12 @@ TEST_CASE("For loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt = (const ExpressionStatement*)stmt;
-            const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* for_loop =
+                reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
-            const auto* non_break_expr_stmt = (const ExpressionStatement*)for_loop->non_break;
+            const auto* non_break_expr_stmt =
+                reinterpret_cast<const ExpressionStatement*>(for_loop->non_break);
             test_number_expression<int64_t>(non_break_expr_stmt->expression, 1);
         }
     }
@@ -2145,8 +2164,8 @@ TEST_CASE("For loops") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
-        const auto* for_loop  = (const ForLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* for_loop  = reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
         ForLoopCapture capture;
         REQUIRE(STATUS_OK(array_list_get(&for_loop->captures, 0, &capture)));
@@ -2198,8 +2217,9 @@ TEST_CASE("While loops") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-        const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* while_loop =
+            reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
 
         REQUIRE(while_loop->condition);
         REQUIRE_FALSE(while_loop->continuation);
@@ -2210,7 +2230,7 @@ TEST_CASE("While loops") {
 
         Statement* statement;
         REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-        expr_stmt = (const ExpressionStatement*)statement;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2224,8 +2244,9 @@ TEST_CASE("While loops") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-        const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* while_loop =
+            reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
 
         REQUIRE(while_loop->condition);
         REQUIRE(while_loop->continuation);
@@ -2237,7 +2258,7 @@ TEST_CASE("While loops") {
 
         Statement* statement;
         REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-        expr_stmt = (ExpressionStatement*)statement;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2252,8 +2273,9 @@ TEST_CASE("While loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-            const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* while_loop =
+                reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
 
             REQUIRE(while_loop->condition);
             REQUIRE(while_loop->continuation);
@@ -2265,13 +2287,13 @@ TEST_CASE("While loops") {
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            const auto* non_break = (const BlockStatement*)while_loop->non_break;
+            const auto* non_break = reinterpret_cast<const BlockStatement*>(while_loop->non_break);
             REQUIRE(non_break->statements.length == 1);
             REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2285,8 +2307,9 @@ TEST_CASE("While loops") {
 
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-            const auto* expr_stmt  = (const ExpressionStatement*)stmt;
-            const auto* while_loop = (const WhileLoopExpression*)expr_stmt->expression;
+            const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+            const auto* while_loop =
+                reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
 
             REQUIRE(while_loop->condition);
             REQUIRE(while_loop->continuation);
@@ -2298,10 +2321,11 @@ TEST_CASE("While loops") {
 
             Statement* statement;
             REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-            expr_stmt = (ExpressionStatement*)statement;
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
-            const auto* non_break = (const ExpressionStatement*)while_loop->non_break;
+            const auto* non_break =
+                reinterpret_cast<const ExpressionStatement*>(while_loop->non_break);
             test_number_expression<uint64_t>(non_break->expression, 1);
         }
     }
@@ -2344,17 +2368,17 @@ TEST_CASE("Do while loops") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt     = (const ExpressionStatement*)stmt;
-        const auto* do_while_loop = (const DoWhileLoopExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* do_while_loop =
+            reinterpret_cast<const DoWhileLoopExpression*>(expr_stmt->expression);
 
         REQUIRE(do_while_loop->block->statements.length == 1);
         REQUIRE(do_while_loop->condition);
 
         Statement* statement;
         REQUIRE(STATUS_OK(array_list_get(&do_while_loop->block->statements, 0, &statement)));
-        expr_stmt = (ExpressionStatement*)statement;
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
-
         test_number_expression<int64_t>(do_while_loop->condition, 1);
     }
 
@@ -2375,6 +2399,12 @@ TEST_CASE("Do while loops") {
     }
 }
 
+// TODO
+TEST_CASE("Raw loops") {
+    SECTION("Correct loops") {}
+    SECTION("Malformed loops") {}
+}
+
 TEST_CASE("Generics") {
     SECTION("Function definition generics") {
         const char*   input = "fn<T, B>(a: int): int {}";
@@ -2386,8 +2416,8 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const auto* expr_stmt = (const ExpressionStatement*)stmt;
-        const auto* function  = (const FunctionExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* function  = reinterpret_cast<const FunctionExpression*>(expr_stmt->expression);
 
         REQUIRE(function->generics.length == 2);
 
@@ -2417,15 +2447,14 @@ TEST_CASE("Generics") {
                             ExplicitTypeTag::EXPLICIT_FN,
                             {});
 
-        const auto*          decl_stmt = (const DeclStatement*)stmt;
-        ExplicitFunctionType explicit_fn =
-            decl_stmt->type->variant.explicit_type.variant.function_type;
+        const auto* decl_stmt   = reinterpret_cast<const DeclStatement*>(stmt);
+        const auto  explicit_fn = decl_stmt->type->variant.explicit_type.variant.function_type;
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&explicit_fn.generics, 0, &generic)));
         test_identifier_expression(generic, "T");
 
-        test_type_expression((Expression*)explicit_fn.return_type,
+        test_type_expression(reinterpret_cast<const Expression*>(explicit_fn.return_type),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
@@ -2448,20 +2477,19 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
         REQUIRE_FALSE(type_decl->primitive_alias);
-        test_identifier_expression((Expression*)type_decl->ident, "F");
+        test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "F");
 
-        const auto* function_type = (const TypeExpression*)type_decl->value;
-        test_type_expression((Expression*)function_type,
+        const auto* function_type = reinterpret_cast<const TypeExpression*>(type_decl->value);
+        test_type_expression(reinterpret_cast<const Expression*>(function_type),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_FN,
                              {});
 
-        const ExplicitFunctionType function =
-            function_type->variant.explicit_type.variant.function_type;
+        const auto function = function_type->variant.explicit_type.variant.function_type;
         REQUIRE(function.generics.length == 2);
 
         Expression* generic;
@@ -2481,8 +2509,8 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const ExpressionStatement* expr_stmt   = (ExpressionStatement*)stmt;
-        const StructExpression*    struct_expr = (StructExpression*)expr_stmt->expression;
+        const auto* expr_stmt   = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* struct_expr = reinterpret_cast<const StructExpression*>(expr_stmt->expression);
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
@@ -2501,20 +2529,19 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const TypeDeclStatement* type_decl = (TypeDeclStatement*)stmt;
+        const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
         REQUIRE_FALSE(type_decl->primitive_alias);
-        test_identifier_expression((Expression*)type_decl->ident, "S");
+        test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "S");
 
-        const auto* struct_type = (const TypeExpression*)type_decl->value;
-        test_type_expression((const Expression*)struct_type,
+        const auto* struct_type = reinterpret_cast<const TypeExpression*>(type_decl->value);
+        test_type_expression(reinterpret_cast<const Expression*>(struct_type),
                              false,
                              false,
                              TypeExpressionTag::EXPLICIT,
                              ExplicitTypeTag::EXPLICIT_STRUCT,
                              {});
 
-        const StructExpression* struct_expr =
-            struct_type->variant.explicit_type.variant.struct_type;
+        const auto* struct_expr = struct_type->variant.explicit_type.variant.struct_type;
         REQUIRE(struct_expr->generics.length == 2);
 
         Expression* generic;
@@ -2534,8 +2561,8 @@ TEST_CASE("Generics") {
 
         Statement* stmt;
         REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
-        const ExpressionStatement* expr_stmt = (ExpressionStatement*)stmt;
-        const CallExpression*      call_expr = (CallExpression*)expr_stmt->expression;
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* call_expr = reinterpret_cast<const CallExpression*>(expr_stmt->expression);
 
         Expression* generic;
         REQUIRE(STATUS_OK(array_list_get(&call_expr->generics, 0, &generic)));
@@ -2568,7 +2595,7 @@ TEST_CASE("Generics") {
         }
 
         SECTION("Incorrect generic expression") {
-            const char*   input = "struct<\"2\" + 2>{a: int,}";
+            const char*   input = R"(struct<"2" + 2>{a: int,})";
             ParserFixture pf(input);
             pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
                              "No prefix parse function for PLUS found [Ln 1, Col 12]",
@@ -2611,7 +2638,7 @@ TEST_CASE("Generics") {
         }
 
         SECTION("With clause with wrong tokens") {
-            const char*   input = "func(1, 2) with <int, \"2\" + 2>";
+            const char*   input = R"(func(1, 2) with <int, "2" + 2>)";
             ParserFixture pf(input);
             pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 23]",
                              "No prefix parse function for PLUS found [Ln 1, Col 27]",
@@ -2623,21 +2650,37 @@ TEST_CASE("Generics") {
 
 TEST_CASE("Null passed to destructors") {
     void (*const destructors[])(Node*, free_alloc_fn) = {
-        array_literal_expression_destroy, assignment_expression_destroy,
-        bool_literal_expression_destroy,  call_expression_destroy,
-        index_expression_destroy,         enum_expression_destroy,
-        float_literal_expression_destroy, function_expression_destroy,
-        identifier_expression_destroy,    if_expression_destroy,
-        infix_expression_destroy,         integer_expression_destroy,
-        for_loop_expression_destroy,      while_loop_expression_destroy,
-        do_while_loop_expression_destroy, match_expression_destroy,
-        namespace_expression_destroy,     prefix_expression_destroy,
-        single_expression_destroy,        string_literal_expression_destroy,
-        struct_expression_destroy,        type_expression_destroy,
-        block_statement_destroy,          decl_statement_destroy,
-        type_decl_statement_destroy,      discard_statement_destroy,
-        expression_statement_destroy,     impl_statement_destroy,
-        import_statement_destroy,         jump_statement_destroy,
+        array_literal_expression_destroy,
+        assignment_expression_destroy,
+        bool_literal_expression_destroy,
+        call_expression_destroy,
+        index_expression_destroy,
+        enum_expression_destroy,
+        float_literal_expression_destroy,
+        function_expression_destroy,
+        identifier_expression_destroy,
+        if_expression_destroy,
+        infix_expression_destroy,
+        integer_expression_destroy,
+        for_loop_expression_destroy,
+        while_loop_expression_destroy,
+        do_while_loop_expression_destroy,
+        loop_expression_destroy,
+        match_expression_destroy,
+        namespace_expression_destroy,
+        prefix_expression_destroy,
+        single_expression_destroy,
+        string_literal_expression_destroy,
+        struct_expression_destroy,
+        type_expression_destroy,
+        block_statement_destroy,
+        decl_statement_destroy,
+        type_decl_statement_destroy,
+        discard_statement_destroy,
+        expression_statement_destroy,
+        impl_statement_destroy,
+        import_statement_destroy,
+        jump_statement_destroy,
     };
 
     for (const auto d : destructors) {

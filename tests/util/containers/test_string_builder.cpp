@@ -47,7 +47,7 @@ TEST_CASE("StringBuilder append slices") {
     const Slice text = slice_from_str_z("hello");
     REQUIRE(STATUS_OK(string_builder_append_slice(&sb, text)));
 
-    const MutSlice mut_text = mut_slice_from_str_z((char*)", world!");
+    const MutSlice mut_text = mut_slice_from_str_z(", world!");
     REQUIRE(STATUS_OK(string_builder_append_mut_slice(&sb, mut_text)));
 
     MutSlice slice;

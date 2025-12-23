@@ -7,7 +7,7 @@ class TempFile {
   public:
     TempFile(std::string path, const std::string& content);
 
-    TempFile(std::string path) : filepath(std::move(path)) {}
+    explicit TempFile(std::string path) : filepath(std::move(path)) {}
     ~TempFile() { std::remove(filepath.c_str()); }
 
     FILE*       open(const char* permissions);

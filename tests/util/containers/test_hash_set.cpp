@@ -87,7 +87,7 @@ TEST_CASE("Basic set usage") {
 
     SetEntry e;
     while (hash_set_iterator_has_next(&it, &e)) {
-        internal_total += *(K*)e.key_ptr;
+        internal_total += *static_cast<K*>(e.key_ptr);
     }
     REQUIRE(load_total == internal_total);
 
@@ -253,7 +253,7 @@ TEST_CASE("Remove set") {
     HashSetIterator it = hash_set_iterator_init(&hs);
     SetEntry        e;
     while (hash_set_iterator_has_next(&it, &e)) {
-        const K k = *(K*)e.key_ptr;
+        const K k = *static_cast<K*>(e.key_ptr);
         REQUIRE(k % 3 != 0);
     }
 

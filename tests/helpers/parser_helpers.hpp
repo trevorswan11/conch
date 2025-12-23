@@ -16,7 +16,7 @@ extern "C" {
 
 class SBFixture {
   public:
-    SBFixture(size_t initial_length);
+    explicit SBFixture(size_t initial_length);
     ~SBFixture() { free(builder.buffer.data); }
 
     StringBuilder* sb() { return &builder; }
@@ -28,7 +28,7 @@ class SBFixture {
 
 class ParserFixture {
   public:
-    ParserFixture(const char* input);
+    explicit ParserFixture(const char* input);
 
     ~ParserFixture() {
         parser_deinit(&p);

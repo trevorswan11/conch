@@ -1531,8 +1531,32 @@ NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expressi
 
     TRY_DO(parser_expect_peek(p, RPAREN),
            NODE_VIRTUAL_FREE(do_while_loop, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *expression = (Expression*)do_while_loop;
+    return SUCCESS;
+}
+
+NODISCARD Status loop_expression_parse(Parser* p, Expression** expression) {
+    const Token start_token = p->current_token;
+    TRY(parser_expect_peek(p, LBRACE));
+
+    // Parse the block statement which must do some work
+    BlockStatement* block;
+    TRY(block_statement_parse(p, &block));
+
+    if (block->statements.length == 0) {
+        PUT_STATUS_PROPAGATE(
+            &p->errors, EMPTY_LOOP, start_token, NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
+    }
+
+    // Super simple parsing here since this is just a raw loop
+    LoopExpression* loop;
+    TRY_DO(loop_expression_create(start_token, block, &loop, p->allocator.memory_alloc),
+           NODE_VIRTUAL_FREE(block, p->allocator.free_alloc));
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
+
+    *expression = (Expression*)loop;
     return SUCCESS;
 }
 

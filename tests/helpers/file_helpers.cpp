@@ -9,8 +9,4 @@ TempFile::TempFile(std::string path, const std::string& content) : filepath(std:
     ofs.close();
 }
 
-FILE* TempFile::open(const char* permissions) {
-    FILE* f = fopen(filepath.c_str(), permissions);
-    if (f == nullptr) { return nullptr; }
-    return f;
-}
+FILE* TempFile::open(const char* permissions) { return fopen(filepath.c_str(), permissions); }

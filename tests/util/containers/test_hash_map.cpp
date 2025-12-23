@@ -146,7 +146,7 @@ TEST_CASE("Basic map usage") {
 
     MapEntry e;
     while (hash_map_iterator_has_next(&it, &e)) {
-        internal_total += *(K*)e.key_ptr;
+        internal_total += *static_cast<K*>(e.key_ptr);
     }
     REQUIRE(load_total == internal_total);
 
@@ -351,9 +351,9 @@ TEST_CASE("Mutable map entry access") {
     // Entry retrieval for mutable value access (reasonable)
     MapEntry e;
     REQUIRE(STATUS_OK(hash_map_get_entry(&hm, &query_key_initial, &e)));
-    REQUIRE(*(K*)e.key_ptr == query_key_initial);
-    REQUIRE(*(V*)e.value_ptr == 20);
-    *(V*)e.value_ptr = 100;
+    REQUIRE(*static_cast<K*>(e.key_ptr) == query_key_initial);
+    REQUIRE(*static_cast<V*>(e.value_ptr) == 20);
+    *static_cast<V*>(e.value_ptr) = 100;
     REQUIRE(query_val == 20);
     REQUIRE(STATUS_OK(hash_map_get_value(&hm, &query_key_initial, &query_val)));
     REQUIRE(query_val == 100);
@@ -381,8 +381,8 @@ TEST_CASE("Remove map") {
     HashMapIterator it = hash_map_iterator_init(&hm);
     MapEntry        e;
     while (hash_map_iterator_has_next(&it, &e)) {
-        K k = *(K*)e.key_ptr;
-        V v = *(V*)e.value_ptr;
+        const K k = *static_cast<K*>(e.key_ptr);
+        const V v = *static_cast<V*>(e.value_ptr);
         REQUIRE(k == v);
         REQUIRE(k % 3 != 0);
     }

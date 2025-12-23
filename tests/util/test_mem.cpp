@@ -204,7 +204,7 @@ TEST_CASE("Reference counting") {
     };
 
     const auto int_dtor = [](void* i, free_alloc_fn free_alloc) {
-        Int* ii = (Int*)i;
+        Int* ii = static_cast<Int*>(i);
         if (ii->heap) {
             free_alloc(ii->heap);
             ii->heap = nullptr;
@@ -212,11 +212,11 @@ TEST_CASE("Reference counting") {
     };
 
     const auto int_ctor = [&int_dtor](int v, bool heaped) {
-        Int* i = (Int*)malloc(sizeof(Int));
+        Int* i = static_cast<Int*>(malloc(sizeof(Int)));
 
         int* j = nullptr;
         if (heaped) {
-            j  = (int*)malloc(sizeof(int));
+            j  = static_cast<int*>(malloc(sizeof(int)));
             *j = v;
             *i = {.rc_control = rc_init(int_dtor), .value = v, .heap = j};
         } else {
@@ -229,7 +229,7 @@ TEST_CASE("Reference counting") {
     SECTION("Standard usage") {
         Int* i = int_ctor(2, true);
         REQUIRE(i->rc_control.ref_count == 1);
-        Int* i_ref = (Int*)rc_retain(i);
+        Int* i_ref = static_cast<Int*>(rc_retain(i));
         REQUIRE(i->rc_control.ref_count == 2);
 
         rc_release(i_ref, free);
@@ -240,7 +240,7 @@ TEST_CASE("Reference counting") {
     SECTION("Without destructor") {
         Int* i = int_ctor(2, false);
         REQUIRE(i->rc_control.ref_count == 1);
-        Int* i_ref = (Int*)rc_retain(i);
+        Int* i_ref = static_cast<Int*>(rc_retain(i));
         REQUIRE(i->rc_control.ref_count == 2);
 
         rc_release(i_ref, free);

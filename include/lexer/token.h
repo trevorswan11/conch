@@ -41,9 +41,10 @@
                                                                                                   \
         PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STRUCT), PROCESS(ENUM),          \
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
-        PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(FOR),   \
-        PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
-        PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE), PROCESS(DO), PROCESS(AS), \
+        PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(LOOP),  \
+        PROCESS(FOR), PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL),            \
+        PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE),          \
+        PROCESS(DO), PROCESS(AS),                                                                 \
                                                                                                   \
         PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(SIZE_TYPE), PROCESS(BYTE_TYPE),            \
         PROCESS(FLOAT_TYPE), PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),        \

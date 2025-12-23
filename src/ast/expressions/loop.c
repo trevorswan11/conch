@@ -283,3 +283,58 @@ NODISCARD Status do_while_loop_expression_analyze(Node*            node,
     MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
+
+NODISCARD Status loop_expression_create(Token            start_token,
+                                        BlockStatement*  block,
+                                        LoopExpression** loop_expr,
+                                        memory_alloc_fn  memory_alloc) {
+    assert(memory_alloc);
+
+    LoopExpression* loop = memory_alloc(sizeof(LoopExpression));
+    if (!loop) { return ALLOCATION_FAILED; }
+
+    *loop = (LoopExpression){
+        .base  = EXPRESSION_INIT(LOOP_VTABLE, start_token),
+        .block = block,
+    };
+
+    *loop_expr = loop;
+    return SUCCESS;
+}
+
+void loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+    if (!node) { return; }
+    assert(free_alloc);
+
+    LoopExpression* loop = (LoopExpression*)node;
+    NODE_VIRTUAL_FREE(loop->block, free_alloc);
+
+    free_alloc(loop);
+}
+
+NODISCARD Status loop_expression_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb) {
+    ASSERT_EXPRESSION(node);
+    assert(sb);
+
+    LoopExpression* loop = (LoopExpression*)node;
+    TRY(string_builder_append_str_z(sb, "loop "));
+    ASSERT_STATEMENT(loop->block);
+    TRY(NODE_VIRTUAL_RECONSTRUCT(loop->block, symbol_map, sb));
+
+    return SUCCESS;
+}
+
+NODISCARD Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+    ASSERT_EXPRESSION(node);
+    assert(parent && errors);
+
+    LoopExpression* loop = (LoopExpression*)node;
+    ASSERT_STATEMENT(loop->block);
+
+    MAYBE_UNUSED(loop);
+    MAYBE_UNUSED(parent);
+    MAYBE_UNUSED(errors);
+    return NOT_IMPLEMENTED;
+}

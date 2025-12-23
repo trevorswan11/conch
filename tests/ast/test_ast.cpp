@@ -63,8 +63,8 @@ TEST_CASE("Declaration reconstructions") {
     SECTION("Typeof'd types") {
         test_reconstruction("type T = typeof 2", "type T = typeof 2;");
         test_reconstruction("type T = typeof 2u", "type T = typeof 2u;");
-        test_reconstruction("type T = typeof \"Hello, World!\"",
-                            "type T = typeof \"Hello, World!\";");
+        test_reconstruction(R"(type T = typeof "Hello, World!")",
+                            R"(type T = typeof "Hello, World!";)");
         test_reconstruction("type T = typeof AAABBB", "type T = typeof AAABBB;");
     }
 }
@@ -89,7 +89,7 @@ TEST_CASE("Short statements") {
 
     SECTION("Import statements") {
         test_reconstruction("import std", "import std;");
-        test_reconstruction("import \"array\" as array", "import \"array\" as array;");
+        test_reconstruction(R"(import "array" as array)", R"(import "array" as array;)");
     }
 
     SECTION("Discard statements") {
@@ -146,8 +146,8 @@ TEST_CASE("Loops") {
     }
 
     SECTION("Do-while loops") {
-        test_reconstruction("do { print(\"Hello, World!\") } while (true)",
-                            "do { print(\"Hello, World!\") } while (true)");
+        test_reconstruction(R"(do { print("Hello, World!") } while (true))",
+                            R"(do { print("Hello, World!") } while (true))");
     }
 }
 
@@ -186,8 +186,8 @@ TEST_CASE("Complex expressions") {
 
 TEST_CASE("String literals") {
     SECTION("Standard strings") {
-        test_reconstruction("const a := \"Hello, World!\"", "const a := \"Hello, World!\";");
-        test_reconstruction("const a: string = \"Hey!\"", "const a: string = \"Hey!\";");
+        test_reconstruction(R"(const a := "Hello, World!")", R"(const a := "Hello, World!";)");
+        test_reconstruction(R"(const a: string = "Hey!")", R"(const a: string = "Hey!";)");
     }
 
     SECTION("Multiline strings") {

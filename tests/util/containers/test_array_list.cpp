@@ -102,8 +102,8 @@ TEST_CASE("Push ops w/ resize") {
     REQUIRE(mut_item);
     REQUIRE(*mut_item == manual_val);
 
-    uint8_t new_val = manual_val + 1;
-    *mut_item       = new_val;
+    const uint8_t new_val = manual_val + 1;
+    *mut_item             = new_val;
     REQUIRE(array_list_get_ptr(&a, 100, (void**)&mut_item) == Status::INDEX_OUT_OF_BOUNDS);
     REQUIRE(STATUS_OK(array_list_get(&a, 1, &out_item)));
     REQUIRE(out_item == new_val);

@@ -118,7 +118,7 @@ NODISCARD Status strntochr(const char* str, size_t n, uint8_t* out) {
         *out = '\0';
         break;
     default:
-        *out = (uint8_t)escaped;
+        *out = escaped;
         break;
     }
 

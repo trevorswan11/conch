@@ -26,14 +26,14 @@ TEST_CASE("Slice comparison") {
 }
 
 TEST_CASE("Mutable slice comparison") {
-    MutSlice m1 = {.ptr = (char*)"foo", .length = 3};
-    MutSlice m2 = {.ptr = (char*)"foo", .length = 3};
-    MutSlice m3 = {.ptr = (char*)"bar", .length = 3};
+    MutSlice m1 = {.ptr = "foo", .length = 3};
+    MutSlice m2 = {.ptr = "foo", .length = 3};
+    MutSlice m3 = {.ptr = "bar", .length = 3};
 
     REQUIRE(compare_mut_slices(&m1, &m2) == 0);
     REQUIRE(compare_mut_slices(&m1, &m3) != 0);
 
-    MutSlice m4 = {.ptr = (char*)"foobar", .length = 6};
+    MutSlice m4 = {.ptr = "foobar", .length = 6};
     REQUIRE(compare_mut_slices(&m1, &m4) != 0);
 }
 
@@ -42,9 +42,9 @@ TEST_CASE("Null terminating string hashing") {
     const char* str2 = "Catch2";
     const char* str3 = "catch2";
 
-    uint64_t h1 = hash_string_z(str1);
-    uint64_t h2 = hash_string_z(str2);
-    uint64_t h3 = hash_string_z(str3);
+    const uint64_t h1 = hash_string_z(str1);
+    const uint64_t h2 = hash_string_z(str2);
+    const uint64_t h3 = hash_string_z(str3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);
@@ -64,9 +64,9 @@ TEST_CASE("Slice hashing") {
 }
 
 TEST_CASE("Mutable slice hashing") {
-    const MutSlice m1 = {.ptr = (char*)"hashme", .length = 6};
-    const MutSlice m2 = {.ptr = (char*)"hashme", .length = 6};
-    const MutSlice m3 = {.ptr = (char*)"different", .length = 9};
+    const MutSlice m1 = {.ptr = "hashme", .length = 6};
+    const MutSlice m2 = {.ptr = "hashme", .length = 6};
+    const MutSlice m3 = {.ptr = "different", .length = 9};
 
     const uint64_t h1 = hash_mut_slice(&m1);
     const uint64_t h2 = hash_mut_slice(&m2);

@@ -5,6 +5,7 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  google-*,
   -performance-no-int-to-ptr,
   -readability-identifier-length,
   -readability-magic-numbers,
@@ -14,6 +15,7 @@ Checks: >
   -misc-use-anonymous-namespace,
   -modernize-use-trailing-return-type,
   -modernize-avoid-c-arrays,
+  -google-readability-todo,
 
 WarningsAsErrors: "*"
 

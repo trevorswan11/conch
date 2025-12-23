@@ -10,7 +10,7 @@ extern "C" {
 
 class SemanticFixture {
   public:
-    SemanticFixture(const char* input);
+    explicit SemanticFixture(const char* input);
 
     ~SemanticFixture() { seman_deinit(&seman); }
 

@@ -55,6 +55,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
 NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
 NODISCARD Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
@@ -114,6 +115,7 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {FOR, for_loop_expression_parse},
     {WHILE, while_loop_expression_parse},
     {DO, do_while_loop_expression_parse},
+    {LOOP, loop_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
