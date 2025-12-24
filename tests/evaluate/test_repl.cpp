@@ -39,12 +39,12 @@ TEST_CASE("REPL with acceptable input") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
-    Fixture<FileIO> fiof(io, file_io_deinit);
+    const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
-    Fixture<ArrayList> alf(output, array_list_deinit);
+    const Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
@@ -70,12 +70,12 @@ TEST_CASE("REPL with error input") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
-    Fixture<FileIO> fiof(io, file_io_deinit);
+    const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
-    Fixture<ArrayList> alf(output, array_list_deinit);
+    const Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
@@ -102,12 +102,12 @@ TEST_CASE("REPL with incorrect buffer") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
-    Fixture<FileIO> fiof(io, file_io_deinit);
+    const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(size_t))));
-    Fixture<ArrayList> alf(output, array_list_deinit);
+    const Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(repl_run(&io, buf, &output) == Status::TYPE_MISMATCH);
 

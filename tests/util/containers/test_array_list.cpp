@@ -17,7 +17,7 @@ TEST_CASE("Init and resize") {
 
     REQUIRE(array_list_init(&a, 10, 0) == Status::ZERO_ITEM_SIZE);
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     REQUIRE(array_list_capacity(&a) == 10);
     REQUIRE(STATUS_OK(array_list_resize(&a, 12)));
@@ -40,7 +40,7 @@ TEST_CASE("Init and resize") {
 TEST_CASE("Push ops w/o resize") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     // Push a handful of elements and check
     const uint8_t expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3};
@@ -66,8 +66,8 @@ TEST_CASE("Push ops w/o resize") {
 TEST_CASE("Push ops w/ resize") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
-    const uint8_t      expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
+    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const uint8_t            expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
 
     // Push and check the first few elements
     const size_t chunk = 8;
@@ -121,7 +121,7 @@ COMPARE_INTEGER_FN(uint32_t);
 TEST_CASE("Remove ops") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     uint32_t out;
     REQUIRE(array_list_pop(&a, &out) == Status::EMPTY);
@@ -163,7 +163,7 @@ TEST_CASE("Remove ops") {
 TEST_CASE("Stable insertion") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     const uint32_t initial[] = {10, 20, 30, 40};
     for (auto v : initial) {
@@ -203,10 +203,10 @@ TEST_CASE("Stable insertion") {
 TEST_CASE("Unstable insertion") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    Fixture<ArrayList> alfa(a, array_list_deinit);
-    ArrayList          b;
+    const Fixture<ArrayList> alfa(a, array_list_deinit);
+    ArrayList                b;
     REQUIRE(STATUS_OK(array_list_init(&b, 4, sizeof(uint32_t))));
-    Fixture<ArrayList> alfb(b, array_list_deinit);
+    const Fixture<ArrayList> alfb(b, array_list_deinit);
 
     const std::vector<uint32_t> initial = {10, 20, 30, 40};
     for (auto v : initial) {
@@ -254,7 +254,7 @@ COMPARE_INTEGER_FN(int32_t);
 TEST_CASE("Malformed find") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     size_t  maybe_idx;
     int32_t maybe_item = 0;
@@ -266,7 +266,7 @@ TEST_CASE("Malformed find") {
 TEST_CASE("Find") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     const int32_t values[] = {10, 20, 30, 40};
     for (const int& value : values) {
@@ -287,7 +287,7 @@ TEST_CASE("Sorting and binary search") {
     ArrayList    a;
     const size_t total_size = 1000;
     REQUIRE(STATUS_OK(array_list_init(&a, 1.5 * total_size, sizeof(uint32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf(a, array_list_deinit);
 
     // Pack a vector and array list with random numbers for sorting
     std::vector<uint32_t> random;
@@ -323,8 +323,8 @@ TEST_CASE("Sorting and binary search") {
 TEST_CASE("ArrayList iterator patterns") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    Fixture<ArrayList> alf(a, array_list_deinit);
-    const uint32_t     values[] = {10, 20, 30, 40};
+    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const uint32_t           values[] = {10, 20, 30, 40};
 
     SECTION("Mutable iterator") {
         for (auto v : values) {

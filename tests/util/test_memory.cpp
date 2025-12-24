@@ -153,8 +153,8 @@ TEST_CASE("String duplication") {
     const char* original = "hello world";
 
     SECTION("Null terminated strings") {
-        char*          copy_z = strdup_z(original);
-        Fixture<char*> strf(copy_z);
+        char*                copy_z = strdup_z(original); // NOLINT
+        const Fixture<char*> strf(copy_z);
 
         REQUIRE(copy_z);
         REQUIRE(strcmp(copy_z, original) == 0);
@@ -165,8 +165,8 @@ TEST_CASE("String duplication") {
     }
 
     SECTION("Less than full size dupe") {
-        char*          copy_s = strdup_s(original, 5);
-        Fixture<char*> strf(copy_s);
+        char*                copy_s = strdup_s(original, 5); // NOLINT
+        const Fixture<char*> strf(copy_s);
 
         REQUIRE(copy_s);
         REQUIRE(strncmp(copy_s, original, 5) == 0);
@@ -174,23 +174,23 @@ TEST_CASE("String duplication") {
     }
 
     SECTION("Full size dupe") {
-        const size_t   len    = strlen(original);
-        char*          copy_s = strdup_s(original, len);
-        Fixture<char*> strf(copy_s);
+        const size_t         len    = strlen(original);
+        char*                copy_s = strdup_s(original, len); // NOLINT
+        const Fixture<char*> strf(copy_s);
 
         REQUIRE(copy_s);
         REQUIRE(strcmp(copy_s, original) == 0);
     }
 
     SECTION("Empty string") {
-        const char*    empty  = "";
-        char*          copy_z = strdup_z(empty);
-        Fixture<char*> strfz(copy_z);
+        const char*          empty  = "";
+        char*                copy_z = strdup_z(empty); // NOLINT
+        const Fixture<char*> strfz(copy_z);
         REQUIRE(copy_z);
         REQUIRE(strcmp(copy_z, "") == 0);
 
-        char*          copy_s = strdup_s(empty, 0);
-        Fixture<char*> strfs(copy_s);
+        char*                copy_s = strdup_s(empty, 0); // NOLINT
+        const Fixture<char*> strfs(copy_s);
         REQUIRE(copy_s);
         REQUIRE(strcmp(copy_s, "") == 0);
     }

@@ -102,7 +102,7 @@ TEST_CASE("Init map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     REQUIRE(hm.size == 0);
     REQUIRE(hm.available == 16);
@@ -135,8 +135,8 @@ TEST_CASE("Basic map usage") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
-    const size_t     count = 5;
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const size_t           count = 5;
 
     V load_total = 0;
     for (V i = 0; i < count; i++) {
@@ -173,7 +173,7 @@ TEST_CASE("Ensure total map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     REQUIRE(STATUS_OK(hash_map_ensure_total_capacity(&hm, 20)));
     const size_t initial_capacity = hash_map_capacity(&hm);
@@ -197,7 +197,7 @@ TEST_CASE("Ensure unused map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint64_t_u, compare_uint64_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     REQUIRE(STATUS_OK(hash_map_ensure_unused_capacity(&hm, 32)));
     const size_t capacity = hash_map_capacity(&hm);
@@ -212,7 +212,7 @@ TEST_CASE("Ensure unused map capacity with tombstones") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (V i = 0; i < 100; i++) {
         REQUIRE(STATUS_OK(hash_map_ensure_unused_capacity(&hm, 1)));
@@ -228,7 +228,7 @@ TEST_CASE("Clear retaining map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_slice, compare_int32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
     hash_map_clear_retaining_capacity(&hm);
 
     const char* str1 = "Hello";
@@ -262,7 +262,7 @@ TEST_CASE("Grow map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     const size_t grow_to = 12456;
 
@@ -294,7 +294,7 @@ TEST_CASE("Rehash map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     // Add some elements and remove every third to simulate a fragmented map
     const auto total_count = static_cast<size_t>(6 * 1637);
@@ -324,7 +324,7 @@ TEST_CASE("Mutable map entry access") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (K i = 0; i < 16; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
@@ -363,7 +363,7 @@ TEST_CASE("Remove map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (K i = 0; i < 16; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
