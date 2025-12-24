@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BLOCK_STMT_H
+#define BLOCK_STMT_H
 
 #include "ast/statements/statement.h"
 
@@ -28,4 +29,6 @@ static const StatementVTable BLOCK_VTABLE = {
         },
 };
 
-NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt);
+NODISCARD Status block_statement_append(BlockStatement* block_stmt, const Statement* stmt);
+
+#endif

@@ -16,9 +16,7 @@ NODISCARD Status jump_statement_create(Token           start_token,
     assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
     JumpStatement* jump = memory_alloc(sizeof(JumpStatement));
-    if (!jump) {
-        return ALLOCATION_FAILED;
-    }
+    if (!jump) { return ALLOCATION_FAILED; }
 
     *jump = (JumpStatement){
         .base  = STATEMENT_INIT(JUMP_VTABLE, start_token),
@@ -30,9 +28,7 @@ NODISCARD Status jump_statement_create(Token           start_token,
 }
 
 void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     JumpStatement* jump = (JumpStatement*)node;

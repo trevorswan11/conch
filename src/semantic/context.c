@@ -9,9 +9,7 @@ NODISCARD Status semantic_context_create(SemanticContext*  parent,
                                          Allocator         allocator) {
     ASSERT_ALLOCATOR(allocator);
     SemanticContext* sem_con = allocator.memory_alloc(sizeof(SemanticContext));
-    if (!sem_con) {
-        return ALLOCATION_FAILED;
-    }
+    if (!sem_con) { return ALLOCATION_FAILED; }
 
     SymbolTable* symbols;
     TRY_DO(symbol_table_create(&symbols, allocator), allocator.free_alloc(sem_con));
@@ -38,9 +36,7 @@ SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
 }
 
 void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc) {
-    if (!context) {
-        return;
-    }
+    if (!context) { return; }
 
     symbol_table_destroy(context->symbol_table, free_alloc);
     free_alloc(context);
@@ -51,15 +47,11 @@ bool semantic_context_find(SemanticContext* context,
                            MutSlice         symbol,
                            SemanticType**   type) {
     assert(context);
-    if (!check_parents) {
-        return symbol_table_find(context->symbol_table, symbol, type);
-    }
+    if (!check_parents) { return symbol_table_find(context->symbol_table, symbol, type); }
 
     SemanticContext* current = context;
     while (current != NULL) {
-        if (symbol_table_find(current->symbol_table, symbol, type)) {
-            return true;
-        }
+        if (symbol_table_find(current->symbol_table, symbol, type)) { return true; }
 
         current = current->parent;
     }
@@ -69,15 +61,11 @@ bool semantic_context_find(SemanticContext* context,
 
 bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol) {
     assert(context);
-    if (!check_parents) {
-        return symbol_table_has(context->symbol_table, symbol);
-    }
+    if (!check_parents) { return symbol_table_has(context->symbol_table, symbol); }
 
     SemanticContext* current = context;
     while (current != NULL) {
-        if (symbol_table_has(current->symbol_table, symbol)) {
-            return true;
-        }
+        if (symbol_table_has(current->symbol_table, symbol)) { return true; }
 
         current = current->parent;
     }

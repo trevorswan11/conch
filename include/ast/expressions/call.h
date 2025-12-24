@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CALL_EXPR_H
+#define CALL_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -39,3 +40,5 @@ static const ExpressionVTable CALL_VTABLE = {
             .analyze     = call_expression_analyze,
         },
 };
+
+#endif

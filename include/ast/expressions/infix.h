@@ -1,4 +1,5 @@
-#pragma once
+#ifndef INFIX_EXPR_H
+#define INFIX_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -30,3 +31,5 @@ static const ExpressionVTable INFIX_VTABLE = {
             .analyze     = infix_expression_analyze,
         },
 };
+
+#endif

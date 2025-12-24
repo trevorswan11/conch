@@ -1,7 +1,9 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
+
+#include "fixtures.hpp"
 
 extern "C" {
 #include "util/containers/hash_set.h"
@@ -16,11 +18,11 @@ TEST_CASE("Malformed set usage") {
     HashSet hs;
 
     // Null pointers should not allow initialization
-    REQUIRE(hash_set_init(NULL, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
+    REQUIRE(hash_set_init(nullptr, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t) ==
             Status::NULL_PARAMETER);
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), NULL, compare_uint16_t) ==
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), nullptr, compare_uint16_t) ==
             Status::NULL_PARAMETER);
-    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, NULL) ==
+    REQUIRE(hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, nullptr) ==
             Status::NULL_PARAMETER);
 
     // Zero size/alignment is illegal
@@ -34,10 +36,10 @@ TEST_CASE("Malformed set usage") {
             Status::SIZE_OVERFLOW);
 
     // Helpers that check self and buffer initialization
-    REQUIRE(hash_set_ensure_total_capacity(NULL, 10) == Status::NULL_PARAMETER);
-    hash_set_deinit(NULL);
+    REQUIRE(hash_set_ensure_total_capacity(nullptr, 10) == Status::NULL_PARAMETER);
+    hash_set_deinit(nullptr);
 
-    hs.buffer = NULL;
+    hs.buffer = nullptr;
     REQUIRE(hash_set_ensure_total_capacity(&hs, 10) == Status::NULL_PARAMETER);
     hash_set_deinit(&hs);
 }
@@ -48,6 +50,8 @@ TEST_CASE("Set init") {
     HashSet hs;
     REQUIRE(STATUS_OK(
         hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
+
     REQUIRE(hs.size == 0);
     REQUIRE(hs.available == 16);
 
@@ -56,12 +60,11 @@ TEST_CASE("Set init") {
     REQUIRE(hs.header->key_size == sizeof(K));
     REQUIRE(hs.header->key_align == alignof(K));
 
+    // Manual deinit and reinit check
     hash_set_deinit(&hs);
-
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 1, sizeof(K), alignof(K), hash_uint16_t_u, compare_uint16_t)));
     REQUIRE(hash_set_capacity(&hs) == HASH_SET_MINIMUM_CAPACITY);
-    hash_set_deinit(&hs);
 }
 
 HASH_INTEGER_FN(uint32_t)
@@ -73,7 +76,8 @@ TEST_CASE("Basic set usage") {
     HashSet hs;
     REQUIRE(STATUS_OK(
         hash_set_init(&hs, 10, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t)));
-    const size_t count = 5;
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
+    const size_t           count = 5;
 
     K load_total = 0;
     for (K i = 0; i < count; i++) {
@@ -87,11 +91,9 @@ TEST_CASE("Basic set usage") {
 
     SetEntry e;
     while (hash_set_iterator_has_next(&it, &e)) {
-        internal_total += *(K*)e.key_ptr;
+        internal_total += *static_cast<K*>(e.key_ptr);
     }
     REQUIRE(load_total == internal_total);
-
-    hash_set_deinit(&hs);
 }
 
 COMPARE_INTEGER_FN(int32_t);
@@ -102,6 +104,7 @@ TEST_CASE("Ensure total set capacity") {
     HashSet hs;
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
 
     REQUIRE(STATUS_OK(hash_set_ensure_total_capacity(&hs, 20)));
     const size_t initial_capacity = hash_set_capacity(&hs);
@@ -113,8 +116,6 @@ TEST_CASE("Ensure total set capacity") {
         REQUIRE_FALSE(result.found_existing);
     }
     REQUIRE(initial_capacity == hash_set_capacity(&hs));
-
-    hash_set_deinit(&hs);
 }
 
 HASH_INTEGER_FN(uint64_t)
@@ -126,13 +127,12 @@ TEST_CASE("Ensure unused set capacity") {
     HashSet hs;
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint64_t_u, compare_uint64_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
 
     REQUIRE(STATUS_OK(hash_set_ensure_unused_capacity(&hs, 32)));
     const size_t capacity = hash_set_capacity(&hs);
     REQUIRE(STATUS_OK(hash_set_ensure_unused_capacity(&hs, 32)));
     REQUIRE(capacity == hash_set_capacity(&hs));
-
-    hash_set_deinit(&hs);
 }
 
 TEST_CASE("Ensure unused set capacity with tombstones") {
@@ -141,14 +141,13 @@ TEST_CASE("Ensure unused set capacity with tombstones") {
     HashSet hs;
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_s, compare_int32_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
 
     for (K i = 0; i < 100; i++) {
         REQUIRE(STATUS_OK(hash_set_ensure_unused_capacity(&hs, 1)));
         hash_set_put_assume_capacity(&hs, &i);
         REQUIRE(STATUS_OK(hash_set_remove(&hs, &i)));
     }
-
-    hash_set_deinit(&hs);
 }
 
 TEST_CASE("Clear retaining set capacity") {
@@ -156,6 +155,7 @@ TEST_CASE("Clear retaining set capacity") {
 
     HashSet hs;
     REQUIRE(STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_slice, compare_int32_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
     hash_set_clear_retaining_capacity(&hs);
 
     const char* str1 = "Hello";
@@ -176,8 +176,6 @@ TEST_CASE("Clear retaining set capacity") {
     REQUIRE(hash_set_count(&hs) == 0);
     REQUIRE(hash_set_capacity(&hs) == capacity);
     REQUIRE_FALSE(hash_set_contains(&hs, &key1));
-
-    hash_set_deinit(&hs);
 }
 
 TEST_CASE("Grow set") {
@@ -186,8 +184,8 @@ TEST_CASE("Grow set") {
     HashSet hs;
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t)));
-
-    const size_t grow_to = 12456;
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
+    const size_t           grow_to = 12456;
 
     for (size_t i = 0; i < grow_to; i++) {
         REQUIRE(STATUS_OK(hash_set_put(&hs, &i)));
@@ -201,8 +199,6 @@ TEST_CASE("Grow set") {
         total += 1;
     }
     REQUIRE(total == grow_to);
-
-    hash_set_deinit(&hs);
 }
 
 TEST_CASE("Rehash set") {
@@ -211,14 +207,13 @@ TEST_CASE("Rehash set") {
     HashSet hs;
     REQUIRE(
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t)));
+    const Fixture<HashSet> hsf(hs, hash_set_deinit);
 
     // Add some elements and remove every third to simulate a fragmented map
-    const size_t total_count = 6 * 1637;
+    const auto total_count = static_cast<size_t>(6 * 1637);
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_set_put(&hs, &i)));
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_set_remove(&hs, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_set_remove(&hs, &i))); }
     }
 
     // Rehash and ensure data was not lost along the way
@@ -232,8 +227,6 @@ TEST_CASE("Rehash set") {
             REQUIRE(STATUS_OK(hash_set_get_index(&hs, &i, &out_index)));
         }
     }
-
-    hash_set_deinit(&hs);
 }
 
 TEST_CASE("Remove set") {
@@ -248,16 +241,14 @@ TEST_CASE("Remove set") {
     }
 
     for (K i = 0; i < 16; i++) {
-        if (i % 3 == 0) {
-            REQUIRE(STATUS_OK(hash_set_remove(&hs, &i)));
-        }
+        if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_set_remove(&hs, &i))); }
     }
     REQUIRE(hash_set_count(&hs) == 10);
 
     HashSetIterator it = hash_set_iterator_init(&hs);
     SetEntry        e;
     while (hash_set_iterator_has_next(&it, &e)) {
-        K k = *(K*)e.key_ptr;
+        const K k = *static_cast<K*>(e.key_ptr);
         REQUIRE(k % 3 != 0);
     }
 

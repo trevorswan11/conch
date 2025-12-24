@@ -8,9 +8,7 @@
 #include "util/memory.h"
 
 uint32_t ceil_power_of_two_32(uint32_t n) {
-    if (n == 0) {
-        return 1;
-    }
+    if (n == 0) { return 1; }
 
     n -= 1;
     n |= n >> 1;
@@ -24,9 +22,7 @@ uint32_t ceil_power_of_two_32(uint32_t n) {
 }
 
 uint64_t ceil_power_of_two_64(uint64_t n) {
-    if (n == 0) {
-        return 1;
-    }
+    if (n == 0) { return 1; }
 
     n -= 1;
     n |= n >> 1;
@@ -57,11 +53,9 @@ bool approx_eq_float(float x, float y, float tolerance) {
 bool approx_eq_double(double x, double y, double tolerance) {
     assert(tolerance >= 0.0);
 
-    if (x == y) {
-        return true;
-    } else if (isnan(x) || isnan(y)) {
-        return false;
-    } else {
-        return fabs(x - y) <= tolerance;
-    }
+    if (x == y) { return true; }
+
+    if (isnan(x) || isnan(y)) { return false; }
+
+    return fabs(x - y) <= tolerance;
 }

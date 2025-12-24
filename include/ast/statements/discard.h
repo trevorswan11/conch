@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DISCARD_STMT_H
+#define DISCARD_STMT_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -27,3 +28,5 @@ static const StatementVTable DISCARD_VTABLE = {
             .analyze     = discard_statement_analyze,
         },
 };
+
+#endif

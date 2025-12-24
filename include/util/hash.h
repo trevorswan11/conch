@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HASH_H
+#define HASH_H
 
 #include <stdint.h>
 
@@ -34,32 +35,38 @@ Hash hash_mut_slice(const void* key);
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 #define HASH_INTEGER_FN(T)                                                            \
     static inline Hash HASH_CONCAT_3(hash_, T, _u)(const void* key) {                 \
-        T    t   = *(const T*)key;                                                    \
-        Hash val = (Hash)(T)t;                                                        \
+        const T t   = *(const T*)key;                                                 \
+        Hash    val = (Hash)(T)t;                                                     \
         if (sizeof(T) == 1) {                                                         \
             val = (val ^ 0xAAU) + (val << 3);                                         \
             val = val ^ (val >> 4);                                                   \
             val = val * 0x27U;                                                        \
             return val;                                                               \
-        } else if (sizeof(T) == 2) {                                                  \
+        }                                                                             \
+                                                                                      \
+        if (sizeof(T) == 2) {                                                         \
             val = (val ^ 0xAAAAU) + (val << 7);                                       \
             val = val ^ (val >> 9);                                                   \
             val = val * 0x27D4U;                                                      \
             val = val ^ (val >> 11);                                                  \
             return val;                                                               \
-        } else if (sizeof(T) == 4) {                                                  \
+        }                                                                             \
+                                                                                      \
+        if (sizeof(T) == 4) {                                                         \
             val = ((val >> 16) ^ val) * 0x45D9F3BU;                                   \
             val = ((val >> 16) ^ val) * 0x45D9F3BU;                                   \
             val = (val >> 16) ^ val;                                                  \
             return val;                                                               \
-        } else if (sizeof(T) == 8) {                                                  \
+        }                                                                             \
+                                                                                      \
+        if (sizeof(T) == 8) {                                                         \
             val = (val ^ (val >> 30)) * 0xBF58476D1CE4E5B9ULL;                        \
             val = (val ^ (val >> 27)) * 0x94D049BB133111EBULL;                        \
             val = val ^ (val >> 31);                                                  \
             return val;                                                               \
-        } else {                                                                      \
-            return 0;                                                                 \
         }                                                                             \
+                                                                                      \
+        return 0;                                                                     \
     }                                                                                 \
                                                                                       \
     static inline ALLOW_UNUSED_FN Hash HASH_CONCAT_3(hash_, T, _s)(const void* key) { \
@@ -80,3 +87,5 @@ Hash hash_mut_slice(const void* key);
         const T vb = *(const T*)b;                                               \
         return (va > vb) - (va < vb);                                            \
     }
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AST_H
+#define AST_H
 
 #include <stdbool.h>
 
@@ -51,3 +52,5 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
 NODISCARD Status generics_reconstruct(ArrayList*     generics,
                                       const HashMap* symbol_map,
                                       StringBuilder* sb);
+
+#endif

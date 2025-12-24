@@ -88,9 +88,7 @@ NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
 
     SemanticArrayType* sema_array = memory_alloc(sizeof(SemanticArrayType));
-    if (!sema_array) {
-        return ALLOCATION_FAILED;
-    }
+    if (!sema_array) { return ALLOCATION_FAILED; }
 
     *sema_array = (SemanticArrayType){
         .rc_control = rc_init(semantic_array_destroy),
@@ -104,9 +102,7 @@ NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
 }
 
 void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
-    if (!array_type) {
-        return;
-    }
+    if (!array_type) { return; }
     assert(free_alloc);
 
     SemanticArrayType* sema_array = (SemanticArrayType*)array_type;
@@ -125,9 +121,7 @@ NODISCARD Status semantic_enum_create(Slice              name,
     assert(variants.header->key_size == sizeof(MutSlice));
 
     SemanticEnumType* type_variant = memory_alloc(sizeof(SemanticEnumType));
-    if (!type_variant) {
-        return ALLOCATION_FAILED;
-    }
+    if (!type_variant) { return ALLOCATION_FAILED; }
 
     *type_variant = (SemanticEnumType){
         .rc_control = rc_init(semantic_enum_destroy),
@@ -154,9 +148,7 @@ void free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc) {
 }
 
 void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
-    if (!enum_type) {
-        return;
-    }
+    if (!enum_type) { return; }
     assert(free_alloc);
 
     SemanticEnumType* type_variant = (SemanticEnumType*)enum_type;
@@ -167,9 +159,7 @@ NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memor
     assert(memory_alloc);
 
     SemanticType* empty_type = memory_alloc(sizeof(SemanticType));
-    if (!empty_type) {
-        return ALLOCATION_FAILED;
-    }
+    if (!empty_type) { return ALLOCATION_FAILED; }
 
     *empty_type = (SemanticType){
         .rc_control = rc_init(semantic_type_destroy),
@@ -218,9 +208,7 @@ NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allo
 }
 
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc) {
-    if (!stype) {
-        return;
-    }
+    if (!stype) { return; }
     assert(free_alloc);
 
     SemanticType* type = (SemanticType*)stype;
@@ -237,9 +225,7 @@ void semantic_type_destroy(void* stype, free_alloc_fn free_alloc) {
 }
 
 bool type_assignable(const SemanticType* lhs, const SemanticType* rhs) {
-    if (rhs->tag == STYPE_NIL) {
-        return lhs->nullable;
-    }
+    if (rhs->tag == STYPE_NIL) { return lhs->nullable; }
 
     if (lhs->nullable && !rhs->nullable) {
         SemanticType tmp = *rhs;
@@ -247,44 +233,32 @@ bool type_assignable(const SemanticType* lhs, const SemanticType* rhs) {
         return type_equal(lhs, &tmp);
     }
 
-    if (!lhs->nullable && rhs->nullable) {
-        return false;
-    }
+    if (!lhs->nullable && rhs->nullable) { return false; }
 
     return type_equal(lhs, rhs);
 }
 
 bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
-    // Conch has explicit null values and minimal shallow type checking
-    if (lhs->tag != rhs->tag) {
-        return false;
-    } else if (rhs->tag == STYPE_NIL) {
-        return lhs->nullable;
-    } else if (lhs->nullable != rhs->nullable) {
-        return false;
-    }
+    // Enforce explicit null values and minimal shallow type checking
+    if (lhs->tag != rhs->tag) { return false; }
+    if (rhs->tag == STYPE_NIL) { return lhs->nullable; }
+    if (lhs->nullable != rhs->nullable) { return false; }
 
     // Both the lhs and rhs must be shallowly equal now, try to disprove deep equality
     switch (lhs->tag) {
     case STYPE_ENUM: {
         SemanticEnumType* lhs_enum = lhs->variant.enum_type;
         SemanticEnumType* rhs_enum = rhs->variant.enum_type;
-        if (!slice_equals(&lhs_enum->type_name, &rhs_enum->type_name)) {
-            return false;
-        }
+        if (!slice_equals(&lhs_enum->type_name, &rhs_enum->type_name)) { return false; }
 
         // Hash sets are equal if they are the same size and one is a perfect subset of the other
-        if (lhs_enum->variants.size != rhs_enum->variants.size) {
-            return false;
-        }
+        if (lhs_enum->variants.size != rhs_enum->variants.size) { return false; }
 
         HashSetIterator it = hash_set_iterator_init(&lhs_enum->variants);
         SetEntry        next;
         while (hash_set_iterator_has_next(&it, &next)) {
             const MutSlice* name = (MutSlice*)next.key_ptr;
-            if (!hash_set_contains(&rhs_enum->variants, name)) {
-                return false;
-            }
+            if (!hash_set_contains(&rhs_enum->variants, name)) { return false; }
         }
         break;
     }

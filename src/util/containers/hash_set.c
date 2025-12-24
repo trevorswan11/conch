@@ -13,13 +13,13 @@
 MAX_FN(size_t, size_t)
 
 // Determines the new capacity based on the current size.
-static inline size_t _hash_set_capacity_for_size(size_t size) {
-    size_t new_cap = (size * 100) / HASH_SET_MAX_LOAD_PERCENTAGE + 1;
+static inline size_t hash_set_capacity_for_size(size_t size) {
+    size_t new_cap = ((size * 100) / HASH_SET_MAX_LOAD_PERCENTAGE) + 1;
     return ceil_power_of_two_size(new_cap);
 }
 
 // Grows the set to the new capacity, rehashing along the way.
-static inline NODISCARD Status _hash_set_grow(HashSet* hs, size_t new_capacity) {
+static inline NODISCARD Status hash_set_grow(HashSet* hs, size_t new_capacity) {
     new_capacity = max_size_t(2, new_capacity, HASH_SET_MINIMUM_CAPACITY);
     assert(new_capacity > hs->header->capacity);
     assert(is_power_of_two(new_capacity));
@@ -32,19 +32,15 @@ static inline NODISCARD Status _hash_set_grow(HashSet* hs, size_t new_capacity) 
     if (hs->size != 0) {
         const size_t old_capacity = hs->header->capacity;
         for (size_t i = 0; i < old_capacity; i++) {
-            if (!metadata_used(hs->metadata[i])) {
-                continue;
-            }
+            if (!metadata_used(hs->metadata[i])) { continue; }
 
             const void* key = ptr_offset(hs->header->keys, i * hs->header->key_size);
             hash_set_put_assume_capacity_no_clobber(&set, key);
 
-            if (set.size == hs->size) {
-                break;
-            }
+            if (set.size == hs->size) { break; }
         }
     }
-    set.available = (new_capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100 - set.size;
+    set.available = ((new_capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100) - set.size;
 
     hash_set_deinit(hs);
     *hs = set;
@@ -52,18 +48,16 @@ static inline NODISCARD Status _hash_set_grow(HashSet* hs, size_t new_capacity) 
 }
 
 // Only grows if the requested count exceeds the current number of available slots.
-static inline NODISCARD Status _hash_set_grow_if_needed(HashSet* hs, size_t new_count) {
+static inline NODISCARD Status hash_set_grow_if_needed(HashSet* hs, size_t new_count) {
     const size_t max_load = (hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100;
-    if (hs->size + new_count <= max_load) {
-        return SUCCESS;
-    }
+    if (hs->size + new_count <= max_load) { return SUCCESS; }
 
-    const size_t desired = _hash_set_capacity_for_size(hs->size + new_count);
-    TRY(_hash_set_grow(hs, desired));
+    const size_t desired = hash_set_capacity_for_size(hs->size + new_count);
+    TRY(hash_set_grow(hs, desired));
     return SUCCESS;
 }
 
-static inline void _hash_set_init_metadatas(HashSet* hs) {
+static inline void hash_set_init_metadatas(HashSet* hs) {
     assert(METADATA_SLOT_OPEN.fingerprint == 0);
     assert(METADATA_SLOT_OPEN.used == 0);
     memset(hs->metadata, 0, sizeof(Metadata) * hs->header->capacity);
@@ -77,33 +71,23 @@ NODISCARD Status hash_set_init_allocator(HashSet* hs,
                                          int (*compare)(const void*, const void*),
                                          Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
-    if (!hs || !hash || !compare) {
-        return NULL_PARAMETER;
-    } else if (key_size == 0 || key_align == 0) {
-        return ZERO_ITEM_SIZE;
-    }
+    if (!hs || !hash || !compare) { return NULL_PARAMETER; }
+    if (key_size == 0 || key_align == 0) { return ZERO_ITEM_SIZE; }
 
     capacity = capacity < HASH_SET_MINIMUM_CAPACITY ? HASH_SET_MINIMUM_CAPACITY : capacity;
-    if (!is_power_of_two(capacity)) {
-        capacity = ceil_power_of_two_size(capacity);
-    }
+    if (!is_power_of_two(capacity)) { capacity = ceil_power_of_two_size(capacity); }
 
     const size_t header_size   = sizeof(SetHeader);
     const size_t metadata_size = sizeof(Metadata) * capacity;
     const size_t keys_size     = key_size * capacity;
 
     // Safety checks before allocating for overflow guard
-    if (capacity > SIZE_MAX / key_size) {
-        return SIZE_OVERFLOW;
-    } else if (metadata_size > SIZE_MAX - header_size) {
-        return SIZE_OVERFLOW;
-    }
+    if (capacity > SIZE_MAX / key_size) { return SIZE_OVERFLOW; }
+    if (metadata_size > SIZE_MAX - header_size) { return SIZE_OVERFLOW; }
 
     const size_t total_size = header_size + metadata_size + (keys_size + key_align - 1);
     void*        buffer     = allocator.continuous_alloc(1, total_size);
-    if (!buffer) {
-        return ALLOCATION_FAILED;
-    }
+    if (!buffer) { return ALLOCATION_FAILED; }
 
     // Unpack the allocated block of memory
     uintptr_t ptr = (uintptr_t)buffer;
@@ -139,7 +123,7 @@ NODISCARD Status hash_set_init_allocator(HashSet* hs,
         .allocator = allocator,
     };
 
-    _hash_set_init_metadatas(hs);
+    hash_set_init_metadatas(hs);
     return SUCCESS;
 }
 
@@ -150,13 +134,11 @@ NODISCARD Status hash_set_init(HashSet* hs,
                                Hash (*hash)(const void*),
                                int (*compare)(const void*, const void*)) {
     return hash_set_init_allocator(
-        hs, capacity, key_size, key_align, hash, compare, standard_allocator);
+        hs, capacity, key_size, key_align, hash, compare, STANDARD_ALLOCATOR);
 }
 
 void hash_set_deinit(HashSet* hs) {
-    if (!hs || !hs->buffer) {
-        return;
-    }
+    if (!hs || !hs->buffer) { return; }
     ASSERT_ALLOCATOR(hs->allocator);
 
     hs->allocator.free_alloc(hs->buffer);
@@ -178,18 +160,16 @@ size_t hash_set_count(const HashSet* hs) {
 }
 
 void hash_set_clear_retaining_capacity(HashSet* hs) {
-    _hash_set_init_metadatas(hs);
+    hash_set_init_metadatas(hs);
     hs->size      = 0;
     hs->available = (hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100;
 }
 
 NODISCARD Status hash_set_ensure_total_capacity(HashSet* hs, size_t new_size) {
-    if (!hs || !hs->buffer) {
-        return NULL_PARAMETER;
-    }
+    if (!hs || !hs->buffer) { return NULL_PARAMETER; }
 
     if (new_size > hs->size) {
-        TRY_IS(_hash_set_grow_if_needed(hs, new_size - hs->size), ALLOCATION_FAILED);
+        TRY_IS(hash_set_grow_if_needed(hs, new_size - hs->size), ALLOCATION_FAILED);
     }
     return SUCCESS;
 }
@@ -258,14 +238,14 @@ void hash_set_rehash(HashSet* hs) {
                      ptr_offset(keys_ptr, probe * hs->header->key_size),
                      hs->header->key_size);
                 continue;
-            } else {
-                metadata[probe].used = 1;
-                const void* old_key  = ptr_offset(keys_ptr, current * hs->header->key_size);
-                void*       new_key  = ptr_offset(keys_ptr, probe * hs->header->key_size);
-
-                memcpy(new_key, old_key, hs->header->key_size);
-                metadata_clear(&metadata[current]);
             }
+
+            metadata[probe].used = 1;
+            const void* old_key  = ptr_offset(keys_ptr, current * hs->header->key_size);
+            void*       new_key  = ptr_offset(keys_ptr, probe * hs->header->key_size);
+
+            memcpy(new_key, old_key, hs->header->key_size);
+            metadata_clear(&metadata[current]);
         }
 
         current += 1;
@@ -286,7 +266,7 @@ void hash_set_rehash(HashSet* hs) {
         }
     }
 
-    hs->available = (hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100 - hs->size;
+    hs->available = ((hs->header->capacity * HASH_SET_MAX_LOAD_PERCENTAGE) / 100) - hs->size;
 }
 
 void hash_set_put_assume_capacity_no_clobber(HashSet* hs, const void* key) {
@@ -317,7 +297,7 @@ void hash_set_put_assume_capacity_no_clobber(HashSet* hs, const void* key) {
 }
 
 NODISCARD Status hash_set_put_no_clobber(HashSet* hs, const void* key) {
-    TRY_IS(_hash_set_grow_if_needed(hs, 1), ALLOCATION_FAILED);
+    TRY_IS(hash_set_grow_if_needed(hs, 1), ALLOCATION_FAILED);
 
     hash_set_put_assume_capacity_no_clobber(hs, key);
     return true;
@@ -358,9 +338,7 @@ SetGetOrPutResult hash_set_get_or_put_assume_capacity(HashSet* hs, const void* k
     }
 
     // It's cheaper to lower probing distance after deletions by recycling a tombstone
-    if (first_tombstone_idx < hs->header->capacity) {
-        probe = first_tombstone_idx;
-    }
+    if (first_tombstone_idx < hs->header->capacity) { probe = first_tombstone_idx; }
     hs->available -= 1;
 
     metadata_fill(&hs->metadata[probe], fingerprint);
@@ -376,7 +354,7 @@ NODISCARD Status hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutRe
     assert(hs && hs->buffer && key);
 
     // If we fail to grow, still try to find the key
-    if (_hash_set_grow_if_needed(hs, 1) == ALLOCATION_FAILED) {
+    if (hash_set_grow_if_needed(hs, 1) == ALLOCATION_FAILED) {
         if (hs->available > 0) {
             *result = hash_set_get_or_put_assume_capacity(hs, key);
             return true;
@@ -419,9 +397,7 @@ bool hash_set_contains(const HashSet* hs, const void* key) {
 
 NODISCARD Status hash_set_get_index(const HashSet* hs, const void* key, size_t* index) {
     assert(hs && hs->buffer && key);
-    if (hs->size == 0) {
-        return EMPTY;
-    }
+    if (hs->size == 0) { return EMPTY; }
 
     const Hash    hash        = hs->hash(key);
     const size_t  mask        = hs->header->capacity - 1;
@@ -438,9 +414,7 @@ NODISCARD Status hash_set_get_index(const HashSet* hs, const void* key, size_t* 
             const void* test_key = ptr_offset(hs->header->keys, probe * hs->header->key_size);
 
             if (hs->compare(key, test_key) == 0) {
-                if (index) {
-                    *index = probe;
-                }
+                if (index) { *index = probe; }
                 return SUCCESS;
             }
         }
@@ -486,9 +460,7 @@ HashSetIterator hash_set_iterator_init(HashSet* hs) {
 bool hash_set_iterator_has_next(HashSetIterator* it, SetEntry* next) {
     assert(it && it->hs && it->hs->buffer);
     assert(it->index <= it->hs->header->capacity);
-    if (it->hs->size == 0) {
-        return false;
-    }
+    if (it->hs->size == 0) { return false; }
 
     const size_t capacity = it->hs->header->capacity;
     while (it->index < capacity) {

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STATUS_H
+#define STATUS_H
 
 #include <assert.h>
 #include <stdbool.h>
@@ -7,54 +8,46 @@
 #define ENUMERATE(ENUM) ENUM
 #define STRINGIFY(STRING) #STRING
 
-#define TRY(expr)                                 \
+#define TRY(expr)                                                           \
+    do {                                                                    \
+        const Status stat_obfuscated_pie = expr;                            \
+        if (stat_obfuscated_pie != SUCCESS) { return stat_obfuscated_pie; } \
+    } while (0)
+
+#define TRY_DO(expr, action)                      \
     do {                                          \
-        const Status _stat_obfuscated_pie = expr; \
-        if (_stat_obfuscated_pie != SUCCESS) {    \
-            return _stat_obfuscated_pie;          \
+        const Status stat_obfuscated_pied = expr; \
+        if (stat_obfuscated_pied != SUCCESS) {    \
+            action;                               \
+            return stat_obfuscated_pied;          \
         }                                         \
     } while (0)
 
-#define TRY_DO(expr, action)                       \
+#define TRY_IS(expr, S)                                                 \
+    do {                                                                \
+        const Status stat_obfuscated_piei = expr;                       \
+        if (stat_obfuscated_piei == S) { return stat_obfuscated_piei; } \
+    } while (0)
+
+#define TRY_DO_IS(expr, action, S)                 \
     do {                                           \
-        const Status _stat_obfuscated_pied = expr; \
-        if (_stat_obfuscated_pied != SUCCESS) {    \
+        const Status stat_obfuscated_piedi = expr; \
+        if (stat_obfuscated_piedi == S) {          \
             action;                                \
-            return _stat_obfuscated_pied;          \
+            return stat_obfuscated_piedi;          \
         }                                          \
     } while (0)
 
-#define TRY_IS(expr, S)                            \
-    do {                                           \
-        const Status _stat_obfuscated_piei = expr; \
-        if (_stat_obfuscated_piei == S) {          \
-            return _stat_obfuscated_piei;          \
-        }                                          \
-    } while (0)
-
-#define TRY_DO_IS(expr, action, S)                  \
-    do {                                            \
-        const Status _stat_obfuscated_piedi = expr; \
-        if (_stat_obfuscated_piedi == S) {          \
-            action;                                 \
-            return _stat_obfuscated_piedi;          \
-        }                                           \
-    } while (0)
-
-#define TRY_NOT(expr, S)                           \
-    do {                                           \
-        const Status _stat_obfuscated_pien = expr; \
-        if (_stat_obfuscated_pien != S) {          \
-            return _stat_obfuscated_pien;          \
-        }                                          \
+#define TRY_NOT(expr, S)                                                \
+    do {                                                                \
+        const Status stat_obfuscated_pien = expr;                       \
+        if (stat_obfuscated_pien != S) { return stat_obfuscated_pien; } \
     } while (0)
 
 // Propagates the `GENERAL_IO` status code if the io expression evaluates to a negative int.
-#define TRY_IO(io_expr)              \
-    do {                             \
-        if (io_expr < 0) {           \
-            return GENERAL_IO_ERROR; \
-        }                            \
+#define TRY_IO(io_expr)                               \
+    do {                                              \
+        if (io_expr < 0) { return GENERAL_IO_ERROR; } \
     } while (0)
 
 #define TRY_IO_DO(io_expr, action)   \
@@ -82,13 +75,9 @@ void debug_print(const char* format, ...);
 #define UNREACHABLE
 #else
 #if defined(__GNUC__) || defined(__clang__)
-#define UNREACHABLE_IMPL \
-    assert(0);           \
-    __builtin_unreachable();
+#define UNREACHABLE_IMPL __builtin_unreachable();
 #elif defined(_MSC_VER)
-#define UNREACHABLE_IMPL \
-    assert(0);           \
-    __assume(0);
+#define UNREACHABLE_IMPL __assume(0);
 #else
 #define UNREACHABLE_IMPL abort()
 #endif
@@ -121,9 +110,10 @@ void debug_print(const char* format, ...);
         PROCESS(UNEXPECTED_ARRAY_SIZE_TOKEN), PROCESS(MISSING_ARRAY_SIZE_TOKEN),                   \
         PROCESS(INCORRECT_EXPLICIT_ARRAY_SIZE), PROCESS(LOOP_MISSING_BODY),                        \
         PROCESS(FOR_MISSING_ITERABLES), PROCESS(WHILE_MISSING_CONDITION), PROCESS(EMPTY_FOR_LOOP), \
-        PROCESS(EMPTY_WHILE_LOOP), PROCESS(ILLEGAL_LOOP_NON_BREAK), PROCESS(ILLEGAL_IF_BRANCH),    \
-        PROCESS(FOR_ITERABLE_CAPTURE_MISMATCH), PROCESS(IMPROPER_WHILE_CONTINUATION),              \
-        PROCESS(ILLEGAL_IDENTIFIER), PROCESS(EMPTY_GENERIC_LIST), PROCESS(IMPLICIT_FN_PARAM_TYPE), \
+        PROCESS(EMPTY_WHILE_LOOP), PROCESS(EMPTY_LOOP), PROCESS(ILLEGAL_LOOP_NON_BREAK),           \
+        PROCESS(ILLEGAL_IF_BRANCH), PROCESS(FOR_ITERABLE_CAPTURE_MISMATCH),                        \
+        PROCESS(IMPROPER_WHILE_CONTINUATION), PROCESS(ILLEGAL_IDENTIFIER),                         \
+        PROCESS(EMPTY_GENERIC_LIST), PROCESS(IMPLICIT_FN_PARAM_TYPE),                              \
         PROCESS(MALFORMED_CHARATCER_LITERAL), PROCESS(USER_IMPORT_MISSING_ALIAS),                  \
         PROCESS(REDEFINITION_OF_IDENTIFIER), PROCESS(UNDECLARED_IDENTIFIER),                       \
         PROCESS(ASSIGNMENT_TO_CONSTANT), PROCESS(MALFORMED_TYPE_DECL), PROCESS(DOUBLE_NULLABLE),   \
@@ -179,3 +169,5 @@ NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb)
     IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \
     cleanup;                                                                   \
     return status
+
+#endif

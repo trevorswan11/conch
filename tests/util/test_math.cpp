@@ -1,11 +1,9 @@
 #include "catch_amalgamated.hpp"
 
-#include <limits.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 extern "C" {
 #include "util/math.h"
@@ -27,11 +25,11 @@ TEST_CASE("max_double and approx_eq") {
 
     REQUIRE(approx_eq_double(-0.49, -0.5, 0.1));
     REQUIRE_FALSE(approx_eq_double(-0.49, -0.5, 0.001));
-    REQUIRE(approx_eq_float(-0.49f, -0.5f, 0.1f));
-    REQUIRE_FALSE(approx_eq_float(-0.49f, -0.5f, 0.001f));
+    REQUIRE(approx_eq_float(-0.49F, -0.5F, 0.1F));
+    REQUIRE_FALSE(approx_eq_float(-0.49F, -0.5F, 0.001F));
 
-    REQUIRE_FALSE(approx_eq_float(nanf(""), -0.5f, 0.001f));
-    REQUIRE_FALSE(approx_eq_float(-0.49f, nanf(""), 0.001f));
+    REQUIRE_FALSE(approx_eq_float(nanf(""), -0.5F, 0.001F));
+    REQUIRE_FALSE(approx_eq_float(-0.49F, nanf(""), 0.001F));
     REQUIRE_FALSE(approx_eq_double(nan(""), -0.5, 0.1));
     REQUIRE_FALSE(approx_eq_double(-0.49, nan(""), 0.1));
 }

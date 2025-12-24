@@ -18,9 +18,7 @@ NODISCARD Status namespace_expression_create(Token                 start_token,
     ASSERT_EXPRESSION(inner);
 
     NamespaceExpression* namespace_local = memory_alloc(sizeof(NamespaceExpression));
-    if (!namespace_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!namespace_local) { return ALLOCATION_FAILED; }
 
     *namespace_local = (NamespaceExpression){
         .base  = EXPRESSION_INIT(NAMESPACE_VTABLE, start_token),
@@ -33,9 +31,7 @@ NODISCARD Status namespace_expression_create(Token                 start_token,
 }
 
 void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     NamespaceExpression* namespace_expr = (NamespaceExpression*)node;

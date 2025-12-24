@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SINGLE_EXPR_H
+#define SINGLE_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -47,3 +48,5 @@ static const ExpressionVTable IGNORE_VTABLE = {
             .analyze     = ignore_expression_analyze,
         },
 };
+
+#endif

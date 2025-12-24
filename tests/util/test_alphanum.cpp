@@ -1,8 +1,9 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 
+#include <utility>
 #include <vector>
 
 extern "C" {
@@ -132,13 +133,13 @@ TEST_CASE("Malformed numbers") {
     SECTION("Signing integers") {
         int64_t v = start;
         REQUIRE(strntoll("0b2", 3, Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
-        REQUIRE(v == start);
+        REQUIRE(std::cmp_equal(v, start));
         REQUIRE(strntoll("0b2", 3, Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
-        REQUIRE(v == start);
+        REQUIRE(std::cmp_equal(v, start));
         REQUIRE(strntoll("0xG", 3, Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
-        REQUIRE(v == start);
+        REQUIRE(std::cmp_equal(v, start));
         REQUIRE(strntoll("0oG", 3, Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
-        REQUIRE(v == start);
+        REQUIRE(std::cmp_equal(v, start));
     }
 
     SECTION("Unsigned integers") {

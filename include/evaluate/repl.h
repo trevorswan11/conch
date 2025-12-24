@@ -1,4 +1,7 @@
-#pragma once
+#ifndef REPL_H
+#define REPL_H
+
+#include <stddef.h>
 
 #include "util/containers/array_list.h"
 #include "util/io.h"
@@ -13,3 +16,5 @@
 NODISCARD Status repl_start(void);
 NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
 NODISCARD Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
+
+#endif

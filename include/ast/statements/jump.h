@@ -1,4 +1,5 @@
-#pragma once
+#ifndef JUMP_STMT_H
+#define JUMP_STMT_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -27,3 +28,5 @@ static const StatementVTable JUMP_VTABLE = {
             .analyze     = jump_statement_analyze,
         },
 };
+
+#endif

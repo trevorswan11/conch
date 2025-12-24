@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LOOP_EXPR_H
+#define LOOP_EXPR_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -108,3 +109,30 @@ static const ExpressionVTable DO_WHILE_VTABLE = {
             .analyze     = do_while_loop_expression_analyze,
         },
 };
+
+typedef struct LoopExpression {
+    Expression      base;
+    BlockStatement* block;
+} LoopExpression;
+
+NODISCARD Status loop_expression_create(Token            start_token,
+                                        BlockStatement*  block,
+                                        LoopExpression** loop_expr,
+                                        memory_alloc_fn  memory_alloc);
+
+void             loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+NODISCARD Status loop_expression_reconstruct(Node*          node,
+                                             const HashMap* symbol_map,
+                                             StringBuilder* sb);
+NODISCARD Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+
+static const ExpressionVTable LOOP_VTABLE = {
+    .base =
+        {
+            .destroy     = loop_expression_destroy,
+            .reconstruct = loop_expression_reconstruct,
+            .analyze     = loop_expression_analyze,
+        },
+};
+
+#endif

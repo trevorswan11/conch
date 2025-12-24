@@ -1,4 +1,5 @@
-#pragma once
+#ifndef IDENTIFIER_EXPR_H
+#define IDENTIFIER_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -28,3 +29,5 @@ static const ExpressionVTable IDENTIFIER_VTABLE = {
             .analyze     = identifier_expression_analyze,
         },
 };
+
+#endif

@@ -17,9 +17,7 @@ NODISCARD Status if_expression_create(Token           start_token,
     ASSERT_EXPRESSION(consequence);
 
     IfExpression* if_local = memory_alloc(sizeof(IfExpression));
-    if (!if_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!if_local) { return ALLOCATION_FAILED; }
 
     *if_local = (IfExpression){
         .base        = EXPRESSION_INIT(IF_VTABLE, start_token),
@@ -33,9 +31,7 @@ NODISCARD Status if_expression_create(Token           start_token,
 }
 
 void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     IfExpression* if_expr = (IfExpression*)node;

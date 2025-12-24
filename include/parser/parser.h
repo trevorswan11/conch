@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PARSER_H
+#define PARSER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -58,3 +59,5 @@ Precedence parser_current_precedence(Parser* p);
 Precedence parser_peek_precedence(Parser* p);
 
 NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt);
+
+#endif

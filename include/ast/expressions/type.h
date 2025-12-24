@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TYPE_EXPR_H
+#define TYPE_EXPR_H
 
 #include "lexer/keywords.h"
 
@@ -110,3 +111,5 @@ static const ExpressionVTable TYPE_VTABLE = {
 NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb);
+
+#endif

@@ -15,9 +15,7 @@ NODISCARD Status expression_statement_create(Token                 start_token,
     assert(expression);
 
     ExpressionStatement* expr = memory_alloc(sizeof(ExpressionStatement));
-    if (!expr) {
-        return ALLOCATION_FAILED;
-    }
+    if (!expr) { return ALLOCATION_FAILED; }
 
     *expr = (ExpressionStatement){
         .base       = STATEMENT_INIT(EXPR_VTABLE, start_token),
@@ -29,9 +27,7 @@ NODISCARD Status expression_statement_create(Token                 start_token,
 }
 
 void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     ExpressionStatement* expr_stmt = (ExpressionStatement*)node;

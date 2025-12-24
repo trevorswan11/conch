@@ -13,9 +13,7 @@ int compare_slices(const void* a, const void* b) {
 
     size_t len = sa->length < sb->length ? sa->length : sb->length;
     int    cmp = memcmp(sa->ptr, sb->ptr, len);
-    if (cmp != 0) {
-        return cmp;
-    }
+    if (cmp != 0) { return cmp; }
 
     return (int)(sa->length - sb->length);
 }
@@ -26,14 +24,12 @@ int compare_mut_slices(const void* a, const void* b) {
 
     size_t len = sa->length < sb->length ? sa->length : sb->length;
     int    cmp = memcmp(sa->ptr, sb->ptr, len);
-    if (cmp != 0) {
-        return cmp;
-    }
+    if (cmp != 0) { return cmp; }
 
     return (int)(sa->length - sb->length);
 }
 
-static inline Hash _hash_string_s(const char* str, size_t size) {
+static inline Hash hash_string_s(const char* str, size_t size) {
     Hash hash = 5381;
     for (size_t i = 0; i < size; i++) {
         char c = str[i];
@@ -44,15 +40,15 @@ static inline Hash _hash_string_s(const char* str, size_t size) {
 
 Hash hash_string_z(const void* key) {
     const char* str = (const char*)key;
-    return _hash_string_s(str, strlen(str));
+    return hash_string_s(str, strlen(str));
 }
 
 Hash hash_slice(const void* key) {
     const Slice* slice = (const Slice*)key;
-    return _hash_string_s(slice->ptr, slice->length);
+    return hash_string_s(slice->ptr, slice->length);
 }
 
 Hash hash_mut_slice(const void* key) {
     const MutSlice* slice = (const MutSlice*)key;
-    return _hash_string_s(slice->ptr, slice->length);
+    return hash_string_s(slice->ptr, slice->length);
 }

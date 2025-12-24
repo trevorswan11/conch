@@ -73,9 +73,7 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 }
 
 NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator allocator) {
-    if (token.type != STRING && token.type != MULTILINE_STRING) {
-        return TYPE_MISMATCH;
-    }
+    if (token.type != STRING && token.type != MULTILINE_STRING) { return TYPE_MISMATCH; }
 
     StringBuilder builder;
     TRY(string_builder_init_allocator(&builder, token.slice.length + 1, allocator));
@@ -84,8 +82,10 @@ NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator al
         if (token.slice.length < 2) {
             string_builder_deinit(&builder);
             return UNEXPECTED_TOKEN;
-        } else if (token.slice.length > 2) {
+        }
 
+        // Here we can just trim off the start and finish of the string
+        if (token.slice.length > 2) {
             const char*  skipped_quote  = token.slice.ptr + 1;
             const size_t skipped_length = token.slice.length - 2;
 
@@ -107,9 +107,7 @@ NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator al
             }
 
             TRY_DO(string_builder_append(&builder, c), string_builder_deinit(&builder));
-            if (c == '\n') {
-                at_line_start = true;
-            }
+            if (c == '\n') { at_line_start = true; }
         }
     }
 

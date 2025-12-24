@@ -7,26 +7,24 @@
 
 #include "util/containers/string_builder.h"
 
-#define INTEGER_EXPR_CREATE(type, custom_vtab, out_expr)    \
+#define INTEGER_EXPR_CREATE(T, custom_vtab, out_expr)       \
     assert(memory_alloc);                                   \
     assert(start_token.slice.ptr);                          \
-    type* integer = memory_alloc(sizeof(type));             \
-    if (!integer) {                                         \
-        return ALLOCATION_FAILED;                           \
-    }                                                       \
                                                             \
-    *integer = (type){                                      \
+    typedef T I;                                            \
+    I*        integer = memory_alloc(sizeof(I));            \
+    if (!integer) { return ALLOCATION_FAILED; }             \
+                                                            \
+    *integer = (I){                                         \
         .base  = EXPRESSION_INIT(custom_vtab, start_token), \
         .value = value,                                     \
     };                                                      \
                                                             \
-    *out_expr = integer;                                    \
+    *(out_expr) = integer;                                  \
     return SUCCESS
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
     free_alloc(node);
 }

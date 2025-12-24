@@ -11,14 +11,14 @@
 
 #include "util/containers/string_builder.h"
 
-#define DECL_NAME(tok, field, name)                                                   \
-    const Allocator allocator = semantic_context_allocator(parent);                   \
-    MutSlice        name;                                                             \
-    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                       \
-                                                                                      \
-    if (semantic_context_has(parent, true, name)) {                                   \
-        PUT_STATUS_PROPAGATE(                                                         \
-            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc(name.ptr)); \
+#define DECL_NAME(tok, field, name)                                                     \
+    const Allocator allocator = semantic_context_allocator(parent);                     \
+    MutSlice        name;                                                               \
+    TRY(mut_slice_dupe(&(name), &(field), allocator.memory_alloc));                     \
+                                                                                        \
+    if (semantic_context_has(parent, true, (name))) {                                   \
+        PUT_STATUS_PROPAGATE(                                                           \
+            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc((name).ptr)); \
     }
 
 NODISCARD Status decl_statement_create(Token                 start_token,
@@ -43,7 +43,9 @@ NODISCARD Status decl_statement_create(Token                 start_token,
         if (start_token.type == CONST) {
             assert(type->tag == EXPLICIT);
             return CONST_DECL_MISSING_VALUE;
-        } else if (start_token.type == VAR && type->tag == IMPLICIT) {
+        }
+
+        if (start_token.type == VAR && type->tag == IMPLICIT) {
             return FORWARD_VAR_DECL_MISSING_TYPE;
         }
     } else {
@@ -51,9 +53,7 @@ NODISCARD Status decl_statement_create(Token                 start_token,
     }
 
     DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));
-    if (!declaration) {
-        return ALLOCATION_FAILED;
-    }
+    if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (DeclStatement){
         .base     = STATEMENT_INIT(DECL_VTABLE, start_token),
@@ -68,9 +68,7 @@ NODISCARD Status decl_statement_create(Token                 start_token,
 }
 
 void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     DeclStatement* decl = (DeclStatement*)node;
@@ -93,9 +91,7 @@ NODISCARD Status decl_statement_reconstruct(Node*          node,
     DeclStatement* decl = (DeclStatement*)node;
     ASSERT_EXPRESSION(decl->ident);
     TRY(NODE_VIRTUAL_RECONSTRUCT(decl->ident, symbol_map, sb));
-    if (decl->type->tag == EXPLICIT) {
-        TRY(string_builder_append_str_z(sb, ": "));
-    }
+    if (decl->type->tag == EXPLICIT) { TRY(string_builder_append_str_z(sb, ": ")); }
 
     TRY(NODE_VIRTUAL_RECONSTRUCT(decl->type, symbol_map, sb));
     if (decl->value) {
@@ -198,9 +194,7 @@ NODISCARD Status type_decl_statement_create(Token                 start_token,
     assert(ident && value);
 
     TypeDeclStatement* declaration = memory_alloc(sizeof(TypeDeclStatement));
-    if (!declaration) {
-        return ALLOCATION_FAILED;
-    }
+    if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (TypeDeclStatement){
         .base            = STATEMENT_INIT(TYPE_DECL_VTABLE, start_token),
@@ -214,9 +208,7 @@ NODISCARD Status type_decl_statement_create(Token                 start_token,
 }
 
 void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     TypeDeclStatement* type_decl = (TypeDeclStatement*)node;

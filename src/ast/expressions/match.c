@@ -10,9 +10,9 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     assert(arms && arms->item_size == sizeof(MatchArm));
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(arms);
-    MatchArm          arm;
-    while (array_list_iterator_has_next(&it, &arm)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(arms);
+    MatchArm               arm;
+    while (array_list_const_iterator_has_next(&it, &arm)) {
         NODE_VIRTUAL_FREE(arm.pattern, free_alloc);
         NODE_VIRTUAL_FREE(arm.dispatch, free_alloc);
     }
@@ -32,9 +32,7 @@ NODISCARD Status match_expression_create(Token             start_token,
     assert(arms.length > 0);
 
     MatchExpression* match = memory_alloc(sizeof(MatchExpression));
-    if (!match) {
-        return ALLOCATION_FAILED;
-    }
+    if (!match) { return ALLOCATION_FAILED; }
 
     *match = (MatchExpression){
         .base       = EXPRESSION_INIT(MATCH_VTABLE, start_token),
@@ -48,9 +46,7 @@ NODISCARD Status match_expression_create(Token             start_token,
 }
 
 void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     MatchExpression* match = (MatchExpression*)node;
@@ -75,9 +71,9 @@ NODISCARD Status match_expression_reconstruct(Node*          node,
     TRY(string_builder_append_str_z(sb, " { "));
 
     assert(match->arms.data && match->arms.length > 0);
-    ArrayListIterator it = array_list_iterator_init(&match->arms);
-    MatchArm          arm;
-    while (array_list_iterator_has_next(&it, &arm)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&match->arms);
+    MatchArm               arm;
+    while (array_list_const_iterator_has_next(&it, &arm)) {
         ASSERT_EXPRESSION(arm.pattern);
         TRY(NODE_VIRTUAL_RECONSTRUCT(arm.pattern, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, " => "));

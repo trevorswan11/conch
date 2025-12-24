@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PRECEDENCE_H
+#define PRECEDENCE_H
 
 #include "lexer/token.h"
 
@@ -65,3 +66,5 @@ static const PrecedencePair PRECEDENCE_PAIRS[] = {
     {COLON_COLON, NAMESPACE},
     {ORELSE, ASSIGNMENT},
 };
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FLOAT_EXPR_H
+#define FLOAT_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -28,3 +29,5 @@ static const ExpressionVTable FLOAT_VTABLE = {
             .analyze     = float_literal_expression_analyze,
         },
 };
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FUNCTION_EXPR_H
+#define FUNCTION_EXPR_H
 
 #include <stdbool.h>
 
@@ -54,3 +55,5 @@ static const ExpressionVTable FUNCTION_VTABLE = {
             .analyze     = function_expression_analyze,
         },
 };
+
+#endif

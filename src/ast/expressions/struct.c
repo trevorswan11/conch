@@ -12,9 +12,9 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(members);
-    StructMember      member;
-    while (array_list_iterator_has_next(&it, &member)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(members);
+    StructMember           member;
+    while (array_list_const_iterator_has_next(&it, &member)) {
         NODE_VIRTUAL_FREE(member.name, free_alloc);
         NODE_VIRTUAL_FREE(member.type, free_alloc);
         NODE_VIRTUAL_FREE(member.default_value, free_alloc);
@@ -34,9 +34,7 @@ NODISCARD Status struct_expression_create(Token              start_token,
     assert(members.item_size == sizeof(StructMember));
 
     StructExpression* struct_local = memory_alloc(sizeof(StructExpression));
-    if (!struct_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!struct_local) { return ALLOCATION_FAILED; }
 
     *struct_local = (StructExpression){
         .base     = EXPRESSION_INIT(STRUCT_VTABLE, start_token),
@@ -49,9 +47,7 @@ NODISCARD Status struct_expression_create(Token              start_token,
 }
 
 void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     StructExpression* struct_expr = (StructExpression*)node;
@@ -72,14 +68,12 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
 
     // Struct generics introduce slightly different spacing
     TRY(generics_reconstruct(&struct_expr->generics, symbol_map, sb));
-    if (struct_expr->generics.length == 0) {
-        TRY(string_builder_append(sb, ' '));
-    }
+    if (struct_expr->generics.length == 0) { TRY(string_builder_append(sb, ' ')); }
     TRY(string_builder_append_str_z(sb, "{ "));
 
-    ArrayListIterator it = array_list_iterator_init(&struct_expr->members);
-    StructMember      member;
-    while (array_list_iterator_has_next(&it, &member)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&struct_expr->members);
+    StructMember           member;
+    while (array_list_const_iterator_has_next(&it, &member)) {
         ASSERT_EXPRESSION(member.name);
         TRY(NODE_VIRTUAL_RECONSTRUCT(member.name, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, ": "));

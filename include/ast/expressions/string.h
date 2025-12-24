@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STRING_EXPR_H
+#define STRING_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -27,3 +28,5 @@ static const ExpressionVTable STRING_VTABLE = {
             .analyze     = string_literal_expression_analyze,
         },
 };
+
+#endif

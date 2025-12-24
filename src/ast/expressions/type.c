@@ -19,9 +19,7 @@ NODISCARD Status type_expression_create(Token               start_token,
                                         memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     TypeExpression* type = memory_alloc(sizeof(TypeExpression));
-    if (!type) {
-        return ALLOCATION_FAILED;
-    }
+    if (!type) { return ALLOCATION_FAILED; }
 
     *type = (TypeExpression){
         .base    = EXPRESSION_INIT(TYPE_VTABLE, start_token),
@@ -34,9 +32,7 @@ NODISCARD Status type_expression_create(Token               start_token,
 }
 
 void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
     TypeExpression* type = (TypeExpression*)node;
 
@@ -86,9 +82,7 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
     TypeExpression* type = (TypeExpression*)node;
     if (type->tag == EXPLICIT) {
         ExplicitType explicit_type = type->variant.explicit_type;
-        if (explicit_type.nullable) {
-            TRY(string_builder_append(sb, '?'));
-        }
+        if (explicit_type.nullable) { TRY(string_builder_append(sb, '?')); }
 
         TRY(explicit_type_reconstruct(explicit_type, symbol_map, sb));
     } else {
@@ -234,14 +228,14 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         assert(explicit_type.variant.array_type.dimensions.length > 0);
         TRY(string_builder_append(sb, '['));
 
-        ArrayListIterator it =
-            array_list_iterator_init(&explicit_type.variant.array_type.dimensions);
+        ArrayListConstIterator it =
+            array_list_const_iterator_init(&explicit_type.variant.array_type.dimensions);
         size_t dim;
-        while (array_list_iterator_has_next(&it, &dim)) {
+        while (array_list_const_iterator_has_next(&it, &dim)) {
             TRY(string_builder_append_unsigned(sb, (uint64_t)dim));
             TRY(string_builder_append_str_z(sb, "uz"));
 
-            if (!array_list_iterator_exhausted(&it)) {
+            if (!array_list_const_iterator_exhausted(&it)) {
                 TRY(string_builder_append_str_z(sb, ", "));
             }
         }
@@ -252,9 +246,7 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         assert(inner_type->tag == EXPLICIT);
 
         ExplicitType inner_explicit_type = inner_type->variant.explicit_type;
-        if (inner_explicit_type.nullable) {
-            TRY(string_builder_append(sb, '?'));
-        }
+        if (inner_explicit_type.nullable) { TRY(string_builder_append(sb, '?')); }
 
         TRY(explicit_type_reconstruct(inner_explicit_type, symbol_map, sb));
         break;

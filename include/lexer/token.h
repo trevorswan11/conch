@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TOKEN_H
+#define TOKEN_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,9 +41,10 @@
                                                                                                   \
         PROCESS(FUNCTION), PROCESS(VAR), PROCESS(CONST), PROCESS(STRUCT), PROCESS(ENUM),          \
         PROCESS(TRUE), PROCESS(FALSE), PROCESS(BOOLEAN_AND), PROCESS(BOOLEAN_OR), PROCESS(IS),    \
-        PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(FOR),   \
-        PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL), PROCESS(TYPEOF),         \
-        PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE), PROCESS(DO), PROCESS(AS), \
+        PROCESS(IN), PROCESS(IF), PROCESS(ELSE), PROCESS(MATCH), PROCESS(RETURN), PROCESS(LOOP),  \
+        PROCESS(FOR), PROCESS(WHILE), PROCESS(CONTINUE), PROCESS(BREAK), PROCESS(NIL),            \
+        PROCESS(TYPEOF), PROCESS(IMPORT), PROCESS(TYPE), PROCESS(IMPL), PROCESS(ORELSE),          \
+        PROCESS(DO), PROCESS(AS),                                                                 \
                                                                                                   \
         PROCESS(INT_TYPE), PROCESS(UINT_TYPE), PROCESS(SIZE_TYPE), PROCESS(BYTE_TYPE),            \
         PROCESS(FLOAT_TYPE), PROCESS(STRING_TYPE), PROCESS(BOOL_TYPE), PROCESS(VOID_TYPE),        \
@@ -95,3 +97,5 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator allocator);
 
 Base integer_token_to_base(TokenType type);
+
+#endif

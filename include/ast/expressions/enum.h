@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ENUM_EXPR_H
+#define ENUM_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -37,3 +38,5 @@ static const ExpressionVTable ENUM_VTABLE = {
             .analyze     = enum_expression_analyze,
         },
 };
+
+#endif

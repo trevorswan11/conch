@@ -1,4 +1,5 @@
-#pragma once
+#ifndef IMPORT_STMT_H
+#define IMPORT_STMT_H
 
 #include "ast/statements/statement.h"
 
@@ -43,3 +44,5 @@ static const StatementVTable IMPORT_VTABLE = {
             .analyze     = import_statement_analyze,
         },
 };
+
+#endif

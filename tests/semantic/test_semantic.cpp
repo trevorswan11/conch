@@ -1,6 +1,20 @@
 #include "catch_amalgamated.hpp"
 
-#include "semantic_helpers.hpp"
+#include <string>
+#include <vector>
+
+#include "fixtures.hpp"
+
+static void
+test_analyze(const char* input, std::vector<std::string> expected_errors, bool print_anyways) {
+    SemanticFixture sf{input};
+    sf.check_errors(std::move(expected_errors), print_anyways);
+}
+
+static void test_analyze(const char* input, std::vector<std::string> expected_errors = {}) {
+    const bool empty = expected_errors.empty();
+    test_analyze(input, std::move(expected_errors), empty);
+}
 
 TEST_CASE("Basic identifiers") {
     SECTION("Identifier declaration") {
@@ -21,10 +35,10 @@ TEST_CASE("Basic identifiers") {
 
 TEST_CASE("Primitive declarations") {
     SECTION("Implicit") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "const v := 3;",
             "const v := 3u;",
-            "const v := \"3\";",
+            R"(const v := "3";)",
             "var v := '3';",
             "const v := true;",
             "var v := 5.234;",
@@ -36,12 +50,12 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Correct explicit") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "const v: int = 3;",
             "const v: uint = 3u;",
             "const v: size = 5uz;",
             "const v: ?size = nil;",
-            "const v: string = \"3\";",
+            R"(const v: string = "3";)",
             "const v: byte = '3';",
             "const v: bool = true;",
             "const v: float = 5.234;",
@@ -55,12 +69,12 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Incorrect explicit") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "const v: uint = 3;",
             "const v: int = 3u;",
             "const v: ?size = 3u;",
             "const v: size = 3u;",
-            "const v: byte = \"3\";",
+            R"(const v: byte = "3";)",
             "const v: string = '3';",
             "const v: float = true;",
             "const v: bool = 5.234;",
@@ -76,11 +90,11 @@ TEST_CASE("Primitive declarations") {
 TEST_CASE("Assignment expressions") {
     SECTION("Basic assignments") {
         SECTION("Correct assignment") {
-            const char* inputs[] = {
+            const char* const inputs[] = {
                 "var v := 3; v = 5",
                 "var v := 3u; v = 6u",
                 "var v := 3uz; v = 6uz",
-                "var v := \"3\"; v = \"woah\"",
+                R"(var v := "3"; v = "woah")",
                 "var v := '3'; v = '\\0'",
                 "var v := true; v = false",
                 "var v := 5.234; v = 2.34e30",
@@ -105,10 +119,10 @@ TEST_CASE("Assignment expressions") {
     SECTION("Compound assignments") {
         SECTION("Correct assignment") {
             // Adding nil to a nullable value will be a runtime check
-            const char* inputs[] = {
+            const char* const inputs[] = {
                 "var v: int = 3; v += 7",
                 "var v: uint = 3u; v += 9u",
-                "var v: string = \"H\"; v += \"i\"",
+                R"(var v: string = "H"; v += "i")",
             };
 
             for (const auto& i : inputs) {
@@ -125,7 +139,7 @@ TEST_CASE("Assignment expressions") {
 
     SECTION("Nil assignments") {
         SECTION("Correct assignment") {
-            const char* inputs[] = {
+            const char* const inputs[] = {
                 "var v: ?int = 3; v = nil",
                 "var v: ?uint = 3u; v = nil",
             };
@@ -170,11 +184,11 @@ TEST_CASE("Block statements") {
 
 TEST_CASE("Type aliases") {
     SECTION("Primitive aliases") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "type custom = int; const v: custom = 3;",
             "type custom = uint; const v: custom = 3u;",
             "type custom = size; const v: custom = 3uz;",
-            "type custom = string; const v: custom = \"3\";",
+            R"(type custom = string; const v: custom = "3";)",
             "type custom = byte; const v: custom = '3';",
             "type custom = bool; const v: custom = true;",
             "type custom = float; const v: custom = 5.234;",
@@ -209,7 +223,7 @@ TEST_CASE("Enum types") {
     }
 
     SECTION("Assignment flavors") {
-        const char* inputs[] = {
+        const char* const inputs[] = {
             "type A = enum { a, }; const b: A = A::a",
             "type A = ?enum { a, }; var b: A = A::a; b = nil",
             "type A = enum { RED, BLUE, GREEN, }; var b: A = A::RED; b = A::BLUE; b = A::GREEN",
@@ -245,7 +259,7 @@ TEST_CASE("Prefix operators") {
         SECTION("Correct types") {
             test_analyze("const a: bool = !false; const b: bool = !nil;");
             test_analyze("const a: bool = !2u; const b: bool = !2u; const c: bool = !3.23");
-            test_analyze("const a: bool = !\"Value\"; const b: bool = !'v';");
+            test_analyze(R"(const a: bool = !"Value"; const b: bool = !'v';)");
             test_analyze("type g = ?enum { ONE, }; const d := !g");
         }
 
@@ -278,8 +292,8 @@ TEST_CASE("Prefix operators") {
 
 TEST_CASE("Infix operators") {
     SECTION("Addition and multiplication") {
-        test_analyze("const a: string = \"Result: \"; const b: int = 5; const c: string = a + b");
-        test_analyze("const a: string = \"Result: \"; const b: int = 5; const c: string = a * b");
+        test_analyze(R"(const a: string = "Result: "; const b: int = 5; const c: string = a + b)");
+        test_analyze(R"(const a: string = "Result: "; const b: int = 5; const c: string = a * b)");
         test_analyze("const a: int = 3; const b: int = 5; const c: int = a + b");
         test_analyze("const a: uint = 3u; const b: uint = 5u; const c := a + b");
         test_analyze("const a := 3.3; const b := 5.5; const c: float = a + b");
@@ -304,13 +318,13 @@ TEST_CASE("Infix operators") {
         test_analyze("3 >= 4");
         test_analyze("'3' >= '4'");
         test_analyze("3u == nil");
-        test_analyze("nil != \"Hello\"");
+        test_analyze(R"(nil != "Hello")");
         test_analyze("nil == nil");
         test_analyze("3 != 4");
         test_analyze("const a: ?int = 3; 6 == a");
         test_analyze("3 is 4");
         test_analyze("3 is 'd'");
-        test_analyze("3 is \"Hello\"");
+        test_analyze(R"(3 is "Hello")");
         test_analyze("true and true");
         test_analyze("nil and false");
         test_analyze("const a: ?int = 3; a or nil");
@@ -344,15 +358,15 @@ TEST_CASE("Infix operators") {
         test_analyze("type a = int; type b = uint; a + b",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 30]"});
         test_analyze("type a = uint; 4 + a", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 16]"});
-        test_analyze("const a: string = \"Hello\"; const b: ?int = 3; a + b",
+        test_analyze(R"(const a: string = "Hello"; const b: ?int = 3; a + b)",
                      {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 47]"});
-        test_analyze("const a: ?string = \"Hello\"; const b: int = 3; a + b",
+        test_analyze(R"(const a: ?string = "Hello"; const b: int = 3; a + b)",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 47]"});
         test_analyze("const a: byte = '3'; const b: byte = '5'; const c := a + b",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 54]"});
-        test_analyze("const a: int = 5; const b: string = \"Result: \"; const c: string = a + b",
+        test_analyze(R"(const a: int = 5; const b: string = "Result: "; const c: string = a + b)",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 67]"});
-        test_analyze("const a: int = 5; const b: string = \"Result: \"; const c: string = a * b",
+        test_analyze(R"(const a: int = 5; const b: string = "Result: "; const c: string = a * b)",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 67]"});
         test_analyze("const a := 3u; const b: uint = 5u; const c: int = a * b",
                      {"TYPE_MISMATCH [Ln 1, Col 36]"});
@@ -371,7 +385,7 @@ TEST_CASE("Infix operators") {
         test_analyze("7u and 4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("type a = enum { ONE, }; const b: a = a::ONE; b == 4",
                      {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 46]"});
-        test_analyze("\"tre\" < \"vor\"", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
+        test_analyze(R"("tre" < "vor")", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3 < 4.3", {"TYPE_MISMATCH [Ln 1, Col 1]"});
         test_analyze("3.3..=4", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 1]"});
         test_analyze("3..=4.3", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 1]"});

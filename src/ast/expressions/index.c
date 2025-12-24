@@ -18,9 +18,7 @@ NODISCARD Status index_expression_create(Token             start_token,
     ASSERT_EXPRESSION(idx);
 
     IndexExpression* index = memory_alloc(sizeof(IndexExpression));
-    if (!index) {
-        return ALLOCATION_FAILED;
-    }
+    if (!index) { return ALLOCATION_FAILED; }
 
     *index = (IndexExpression){
         .base  = EXPRESSION_INIT(INDEX_VTABLE, start_token),
@@ -33,9 +31,7 @@ NODISCARD Status index_expression_create(Token             start_token,
 }
 
 void index_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     IndexExpression* index = (IndexExpression*)node;

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STRUCT_EXPR_H
+#define STRUCT_EXPR_H
 
 #include "ast/expressions/expression.h"
 
@@ -41,3 +42,5 @@ static const ExpressionVTable STRUCT_VTABLE = {
             .analyze     = struct_expression_analyze,
         },
 };
+
+#endif

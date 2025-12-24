@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LEXER_H
+#define LEXER_H
 
 #include <stddef.h>
 
@@ -47,3 +48,5 @@ Token lexer_read_string(Lexer* l);
 Token lexer_read_character_literal(Lexer* l);
 Token lexer_read_comment(Lexer* l);
 Token lexer_read_multilinestring(Lexer* l);
+
+#endif

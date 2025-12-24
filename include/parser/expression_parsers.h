@@ -1,4 +1,5 @@
-#pragma once
+#ifndef EXPRESSION_PARSERS_H
+#define EXPRESSION_PARSERS_H
 
 #include <assert.h>
 #include <stdbool.h>
@@ -54,6 +55,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
 NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
+NODISCARD Status loop_expression_parse(Parser* p, Expression** expression);
 NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
 NODISCARD Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
@@ -73,6 +75,7 @@ static inline Hash hash_prefix(const void* key) {
     return hash_token_type(&fn.token_key);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 static inline int compare_prefix(const void* a, const void* b) {
     const PrefixFn fn_a = *(const PrefixFn*)a;
     const PrefixFn fn_b = *(const PrefixFn*)b;
@@ -113,6 +116,7 @@ static const PrefixFn PREFIX_FUNCTIONS[] = {
     {FOR, for_loop_expression_parse},
     {WHILE, while_loop_expression_parse},
     {DO, do_while_loop_expression_parse},
+    {LOOP, loop_expression_parse},
 };
 
 static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
@@ -120,9 +124,7 @@ static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
 
     SetEntry e;
     PrefixFn prefix_probe = {type, NULL};
-    if (STATUS_ERR(hash_set_get_entry(&p->prefix_parse_fns, &prefix_probe, &e))) {
-        return false;
-    }
+    if (STATUS_ERR(hash_set_get_entry(&p->prefix_parse_fns, &prefix_probe, &e))) { return false; }
 
     *prefix = *(PrefixFn*)e.key_ptr;
     return true;
@@ -139,6 +141,7 @@ static inline Hash hash_infix(const void* key) {
     return hash_token_type(&fn.token_key);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 static inline int compare_infix(const void* a, const void* b) {
     const InfixFn fn_a = *(const InfixFn*)a;
     const InfixFn fn_b = *(const InfixFn*)b;
@@ -150,9 +153,7 @@ static inline bool poll_infix(Parser* p, TokenType type, InfixFn* infix) {
 
     SetEntry e;
     InfixFn  infix_probe = {type, NULL};
-    if (STATUS_ERR(hash_set_get_entry(&p->infix_parse_fns, &infix_probe, &e))) {
-        return false;
-    }
+    if (STATUS_ERR(hash_set_get_entry(&p->infix_parse_fns, &infix_probe, &e))) { return false; }
 
     *infix = *(InfixFn*)e.key_ptr;
     return true;
@@ -199,3 +200,5 @@ static const InfixFn INFIX_FUNCTIONS[] = {
     {XOR_ASSIGN, assignment_expression_parse},
     {COLON_COLON, namespace_expression_parse},
 };
+
+#endif

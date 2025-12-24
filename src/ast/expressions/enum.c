@@ -15,9 +15,9 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     assert(variants);
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(variants);
-    EnumVariant       variant;
-    while (array_list_iterator_has_next(&it, &variant)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(variants);
+    EnumVariant            variant;
+    while (array_list_const_iterator_has_next(&it, &variant)) {
         NODE_VIRTUAL_FREE(variant.name, free_alloc);
         NODE_VIRTUAL_FREE(variant.value, free_alloc);
     }
@@ -34,9 +34,7 @@ NODISCARD Status enum_expression_create(Token            start_token,
     assert(variants.length > 0);
 
     EnumExpression* enum_local = memory_alloc(sizeof(EnumExpression));
-    if (!enum_local) {
-        return ALLOCATION_FAILED;
-    }
+    if (!enum_local) { return ALLOCATION_FAILED; }
 
     *enum_local = (EnumExpression){
         .base     = EXPRESSION_INIT(ENUM_VTABLE, start_token),
@@ -48,9 +46,7 @@ NODISCARD Status enum_expression_create(Token            start_token,
 }
 
 void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
-    if (!node) {
-        return;
-    }
+    if (!node) { return; }
     assert(free_alloc);
 
     EnumExpression* enum_expr = (EnumExpression*)node;
@@ -68,9 +64,9 @@ NODISCARD Status enum_expression_reconstruct(Node*          node,
     EnumExpression* enum_expr = (EnumExpression*)node;
     TRY(string_builder_append_str_z(sb, "enum { "));
 
-    ArrayListIterator it = array_list_iterator_init(&enum_expr->variants);
-    EnumVariant       variant;
-    while (array_list_iterator_has_next(&it, &variant)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&enum_expr->variants);
+    EnumVariant            variant;
+    while (array_list_const_iterator_has_next(&it, &variant)) {
         ASSERT_EXPRESSION(variant.name);
         TRY(NODE_VIRTUAL_RECONSTRUCT(variant.name, symbol_map, sb));
 

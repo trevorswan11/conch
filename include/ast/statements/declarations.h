@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DECL_STMT_H
+#define DECL_STMT_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -66,3 +67,5 @@ static const StatementVTable TYPE_DECL_VTABLE = {
             .analyze     = type_decl_statement_analyze,
         },
 };
+
+#endif

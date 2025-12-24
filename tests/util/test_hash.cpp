@@ -1,7 +1,8 @@
 #include "catch_amalgamated.hpp"
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+
+#include "fixtures.hpp"
 
 extern "C" {
 #include "util/hash.h"
@@ -27,14 +28,18 @@ TEST_CASE("Slice comparison") {
 }
 
 TEST_CASE("Mutable slice comparison") {
-    MutSlice m1 = {.ptr = (char*)"foo", .length = 3};
-    MutSlice m2 = {.ptr = (char*)"foo", .length = 3};
-    MutSlice m3 = {.ptr = (char*)"bar", .length = 3};
+    CStringFixture s1{"foo"};
+    const auto     m1 = mut_slice_from_str_z(s1.raw());
+    CStringFixture s2{"foo"};
+    const auto     m2 = mut_slice_from_str_z(s2.raw());
+    CStringFixture s3{"bar"};
+    const auto     m3 = mut_slice_from_str_z(s3.raw());
 
     REQUIRE(compare_mut_slices(&m1, &m2) == 0);
     REQUIRE(compare_mut_slices(&m1, &m3) != 0);
 
-    MutSlice m4 = {.ptr = (char*)"foobar", .length = 6};
+    CStringFixture s4{"foobar"};
+    const auto     m4 = mut_slice_from_str_z(s4.raw());
     REQUIRE(compare_mut_slices(&m1, &m4) != 0);
 }
 
@@ -43,35 +48,38 @@ TEST_CASE("Null terminating string hashing") {
     const char* str2 = "Catch2";
     const char* str3 = "catch2";
 
-    uint64_t h1 = hash_string_z(str1);
-    uint64_t h2 = hash_string_z(str2);
-    uint64_t h3 = hash_string_z(str3);
+    const uint64_t h1 = hash_string_z(str1);
+    const uint64_t h2 = hash_string_z(str2);
+    const uint64_t h3 = hash_string_z(str3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);
 }
 
 TEST_CASE("Slice hashing") {
-    Slice s1 = slice_from_str_s("hashme", 6);
-    Slice s2 = slice_from_str_s("hashme", 6);
-    Slice s3 = slice_from_str_s("different", 9);
+    const auto s1 = slice_from_str_s("hashme", 6);
+    const auto s2 = slice_from_str_s("hashme", 6);
+    const auto s3 = slice_from_str_s("different", 9);
 
-    uint64_t h1 = hash_slice(&s1);
-    uint64_t h2 = hash_slice(&s2);
-    uint64_t h3 = hash_slice(&s3);
+    const auto h1 = hash_slice(&s1);
+    const auto h2 = hash_slice(&s2);
+    const auto h3 = hash_slice(&s3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);
 }
 
 TEST_CASE("Mutable slice hashing") {
-    MutSlice m1 = {.ptr = (char*)"hashme", .length = 6};
-    MutSlice m2 = {.ptr = (char*)"hashme", .length = 6};
-    MutSlice m3 = {.ptr = (char*)"different", .length = 9};
+    CStringFixture s1{"hashme"};
+    const auto     m1 = mut_slice_from_str_z(s1.raw());
+    CStringFixture s2{"hashme"};
+    const auto     m2 = mut_slice_from_str_z(s2.raw());
+    CStringFixture s3{"different"};
+    const auto     m3 = mut_slice_from_str_z(s3.raw());
 
-    uint64_t h1 = hash_mut_slice(&m1);
-    uint64_t h2 = hash_mut_slice(&m2);
-    uint64_t h3 = hash_mut_slice(&m3);
+    const auto h1 = hash_mut_slice(&m1);
+    const auto h2 = hash_mut_slice(&m2);
+    const auto h3 = hash_mut_slice(&m3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);
@@ -88,7 +96,9 @@ COMPARE_INTEGER_FN(uint32_t)
 COMPARE_INTEGER_FN(uint64_t)
 
 TEST_CASE("hash_uint8_t") {
-    uint8_t a = 42, b = 42, c = 100;
+    uint8_t a = 42;
+    uint8_t b = 42;
+    uint8_t c = 100;
     REQUIRE(hash_uint8_t_u(&a) == hash_uint8_t_u(&b));
     REQUIRE(hash_uint8_t_u(&a) != hash_uint8_t_u(&c));
 
@@ -96,7 +106,9 @@ TEST_CASE("hash_uint8_t") {
 }
 
 TEST_CASE("hash_uint16_t") {
-    uint16_t a = 1234, b = 1234, c = 5678;
+    uint16_t a = 1234;
+    uint16_t b = 1234;
+    uint16_t c = 5678;
     REQUIRE(hash_uint16_t_u(&a) == hash_uint16_t_u(&b));
     REQUIRE(hash_uint16_t_u(&a) != hash_uint16_t_u(&c));
 
@@ -104,7 +116,9 @@ TEST_CASE("hash_uint16_t") {
 }
 
 TEST_CASE("hash_uint32_t") {
-    uint32_t a = 0xDEADBEEF, b = 0xDEADBEEF, c = 0xFEEDBEEF;
+    uint32_t a = 0xDEADBEEF;
+    uint32_t b = 0xDEADBEEF;
+    uint32_t c = 0xFEEDBEEF;
     REQUIRE(hash_uint32_t_u(&a) == hash_uint32_t_u(&b));
     REQUIRE(hash_uint32_t_u(&a) != hash_uint32_t_u(&c));
 
@@ -112,7 +126,9 @@ TEST_CASE("hash_uint32_t") {
 }
 
 TEST_CASE("hash_uint64_t") {
-    uint64_t a = 0xDEADBEEFCAFEBABEULL, b = 0xDEADBEEFCAFEBABEULL, c = 0xFEEDFACE12345678ULL;
+    uint64_t a = 0xDEADBEEFCAFEBABEULL;
+    uint64_t b = 0xDEADBEEFCAFEBABEULL;
+    uint64_t c = 0xFEEDFACE12345678ULL;
     REQUIRE(hash_uint64_t_u(&a) == hash_uint64_t_u(&b));
     REQUIRE(hash_uint64_t_u(&a) != hash_uint64_t_u(&c));
 
@@ -120,28 +136,32 @@ TEST_CASE("hash_uint64_t") {
 }
 
 TEST_CASE("compare_uint8_t") {
-    uint8_t a = 10, b = 20;
+    uint8_t a = 10;
+    uint8_t b = 20;
     REQUIRE(compare_uint8_t(&a, &b) == -1);
     REQUIRE(compare_uint8_t(&b, &a) == 1);
     REQUIRE(compare_uint8_t(&a, &a) == 0);
 }
 
 TEST_CASE("compare_uint16_t") {
-    uint16_t a = 1000, b = 5000;
+    uint16_t a = 1000;
+    uint16_t b = 5000;
     REQUIRE(compare_uint16_t(&a, &b) == -1);
     REQUIRE(compare_uint16_t(&b, &a) == 1);
     REQUIRE(compare_uint16_t(&a, &a) == 0);
 }
 
 TEST_CASE("compare_uint32_t") {
-    uint32_t a = 12345678, b = 87654321;
+    uint32_t a = 12345678;
+    uint32_t b = 87654321;
     REQUIRE(compare_uint32_t(&a, &b) == -1);
     REQUIRE(compare_uint32_t(&b, &a) == 1);
     REQUIRE(compare_uint32_t(&a, &a) == 0);
 }
 
 TEST_CASE("compare_uint64_t") {
-    uint64_t a = 0x123456789ABCDEF0ULL, b = 0xFEDCBA9876543210ULL;
+    uint64_t a = 0x123456789ABCDEF0ULL;
+    uint64_t b = 0xFEDCBA9876543210ULL;
     REQUIRE(compare_uint64_t(&a, &b) == -1);
     REQUIRE(compare_uint64_t(&b, &a) == 1);
     REQUIRE(compare_uint64_t(&a, &a) == 0);

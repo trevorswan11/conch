@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PROGRAM_H
+#define PROGRAM_H
 
 #include "ast/ast.h"
 #include "lexer/lexer.h"
@@ -26,3 +27,5 @@ void             program_deinit(Program* program);
 
 NODISCARD Status program_run(Program* program, Slice input);
 NODISCARD Status program_print_errors(ArrayList* errors, FileIO* io);
+
+#endif

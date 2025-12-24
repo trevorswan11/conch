@@ -1,4 +1,5 @@
-#pragma once
+#ifndef EXPRESSION_STMT_H
+#define EXPRESSION_STMT_H
 
 #include "ast/expressions/expression.h"
 #include "ast/statements/statement.h"
@@ -29,3 +30,5 @@ static const StatementVTable EXPR_VTABLE = {
             .analyze     = expression_statement_analyze,
         },
 };
+
+#endif
