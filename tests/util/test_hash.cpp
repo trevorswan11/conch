@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "fixtures.hpp"
+
 extern "C" {
 #include "util/hash.h"
 #include "util/memory.h"
@@ -26,14 +28,18 @@ TEST_CASE("Slice comparison") {
 }
 
 TEST_CASE("Mutable slice comparison") {
-    MutSlice m1 = {.ptr = "foo", .length = 3};
-    MutSlice m2 = {.ptr = "foo", .length = 3};
-    MutSlice m3 = {.ptr = "bar", .length = 3};
+    CStringFixture s1{"foo"};
+    const auto     m1 = mut_slice_from_str_z(s1.raw());
+    CStringFixture s2{"foo"};
+    const auto     m2 = mut_slice_from_str_z(s2.raw());
+    CStringFixture s3{"bar"};
+    const auto     m3 = mut_slice_from_str_z(s3.raw());
 
     REQUIRE(compare_mut_slices(&m1, &m2) == 0);
     REQUIRE(compare_mut_slices(&m1, &m3) != 0);
 
-    MutSlice m4 = {.ptr = "foobar", .length = 6};
+    CStringFixture s4{"foobar"};
+    const auto     m4 = mut_slice_from_str_z(s4.raw());
     REQUIRE(compare_mut_slices(&m1, &m4) != 0);
 }
 
@@ -51,26 +57,29 @@ TEST_CASE("Null terminating string hashing") {
 }
 
 TEST_CASE("Slice hashing") {
-    const Slice s1 = slice_from_str_s("hashme", 6);
-    const Slice s2 = slice_from_str_s("hashme", 6);
-    const Slice s3 = slice_from_str_s("different", 9);
+    const auto s1 = slice_from_str_s("hashme", 6);
+    const auto s2 = slice_from_str_s("hashme", 6);
+    const auto s3 = slice_from_str_s("different", 9);
 
-    const uint64_t h1 = hash_slice(&s1);
-    const uint64_t h2 = hash_slice(&s2);
-    const uint64_t h3 = hash_slice(&s3);
+    const auto h1 = hash_slice(&s1);
+    const auto h2 = hash_slice(&s2);
+    const auto h3 = hash_slice(&s3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);
 }
 
 TEST_CASE("Mutable slice hashing") {
-    const MutSlice m1 = {.ptr = "hashme", .length = 6};
-    const MutSlice m2 = {.ptr = "hashme", .length = 6};
-    const MutSlice m3 = {.ptr = "different", .length = 9};
+    CStringFixture s1{"hashme"};
+    const auto     m1 = mut_slice_from_str_z(s1.raw());
+    CStringFixture s2{"hashme"};
+    const auto     m2 = mut_slice_from_str_z(s2.raw());
+    CStringFixture s3{"different"};
+    const auto     m3 = mut_slice_from_str_z(s3.raw());
 
-    const uint64_t h1 = hash_mut_slice(&m1);
-    const uint64_t h2 = hash_mut_slice(&m2);
-    const uint64_t h3 = hash_mut_slice(&m3);
+    const auto h1 = hash_mut_slice(&m1);
+    const auto h2 = hash_mut_slice(&m2);
+    const auto h3 = hash_mut_slice(&m3);
 
     REQUIRE(h1 == h2);
     REQUIRE(h1 != h3);

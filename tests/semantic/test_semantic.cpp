@@ -1,6 +1,20 @@
 #include "catch_amalgamated.hpp"
 
-#include "semantic_helpers.hpp"
+#include <string>
+#include <vector>
+
+#include "fixtures.hpp"
+
+static void
+test_analyze(const char* input, std::vector<std::string> expected_errors, bool print_anyways) {
+    SemanticFixture sf{input};
+    sf.check_errors(std::move(expected_errors), print_anyways);
+}
+
+static void test_analyze(const char* input, std::vector<std::string> expected_errors = {}) {
+    const bool empty = expected_errors.empty();
+    test_analyze(input, std::move(expected_errors), empty);
+}
 
 TEST_CASE("Basic identifiers") {
     SECTION("Identifier declaration") {

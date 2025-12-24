@@ -5,7 +5,8 @@
 #include <iostream>
 #include <string>
 
-#include "file_helpers.hpp"
+#include "file_io.hpp"
+#include "fixtures.hpp"
 
 extern "C" {
 #include "ast/ast.h"
@@ -38,10 +39,12 @@ TEST_CASE("REPL with acceptable input") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
+    Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
@@ -52,9 +55,6 @@ TEST_CASE("REPL with acceptable input") {
     REQUIRE(captured_out.find(WELCOME_MESSAGE) != std::string::npos);
     REQUIRE(captured_out.find("var") != std::string::npos);
     REQUIRE(captured_out.find("const") != std::string::npos);
-
-    array_list_deinit(&output);
-    file_io_deinit(&io);
 }
 
 TEST_CASE("REPL with error input") {
@@ -70,10 +70,12 @@ TEST_CASE("REPL with error input") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
+    Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
 
@@ -87,9 +89,6 @@ TEST_CASE("REPL with error input") {
 
     REQUIRE(captured_out.find(WELCOME_MESSAGE) != std::string::npos);
     REQUIRE(captured_err.find("Parser errors:") != std::string::npos);
-
-    array_list_deinit(&output);
-    file_io_deinit(&io);
 }
 
 TEST_CASE("REPL with incorrect buffer") {
@@ -103,10 +102,12 @@ TEST_CASE("REPL with incorrect buffer") {
 
     FileIO io;
     REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(size_t))));
+    Fixture<ArrayList> alf(output, array_list_deinit);
 
     REQUIRE(repl_run(&io, buf, &output) == Status::TYPE_MISMATCH);
 
@@ -114,7 +115,4 @@ TEST_CASE("REPL with incorrect buffer") {
     const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
                                    std::istreambuf_iterator<char>());
     REQUIRE(captured_err.find("ArrayList must be initialized for bytes") != std::string::npos);
-
-    array_list_deinit(&output);
-    file_io_deinit(&io);
 }

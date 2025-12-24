@@ -12,9 +12,9 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     assert(members);
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(members);
-    StructMember      member;
-    while (array_list_iterator_has_next(&it, &member)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(members);
+    StructMember           member;
+    while (array_list_const_iterator_has_next(&it, &member)) {
         NODE_VIRTUAL_FREE(member.name, free_alloc);
         NODE_VIRTUAL_FREE(member.type, free_alloc);
         NODE_VIRTUAL_FREE(member.default_value, free_alloc);
@@ -71,9 +71,9 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
     if (struct_expr->generics.length == 0) { TRY(string_builder_append(sb, ' ')); }
     TRY(string_builder_append_str_z(sb, "{ "));
 
-    ArrayListIterator it = array_list_iterator_init(&struct_expr->members);
-    StructMember      member;
-    while (array_list_iterator_has_next(&it, &member)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&struct_expr->members);
+    StructMember           member;
+    while (array_list_const_iterator_has_next(&it, &member)) {
         ASSERT_EXPRESSION(member.name);
         TRY(NODE_VIRTUAL_RECONSTRUCT(member.name, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, ": "));

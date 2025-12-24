@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "fixtures.hpp"
+
 extern "C" {
 #include "util/math.h"
 #include "util/memory.h"
@@ -151,43 +153,46 @@ TEST_CASE("String duplication") {
     const char* original = "hello world";
 
     SECTION("Null terminated strings") {
-        char* copy_z = strdup_z(original);
+        char*          copy_z = strdup_z(original);
+        Fixture<char*> strf(copy_z);
+
         REQUIRE(copy_z);
         REQUIRE(strcmp(copy_z, original) == 0);
 
         copy_z[0] = 'H';
         REQUIRE(strcmp(copy_z, "Hello world") == 0);
         REQUIRE(strcmp(original, "hello world") == 0);
-        free(copy_z);
     }
 
     SECTION("Less than full size dupe") {
-        char* copy_s = strdup_s(original, 5);
+        char*          copy_s = strdup_s(original, 5);
+        Fixture<char*> strf(copy_s);
+
         REQUIRE(copy_s);
         REQUIRE(strncmp(copy_s, original, 5) == 0);
         REQUIRE(copy_s[5] == '\0');
-        free(copy_s);
     }
 
     SECTION("Full size dupe") {
-        const size_t len    = strlen(original);
-        char*        copy_s = strdup_s(original, len);
+        const size_t   len    = strlen(original);
+        char*          copy_s = strdup_s(original, len);
+        Fixture<char*> strf(copy_s);
+
         REQUIRE(copy_s);
         REQUIRE(strcmp(copy_s, original) == 0);
-        free(copy_s);
     }
 
     SECTION("Empty string") {
-        const char* empty  = "";
-        char*       copy_z = strdup_z(empty);
+        const char*    empty  = "";
+        char*          copy_z = strdup_z(empty);
+        Fixture<char*> strfz(copy_z);
         REQUIRE(copy_z);
         REQUIRE(strcmp(copy_z, "") == 0);
-        free(copy_z);
 
-        char* copy_s = strdup_s(empty, 0);
+        char*          copy_s = strdup_s(empty, 0);
+        Fixture<char*> strfs(copy_s);
         REQUIRE(copy_s);
         REQUIRE(strcmp(copy_s, "") == 0);
-        free(copy_s);
     }
 
     SECTION("Null string") {

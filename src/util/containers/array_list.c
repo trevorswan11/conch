@@ -299,9 +299,9 @@ ArrayListIterator array_list_iterator_init(ArrayList* a) {
     };
 }
 
-bool array_list_iterator_has_next(ArrayListIterator* it, void* next) {
+bool array_list_iterator_has_next(ArrayListIterator* it, void** next) {
     assert(it && it->a && it->a->data);
-    return STATUS_OK(array_list_get(it->a, it->index++, next));
+    return STATUS_OK(array_list_get_ptr(it->a, it->index++, next));
 }
 
 bool array_list_iterator_exhausted(const ArrayListIterator* it) {
@@ -320,4 +320,9 @@ ArrayListConstIterator array_list_const_iterator_init(const ArrayList* a) {
 bool array_list_const_iterator_has_next(ArrayListConstIterator* it, void* next) {
     assert(it && it->a && it->a->data);
     return STATUS_OK(array_list_get(it->a, it->index++, next));
+}
+
+bool array_list_const_iterator_exhausted(const ArrayListConstIterator* it) {
+    assert(it && it->a && it->a->data);
+    return it->index >= it->a->length;
 }

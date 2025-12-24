@@ -11,9 +11,9 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     assert(arguments && arguments->data);
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(arguments);
-    CallArgument      argument;
-    while (array_list_iterator_has_next(&it, &argument)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(arguments);
+    CallArgument           argument;
+    while (array_list_const_iterator_has_next(&it, &argument)) {
         NODE_VIRTUAL_FREE(argument.argument, free_alloc);
     }
 
@@ -67,15 +67,17 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
     TRY(NODE_VIRTUAL_RECONSTRUCT(call->function, symbol_map, sb));
     TRY(string_builder_append(sb, '('));
 
-    ArrayListIterator it = array_list_iterator_init(&call->arguments);
-    CallArgument      argument;
-    while (array_list_iterator_has_next(&it, &argument)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&call->arguments);
+    CallArgument           argument;
+    while (array_list_const_iterator_has_next(&it, &argument)) {
         if (argument.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
         ASSERT_EXPRESSION(argument.argument);
         TRY(NODE_VIRTUAL_RECONSTRUCT(argument.argument, symbol_map, sb));
 
-        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
+        if (!array_list_const_iterator_exhausted(&it)) {
+            TRY(string_builder_append_str_z(sb, ", "));
+        }
     }
 
     TRY(string_builder_append(sb, ')'));

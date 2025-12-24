@@ -12,9 +12,9 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     assert(captures && captures->data);
     assert(free_alloc);
 
-    ArrayListIterator it = array_list_iterator_init(captures);
-    ForLoopCapture    capture;
-    while (array_list_iterator_has_next(&it, &capture)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(captures);
+    ForLoopCapture         capture;
+    while (array_list_const_iterator_has_next(&it, &capture)) {
         NODE_VIRTUAL_FREE(capture.capture, free_alloc);
     }
 
@@ -72,12 +72,14 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     TRY(string_builder_append_str_z(sb, "for ("));
 
     // All for loops have an iterables clause
-    ArrayListIterator it = array_list_iterator_init(&for_loop->iterables);
-    Expression*       iterable;
-    while (array_list_iterator_has_next(&it, (void*)&iterable)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&for_loop->iterables);
+    Expression*            iterable;
+    while (array_list_const_iterator_has_next(&it, (void*)&iterable)) {
         ASSERT_EXPRESSION(iterable);
         TRY(NODE_VIRTUAL_RECONSTRUCT(iterable, symbol_map, sb));
-        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
+        if (!array_list_const_iterator_exhausted(&it)) {
+            TRY(string_builder_append_str_z(sb, ", "));
+        }
     }
 
     // A for loop may not have captures if it means to discard its iterables
@@ -85,15 +87,17 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     if (for_loop->captures.length > 0) {
         TRY(string_builder_append_str_z(sb, " : ("));
 
-        it = array_list_iterator_init(&for_loop->captures);
+        it = array_list_const_iterator_init(&for_loop->captures);
         ForLoopCapture capture;
-        while (array_list_iterator_has_next(&it, &capture)) {
+        while (array_list_const_iterator_has_next(&it, &capture)) {
             if (capture.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
             ASSERT_EXPRESSION(capture.capture);
             TRY(NODE_VIRTUAL_RECONSTRUCT(capture.capture, symbol_map, sb));
 
-            if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
+            if (!array_list_const_iterator_exhausted(&it)) {
+                TRY(string_builder_append_str_z(sb, ", "));
+            }
         }
 
         TRY(string_builder_append(sb, ')'));

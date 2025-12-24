@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include "fixtures.hpp"
+
 extern "C" {
 #include "util/containers/hash_map.h"
 }
@@ -100,6 +102,8 @@ TEST_CASE("Init map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
+
     REQUIRE(hm.size == 0);
     REQUIRE(hm.available == 16);
 
@@ -114,12 +118,11 @@ TEST_CASE("Init map") {
         REQUIRE(metadata_equal(hm.metadata[i], METADATA_SLOT_OPEN));
     }
 
+    // Manual deinit and reinit check
     hash_map_deinit(&hm);
-
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 1, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint16_t_u, compare_uint16_t)));
     REQUIRE(hash_map_capacity(&hm) == HASH_MAP_MINIMUM_CAPACITY);
-    hash_map_deinit(&hm);
 }
 
 HASH_INTEGER_FN(uint32_t)
@@ -132,7 +135,8 @@ TEST_CASE("Basic map usage") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 10, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
-    const size_t count = 5;
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
+    const size_t     count = 5;
 
     V load_total = 0;
     for (V i = 0; i < count; i++) {
@@ -158,8 +162,6 @@ TEST_CASE("Basic map usage") {
         internal_total += val;
     }
     REQUIRE(load_total == internal_total);
-
-    hash_map_deinit(&hm);
 }
 
 COMPARE_INTEGER_FN(int32_t);
@@ -171,6 +173,7 @@ TEST_CASE("Ensure total map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     REQUIRE(STATUS_OK(hash_map_ensure_total_capacity(&hm, 20)));
     const size_t initial_capacity = hash_map_capacity(&hm);
@@ -182,8 +185,6 @@ TEST_CASE("Ensure total map capacity") {
         REQUIRE_FALSE(result.found_existing);
     }
     REQUIRE(initial_capacity == hash_map_capacity(&hm));
-
-    hash_map_deinit(&hm);
 }
 
 HASH_INTEGER_FN(uint64_t)
@@ -196,13 +197,12 @@ TEST_CASE("Ensure unused map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint64_t_u, compare_uint64_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     REQUIRE(STATUS_OK(hash_map_ensure_unused_capacity(&hm, 32)));
     const size_t capacity = hash_map_capacity(&hm);
     REQUIRE(STATUS_OK(hash_map_ensure_unused_capacity(&hm, 32)));
     REQUIRE(capacity == hash_map_capacity(&hm));
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Ensure unused map capacity with tombstones") {
@@ -212,14 +212,13 @@ TEST_CASE("Ensure unused map capacity with tombstones") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_s, compare_int32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (V i = 0; i < 100; i++) {
         REQUIRE(STATUS_OK(hash_map_ensure_unused_capacity(&hm, 1)));
         hash_map_put_assume_capacity(&hm, &i, &i);
         REQUIRE(STATUS_OK(hash_map_remove(&hm, &i)));
     }
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Clear retaining map capacity") {
@@ -229,6 +228,7 @@ TEST_CASE("Clear retaining map capacity") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_slice, compare_int32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
     hash_map_clear_retaining_capacity(&hm);
 
     const char* str1 = "Hello";
@@ -253,8 +253,6 @@ TEST_CASE("Clear retaining map capacity") {
     REQUIRE(hash_map_count(&hm) == 0);
     REQUIRE(hash_map_capacity(&hm) == capacity);
     REQUIRE_FALSE(hash_map_contains(&hm, &key1));
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Grow map") {
@@ -264,6 +262,7 @@ TEST_CASE("Grow map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     const size_t grow_to = 12456;
 
@@ -286,8 +285,6 @@ TEST_CASE("Grow map") {
         REQUIRE(STATUS_OK(hash_map_get_value(&hm, &i, &out_val)));
         REQUIRE(out_val == i);
     }
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Rehash map") {
@@ -297,9 +294,10 @@ TEST_CASE("Rehash map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     // Add some elements and remove every third to simulate a fragmented map
-    const size_t total_count = 6UZ * 1637UZ;
+    const auto total_count = static_cast<size_t>(6 * 1637);
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
         if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_map_remove(&hm, &i))); }
@@ -317,8 +315,6 @@ TEST_CASE("Rehash map") {
             REQUIRE(out_val == i);
         }
     }
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Mutable map entry access") {
@@ -328,6 +324,7 @@ TEST_CASE("Mutable map entry access") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (K i = 0; i < 16; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
@@ -357,8 +354,6 @@ TEST_CASE("Mutable map entry access") {
     REQUIRE(query_val == 20);
     REQUIRE(STATUS_OK(hash_map_get_value(&hm, &query_key_initial, &query_val)));
     REQUIRE(query_val == 100);
-
-    hash_map_deinit(&hm);
 }
 
 TEST_CASE("Remove map") {
@@ -368,6 +363,7 @@ TEST_CASE("Remove map") {
     HashMap hm;
     REQUIRE(STATUS_OK(hash_map_init(
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
+    Fixture<HashMap> hmf(hm, hash_map_deinit);
 
     for (K i = 0; i < 16; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
@@ -396,6 +392,4 @@ TEST_CASE("Remove map") {
             REQUIRE(out_val == i);
         }
     }
-
-    hash_map_deinit(&hm);
 }

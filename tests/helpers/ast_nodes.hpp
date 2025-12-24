@@ -1,61 +1,11 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 extern "C" {
-#include "ast/ast.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/statement.h"
-
-#include "lexer/lexer.h"
-#include "parser/parser.h"
-
-#include "util/containers/string_builder.h"
 }
-
-class SBFixture {
-  public:
-    explicit SBFixture(size_t initial_length);
-    ~SBFixture() { free(builder.buffer.data); }
-
-    StringBuilder* sb() { return &builder; }
-    char*          to_string();
-
-  private:
-    StringBuilder builder;
-};
-
-class ParserFixture {
-  public:
-    explicit ParserFixture(const char* input);
-
-    ~ParserFixture() {
-        parser_deinit(&p);
-        ast_deinit(&a);
-        lexer_deinit(&l);
-    }
-
-    const Parser* parser() { return &p; }
-    const AST*    ast() { return &a; }
-    AST*          ast_mut() { return &a; }
-    const Lexer*  lexer() { return &l; }
-
-    void check_errors(std::vector<std::string> expected_errors = {});
-    void check_errors(std::vector<std::string> expected_errors, bool print_anyways);
-
-  private:
-    Parser p;
-    AST    a;
-    Lexer  l;
-    FileIO stdio;
-};
-
-void check_errors(const ArrayList*         actual_errors,
-                  std::vector<std::string> expected_errors,
-                  bool                     print_anyways);
-
-void test_reconstruction(const char* input, std::string expected);
 
 // This does not verify any correctness for non-identifiers.
 void test_type_expression(const Expression* expression,

@@ -14,9 +14,9 @@
 void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc) {
     ASSERT_ALLOCATOR(parameters->allocator);
 
-    ArrayListIterator it = array_list_iterator_init(parameters);
-    Parameter         parameter;
-    while (array_list_iterator_has_next(&it, &parameter)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(parameters);
+    Parameter              parameter;
+    while (array_list_const_iterator_has_next(&it, &parameter)) {
         NODE_VIRTUAL_FREE(parameter.ident, free_alloc);
         NODE_VIRTUAL_FREE(parameter.type, free_alloc);
         NODE_VIRTUAL_FREE(parameter.default_value, free_alloc);
@@ -30,9 +30,9 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
                                             StringBuilder* sb) {
     assert(parameters && symbol_map && sb);
 
-    ArrayListIterator it = array_list_iterator_init(parameters);
-    Parameter         parameter;
-    while (array_list_iterator_has_next(&it, &parameter)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(parameters);
+    Parameter              parameter;
+    while (array_list_const_iterator_has_next(&it, &parameter)) {
         if (parameter.is_ref) { TRY(string_builder_append_str_z(sb, "ref ")); }
 
         ASSERT_EXPRESSION(parameter.ident);
@@ -48,7 +48,9 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
             TRY(NODE_VIRTUAL_RECONSTRUCT(parameter.default_value, symbol_map, sb));
         }
 
-        if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
+        if (!array_list_const_iterator_exhausted(&it)) {
+            TRY(string_builder_append_str_z(sb, ", "));
+        }
     }
 
     return SUCCESS;

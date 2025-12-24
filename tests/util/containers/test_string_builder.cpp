@@ -4,120 +4,123 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "fixtures.hpp"
+
 extern "C" {
 #include "util/containers/string_builder.h"
 }
 
 TEST_CASE("StringBuilder basic append") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 4)));
+    SBFixture      sbf{4};
+    StringBuilder* sb = sbf.sb();
 
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'h')));
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'i')));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'h')));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'i')));
+
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "hi") == 0);
 
-    free(slice.ptr);
+    std::string expected = "hi";
+    REQUIRE(expected == slice.ptr);
 }
 
 TEST_CASE("StringBuilder append many") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+    SBFixture      sbf{2};
+    StringBuilder* sb = sbf.sb();
 
     const char* text = "hello";
-    REQUIRE(STATUS_OK(string_builder_append_many(&sb, text, 5)));
+    REQUIRE(STATUS_OK(string_builder_append_many(sb, text, 5)));
 
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "hello") == 0);
+    std::string expected = "hello";
+    REQUIRE(expected == slice.ptr);
 
+    expected     = "Hello";
     slice.ptr[0] = 'H';
-    REQUIRE(strcmp(slice.ptr, "Hello") == 0);
-
-    free(slice.ptr);
+    REQUIRE(expected == slice.ptr);
 }
 
 TEST_CASE("StringBuilder append slices") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+    SBFixture      sbf{2};
+    StringBuilder* sb = sbf.sb();
 
     const Slice text = slice_from_str_z("hello");
-    REQUIRE(STATUS_OK(string_builder_append_slice(&sb, text)));
+    REQUIRE(STATUS_OK(string_builder_append_slice(sb, text)));
 
-    const MutSlice mut_text = mut_slice_from_str_z(", world!");
-    REQUIRE(STATUS_OK(string_builder_append_mut_slice(&sb, mut_text)));
+    CStringFixture str{", world!"};
+    const MutSlice mut_text = mut_slice_from_str_z(str.raw());
+    REQUIRE(STATUS_OK(string_builder_append_mut_slice(sb, mut_text)));
 
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "hello, world!") == 0);
 
-    free(slice.ptr);
+    std::string expected = "hello, world!";
+    REQUIRE(expected == slice.ptr);
 }
 
 TEST_CASE("StringBuilder multiple appends") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+    SBFixture      sbf{2};
+    StringBuilder* sb = sbf.sb();
 
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'A')));
-    REQUIRE(STATUS_OK(string_builder_append_many(&sb, "BC", 2)));
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'D')));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'A')));
+    REQUIRE(STATUS_OK(string_builder_append_many(sb, "BC", 2)));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'D')));
 
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "ABCD") == 0);
 
-    free(slice.ptr);
+    std::string expected = "ABCD";
+    REQUIRE(expected == slice.ptr);
 }
 
 TEST_CASE("StringBuilder number appends") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
+    SBFixture      sbf{2};
+    StringBuilder* sb = sbf.sb();
 
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'A')));
-    REQUIRE(STATUS_OK(string_builder_append_many(&sb, "BC", 2)));
-    REQUIRE(STATUS_OK(string_builder_append(&sb, 'D')));
-    REQUIRE(STATUS_OK(string_builder_append_unsigned(&sb, 12032)));
-    REQUIRE(STATUS_OK(string_builder_append_str_z(&sb, " EF ")));
-    REQUIRE(STATUS_OK(string_builder_append_signed(&sb, -12032)));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'A')));
+    REQUIRE(STATUS_OK(string_builder_append_many(sb, "BC", 2)));
+    REQUIRE(STATUS_OK(string_builder_append(sb, 'D')));
+    REQUIRE(STATUS_OK(string_builder_append_unsigned(sb, 12032)));
+    REQUIRE(STATUS_OK(string_builder_append_str_z(sb, " EF ")));
+    REQUIRE(STATUS_OK(string_builder_append_signed(sb, -12032)));
 
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
 
     std::string expected = "ABCD12032 EF -12032";
     REQUIRE(expected == slice.ptr);
-
-    free(slice.ptr);
 }
 
 TEST_CASE("StringBuilder empty initialization") {
-    StringBuilder sb;
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 1)));
+    SBFixture      sbf{1};
+    StringBuilder* sb = sbf.sb();
 
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "") == 0);
 
-    free(slice.ptr);
+    std::string expected;
+    REQUIRE(expected == slice.ptr);
 }
 
 TEST_CASE("StringBuilder handles null inputs") {
-    StringBuilder sb;
+    StringBuilder bad_sb;
     REQUIRE(string_builder_init(nullptr, 10) == Status::NULL_PARAMETER);
-    REQUIRE(string_builder_init(&sb, 0) == Status::EMPTY);
+    REQUIRE(string_builder_init(&bad_sb, 0) == Status::EMPTY);
 
-    REQUIRE(STATUS_OK(string_builder_init(&sb, 2)));
-    REQUIRE(string_builder_append_many(&sb, nullptr, 5) == Status::NULL_PARAMETER);
+    SBFixture      sbf{2};
+    StringBuilder* sb = sbf.sb();
+    REQUIRE(string_builder_append_many(sb, nullptr, 5) == Status::NULL_PARAMETER);
     MutSlice slice;
-    REQUIRE(STATUS_OK(string_builder_to_string(&sb, &slice)));
+    REQUIRE(STATUS_OK(string_builder_to_string(sb, &slice)));
     REQUIRE(slice.ptr);
-    REQUIRE(strcmp(slice.ptr, "") == 0);
 
-    free(slice.ptr);
+    std::string expected;
+    REQUIRE(expected == slice.ptr);
 }

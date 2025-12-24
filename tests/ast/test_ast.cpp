@@ -3,7 +3,24 @@
 #include <cstdlib>
 #include <string>
 
-#include "parser_helpers.hpp"
+#include "fixtures.hpp"
+
+extern "C" {
+#include "ast/ast.h"
+}
+
+static void test_reconstruction(const char* input, std::string expected) {
+    if ((strlen(input) == 0) || expected.empty()) { return; }
+
+    group_expressions = false;
+    ParserFixture pf{input};
+    pf.check_errors({}, true);
+
+    SBFixture sb{expected.size()};
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
+    REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
+    REQUIRE(expected == sb.to_string());
+}
 
 TEST_CASE("Declaration reconstructions") {
     SECTION("Simple") {

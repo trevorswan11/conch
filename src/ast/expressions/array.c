@@ -54,9 +54,9 @@ NODISCARD Status array_literal_expression_reconstruct(Node*          node,
     }
     TRY(string_builder_append_str_z(sb, "]{ "));
 
-    ArrayListIterator it = array_list_iterator_init(&array->items);
-    Expression*       item;
-    while (array_list_iterator_has_next(&it, (void*)&item)) {
+    ArrayListConstIterator it = array_list_const_iterator_init(&array->items);
+    Expression*            item;
+    while (array_list_const_iterator_has_next(&it, (void*)&item)) {
         ASSERT_EXPRESSION(item);
         TRY(NODE_VIRTUAL_RECONSTRUCT(item, symbol_map, sb));
         TRY(string_builder_append_str_z(sb, ", "));

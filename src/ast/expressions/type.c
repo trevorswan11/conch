@@ -228,14 +228,16 @@ NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
         assert(explicit_type.variant.array_type.dimensions.length > 0);
         TRY(string_builder_append(sb, '['));
 
-        ArrayListIterator it =
-            array_list_iterator_init(&explicit_type.variant.array_type.dimensions);
+        ArrayListConstIterator it =
+            array_list_const_iterator_init(&explicit_type.variant.array_type.dimensions);
         size_t dim;
-        while (array_list_iterator_has_next(&it, &dim)) {
+        while (array_list_const_iterator_has_next(&it, &dim)) {
             TRY(string_builder_append_unsigned(sb, (uint64_t)dim));
             TRY(string_builder_append_str_z(sb, "uz"));
 
-            if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
+            if (!array_list_const_iterator_exhausted(&it)) {
+                TRY(string_builder_append_str_z(sb, ", "));
+            }
         }
 
         TRY(string_builder_append(sb, ']'));
