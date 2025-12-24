@@ -7,13 +7,15 @@
 
 #include "util/containers/string_builder.h"
 
-#define SINGLE_STMT_CREATE(type, custom_vtab, out_expr)            \
-    assert(memory_alloc);                                          \
-    type* temp = memory_alloc(sizeof(type));                       \
-    if (!temp) { return ALLOCATION_FAILED; }                       \
-                                                                   \
-    *temp     = (type){EXPRESSION_INIT(custom_vtab, start_token)}; \
-    *out_expr = temp;                                              \
+#define SINGLE_STMT_CREATE(T, custom_vtab, out_expr)              \
+    assert(memory_alloc);                                         \
+                                                                  \
+    typedef T S;                                                  \
+    S*        temp = memory_alloc(sizeof(S));                     \
+    if (!temp) { return ALLOCATION_FAILED; }                      \
+                                                                  \
+    *temp       = (S){EXPRESSION_INIT(custom_vtab, start_token)}; \
+    *(out_expr) = temp;                                           \
     return SUCCESS
 
 #define SINGLE_STMT_RECONSTRUCT(string)           \

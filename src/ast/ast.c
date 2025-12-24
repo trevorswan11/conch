@@ -89,7 +89,7 @@ NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb) {
 
     ArrayListIterator it = array_list_iterator_init(&ast->statements);
     Statement*        stmt;
-    while (array_list_iterator_has_next(&it, &stmt)) {
+    while (array_list_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
         TRY_DO(NODE_VIRTUAL_RECONSTRUCT(stmt, &ast->token_type_symbols, sb),
                string_builder_deinit(sb));
@@ -113,7 +113,7 @@ void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
 
     ArrayListIterator it = array_list_iterator_init(statements);
     Statement*        stmt;
-    while (array_list_iterator_has_next(&it, &stmt)) {
+    while (array_list_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
         NODE_VIRTUAL_FREE(stmt, free_alloc);
     }
@@ -127,7 +127,7 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
 
     ArrayListIterator it = array_list_iterator_init(expressions);
     Expression*       expr;
-    while (array_list_iterator_has_next(&it, &expr)) {
+    while (array_list_iterator_has_next(&it, (void*)&expr)) {
         ASSERT_EXPRESSION(expr);
         NODE_VIRTUAL_FREE(expr, free_alloc);
     }
@@ -162,7 +162,7 @@ NODISCARD Status generics_reconstruct(ArrayList*     generics,
 
         ArrayListIterator it = array_list_iterator_init(generics);
         Expression*       generic;
-        while (array_list_iterator_has_next(&it, &generic)) {
+        while (array_list_iterator_has_next(&it, (void*)&generic)) {
             TRY(NODE_VIRTUAL_RECONSTRUCT(generic, symbol_map, sb));
             if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }
         }

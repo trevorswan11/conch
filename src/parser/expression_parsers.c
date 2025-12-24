@@ -42,7 +42,7 @@
     case UNDERSCORE:                                                           \
         PUT_STATUS_PROPAGATE(&p->errors, err_code, p->current_token, cleanup); \
     default:                                                                   \
-        TRY_DO(parser_parse_statement(p, &result), cleanup);                   \
+        TRY_DO(parser_parse_statement(p, &(result)), cleanup);                 \
         break;                                                                 \
     }
 
@@ -59,7 +59,7 @@
             PUT_STATUS_PROPAGATE(&p->errors, err_code, p->peek_token, cleanup); \
         default:                                                                \
             TRY_DO(parser_next_token(p), cleanup);                              \
-            TRY_DO(parser_parse_statement(p, &result), cleanup);                \
+            TRY_DO(parser_parse_statement(p, &(result)), cleanup);              \
             break;                                                              \
         }                                                                       \
     }
@@ -244,7 +244,7 @@ NODISCARD Status generics_parse(Parser* p, ArrayList* generics) {
             TRY_DO(identifier_expression_parse(p, &ident),
                    free_expression_list(generics, p->allocator.free_alloc));
 
-            TRY_DO(array_list_push(generics, &ident), {
+            TRY_DO(array_list_push(generics, (const void*)&ident), {
                 free_expression_list(generics, p->allocator.free_alloc);
                 NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
             });
@@ -578,7 +578,8 @@ NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool*
         PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});          \
     }                                                                             \
                                                                                   \
-    T* integer;                                                                   \
+    typedef T I;                                                                  \
+    I*        integer;                                                            \
     TRY(create_fn(start_token, value, &integer, p->allocator.memory_alloc));      \
     *expression = (Expression*)integer;
 
@@ -1215,7 +1216,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
                free_expression_list(&items, p->allocator.free_alloc));
 
         // Add to the array list and expect a comma to align with language philosophy
-        TRY_DO(array_list_push(&items, &item), {
+        TRY_DO(array_list_push(&items, (const void*)&item), {
             NODE_VIRTUAL_FREE(item, p->allocator.free_alloc);
             free_expression_list(&items, p->allocator.free_alloc);
         });
@@ -1256,7 +1257,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
         TRY_DO(expression_parse(p, LOWEST, &iterable),
                free_expression_list(&iterables, p->allocator.free_alloc));
 
-        TRY_DO(array_list_push(&iterables, &iterable),
+        TRY_DO(array_list_push(&iterables, (const void*)&iterable),
                free_expression_list(&iterables, p->allocator.free_alloc));
 
         // Only check for the comma after confirming we aren't at the end of the iterables

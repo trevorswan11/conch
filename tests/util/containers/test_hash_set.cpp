@@ -213,7 +213,7 @@ TEST_CASE("Rehash set") {
         STATUS_OK(hash_set_init(&hs, 8, sizeof(K), alignof(K), hash_uint32_t_u, compare_uint32_t)));
 
     // Add some elements and remove every third to simulate a fragmented map
-    const size_t total_count = 6 * 1637;
+    const size_t total_count = 6UZ * 1637UZ;
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_set_put(&hs, &i)));
         if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_set_remove(&hs, &i))); }

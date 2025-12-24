@@ -53,7 +53,7 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
 
     ArrayListConstIterator it = array_list_const_iterator_init(&analyzer->ast->statements);
     Statement*             stmt;
-    while (array_list_const_iterator_has_next(&it, &stmt)) {
+    while (array_list_const_iterator_has_next(&it, (void*)&stmt)) {
         assert(analyzer->global_ctx);
         ASSERT_STATEMENT(stmt);
         TRY_IS(NODE_VIRTUAL_ANALYZE(stmt, analyzer->global_ctx, &analyzer->errors),

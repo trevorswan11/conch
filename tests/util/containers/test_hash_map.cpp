@@ -299,7 +299,7 @@ TEST_CASE("Rehash map") {
         &hm, 8, sizeof(K), alignof(K), sizeof(V), alignof(V), hash_uint32_t_u, compare_uint32_t)));
 
     // Add some elements and remove every third to simulate a fragmented map
-    const size_t total_count = 6 * 1637;
+    const size_t total_count = 6UZ * 1637UZ;
     for (size_t i = 0; i < total_count; i++) {
         REQUIRE(STATUS_OK(hash_map_put(&hm, &i, &i)));
         if (i % 3 == 0) { REQUIRE(STATUS_OK(hash_map_remove(&hm, &i))); }

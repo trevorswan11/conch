@@ -71,7 +71,7 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         for (size_t i = 0; i < std::size(expected_identifiers); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
             test_decl_statement(stmt, false, expected_identifiers[i]);
         }
     }
@@ -108,7 +108,7 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         for (size_t i = 0; i < std::size(expected_identifiers); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
             test_decl_statement(stmt, is_const[i], expected_identifiers[i]);
         }
     }
@@ -142,7 +142,7 @@ TEST_CASE("Declarations") {
 
         Statement* stmt;
         for (size_t i = 0; i < std::size(expected_identifiers); i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
             test_decl_statement(stmt,
                                 is_const[i],
                                 expected_identifiers[i],
@@ -187,7 +187,7 @@ TEST_CASE("Declarations") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
             test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident),
                                        "a");
@@ -206,7 +206,7 @@ TEST_CASE("Declarations") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
         test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident), "N");
         REQUIRE_FALSE(type_decl_stmt->primitive_alias);
@@ -237,7 +237,7 @@ TEST_CASE("Jump statements") {
 
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
             const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             if (values[i].has_value()) {
                 test_number_expression<int64_t>(jump_stmt->value, values[i].value());
@@ -253,7 +253,7 @@ TEST_CASE("Jump statements") {
 
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 5);
     }
@@ -266,7 +266,7 @@ TEST_CASE("Jump statements") {
 
         REQUIRE(ast->statements.length == 1);
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         const auto* prefix    = reinterpret_cast<const PrefixExpression*>(jump_stmt->value);
         test_number_expression<int64_t>(prefix->rhs, 5);
@@ -281,7 +281,7 @@ TEST_CASE("Jump statements") {
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             REQUIRE_FALSE(jump_stmt->value);
         }
@@ -294,11 +294,11 @@ TEST_CASE("Jump statements") {
 
             REQUIRE(ast->statements.length == 2);
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
             REQUIRE_FALSE(jump_stmt->value);
 
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 1, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 1, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 2);
         }
@@ -314,7 +314,7 @@ TEST_CASE("Identifier Expressions") {
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
 
     const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
     test_identifier_expression(expr_stmt->expression, "foobar");
@@ -329,7 +329,7 @@ TEST_CASE("Index expression") {
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
 
     const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
     const auto* index     = reinterpret_cast<const IndexExpression*>(expr_stmt->expression);
@@ -369,7 +369,7 @@ TEST_CASE("Number-based expressions") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* byte =
                 reinterpret_cast<const ByteLiteralExpression*>(expr_stmt->expression);
@@ -418,7 +418,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* expr = reinterpret_cast<const PrefixExpression*>(expr_stmt->expression);
 
@@ -561,7 +561,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             T*          expr      = reinterpret_cast<T*>(expr_stmt->expression);
 
@@ -603,7 +603,7 @@ TEST_CASE("Basic prefix / infix expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* namespace_expr =
             reinterpret_cast<const NamespaceExpression*>(expr_stmt->expression);
@@ -681,7 +681,7 @@ TEST_CASE("Typeof expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
         test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "a");
         REQUIRE_FALSE(type_decl->primitive_alias);
@@ -744,7 +744,7 @@ TEST_CASE("Bool expressions") {
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
 
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_bool_expression(expr_stmt->expression, expected_values[i]);
@@ -772,7 +772,7 @@ TEST_CASE("String expressions") {
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
 
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_string_expression(expr_stmt->expression, expected_strings[i]);
@@ -803,7 +803,7 @@ TEST_CASE("String expressions") {
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
 
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_string_expression(expr_stmt->expression, expected_strings[i]);
@@ -821,7 +821,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
         const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
@@ -834,7 +834,7 @@ TEST_CASE("Conditional expressions") {
 
         const auto* consequence = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, static_cast<void*>(&stmt))));
         expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "x");
     }
@@ -848,7 +848,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
         const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
@@ -861,13 +861,13 @@ TEST_CASE("Conditional expressions") {
 
         const auto* consequence = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&consequence->statements, 0, static_cast<void*>(&stmt))));
         expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "x");
 
         const auto* alternate = reinterpret_cast<const BlockStatement*>(if_expr->alternate);
         REQUIRE(alternate->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&alternate->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&alternate->statements, 0, static_cast<void*>(&stmt))));
         expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_identifier_expression(expr_stmt->expression, "y");
     }
@@ -881,7 +881,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         test_decl_statement(stmt, true, "val");
         const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
         REQUIRE(decl_stmt->type->tag == IMPLICIT);
@@ -911,7 +911,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
         const auto* if_expr = reinterpret_cast<const IfExpression*>(expr_stmt->expression);
@@ -936,7 +936,7 @@ TEST_CASE("Conditional expressions") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
 
         // Verify the first condition
@@ -951,7 +951,8 @@ TEST_CASE("Conditional expressions") {
         // Verify the first consequence
         const auto* consequence_one = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence_one->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&consequence_one->statements, 0, &stmt)));
+        REQUIRE(
+            STATUS_OK(array_list_get(&consequence_one->statements, 0, static_cast<void*>(&stmt))));
         const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         const auto* neg_num   = reinterpret_cast<const PrefixExpression*>(jump_stmt->value);
         REQUIRE(NODE_TOKEN(neg_num).type == TokenType::MINUS);
@@ -971,14 +972,16 @@ TEST_CASE("Conditional expressions") {
         // Verify the second consequence
         const auto* consequence_two = reinterpret_cast<const BlockStatement*>(if_expr->consequence);
         REQUIRE(consequence_two->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&consequence_two->statements, 0, &stmt)));
+        REQUIRE(
+            STATUS_OK(array_list_get(&consequence_two->statements, 0, static_cast<void*>(&stmt))));
         jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 1);
 
         // Verify the second alternate
         const auto* alternate_two = reinterpret_cast<const BlockStatement*>(if_expr->alternate);
         REQUIRE(alternate_two->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&alternate_two->statements, 0, &stmt)));
+        REQUIRE(
+            STATUS_OK(array_list_get(&alternate_two->statements, 0, static_cast<void*>(&stmt))));
         jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
         test_number_expression<int64_t>(jump_stmt->value, 0);
     }
@@ -1037,7 +1040,7 @@ TEST_CASE("Function literals") {
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
 
             test_decl_statement(stmt,
                                 false,
@@ -1132,7 +1135,7 @@ TEST_CASE("Function literals") {
 
             REQUIRE(ast->statements.length == 1);
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
 
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* function =
@@ -1170,7 +1173,7 @@ TEST_CASE("Function literals") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* call      = reinterpret_cast<const CallExpression*>(expr_stmt->expression);
 
@@ -1261,7 +1264,7 @@ TEST_CASE("Enum declarations") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* enum_expr = reinterpret_cast<const EnumExpression*>(expr_stmt->expression);
 
@@ -1281,7 +1284,7 @@ TEST_CASE("Enum declarations") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         test_decl_statement(stmt, false, "a");
         const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
@@ -1309,7 +1312,7 @@ TEST_CASE("Enum declarations") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* type_decl_stmt = reinterpret_cast<const TypeDeclStatement*>(stmt);
         test_identifier_expression(reinterpret_cast<const Expression*>(type_decl_stmt->ident),
                                    "Colors");
@@ -1425,7 +1428,7 @@ TEST_CASE("Struct declarations") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* struct_expr =
                 reinterpret_cast<const StructExpression*>(expr_stmt->expression);
@@ -1445,7 +1448,7 @@ TEST_CASE("Struct declarations") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         test_decl_statement(stmt, false, "a");
         const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
@@ -1525,7 +1528,7 @@ TEST_CASE("Nil expressions") {
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
     const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
     REQUIRE(slice_equals_str_z(&NODE_TOKEN(expr_stmt->expression).slice, "nil"));
 }
@@ -1540,13 +1543,14 @@ TEST_CASE("Impl statements") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* impl_stmt = reinterpret_cast<const ImplStatement*>(stmt);
 
         test_identifier_expression(reinterpret_cast<const Expression*>(impl_stmt->parent), "Obj");
 
         REQUIRE(impl_stmt->implementation->statements.length == 1);
-        REQUIRE(STATUS_OK(array_list_get(&impl_stmt->implementation->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(
+            array_list_get(&impl_stmt->implementation->statements, 0, static_cast<void*>(&stmt))));
         test_decl_statement(stmt,
                             true,
                             "a",
@@ -1610,7 +1614,7 @@ TEST_CASE("Import Statements") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* import_stmt = reinterpret_cast<const ImportStatement*>(stmt);
 
             REQUIRE(import_stmt->tag == expected.expected_tag);
@@ -1686,7 +1690,7 @@ TEST_CASE("Match expressions") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* match_expr =
                 reinterpret_cast<const MatchExpression*>(expr_stmt->expression);
@@ -1799,7 +1803,7 @@ TEST_CASE("Array expressions") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* array_expr =
                 reinterpret_cast<const ArrayLiteralExpression*>(expr_stmt->expression);
@@ -1813,7 +1817,8 @@ TEST_CASE("Array expressions") {
 
             Expression* item;
             for (size_t i = 0; i < array_expr->items.length; i++) {
-                REQUIRE(STATUS_OK(array_list_get(&array_expr->items, i, &item)));
+                REQUIRE(
+                    STATUS_OK(array_list_get(&array_expr->items, i, static_cast<void*>(&item))));
                 test_number_expression(item, expected.expected_items[i]);
             }
         }
@@ -1871,7 +1876,7 @@ TEST_CASE("Array expressions") {
                 REQUIRE(ast->statements.length == 1);
 
                 Statement* stmt;
-                REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+                REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
                 test_decl_statement(stmt, false, expected.decl_name);
                 const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
 
@@ -1984,7 +1989,7 @@ TEST_CASE("Discard statements") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* discard_stmt = reinterpret_cast<const DiscardStatement*>(stmt);
         test_number_expression<int64_t>(discard_stmt->to_discard, 90);
     }
@@ -2008,7 +2013,7 @@ TEST_CASE("For loops") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* for_loop  = reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
@@ -2018,12 +2023,12 @@ TEST_CASE("For loops") {
         REQUIRE_FALSE(for_loop->non_break);
 
         Expression* iterable;
-        REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+        REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, static_cast<void*>(&iterable))));
         test_number_expression<int64_t>(iterable, 1);
 
-        Statement* statement;
-        REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+        REQUIRE(
+            STATUS_OK(array_list_get(&for_loop->block->statements, 0, static_cast<void*>(&stmt))));
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2037,7 +2042,7 @@ TEST_CASE("For loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* for_loop =
                 reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
@@ -2048,7 +2053,8 @@ TEST_CASE("For loops") {
             REQUIRE_FALSE(for_loop->non_break);
 
             Expression* iterable;
-            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+            REQUIRE(
+                STATUS_OK(array_list_get(&for_loop->iterables, 0, static_cast<void*>(&iterable))));
             test_number_expression<int64_t>(iterable, 1);
 
             ForLoopCapture capture;
@@ -2056,9 +2062,9 @@ TEST_CASE("For loops") {
             REQUIRE_FALSE(capture.is_ref);
             test_identifier_expression(capture.capture, "name");
 
-            Statement* statement;
-            REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(STATUS_OK(
+                array_list_get(&for_loop->block->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2071,7 +2077,7 @@ TEST_CASE("For loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* for_loop =
                 reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
@@ -2098,7 +2104,7 @@ TEST_CASE("For loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* for_loop =
                 reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
@@ -2109,9 +2115,11 @@ TEST_CASE("For loops") {
             REQUIRE(for_loop->non_break);
 
             Expression* iterable;
-            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 0, &iterable)));
+            REQUIRE(
+                STATUS_OK(array_list_get(&for_loop->iterables, 0, static_cast<void*>(&iterable))));
             test_number_expression<int64_t>(iterable, 1);
-            REQUIRE(STATUS_OK(array_list_get(&for_loop->iterables, 1, &iterable)));
+            REQUIRE(
+                STATUS_OK(array_list_get(&for_loop->iterables, 1, static_cast<void*>(&iterable))));
             test_number_expression<int64_t>(iterable, 2);
 
             ForLoopCapture capture;
@@ -2122,15 +2130,16 @@ TEST_CASE("For loops") {
             REQUIRE_FALSE(capture.is_ref);
             test_identifier_expression(capture.capture, "word");
 
-            Statement* statement;
-            REQUIRE(STATUS_OK(array_list_get(&for_loop->block->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(STATUS_OK(
+                array_list_get(&for_loop->block->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
             const auto* non_break = reinterpret_cast<const BlockStatement*>(for_loop->non_break);
             REQUIRE(non_break->statements.length == 1);
-            REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(
+                STATUS_OK(array_list_get(&non_break->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2143,7 +2152,7 @@ TEST_CASE("For loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* for_loop =
                 reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
@@ -2163,7 +2172,7 @@ TEST_CASE("For loops") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* for_loop  = reinterpret_cast<const ForLoopExpression*>(expr_stmt->expression);
 
@@ -2216,7 +2225,7 @@ TEST_CASE("While loops") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* while_loop =
             reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
@@ -2227,10 +2236,9 @@ TEST_CASE("While loops") {
         REQUIRE_FALSE(while_loop->non_break);
 
         test_number_expression<int64_t>(while_loop->condition, 1);
-
-        Statement* statement;
-        REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+        REQUIRE(STATUS_OK(
+            array_list_get(&while_loop->block->statements, 0, static_cast<void*>(&stmt))));
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2243,7 +2251,7 @@ TEST_CASE("While loops") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* while_loop =
             reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
@@ -2256,9 +2264,9 @@ TEST_CASE("While loops") {
         test_number_expression<int64_t>(while_loop->condition, 1);
         test_number_expression<int64_t>(while_loop->continuation, 1);
 
-        Statement* statement;
-        REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+        REQUIRE(STATUS_OK(
+            array_list_get(&while_loop->block->statements, 0, static_cast<void*>(&stmt))));
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
     }
 
@@ -2272,7 +2280,7 @@ TEST_CASE("While loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* while_loop =
                 reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
@@ -2285,15 +2293,16 @@ TEST_CASE("While loops") {
             test_number_expression<int64_t>(while_loop->condition, 1);
             test_number_expression<int64_t>(while_loop->continuation, 1);
 
-            Statement* statement;
-            REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(STATUS_OK(
+                array_list_get(&while_loop->block->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
             const auto* non_break = reinterpret_cast<const BlockStatement*>(while_loop->non_break);
             REQUIRE(non_break->statements.length == 1);
-            REQUIRE(STATUS_OK(array_list_get(&non_break->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(
+                STATUS_OK(array_list_get(&non_break->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
         }
 
@@ -2306,7 +2315,7 @@ TEST_CASE("While loops") {
             REQUIRE(ast->statements.length == 1);
 
             Statement* stmt;
-            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+            REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* while_loop =
                 reinterpret_cast<const WhileLoopExpression*>(expr_stmt->expression);
@@ -2319,9 +2328,9 @@ TEST_CASE("While loops") {
             test_number_expression<int64_t>(while_loop->condition, 1);
             test_number_expression<int64_t>(while_loop->continuation, 1);
 
-            Statement* statement;
-            REQUIRE(STATUS_OK(array_list_get(&while_loop->block->statements, 0, &statement)));
-            expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+            REQUIRE(STATUS_OK(
+                array_list_get(&while_loop->block->statements, 0, static_cast<void*>(&stmt))));
+            expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             test_number_expression<int64_t>(expr_stmt->expression, 1);
 
             const auto* non_break =
@@ -2367,7 +2376,7 @@ TEST_CASE("Do while loops") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* do_while_loop =
             reinterpret_cast<const DoWhileLoopExpression*>(expr_stmt->expression);
@@ -2375,9 +2384,9 @@ TEST_CASE("Do while loops") {
         REQUIRE(do_while_loop->block->statements.length == 1);
         REQUIRE(do_while_loop->condition);
 
-        Statement* statement;
-        REQUIRE(STATUS_OK(array_list_get(&do_while_loop->block->statements, 0, &statement)));
-        expr_stmt = reinterpret_cast<const ExpressionStatement*>(statement);
+        REQUIRE(STATUS_OK(
+            array_list_get(&do_while_loop->block->statements, 0, static_cast<void*>(&stmt))));
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         test_number_expression<int64_t>(expr_stmt->expression, 1);
         test_number_expression<int64_t>(do_while_loop->condition, 1);
     }
@@ -2401,8 +2410,30 @@ TEST_CASE("Do while loops") {
 
 // TODO
 TEST_CASE("Raw loops") {
-    SECTION("Correct loops") {}
-    SECTION("Malformed loops") {}
+    SECTION("Correct loops") {
+        const char*   input = "loop {1}";
+        ParserFixture pf(input);
+        pf.check_errors();
+
+        const auto* ast = pf.ast();
+        REQUIRE(ast->statements.length == 1);
+
+        Statement* stmt;
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
+        const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        const auto* loop      = reinterpret_cast<const LoopExpression*>(expr_stmt->expression);
+
+        REQUIRE(loop->block->statements.length == 1);
+        REQUIRE(STATUS_OK(array_list_get(&loop->block->statements, 0, static_cast<void*>(&stmt))));
+        expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
+        test_number_expression<int64_t>(expr_stmt->expression, 1);
+    }
+
+    SECTION("Malformed loop without body") {
+        const char*   input = "loop {}";
+        ParserFixture pf(input);
+        pf.check_errors({"EMPTY_LOOP [Ln 1, Col 1]"}, false);
+    }
 }
 
 TEST_CASE("Generics") {
@@ -2415,16 +2446,16 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* function  = reinterpret_cast<const FunctionExpression*>(expr_stmt->expression);
 
         REQUIRE(function->generics.length == 2);
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&function->generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&function->generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "T");
-        REQUIRE(STATUS_OK(array_list_get(&function->generics, 1, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&function->generics, 1, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "B");
     }
 
@@ -2437,7 +2468,7 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         test_decl_statement(stmt,
                             false,
                             "a",
@@ -2451,7 +2482,7 @@ TEST_CASE("Generics") {
         const auto  explicit_fn = decl_stmt->type->variant.explicit_type.variant.function_type;
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&explicit_fn.generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&explicit_fn.generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "T");
 
         test_type_expression(reinterpret_cast<const Expression*>(explicit_fn.return_type),
@@ -2463,7 +2494,7 @@ TEST_CASE("Generics") {
         REQUIRE(STATUS_OK(array_list_get(
             &explicit_fn.return_type->variant.explicit_type.variant.ident_type.generics,
             0,
-            &generic)));
+            static_cast<void*>(&generic))));
         test_identifier_expression(generic, "int", TokenType::INT_TYPE);
     }
 
@@ -2476,7 +2507,7 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
         REQUIRE_FALSE(type_decl->primitive_alias);
         test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "F");
@@ -2493,9 +2524,9 @@ TEST_CASE("Generics") {
         REQUIRE(function.generics.length == 2);
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&function.generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&function.generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "T");
-        REQUIRE(STATUS_OK(array_list_get(&function.generics, 1, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&function.generics, 1, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "B");
     }
 
@@ -2508,14 +2539,14 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt   = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* struct_expr = reinterpret_cast<const StructExpression*>(expr_stmt->expression);
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "T");
-        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "E");
     }
 
@@ -2528,7 +2559,7 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* type_decl = reinterpret_cast<const TypeDeclStatement*>(stmt);
         REQUIRE_FALSE(type_decl->primitive_alias);
         test_identifier_expression(reinterpret_cast<const Expression*>(type_decl->ident), "S");
@@ -2545,9 +2576,9 @@ TEST_CASE("Generics") {
         REQUIRE(struct_expr->generics.length == 2);
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "T");
-        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&struct_expr->generics, 1, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "E");
     }
 
@@ -2560,12 +2591,12 @@ TEST_CASE("Generics") {
         REQUIRE(ast->statements.length == 1);
 
         Statement* stmt;
-        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+        REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
         const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
         const auto* call_expr = reinterpret_cast<const CallExpression*>(expr_stmt->expression);
 
         Expression* generic;
-        REQUIRE(STATUS_OK(array_list_get(&call_expr->generics, 0, &generic)));
+        REQUIRE(STATUS_OK(array_list_get(&call_expr->generics, 0, static_cast<void*>(&generic))));
         test_identifier_expression(generic, "int", TokenType::INT_TYPE);
     }
 

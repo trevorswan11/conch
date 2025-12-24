@@ -50,7 +50,7 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
     ArrayListIterator it    = array_list_iterator_init(&block->statements);
 
     Statement* stmt;
-    while (array_list_iterator_has_next(&it, &stmt)) {
+    while (array_list_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
         TRY(NODE_VIRTUAL_RECONSTRUCT(stmt, symbol_map, sb));
     }
@@ -71,7 +71,7 @@ NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, Ar
 
     ArrayListIterator it = array_list_iterator_init(&block->statements);
     Statement*        stmt;
-    while (array_list_iterator_has_next(&it, &stmt)) {
+    while (array_list_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
         TRY_DO(NODE_VIRTUAL_ANALYZE(stmt, child, errors),
                semantic_context_destroy(child, allocator.free_alloc));
@@ -87,8 +87,8 @@ NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, Ar
     return SUCCESS;
 }
 
-NODISCARD Status block_statement_append(BlockStatement* block_stmt, Statement* stmt) {
+NODISCARD Status block_statement_append(BlockStatement* block_stmt, const Statement* stmt) {
     assert(block_stmt && block_stmt->statements.data && stmt);
-    TRY(array_list_push(&block_stmt->statements, &stmt));
+    TRY(array_list_push(&block_stmt->statements, (const void*)&stmt));
     return SUCCESS;
 }

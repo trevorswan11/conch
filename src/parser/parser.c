@@ -203,7 +203,7 @@ NODISCARD Status parser_consume(Parser* p, AST* ast) {
             Statement* stmt = NULL;
             TRY_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
             if (stmt) {
-                TRY_DO(array_list_push(&ast->statements, &stmt),
+                TRY_DO(array_list_push(&ast->statements, (void*)&stmt),
                        NODE_VIRTUAL_FREE(stmt, p->allocator.free_alloc));
             }
         }

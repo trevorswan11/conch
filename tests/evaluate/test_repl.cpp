@@ -49,10 +49,6 @@ TEST_CASE("REPL with acceptable input") {
     const std::string captured_out((std::istreambuf_iterator<char>(out_fs)),
                                    std::istreambuf_iterator<char>());
 
-    std::ifstream     err_fs(temp_err.path(), std::ios::binary);
-    const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
-                                   std::istreambuf_iterator<char>());
-
     REQUIRE(captured_out.find(WELCOME_MESSAGE) != std::string::npos);
     REQUIRE(captured_out.find("var") != std::string::npos);
     REQUIRE(captured_out.find("const") != std::string::npos);

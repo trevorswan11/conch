@@ -74,7 +74,7 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     // All for loops have an iterables clause
     ArrayListIterator it = array_list_iterator_init(&for_loop->iterables);
     Expression*       iterable;
-    while (array_list_iterator_has_next(&it, &iterable)) {
+    while (array_list_iterator_has_next(&it, (void*)&iterable)) {
         ASSERT_EXPRESSION(iterable);
         TRY(NODE_VIRTUAL_RECONSTRUCT(iterable, symbol_map, sb));
         if (!array_list_iterator_exhausted(&it)) { TRY(string_builder_append_str_z(sb, ", ")); }

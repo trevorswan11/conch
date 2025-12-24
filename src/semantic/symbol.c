@@ -43,7 +43,7 @@ void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
             *name = zeroed_mut_slice();
         }
 
-        SemanticType** type = next.value_ptr;
+        SemanticType** type = (SemanticType**)next.value_ptr;
         RC_RELEASE(*type, free_alloc);
     }
 
@@ -56,14 +56,14 @@ NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType
     assert(!symbol_table_has(st, symbol));
 
     const void* retained = rc_retain(type);
-    return hash_map_put(&st->symbols, &symbol, &retained);
+    return hash_map_put(&st->symbols, &symbol, (const void*)&retained);
 }
 
 NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType** type) {
     assert(st);
     assert(symbol_table_has(st, symbol));
 
-    return hash_map_get_value(&st->symbols, &symbol, type);
+    return hash_map_get_value(&st->symbols, &symbol, (void*)type);
 }
 
 bool symbol_table_find(SymbolTable* st, MutSlice symbol, SemanticType** type) {

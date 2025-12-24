@@ -75,6 +75,7 @@ static inline Hash hash_prefix(const void* key) {
     return hash_token_type(&fn.token_key);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 static inline int compare_prefix(const void* a, const void* b) {
     const PrefixFn fn_a = *(const PrefixFn*)a;
     const PrefixFn fn_b = *(const PrefixFn*)b;
@@ -140,6 +141,7 @@ static inline Hash hash_infix(const void* key) {
     return hash_token_type(&fn.token_key);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 static inline int compare_infix(const void* a, const void* b) {
     const InfixFn fn_a = *(const InfixFn*)a;
     const InfixFn fn_b = *(const InfixFn*)b;

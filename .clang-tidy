@@ -6,6 +6,7 @@ Checks: >
   portability-*,
   readability-*,
   google-*,
+  bugprone-*,
   -performance-no-int-to-ptr,
   -readability-identifier-length,
   -readability-magic-numbers,
@@ -16,6 +17,8 @@ Checks: >
   -modernize-use-trailing-return-type,
   -modernize-avoid-c-arrays,
   -google-readability-todo,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-unchecked-optional-access,
 
 WarningsAsErrors: "*"
 

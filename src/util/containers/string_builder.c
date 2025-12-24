@@ -9,7 +9,6 @@ NODISCARD Status string_builder_init_allocator(StringBuilder* sb,
                                                size_t         initial_length,
                                                Allocator      allocator) {
     if (!sb) { return NULL_PARAMETER; }
-
     return initial_length == 0
                ? EMPTY
                : array_list_init_allocator(&sb->buffer, initial_length, sizeof(char), allocator);
@@ -31,7 +30,6 @@ NODISCARD Status string_builder_append(StringBuilder* sb, char byte) {
 
 NODISCARD Status string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
     assert(sb);
-
     if (!bytes) { return NULL_PARAMETER; }
 
     TRY(array_list_ensure_total_capacity(&sb->buffer, sb->buffer.length + length));
@@ -80,7 +78,7 @@ NODISCARD Status string_builder_append_unsigned(StringBuilder* sb, uint64_t valu
     }
 
     for (size_t i = 0; i < digits; i++) {
-        char digit = '0' + (value / div % 10);
+        char digit = (char)((uint64_t)('0') + (value / div % 10));
         array_list_push_assume_capacity(&sb->buffer, &digit);
         div /= 10;
     }

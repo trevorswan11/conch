@@ -11,14 +11,14 @@
 
 #include "util/containers/string_builder.h"
 
-#define DECL_NAME(tok, field, name)                                                   \
-    const Allocator allocator = semantic_context_allocator(parent);                   \
-    MutSlice        name;                                                             \
-    TRY(mut_slice_dupe(&name, &field, allocator.memory_alloc));                       \
-                                                                                      \
-    if (semantic_context_has(parent, true, name)) {                                   \
-        PUT_STATUS_PROPAGATE(                                                         \
-            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc(name.ptr)); \
+#define DECL_NAME(tok, field, name)                                                     \
+    const Allocator allocator = semantic_context_allocator(parent);                     \
+    MutSlice        name;                                                               \
+    TRY(mut_slice_dupe(&(name), &(field), allocator.memory_alloc));                     \
+                                                                                        \
+    if (semantic_context_has(parent, true, (name))) {                                   \
+        PUT_STATUS_PROPAGATE(                                                           \
+            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc((name).ptr)); \
     }
 
 NODISCARD Status decl_statement_create(Token                 start_token,

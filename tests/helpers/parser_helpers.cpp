@@ -160,7 +160,7 @@ template <typename T> void test_number_expression(const char* input, T expected_
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, &stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, (void*)&stmt)));
 
     const auto* expr = reinterpret_cast<const ExpressionStatement*>(stmt);
     test_number_expression<T>(expr->expression, expected_value);

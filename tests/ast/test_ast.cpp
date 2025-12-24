@@ -149,6 +149,11 @@ TEST_CASE("Loops") {
         test_reconstruction(R"(do { print("Hello, World!") } while (true))",
                             R"(do { print("Hello, World!") } while (true))");
     }
+
+    SECTION("Raw loop") {
+        test_reconstruction(R"(loop { print("Hello, World!") })",
+                            R"(loop { print("Hello, World!") })");
+    }
 }
 
 TEST_CASE("Complex expressions") {

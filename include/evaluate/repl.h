@@ -9,7 +9,7 @@
 
 #define PROMPT ">>> "
 #define CONTINUATION_PROMPT "... "
-static const size_t BUF_SIZE = 4096;
+#define BUF_SIZE 4096
 #define WELCOME_MESSAGE "Welcome to Conch REPL! Type 'exit' to quit."
 #define EXIT_TOKEN "exit"
 

@@ -5,7 +5,7 @@
 
 TempFile::TempFile(std::string path, const std::string& content) : filepath(std::move(path)) {
     std::ofstream ofs(filepath, std::ios::binary);
-    ofs.write(content.data(), content.size());
+    ofs.write(content.data(), static_cast<std::streamsize>(content.size()));
     ofs.close();
 }
 

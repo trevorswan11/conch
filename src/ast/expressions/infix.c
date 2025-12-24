@@ -85,7 +85,7 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
     }                                                                                         \
                                                                                               \
     MAKE_PRIMITIVE(lhs_type->tag, false, new_type, allocator.memory_alloc, cleanup);          \
-    result = new_type;
+    (result) = new_type;
 
 NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
