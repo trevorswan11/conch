@@ -515,8 +515,8 @@ TEST_CASE("Advanced literals") {
     }
 
     SECTION("String literals") {
-        const char* input = R"(const five = "Hello, World!";
-                            var ten = "Hello\n, World!\0";var one := "Hello, World!;)";
+        const char* input =
+            R"(const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)";
 
         const ExpectedToken expecteds[] = {
             {TokenType::CONST, "const"},
@@ -588,16 +588,19 @@ TEST_CASE("Advanced literals") {
     }
 
     SECTION("Promotion of invalid tokens") {
-        const auto string_tok = token_init(TokenType::INT_10, "1", strlen("1"), 0, 0);
-        MutSlice   promoted_string;
+        const auto token_slice = slice_from_str_z("1");
+        const auto string_tok =
+            token_init(TokenType::INT_10, token_slice.ptr, token_slice.length, 0, 0);
+        MutSlice promoted_string;
         REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
                 Status::TYPE_MISMATCH);
     }
 
     SECTION("Promotion of standard string literals") {
         SECTION("Normal case") {
-            const auto string_tok = token_init(
-                TokenType::STRING, R"("Hello, World!")", strlen(R"("Hello, World!")"), 0, 0);
+            const auto token_slice = slice_from_str_z(R"("Hello, World!")");
+            const auto string_tok =
+                token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
@@ -607,8 +610,9 @@ TEST_CASE("Advanced literals") {
         }
 
         SECTION("Escaped case") {
-            const auto string_tok = token_init(
-                TokenType::STRING, R"(""Hello, World!"")", strlen(R"(""Hello, World!"")"), 0, 0);
+            const auto token_slice = slice_from_str_z(R"(""Hello, World!"")");
+            const auto string_tok =
+                token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
@@ -618,8 +622,10 @@ TEST_CASE("Advanced literals") {
         }
 
         SECTION("Empty case") {
-            const auto string_tok = token_init(TokenType::STRING, R"("")", strlen(R"("")"), 0, 0);
-            MutSlice   promoted_string;
+            const auto token_slice = slice_from_str_z(R"("")");
+            const auto string_tok =
+                token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
+            MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
@@ -628,8 +634,10 @@ TEST_CASE("Advanced literals") {
         }
 
         SECTION("Malformed case") {
-            const auto string_tok = token_init(TokenType::STRING, R"(")", strlen(R"(")"), 0, 0);
-            MutSlice   promoted_string;
+            const auto token_slice = slice_from_str_z(R"(")");
+            const auto string_tok =
+                token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
+            MutSlice promoted_string;
             REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
                     Status::UNEXPECTED_TOKEN);
         }
@@ -637,12 +645,10 @@ TEST_CASE("Advanced literals") {
 
     SECTION("Promotion of multistring literals") {
         SECTION("Normal case no newline") {
-            const auto string_tok = token_init(TokenType::MULTILINE_STRING,
-                                               R"(\\Hello,"World!")",
-                                               strlen(R"(\\Hello,"World!")"),
-                                               0,
-                                               0);
-            MutSlice   promoted_string;
+            const auto token_slice = slice_from_str_z(R"(\\Hello,"World!")");
+            const auto string_tok =
+                token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
+            MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
@@ -651,16 +657,10 @@ TEST_CASE("Advanced literals") {
         }
 
         SECTION("Normal case newline") {
-            const auto string_tok = token_init(TokenType::MULTILINE_STRING,
-                                               R"(\\Hello,
-                                               \\World!
-                                               \\)",
-                                               strlen(R"(\\Hello,
-                                                      \\World!
-                                                      \\)"),
-                                               0,
-                                               0);
-            MutSlice   promoted_string;
+            const auto token_slice = slice_from_str_z("\\\\Hello,\n\\\\World!\n\\\\");
+            const auto string_tok =
+                token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
+            MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
@@ -669,8 +669,10 @@ TEST_CASE("Advanced literals") {
         }
 
         SECTION("Empty case") {
-            const auto string_tok = token_init(TokenType::MULTILINE_STRING, "", strlen(""), 0, 0);
-            MutSlice   promoted_string;
+            const auto token_slice = slice_from_str_z("");
+            const auto string_tok =
+                token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
+            MutSlice promoted_string;
             REQUIRE(
                 STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
             REQUIRE(promoted_string.ptr);
