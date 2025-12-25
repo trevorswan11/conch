@@ -632,11 +632,7 @@ NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expressi
     assert(start_token.slice.length > 0);
 
     double       value;
-    const Status parse_status = strntod(start_token.slice.ptr,
-                                        start_token.slice.length,
-                                        &value,
-                                        p->allocator.memory_alloc,
-                                        p->allocator.free_alloc);
+    const Status parse_status = strntod(start_token.slice.ptr, start_token.slice.length, &value);
     if (STATUS_ERR(parse_status)) {
         PUT_STATUS_PROPAGATE(&p->errors, parse_status, start_token, {});
     }

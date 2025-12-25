@@ -1,13 +1,15 @@
 #include <assert.h>
 #include <errno.h>
-#include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "util/alphanum.h"
 #include "util/status.h"
+
+const size_t FLOAT_BUF_SIZE = 128;
 
 #define PARSE_INT_STR(T, max, overflow_err)                               \
     assert(base != UNKNOWN);                                              \
@@ -54,29 +56,18 @@ NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value) {
     PARSE_INT_STR(size_t, SIZE_MAX, SIZE_OVERFLOW);
 }
 
-NODISCARD Status strntod(const char*     str,
-                         size_t          n,
-                         double*         value,
-                         memory_alloc_fn memory_alloc,
-                         free_alloc_fn   free_alloc) {
-    setlocale(LC_NUMERIC, "C");
-
-    assert(memory_alloc && free_alloc);
-    char* buf = memory_alloc(n + 1);
-    if (!buf) { return ALLOCATION_FAILED; }
-
-    memcpy(buf, str, n);
-    buf[n] = '\0';
+NODISCARD Status strntod(const char* str, size_t n, double* value) {
+    char   buf[FLOAT_BUF_SIZE];
+    size_t len = n >= FLOAT_BUF_SIZE ? FLOAT_BUF_SIZE - 1 : n;
+    memcpy(buf, str, len);
+    buf[len] = '\0';
 
     char* endptr;
     errno         = 0;
     double result = strtod(buf, &endptr);
-
-    char end = *endptr;
-    free_alloc(buf);
+    char   end    = *endptr;
 
     if (end != '\0') { return MALFORMED_FLOAT_STR; }
-
     if (errno == ERANGE) { return FLOAT_OVERFLOW; }
 
     *value = result;

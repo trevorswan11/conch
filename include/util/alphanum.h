@@ -5,7 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "util/memory.h"
 #include "util/status.h"
 
 static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }
@@ -62,11 +61,9 @@ NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value
 NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value);
 
 // Returns the double precision floating point form of the input string.
-NODISCARD Status strntod(const char*     str,
-                         size_t          n,
-                         double*         value,
-                         memory_alloc_fn memory_alloc,
-                         free_alloc_fn   free_alloc);
+//
+// The string can be of any length, but only the first 128 bytes are considered.
+NODISCARD Status strntod(const char* str, size_t n, double* value);
 
 // Returns the byte representation of a character.
 //

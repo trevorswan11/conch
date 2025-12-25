@@ -11,6 +11,8 @@ extern "C" {
 #include "util/math.h"
 }
 
+#define SPLAT_STR(str) (str), strlen(str)
+
 TEST_CASE("Character utils") {
     SECTION("Checkers") {
         REQUIRE(is_digit('0'));
@@ -57,108 +59,116 @@ TEST_CASE("Character utils") {
 
         uint8_t result;
         for (const auto& t : cases) {
-            REQUIRE(STATUS_OK(strntochr(t.literal, strlen(t.literal), &result)));
+            REQUIRE(STATUS_OK(strntochr(SPLAT_STR(t.literal), &result)));
             REQUIRE(t.expected == result);
         }
 
-        REQUIRE(strntochr("'ret'", 5, &result) == Status::MALFORMED_CHARATCER_LITERAL);
+        REQUIRE(strntochr(SPLAT_STR("'ret'"), &result) == Status::MALFORMED_CHARATCER_LITERAL);
     }
 }
 
 TEST_CASE("Signed integer from string") {
     int64_t test_value;
-    REQUIRE(STATUS_OK(strntoll("1023", 4, Base::DECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoll(SPLAT_STR("1023"), Base::DECIMAL, &test_value)));
     REQUIRE(test_value == 1023);
 
-    REQUIRE(strntoll("0xFFFFFFFFFFFFFFFF", 18, Base::HEXADECIMAL, &test_value) ==
+    REQUIRE(strntoll(SPLAT_STR("0xFFFFFFFFFFFFFFFF"), Base::HEXADECIMAL, &test_value) ==
             Status::SIGNED_INTEGER_OVERFLOW);
-    REQUIRE(STATUS_OK(strntoll("0xFF", 4, Base::HEXADECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoll(SPLAT_STR("0xFF"), Base::HEXADECIMAL, &test_value)));
     REQUIRE(test_value == 0xFF);
 
-    REQUIRE(STATUS_OK(strntoll("0b10011101101", 13, Base::BINARY, &test_value)));
+    REQUIRE(STATUS_OK(strntoll(SPLAT_STR("0b10011101101"), Base::BINARY, &test_value)));
     REQUIRE(test_value == 0b10011101101);
 
-    REQUIRE(STATUS_OK(strntoll("0o1234567", 9, Base::OCTAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoll(SPLAT_STR("0o1234567"), Base::OCTAL, &test_value)));
     REQUIRE(test_value == 342391);
 }
 
 TEST_CASE("Unsigned integer from string") {
     uint64_t test_value;
-    REQUIRE(STATUS_OK(strntoull("1023", 4, Base::DECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoull(SPLAT_STR("1023"), Base::DECIMAL, &test_value)));
     REQUIRE(test_value == 1023);
 
-    REQUIRE(strntoull("0x10000000000000000", 19, Base::HEXADECIMAL, &test_value) ==
+    REQUIRE(strntoull(SPLAT_STR("0x10000000000000000"), Base::HEXADECIMAL, &test_value) ==
             Status::UNSIGNED_INTEGER_OVERFLOW);
-    REQUIRE(STATUS_OK(strntoull("0xFF", 4, Base::HEXADECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoull(SPLAT_STR("0xFF"), Base::HEXADECIMAL, &test_value)));
     REQUIRE(test_value == 0xFF);
 
-    REQUIRE(STATUS_OK(strntoull("0b10011101101", 13, Base::BINARY, &test_value)));
+    REQUIRE(STATUS_OK(strntoull(SPLAT_STR("0b10011101101"), Base::BINARY, &test_value)));
     REQUIRE(test_value == 0b10011101101);
 
-    REQUIRE(STATUS_OK(strntoull("0o1234567", 9, Base::OCTAL, &test_value)));
+    REQUIRE(STATUS_OK(strntoull(SPLAT_STR("0o1234567"), Base::OCTAL, &test_value)));
     REQUIRE(test_value == 342391);
 }
 
 TEST_CASE("Size type from string") {
     size_t test_value;
-    REQUIRE(STATUS_OK(strntouz("1023", 4, Base::DECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntouz(SPLAT_STR("1023"), Base::DECIMAL, &test_value)));
     REQUIRE(test_value == 1023);
 
-    REQUIRE(strntouz("0x10000000000000000", 19, Base::HEXADECIMAL, &test_value) ==
+    REQUIRE(strntouz(SPLAT_STR("0x10000000000000000"), Base::HEXADECIMAL, &test_value) ==
             Status::SIZE_OVERFLOW);
-    REQUIRE(STATUS_OK(strntouz("0xFF", 4, Base::HEXADECIMAL, &test_value)));
+    REQUIRE(STATUS_OK(strntouz(SPLAT_STR("0xFF"), Base::HEXADECIMAL, &test_value)));
     REQUIRE(test_value == 0xFF);
 
-    REQUIRE(STATUS_OK(strntouz("0b10011101101", 13, Base::BINARY, &test_value)));
+    REQUIRE(STATUS_OK(strntouz(SPLAT_STR("0b10011101101"), Base::BINARY, &test_value)));
     REQUIRE(test_value == 0b10011101101);
 
-    REQUIRE(STATUS_OK(strntouz("0o1234567", 9, Base::OCTAL, &test_value)));
+    REQUIRE(STATUS_OK(strntouz(SPLAT_STR("0o1234567"), Base::OCTAL, &test_value)));
     REQUIRE(test_value == 342391);
 }
 
 TEST_CASE("Double from string") {
     double test_value;
-    REQUIRE(STATUS_OK(strntod("1023", 4, &test_value, malloc, free)));
+    REQUIRE(STATUS_OK(strntod(SPLAT_STR("1023"), &test_value)));
     REQUIRE(approx_eq_double(test_value, 1023.0, EPSILON));
 
-    REQUIRE(STATUS_OK(strntod("1023.234612", 11, &test_value, malloc, free)));
+    REQUIRE(STATUS_OK(strntod(SPLAT_STR("1023.234612"), &test_value)));
     REQUIRE(approx_eq_double(test_value, 1023.234612, EPSILON));
 
-    REQUIRE(STATUS_OK(strntod("1023.234612e234", 15, &test_value, malloc, free)));
+    REQUIRE(STATUS_OK(strntod(SPLAT_STR("1023.234612e234"), &test_value)));
     REQUIRE(approx_eq_double(test_value, 1023.234612e234, EPSILON));
+
+    // The value doesn't matter here, just checking if it handles too long
+    REQUIRE(STATUS_OK(strntod(
+        SPLAT_STR("1."
+                  "234567891011121314151617181920212223242526272829303132334353637383"
+                  "94041424344454647484950515253545556575859606162636465669023487509238749857"),
+        &test_value)));
 }
 
 TEST_CASE("Malformed numbers") {
     const uint64_t start = 42;
     SECTION("Signing integers") {
         int64_t v = start;
-        REQUIRE(strntoll("0b2", 3, Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoll(SPLAT_STR("0b2"), Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(std::cmp_equal(v, start));
-        REQUIRE(strntoll("0b2", 3, Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoll(SPLAT_STR("0b2"), Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(std::cmp_equal(v, start));
-        REQUIRE(strntoll("0xG", 3, Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoll(SPLAT_STR("0xG"), Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(std::cmp_equal(v, start));
-        REQUIRE(strntoll("0oG", 3, Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoll(SPLAT_STR("0oG"), Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(std::cmp_equal(v, start));
     }
 
     SECTION("Unsigned integers") {
         uint64_t v = start;
-        REQUIRE(strntoull("0b2", 3, Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoull(SPLAT_STR("0b2"), Base::DECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(v == start);
-        REQUIRE(strntoull("0b2", 3, Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoull(SPLAT_STR("0b2"), Base::BINARY, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(v == start);
-        REQUIRE(strntoull("0xG", 3, Base::HEXADECIMAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoull(SPLAT_STR("0xG"), Base::HEXADECIMAL, &v) ==
+                Status::MALFORMED_INTEGER_STR);
         REQUIRE(v == start);
-        REQUIRE(strntoull("0oG", 3, Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
+        REQUIRE(strntoull(SPLAT_STR("0oG"), Base::OCTAL, &v) == Status::MALFORMED_INTEGER_STR);
         REQUIRE(v == start);
     }
 
     SECTION("Floating points") {
         double v = start;
-        REQUIRE(strntod("1023.234612e2340", 16, &v, malloc, free) == Status::FLOAT_OVERFLOW);
+        REQUIRE(strntod(SPLAT_STR("1023.234612e2340"), &v) == Status::FLOAT_OVERFLOW);
         REQUIRE(approx_eq_double(start, v, EPSILON));
-        REQUIRE(strntod("1023.23R612e234", 15, &v, malloc, free) == Status::MALFORMED_FLOAT_STR);
+        REQUIRE(strntod(SPLAT_STR("1023.23R612e234"), &v) == Status::MALFORMED_FLOAT_STR);
         REQUIRE(approx_eq_double(start, v, EPSILON));
     }
 }
