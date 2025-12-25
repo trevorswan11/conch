@@ -7,6 +7,8 @@
 
 #include "util/status.h"
 
+#define PARSE_FLOAT_BUF_SIZE 128
+
 static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }
 
 // Checks if the given byte is a letter.

@@ -9,8 +9,6 @@
 #include "util/alphanum.h"
 #include "util/status.h"
 
-const size_t FLOAT_BUF_SIZE = 128;
-
 #define PARSE_INT_STR(T, max, overflow_err)                               \
     assert(base != UNKNOWN);                                              \
     T      result = 0;                                                    \
@@ -57,8 +55,8 @@ NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value) {
 }
 
 NODISCARD Status strntod(const char* str, size_t n, double* value) {
-    char   buf[FLOAT_BUF_SIZE];
-    size_t len = n >= FLOAT_BUF_SIZE ? FLOAT_BUF_SIZE - 1 : n;
+    char   buf[PARSE_FLOAT_BUF_SIZE];
+    size_t len = n >= PARSE_FLOAT_BUF_SIZE ? PARSE_FLOAT_BUF_SIZE - 1 : n;
     memcpy(buf, str, len);
     buf[len] = '\0';
 
