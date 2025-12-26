@@ -9,12 +9,12 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status assignment_expression_create(Token                  start_token,
-                                              Expression*            lhs,
-                                              TokenType              op,
-                                              Expression*            rhs,
-                                              AssignmentExpression** assignment_expr,
-                                              memory_alloc_fn        memory_alloc) {
+[[nodiscard]] Status assignment_expression_create(Token                  start_token,
+                                                  Expression*            lhs,
+                                                  TokenType              op,
+                                                  Expression*            rhs,
+                                                  AssignmentExpression** assignment_expr,
+                                                  memory_alloc_fn        memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(lhs);
     ASSERT_EXPRESSION(rhs);
@@ -44,9 +44,8 @@ void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(assign);
 }
 
-NODISCARD Status assignment_expression_reconstruct(Node*          node,
-                                                   const HashMap* symbol_map,
-                                                   StringBuilder* sb) {
+[[nodiscard]] Status
+assignment_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -68,9 +67,8 @@ NODISCARD Status assignment_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status assignment_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors) {
+[[nodiscard]] Status
+assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -118,7 +116,7 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     }
 
     // Compound expressions are treated like a subset of infix expressions
-    SemanticType* resulting_type = NULL;
+    SemanticType* resulting_type = nullptr;
     switch (assign->op) {
     case ASSIGN:
         if (!type_assignable(lhs_type, rhs_type)) {

@@ -78,11 +78,11 @@ bool semantic_type_is_integer(SemanticType* type) {
     }
 }
 
-NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
-                                       SemanticArrayUnion  variant,
-                                       SemanticType*       inner_type,
-                                       SemanticArrayType** array_type,
-                                       memory_alloc_fn     memory_alloc) {
+[[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
+                                           SemanticArrayUnion  variant,
+                                           SemanticType*       inner_type,
+                                           SemanticArrayType** array_type,
+                                           memory_alloc_fn     memory_alloc) {
     assert(inner_type);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.length > 1 : true);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
@@ -113,10 +113,10 @@ void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
     RC_RELEASE(sema_array->inner_type, free_alloc);
 }
 
-NODISCARD Status semantic_enum_create(Slice              name,
-                                      HashSet            variants,
-                                      SemanticEnumType** enum_type,
-                                      memory_alloc_fn    memory_alloc) {
+[[nodiscard]] Status semantic_enum_create(Slice              name,
+                                          HashSet            variants,
+                                          SemanticEnumType** enum_type,
+                                          memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(variants.header->key_size == sizeof(MutSlice));
 
@@ -141,7 +141,7 @@ void free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc) {
     while (hash_set_iterator_has_next(&it, &variant)) {
         MutSlice* name = (MutSlice*)variant.key_ptr;
         free_alloc(name->ptr);
-        name->ptr = NULL;
+        name->ptr = nullptr;
     }
 
     hash_set_deinit(variants);
@@ -155,7 +155,7 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     free_enum_variant_set(&type_variant->variants, free_alloc);
 }
 
-NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
 
     SemanticType* empty_type = memory_alloc(sizeof(SemanticType));
@@ -172,11 +172,10 @@ NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memor
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
-                                            SemanticType* src,
-                                            Allocator     allocator) {
+[[nodiscard]] Status semantic_type_copy_variant(SemanticType*              dest,
+                                                SemanticType*              src,
+                                                [[maybe_unused]] Allocator allocator) {
     dest->tag = src->tag;
-    MAYBE_UNUSED(allocator);
 
     switch (src->tag) {
     case STYPE_ENUM:
@@ -193,7 +192,8 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+[[nodiscard]] Status
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
     SemanticType* type;
     TRY(semantic_type_create(&type, allocator.memory_alloc));
 
@@ -262,6 +262,39 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
         }
         break;
     }
+    case STYPE_ARRAY:
+        if (lhs->variant.array_type->tag != rhs->variant.array_type->tag ||
+            !type_equal(lhs->variant.array_type->inner_type, rhs->variant.array_type->inner_type)) {
+            return false;
+        }
+
+        switch (lhs->variant.array_type->tag) {
+        case STYPE_ARRAY_SINGLE_DIM:
+            return lhs->variant.array_type->variant.length ==
+                   rhs->variant.array_type->variant.length;
+        case STYPE_ARRAY_MULTI_DIM: {
+            const ArrayList lhs_dims = lhs->variant.array_type->variant.dimensions;
+            const ArrayList rhs_dims = rhs->variant.array_type->variant.dimensions;
+            if (lhs_dims.length != rhs_dims.length) { return false; }
+
+            // Equal dimensions must be ordered exactly the same
+            ArrayListConstIterator lhs_it = array_list_const_iterator_init(&lhs_dims);
+            size_t                 lhs_next;
+            ArrayListConstIterator rhs_it = array_list_const_iterator_init(&rhs_dims);
+            size_t                 rhs_next;
+            while (array_list_const_iterator_has_next(&lhs_it, &lhs_next) &&
+                   array_list_const_iterator_has_next(&rhs_it, &rhs_next)) {
+                if (lhs_next != rhs_next) { return false; }
+            }
+
+            break;
+        }
+        case STYPE_ARRAY_RANGE:
+            return lhs->variant.array_type->variant.inclusive ==
+                   rhs->variant.array_type->variant.inclusive;
+        }
+
+        break;
     default:
         break;
     }

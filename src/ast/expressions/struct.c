@@ -22,11 +22,11 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     array_list_deinit(members);
 }
 
-NODISCARD Status struct_expression_create(Token              start_token,
-                                          ArrayList          generics,
-                                          ArrayList          members,
-                                          StructExpression** struct_expr,
-                                          memory_alloc_fn    memory_alloc) {
+[[nodiscard]] Status struct_expression_create(Token              start_token,
+                                              ArrayList          generics,
+                                              ArrayList          members,
+                                              StructExpression** struct_expr,
+                                              memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(generics.item_size == sizeof(Expression*));
@@ -57,9 +57,8 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(struct_expr);
 }
 
-NODISCARD Status struct_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb) {
+[[nodiscard]] Status
+struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -92,15 +91,14 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status struct_expression_analyze(Node*                             node,
+                                               [[maybe_unused]] SemanticContext* parent,
+                                               [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    StructExpression* struct_expr = (StructExpression*)node;
+    [[maybe_unused]] StructExpression* struct_expr = (StructExpression*)node;
     assert(struct_expr->members.data && struct_expr->members.length > 0);
 
-    MAYBE_UNUSED(struct_expr);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

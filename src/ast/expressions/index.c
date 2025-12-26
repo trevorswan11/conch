@@ -8,11 +8,11 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status index_expression_create(Token             start_token,
-                                         Expression*       array,
-                                         Expression*       idx,
-                                         IndexExpression** index_expr,
-                                         memory_alloc_fn   memory_alloc) {
+[[nodiscard]] Status index_expression_create(Token             start_token,
+                                             Expression*       array,
+                                             Expression*       idx,
+                                             IndexExpression** index_expr,
+                                             memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(array);
     ASSERT_EXPRESSION(idx);
@@ -41,9 +41,8 @@ void index_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(index);
 }
 
-NODISCARD Status index_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+index_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -59,7 +58,8 @@ NODISCARD Status index_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -91,9 +91,18 @@ NODISCARD Status index_expression_analyze(Node* node, SemanticContext* parent, A
         });
     }
 
-    // Retaining the inner array type is straightforward here
+    // We need to check the constness of the array, not the inner item
     assert(array_type->variant.array_type);
-    parent->analyzed_type = rc_retain(array_type->variant.array_type->inner_type);
+    SemanticType* resulting_type;
+    TRY_DO(
+        semantic_type_copy(&resulting_type, array_type->variant.array_type->inner_type, allocator),
+        {
+            RC_RELEASE(idx_type, allocator.free_alloc);
+            RC_RELEASE(array_type, allocator.free_alloc);
+        });
+    resulting_type->is_const = array_type->is_const;
+
+    parent->analyzed_type = resulting_type;
     RC_RELEASE(idx_type, allocator.free_alloc);
     RC_RELEASE(array_type, allocator.free_alloc);
     return SUCCESS;

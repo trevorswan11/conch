@@ -1,29 +1,25 @@
 #ifndef SEMA_TYPE_H
 #define SEMA_TYPE_H
 
-#include <stdbool.h>
-
 #include "util/containers/array_list.h"
 #include "util/containers/hash_set.h"
 
 typedef struct SemanticType SemanticType;
 
-#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)       \
-    SemanticType* name;                                     \
-    TRY_DO(semantic_type_create(&name, memory_alloc), err); \
-                                                            \
-    name->tag      = T;                                     \
-    name->variant  = SEMANTIC_DATALESS_TYPE;                \
-    name->is_const = true;                                  \
-    name->valued   = true;                                  \
-    name->nullable = N
+#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)         \
+    SemanticType* name;                                       \
+    TRY_DO(semantic_type_create(&(name), memory_alloc), err); \
+                                                              \
+    (name)->tag      = T;                                     \
+    (name)->variant  = SEMANTIC_DATALESS_TYPE;                \
+    (name)->is_const = true;                                  \
+    (name)->valued   = true;                                  \
+    (name)->nullable = N
 
 #define PRIMITIVE_ANALYZE(T, N, A)     \
     ASSERT_EXPRESSION(node);           \
     assert(parent);                    \
     assert(errors);                    \
-    MAYBE_UNUSED(node);                \
-    MAYBE_UNUSED(errors);              \
     MAKE_PRIMITIVE(T, N, type, A, {}); \
                                        \
     parent->analyzed_type = type;      \
@@ -82,12 +78,12 @@ typedef struct {
     SemanticType*      inner_type;
 } SemanticArrayType;
 
-NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
-                                       SemanticArrayUnion  variant,
-                                       SemanticType*       inner_type,
-                                       SemanticArrayType** array_type,
-                                       memory_alloc_fn     memory_alloc);
-void             semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
+[[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
+                                           SemanticArrayUnion  variant,
+                                           SemanticType*       inner_type,
+                                           SemanticArrayType** array_type,
+                                           memory_alloc_fn     memory_alloc);
+void                 semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
 
 typedef struct {
     RcControlBlock rc_control;
@@ -96,12 +92,12 @@ typedef struct {
     HashSet variants;
 } SemanticEnumType;
 
-NODISCARD Status semantic_enum_create(Slice              name,
-                                      HashSet            variants,
-                                      SemanticEnumType** enum_type,
-                                      memory_alloc_fn    memory_alloc);
-void             free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
-void             semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
+[[nodiscard]] Status semantic_enum_create(Slice              name,
+                                          HashSet            variants,
+                                          SemanticEnumType** enum_type,
+                                          memory_alloc_fn    memory_alloc);
+void                 free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
+void                 semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
 
 typedef union {
     SematicDatalessType dataless_type;
@@ -122,17 +118,17 @@ typedef struct SemanticType {
 } SemanticType;
 
 // Creates an empty semantic type.
-NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc);
+[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc);
 
 // Copies the tagged union data from src to dest, leaving flags alone.
 //
 // Reference counting is respected when possible.
-NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
-                                            SemanticType* src,
-                                            Allocator     allocator);
+[[nodiscard]] Status
+semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator allocator);
 
 // Creates and deep copies src into dest while respecting RC.
-NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
+[[nodiscard]] Status
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
 
 // Never call this directly!
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);

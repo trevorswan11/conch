@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
@@ -21,12 +20,12 @@
             errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc((name).ptr)); \
     }
 
-NODISCARD Status decl_statement_create(Token                 start_token,
-                                       IdentifierExpression* ident,
-                                       TypeExpression*       type,
-                                       Expression*           value,
-                                       DeclStatement**       decl_stmt,
-                                       memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status decl_statement_create(Token                 start_token,
+                                           IdentifierExpression* ident,
+                                           TypeExpression*       type,
+                                           Expression*           value,
+                                           DeclStatement**       decl_stmt,
+                                           memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     ASSERT_EXPRESSION(ident);
@@ -79,9 +78,8 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(decl);
 }
 
-NODISCARD Status decl_statement_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -108,7 +106,8 @@ NODISCARD Status decl_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
@@ -183,12 +182,12 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_create(Token                 start_token,
-                                            IdentifierExpression* ident,
-                                            Expression*           value,
-                                            bool                  primitive_alias,
-                                            TypeDeclStatement**   type_decl_stmt,
-                                            memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status type_decl_statement_create(Token                 start_token,
+                                                IdentifierExpression* ident,
+                                                Expression*           value,
+                                                bool                  primitive_alias,
+                                                TypeDeclStatement**   type_decl_stmt,
+                                                memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(ident && value);
@@ -218,9 +217,8 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type_decl);
 }
 
-NODISCARD Status type_decl_statement_reconstruct(Node*          node,
-                                                 const HashMap* symbol_map,
-                                                 StringBuilder* sb) {
+[[nodiscard]] Status
+type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -238,9 +236,8 @@ NODISCARD Status type_decl_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_analyze(Node*            node,
-                                             SemanticContext* parent,
-                                             ArrayList*       errors) {
+[[nodiscard]] Status
+type_decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

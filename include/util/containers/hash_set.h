@@ -1,7 +1,6 @@
 #ifndef HASH_SET_H
 #define HASH_SET_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -72,13 +71,13 @@ typedef struct {
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Stripped implementation of a map.
-NODISCARD Status hash_set_init_allocator(HashSet* hs,
-                                         size_t   capacity,
-                                         size_t   key_size,
-                                         size_t   key_align,
-                                         Hash (*hash)(const void*),
-                                         int (*compare)(const void*, const void*),
-                                         Allocator allocator);
+[[nodiscard]] Status hash_set_init_allocator(HashSet* hs,
+                                             size_t   capacity,
+                                             size_t   key_size,
+                                             size_t   key_align,
+                                             Hash (*hash)(const void*),
+                                             int (*compare)(const void*, const void*),
+                                             Allocator allocator);
 
 // Creates a HashSet with the given properties.
 //
@@ -90,20 +89,20 @@ NODISCARD Status hash_set_init_allocator(HashSet* hs,
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Stripped implementation of a map.
-NODISCARD Status hash_set_init(HashSet* hs,
-                               size_t   capacity,
-                               size_t   key_size,
-                               size_t   key_align,
-                               Hash (*hash)(const void*),
-                               int (*compare)(const void*, const void*));
-void             hash_set_deinit(HashSet* hs);
+[[nodiscard]] Status hash_set_init(HashSet* hs,
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*));
+void                 hash_set_deinit(HashSet* hs);
 
 size_t hash_set_capacity(const HashSet* hs);
 size_t hash_set_count(const HashSet* hs);
 
-void             hash_set_clear_retaining_capacity(HashSet* hs);
-NODISCARD Status hash_set_ensure_total_capacity(HashSet* hs, size_t new_size);
-NODISCARD Status hash_set_ensure_unused_capacity(HashSet* hs, size_t additional_size);
+void                 hash_set_clear_retaining_capacity(HashSet* hs);
+[[nodiscard]] Status hash_set_ensure_total_capacity(HashSet* hs, size_t new_size);
+[[nodiscard]] Status hash_set_ensure_unused_capacity(HashSet* hs, size_t additional_size);
 
 // Rehash the map, in-place.
 //
@@ -119,21 +118,21 @@ NODISCARD Status hash_set_ensure_unused_capacity(HashSet* hs, size_t additional_
 void hash_set_rehash(HashSet* hs);
 
 // Inserts an entry into the map, assuming it is not present and no growth is needed.
-void             hash_set_put_assume_capacity_no_clobber(HashSet* hs, const void* key);
-NODISCARD Status hash_set_put_no_clobber(HashSet* hs, const void* key);
+void                 hash_set_put_assume_capacity_no_clobber(HashSet* hs, const void* key);
+[[nodiscard]] Status hash_set_put_no_clobber(HashSet* hs, const void* key);
 
-SetGetOrPutResult hash_set_get_or_put_assume_capacity(HashSet* hs, const void* key);
-NODISCARD Status  hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutResult* result);
-void              hash_set_put_assume_capacity(HashSet* hs, const void* key);
-NODISCARD Status  hash_set_put(HashSet* hs, const void* key);
+SetGetOrPutResult    hash_set_get_or_put_assume_capacity(HashSet* hs, const void* key);
+[[nodiscard]] Status hash_set_get_or_put(HashSet* hs, const void* key, SetGetOrPutResult* result);
+void                 hash_set_put_assume_capacity(HashSet* hs, const void* key);
+[[nodiscard]] Status hash_set_put(HashSet* hs, const void* key);
 
-bool             hash_set_contains(const HashSet* hs, const void* key);
-NODISCARD Status hash_set_get_index(const HashSet* hs, const void* key, size_t* index);
+bool                 hash_set_contains(const HashSet* hs, const void* key);
+[[nodiscard]] Status hash_set_get_index(const HashSet* hs, const void* key, size_t* index);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-NODISCARD Status hash_set_get_entry(HashSet* hs, const void* key, SetEntry* e);
+[[nodiscard]] Status hash_set_get_entry(HashSet* hs, const void* key, SetEntry* e);
 
-NODISCARD Status hash_set_remove(HashSet* hs, const void* key);
+[[nodiscard]] Status hash_set_remove(HashSet* hs, const void* key);
 
 HashSetIterator hash_set_iterator_init(HashSet* hs);
 bool            hash_set_iterator_has_next(HashSetIterator* it, SetEntry* next);

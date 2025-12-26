@@ -8,10 +8,10 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status jump_statement_create(Token           start_token,
-                                       Expression*     value,
-                                       JumpStatement** jump_stmt,
-                                       memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status jump_statement_create(Token           start_token,
+                                           Expression*     value,
+                                           JumpStatement** jump_stmt,
+                                           memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
     assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
@@ -37,9 +37,8 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(jump);
 }
 
-NODISCARD Status jump_statement_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -62,14 +61,13 @@ NODISCARD Status jump_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status jump_statement_analyze(Node*                             node,
+                                            [[maybe_unused]] SemanticContext* parent,
+                                            [[maybe_unused]] ArrayList*       errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    JumpStatement* jump = (JumpStatement*)node;
+    [[maybe_unused]] JumpStatement* jump = (JumpStatement*)node;
 
-    MAYBE_UNUSED(jump);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

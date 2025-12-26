@@ -1,7 +1,6 @@
 #ifndef HASH_MAP_H
 #define HASH_MAP_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -117,15 +116,15 @@ typedef struct {
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Heavily inspired by Zig's unmanaged HashMap.
-NODISCARD Status hash_map_init_allocator(HashMap* hm,
-                                         size_t   capacity,
-                                         size_t   key_size,
-                                         size_t   key_align,
-                                         size_t   value_size,
-                                         size_t   value_align,
-                                         Hash (*hash)(const void*),
-                                         int (*compare)(const void*, const void*),
-                                         Allocator allocator);
+[[nodiscard]] Status hash_map_init_allocator(HashMap* hm,
+                                             size_t   capacity,
+                                             size_t   key_size,
+                                             size_t   key_align,
+                                             size_t   value_size,
+                                             size_t   value_align,
+                                             Hash (*hash)(const void*),
+                                             int (*compare)(const void*, const void*),
+                                             Allocator allocator);
 
 // Creates a HashMap with the given properties.
 //
@@ -137,22 +136,22 @@ NODISCARD Status hash_map_init_allocator(HashMap* hm,
 // `hash` is a user defined function pointer for hashing keys.
 //
 // Heavily inspired by Zig's unmanaged HashMap.
-NODISCARD Status hash_map_init(HashMap* hm,
-                               size_t   capacity,
-                               size_t   key_size,
-                               size_t   key_align,
-                               size_t   value_size,
-                               size_t   value_align,
-                               Hash (*hash)(const void*),
-                               int (*compare)(const void*, const void*));
-void             hash_map_deinit(HashMap* hm);
+[[nodiscard]] Status hash_map_init(HashMap* hm,
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   size_t   value_size,
+                                   size_t   value_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*));
+void                 hash_map_deinit(HashMap* hm);
 
 size_t hash_map_capacity(const HashMap* hm);
 size_t hash_map_count(const HashMap* hm);
 
-void             hash_map_clear_retaining_capacity(HashMap* hm);
-NODISCARD Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
-NODISCARD Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
+void                 hash_map_clear_retaining_capacity(HashMap* hm);
+[[nodiscard]] Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
+[[nodiscard]] Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 
 // Rehash the map, in-place.
 //
@@ -169,22 +168,22 @@ void hash_map_rehash(HashMap* hm);
 
 // Inserts an entry into the map, assuming it is not present and no growth is needed.
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
-NODISCARD Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
+[[nodiscard]] Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
 
-MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
-NODISCARD Status  hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
-void              hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
-NODISCARD Status  hash_map_put(HashMap* hm, const void* key, const void* value);
+MapGetOrPutResult    hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
+[[nodiscard]] Status hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
+void                 hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
+[[nodiscard]] Status hash_map_put(HashMap* hm, const void* key, const void* value);
 
-bool             hash_map_contains(const HashMap* hm, const void* key);
-NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
-NODISCARD Status hash_map_get_value(const HashMap* hm, const void* key, void* value);
-NODISCARD Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
+bool                 hash_map_contains(const HashMap* hm, const void* key);
+[[nodiscard]] Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
+[[nodiscard]] Status hash_map_get_value(const HashMap* hm, const void* key, void* value);
+[[nodiscard]] Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);
 
 // Gets the entry corresponding to the provided key. The returned data is owned by the map.
-NODISCARD Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
+[[nodiscard]] Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e);
 
-NODISCARD Status hash_map_remove(HashMap* hm, const void* key);
+[[nodiscard]] Status hash_map_remove(HashMap* hm, const void* key);
 
 HashMapIterator hash_map_iterator_init(HashMap* hm);
 bool            hash_map_iterator_has_next(HashMapIterator* it, MapEntry* next);

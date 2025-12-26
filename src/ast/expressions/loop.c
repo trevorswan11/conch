@@ -21,13 +21,13 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     array_list_deinit(captures);
 }
 
-NODISCARD Status for_loop_expression_create(Token               start_token,
-                                            ArrayList           iterables,
-                                            ArrayList           captures,
-                                            BlockStatement*     block,
-                                            Statement*          non_break,
-                                            ForLoopExpression** for_expr,
-                                            memory_alloc_fn     memory_alloc) {
+[[nodiscard]] Status for_loop_expression_create(Token               start_token,
+                                                ArrayList           iterables,
+                                                ArrayList           captures,
+                                                BlockStatement*     block,
+                                                Statement*          non_break,
+                                                ForLoopExpression** for_expr,
+                                                memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(block);
     assert(iterables.item_size == sizeof(Expression*));
@@ -61,9 +61,8 @@ void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(for_loop);
 }
 
-NODISCARD Status for_loop_expression_reconstruct(Node*          node,
-                                                 const HashMap* symbol_map,
-                                                 StringBuilder* sb) {
+[[nodiscard]] Status
+for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -117,29 +116,26 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status for_loop_expression_analyze(Node*            node,
-                                             SemanticContext* parent,
-                                             ArrayList*       errors) {
+[[nodiscard]] Status for_loop_expression_analyze(Node*                             node,
+                                                 [[maybe_unused]] SemanticContext* parent,
+                                                 [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    ForLoopExpression* for_loop = (ForLoopExpression*)node;
+    [[maybe_unused]] ForLoopExpression* for_loop = (ForLoopExpression*)node;
     assert(for_loop->iterables.data && for_loop->iterables.length > 0);
     ASSERT_STATEMENT(for_loop->block);
 
-    MAYBE_UNUSED(for_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status while_loop_expression_create(Token                 start_token,
-                                              Expression*           condition,
-                                              Expression*           continuation,
-                                              BlockStatement*       block,
-                                              Statement*            non_break,
-                                              WhileLoopExpression** while_expr,
-                                              memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status while_loop_expression_create(Token                 start_token,
+                                                  Expression*           condition,
+                                                  Expression*           continuation,
+                                                  BlockStatement*       block,
+                                                  Statement*            non_break,
+                                                  WhileLoopExpression** while_expr,
+                                                  memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
 
     WhileLoopExpression* while_loop = memory_alloc(sizeof(WhileLoopExpression));
@@ -170,9 +166,8 @@ void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(while_loop);
 }
 
-NODISCARD Status while_loop_expression_reconstruct(Node*          node,
-                                                   const HashMap* symbol_map,
-                                                   StringBuilder* sb) {
+[[nodiscard]] Status
+while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -205,27 +200,24 @@ NODISCARD Status while_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status while_loop_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors) {
+[[nodiscard]] Status while_loop_expression_analyze(Node*                             node,
+                                                   [[maybe_unused]] SemanticContext* parent,
+                                                   [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
+    [[maybe_unused]] WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
     ASSERT_EXPRESSION(while_loop->condition);
     ASSERT_STATEMENT(while_loop->block);
 
-    MAYBE_UNUSED(while_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status do_while_loop_expression_create(Token                   start_token,
-                                                 BlockStatement*         block,
-                                                 Expression*             condition,
-                                                 DoWhileLoopExpression** do_while_expr,
-                                                 memory_alloc_fn         memory_alloc) {
+[[nodiscard]] Status do_while_loop_expression_create(Token                   start_token,
+                                                     BlockStatement*         block,
+                                                     Expression*             condition,
+                                                     DoWhileLoopExpression** do_while_expr,
+                                                     memory_alloc_fn         memory_alloc) {
     assert(memory_alloc);
 
     DoWhileLoopExpression* do_while_loop = memory_alloc(sizeof(DoWhileLoopExpression));
@@ -252,9 +244,8 @@ void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(do_while_loop);
 }
 
-NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
-                                                      const HashMap* symbol_map,
-                                                      StringBuilder* sb) {
+[[nodiscard]] Status
+do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -272,26 +263,23 @@ NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status do_while_loop_expression_analyze(Node*            node,
-                                                  SemanticContext* parent,
-                                                  ArrayList*       errors) {
+[[nodiscard]] Status do_while_loop_expression_analyze(Node*                             node,
+                                                      [[maybe_unused]] SemanticContext* parent,
+                                                      [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    WhileLoopExpression* do_while_loop = (WhileLoopExpression*)node;
+    [[maybe_unused]] WhileLoopExpression* do_while_loop = (WhileLoopExpression*)node;
     ASSERT_STATEMENT(do_while_loop->block);
     ASSERT_EXPRESSION(do_while_loop->condition);
 
-    MAYBE_UNUSED(do_while_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status loop_expression_create(Token            start_token,
-                                        BlockStatement*  block,
-                                        LoopExpression** loop_expr,
-                                        memory_alloc_fn  memory_alloc) {
+[[nodiscard]] Status loop_expression_create(Token            start_token,
+                                            BlockStatement*  block,
+                                            LoopExpression** loop_expr,
+                                            memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
 
     LoopExpression* loop = memory_alloc(sizeof(LoopExpression));
@@ -316,9 +304,8 @@ void loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(loop);
 }
 
-NODISCARD Status loop_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -330,15 +317,14 @@ NODISCARD Status loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status loop_expression_analyze(Node*                             node,
+                                             [[maybe_unused]] SemanticContext* parent,
+                                             [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    LoopExpression* loop = (LoopExpression*)node;
+    [[maybe_unused]] LoopExpression* loop = (LoopExpression*)node;
     ASSERT_STATEMENT(loop->block);
 
-    MAYBE_UNUSED(loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

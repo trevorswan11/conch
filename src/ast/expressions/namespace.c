@@ -8,11 +8,11 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status namespace_expression_create(Token                 start_token,
-                                             Expression*           outer,
-                                             IdentifierExpression* inner,
-                                             NamespaceExpression** namespace_expr,
-                                             memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status namespace_expression_create(Token                 start_token,
+                                                 Expression*           outer,
+                                                 IdentifierExpression* inner,
+                                                 NamespaceExpression** namespace_expr,
+                                                 memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(outer);
     ASSERT_EXPRESSION(inner);
@@ -41,9 +41,8 @@ void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(namespace_expr);
 }
 
-NODISCARD Status namespace_expression_reconstruct(Node*          node,
-                                                  const HashMap* symbol_map,
-                                                  StringBuilder* sb) {
+[[nodiscard]] Status
+namespace_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -58,9 +57,8 @@ NODISCARD Status namespace_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status namespace_expression_analyze(Node*            node,
-                                              SemanticContext* parent,
-                                              ArrayList*       errors) {
+[[nodiscard]] Status
+namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -80,6 +78,14 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
            RC_RELEASE(direct_parent, allocator.free_alloc));
     switch (direct_parent->tag) {
     case STYPE_ENUM: {
+        const HashSet variants = direct_parent->variant.enum_type->variants;
+        if (!hash_set_contains(&variants, &namespace_expr->inner->name)) {
+            PUT_STATUS_PROPAGATE(errors, UNKNOWN_ENUM_VARIANT, start_token, {
+                RC_RELEASE(direct_parent, allocator.free_alloc);
+                RC_RELEASE(inner_type, allocator.free_alloc);
+            });
+        }
+
         TRY_DO(semantic_type_copy_variant(inner_type, direct_parent, allocator), {
             RC_RELEASE(direct_parent, allocator.free_alloc);
             RC_RELEASE(inner_type, allocator.free_alloc);

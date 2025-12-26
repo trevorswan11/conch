@@ -17,7 +17,7 @@
 
 #include "util/status.h"
 
-NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
+[[nodiscard]] Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -34,15 +34,13 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
     TypeExpression* type = (TypeExpression*)type_expr;
 
-    Expression* value = NULL;
+    Expression* value = nullptr;
     if (value_initialized) {
         TRY_DO(expression_parse(p, LOWEST, &value), {
             NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
             NODE_VIRTUAL_FREE(type, p->allocator.free_alloc);
         });
     }
-
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     DeclStatement* decl_stmt;
     const Status   create_status = decl_statement_create(
@@ -59,7 +57,7 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
+[[nodiscard]] Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -95,8 +93,6 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
         value = (Expression*)type;
     }
 
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
-
     TypeDeclStatement* type_decl;
     TRY_DO(
         type_decl_statement_create(
@@ -110,30 +106,28 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
     return SUCCESS;
 }
 
-NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
+[[nodiscard]] Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    Expression* value       = NULL;
+    Expression* value       = nullptr;
 
-    if (start_token.type != CONTINUE && !parser_peek_token_is(p, END)) {
-        TRY(parser_next_token(p));
-
-        if (!parser_current_token_is(p, SEMICOLON)) { TRY(expression_parse(p, LOWEST, &value)); }
+    if (start_token.type != CONTINUE && !parser_peek_token_is(p, END) &&
+        !parser_peek_token_is(p, SEMICOLON)) {
+        UNREACHABLE_IF_ERROR(parser_next_token(p));
+        TRY(expression_parse(p, LOWEST, &value));
     }
 
     JumpStatement* jump_stmt;
     TRY_DO(jump_statement_create(start_token, value, &jump_stmt, p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(value, p->allocator.free_alloc));
 
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
-
     *stmt = jump_stmt;
     return SUCCESS;
 }
 
-NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
+[[nodiscard]] Status expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
     const Token start_token = p->current_token;
@@ -145,15 +139,11 @@ NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stm
     TRY_DO(expression_statement_create(start_token, lhs, &expr_stmt, p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
 
-    if (parser_peek_token_is(p, SEMICOLON)) {
-        TRY_DO(parser_next_token(p), NODE_VIRTUAL_FREE(lhs, p->allocator.free_alloc));
-    }
-
     *stmt = expr_stmt;
     return SUCCESS;
 }
 
-NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
+[[nodiscard]] Status block_statement_parse(Parser* p, BlockStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -180,7 +170,7 @@ NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
+[[nodiscard]] Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -208,13 +198,11 @@ NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
         NODE_VIRTUAL_FREE(block, p->allocator.free_alloc);
     });
 
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
-
     *stmt = impl;
     return SUCCESS;
 }
 
-NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
+[[nodiscard]] Status import_statement_parse(Parser* p, ImportStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -246,7 +234,7 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
         PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_TOKEN, p->peek_token, {});
     }
 
-    IdentifierExpression* alias = NULL;
+    IdentifierExpression* alias = nullptr;
     if (parser_peek_token_is(p, AS)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         TRY_DO(parser_expect_peek(p, IDENT), NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
@@ -267,13 +255,11 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
                start_token, tag, variant, alias, &import, p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));
 
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
-
     *stmt = import;
     return SUCCESS;
 }
 
-NODISCARD Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
+[[nodiscard]] Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -287,8 +273,6 @@ NODISCARD Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
     DiscardStatement* discard;
     TRY_DO(discard_statement_create(start_token, to_discard, &discard, p->allocator.memory_alloc),
            NODE_VIRTUAL_FREE(to_discard, p->allocator.free_alloc));
-
-    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
 
     *stmt = discard;
     return SUCCESS;

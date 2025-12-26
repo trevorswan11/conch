@@ -17,53 +17,17 @@ if(APPLE)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(MSVC)
-    # Completely wipe MSVC builtin flags
-    set(CMAKE_C_FLAGS_DEBUG "")
-    set(CMAKE_CXX_FLAGS_DEBUG "")
+set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
+set(WARNING_IGNORE "-w")
 
-    set(CMAKE_C_FLAGS_RELEASE "")
-    set(CMAKE_CXX_FLAGS_RELEASE "")
-
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-
-    set(CMAKE_C_FLAGS_MINSIZEREL "")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "")
-
-    string(REPLACE "/RTC1" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/RTCsu" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/RTCsu" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
-    # MSVC has configurations, but dist needs to be manually populated
-    set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
-    set(CMAKE_C_FLAGS_DIST          "")
-    set(CMAKE_CXX_FLAGS_DIST        "")
-    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
-    set(CMAKE_SHARED_LINKER_FLAGS_DIST "")
-    set(CMAKE_MODULE_LINKER_FLAGS_DIST "")
-
-    # Set common flags for unix-faithful building
-    set(BASE_FLAGS "/W4" "/WX" "/wd4232")
-    set(WARNING_IGNORE "/W0")
-
-    set(DIST_FLAGS "/O2" "/DNDEBUG" "/DDIST")
-    set(RELEASE_FLAGS "/O1" "/DRELEASE")
-    set(DEBUG_FLAGS "/Zi" "/DDEBUG" "/RTC1")
-else()
-    set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
-    set(WARNING_IGNORE "-w")
-
-    set(DIST_FLAGS "-O3" "-DNDEBUG" "-DDIST")
-    set(RELEASE_FLAGS "-O2" "-DRELEASE")
-    set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
-endif()
+set(DIST_FLAGS "-O3" "-DNDEBUG" "-DDIST")
+set(RELEASE_FLAGS "-O2" "-DRELEASE")
+set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
 
 # Source file collection
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
@@ -85,16 +49,14 @@ function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${BASE_FLAGS})
 
     target_compile_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    if(NOT MSVC)
-        target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    endif()
+    target_link_options(conch_core_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
     set_target_properties(conch_core_${TARGET_NAME}
         PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUT_DIR})
 
     # Fresh catch2 configuration per target
     add_library(catch2_${TARGET_NAME}
         STATIC tests/test_framework/catch_amalgamated.cpp)
-    
+
     target_include_directories(catch2_${TARGET_NAME}
         PUBLIC tests/test_framework)
 
@@ -112,9 +74,7 @@ function(create_conch_suite TARGET_NAME EXTRA_FLAGS OUT_DIR)
     target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${WARNING_IGNORE})
 
     target_compile_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    if(NOT MSVC)
-        target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
-    endif()
+    target_link_options(conch_tests_${TARGET_NAME} PRIVATE ${EXTRA_FLAGS})
     set_target_properties(conch_tests_${TARGET_NAME}
         PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OUT_DIR})
 endfunction()
@@ -146,33 +106,19 @@ add_test(NAME run_tests_release COMMAND conch_tests_release)
 add_test(NAME run_tests_dist COMMAND conch_tests_dist)
 
 # Compiler specific configuration
-if(MSVC)
-    add_custom_target(conch ALL
-        DEPENDS
-            $<$<CONFIG:Debug>:conch_debug>
-            $<$<CONFIG:Release>:conch_release>
-            $<$<CONFIG:Dist>:conch_dist>)
+add_custom_target(conch DEPENDS dist release debug)
 
-    add_custom_target(conch_tests ALL
-        DEPENDS
-            $<$<CONFIG:Debug>:conch_tests_debug>
-            $<$<CONFIG:Release>:conch_tests_release>
-            $<$<CONFIG:Dist>:conch_tests_dist>)
-else()
-    add_custom_target(conch DEPENDS dist release debug)
+add_custom_target(qtest
+    DEPENDS conch_tests_debug
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+    USES_TERMINAL)
 
-    add_custom_target(qtest
-        DEPENDS conch_tests_debug
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
-        USES_TERMINAL)
-
-    add_custom_target(conch_tests
-        DEPENDS conch_tests_debug conch_tests_release conch_tests_dist
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_release
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_dist
-        USES_TERMINAL)
-endif()
+add_custom_target(conch_tests
+    DEPENDS conch_tests_debug conch_tests_release conch_tests_dist
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_debug
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_release
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R run_tests_dist
+    USES_TERMINAL)
 
 # Standard tooling disabled on windows due to clang/llvm weirdness
 if(NOT WIN32 AND

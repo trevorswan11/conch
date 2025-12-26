@@ -13,19 +13,17 @@ typedef struct ArrayLiteralExpression {
     ArrayList  items;
 } ArrayLiteralExpression;
 
-NODISCARD Status array_literal_expression_create(Token                    start_token,
-                                                 bool                     inferred_size,
-                                                 ArrayList                items,
-                                                 ArrayLiteralExpression** array_expr,
-                                                 memory_alloc_fn          memory_alloc);
+[[nodiscard]] Status array_literal_expression_create(Token                    start_token,
+                                                     bool                     inferred_size,
+                                                     ArrayList                items,
+                                                     ArrayLiteralExpression** array_expr,
+                                                     memory_alloc_fn          memory_alloc);
 
-void             array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status array_literal_expression_reconstruct(Node*          node,
-                                                      const HashMap* symbol_map,
-                                                      StringBuilder* sb);
-NODISCARD Status array_literal_expression_analyze(Node*            node,
-                                                  SemanticContext* parent,
-                                                  ArrayList*       errors);
+void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+array_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable ARRAY_VTABLE = {
     .base =

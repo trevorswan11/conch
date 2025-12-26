@@ -6,12 +6,12 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status if_expression_create(Token           start_token,
-                                      Expression*     condition,
-                                      Statement*      consequence,
-                                      Statement*      alternate,
-                                      IfExpression**  if_expr,
-                                      memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status if_expression_create(Token           start_token,
+                                          Expression*     condition,
+                                          Statement*      consequence,
+                                          Statement*      alternate,
+                                          IfExpression**  if_expr,
+                                          memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(condition);
     ASSERT_EXPRESSION(consequence);
@@ -42,9 +42,8 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(if_expr);
 }
 
-NODISCARD Status if_expression_reconstruct(Node*          node,
-                                           const HashMap* symbol_map,
-                                           StringBuilder* sb) {
+[[nodiscard]] Status
+if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -67,16 +66,15 @@ NODISCARD Status if_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status if_expression_analyze(Node*                             node,
+                                           [[maybe_unused]] SemanticContext* parent,
+                                           [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    IfExpression* if_expr = (IfExpression*)node;
+    [[maybe_unused]] IfExpression* if_expr = (IfExpression*)node;
     ASSERT_EXPRESSION(if_expr->condition);
     ASSERT_EXPRESSION(if_expr->consequence);
 
-    MAYBE_UNUSED(if_expr);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

@@ -1,8 +1,6 @@
 #ifndef FUNCTION_EXPR_H
 #define FUNCTION_EXPR_H
 
-#include <stdbool.h>
-
 #include "ast/expressions/expression.h"
 
 #include "util/containers/array_list.h"
@@ -18,10 +16,9 @@ typedef struct Parameter {
     Expression*           default_value;
 } Parameter;
 
-void             free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
-NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb);
+void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
 
 typedef struct FunctionExpression {
     Expression      base;
@@ -31,21 +28,19 @@ typedef struct FunctionExpression {
     BlockStatement* body;
 } FunctionExpression;
 
-NODISCARD Status function_expression_create(Token                start_token,
-                                            ArrayList            generics,
-                                            ArrayList            parameters,
-                                            TypeExpression*      return_type,
-                                            BlockStatement*      body,
-                                            FunctionExpression** function_expr,
-                                            memory_alloc_fn      memory_alloc);
+[[nodiscard]] Status function_expression_create(Token                start_token,
+                                                ArrayList            generics,
+                                                ArrayList            parameters,
+                                                TypeExpression*      return_type,
+                                                BlockStatement*      body,
+                                                FunctionExpression** function_expr,
+                                                memory_alloc_fn      memory_alloc);
 
-void             function_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status function_expression_reconstruct(Node*          node,
-                                                 const HashMap* symbol_map,
-                                                 StringBuilder* sb);
-NODISCARD Status function_expression_analyze(Node*            node,
-                                             SemanticContext* parent,
-                                             ArrayList*       errors);
+void function_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+function_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable FUNCTION_VTABLE = {
     .base =

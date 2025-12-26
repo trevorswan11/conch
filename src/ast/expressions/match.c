@@ -20,12 +20,12 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     array_list_deinit(arms);
 }
 
-NODISCARD Status match_expression_create(Token             start_token,
-                                         Expression*       expression,
-                                         ArrayList         arms,
-                                         Statement*        catch_all,
-                                         MatchExpression** match_expr,
-                                         memory_alloc_fn   memory_alloc) {
+[[nodiscard]] Status match_expression_create(Token             start_token,
+                                             Expression*       expression,
+                                             ArrayList         arms,
+                                             Statement*        catch_all,
+                                             MatchExpression** match_expr,
+                                             memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(expression);
     assert(arms.item_size == sizeof(MatchArm));
@@ -57,9 +57,8 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(match);
 }
 
-NODISCARD Status match_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -93,16 +92,15 @@ NODISCARD Status match_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status match_expression_analyze(Node*                             node,
+                                              [[maybe_unused]] SemanticContext* parent,
+                                              [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    MatchExpression* match = (MatchExpression*)node;
+    [[maybe_unused]] MatchExpression* match = (MatchExpression*)node;
     ASSERT_EXPRESSION(match->expression);
     assert(match->arms.data && match->arms.length > 0);
 
-    MAYBE_UNUSED(match);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

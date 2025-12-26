@@ -12,11 +12,11 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status type_expression_create(Token               start_token,
-                                        TypeExpressionTag   tag,
-                                        TypeExpressionUnion variant,
-                                        TypeExpression**    type_expr,
-                                        memory_alloc_fn     memory_alloc) {
+[[nodiscard]] Status type_expression_create(Token               start_token,
+                                            TypeExpressionTag   tag,
+                                            TypeExpressionUnion variant,
+                                            TypeExpression**    type_expr,
+                                            memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     TypeExpression* type = memory_alloc(sizeof(TypeExpression));
     if (!type) { return ALLOCATION_FAILED; }
@@ -73,9 +73,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type);
 }
 
-NODISCARD Status type_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -91,7 +90,8 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -127,7 +127,7 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
                 new_symbol_type->variant  = SEMANTIC_DATALESS_TYPE;
                 new_symbol_type->nullable = explicit_type.nullable;
             } else if (semantic_context_find(parent, true, probe_type_name, &probe_symbol_type)) {
-                // Double null doesn't make sense, guard before making the new type
+                // Double nullable doesn't make sense, guard before making the new type
                 if (probe_symbol_type->nullable && explicit_type.nullable) {
                     PUT_STATUS_PROPAGATE(errors,
                                          DOUBLE_NULLABLE,
@@ -186,9 +186,9 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
     return SUCCESS;
 }
 
-NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
-                                           const HashMap* symbol_map,
-                                           StringBuilder* sb) {
+[[nodiscard]] Status explicit_type_reconstruct(ExplicitType   explicit_type,
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb) {
     assert(sb);
 
     switch (explicit_type.tag) {

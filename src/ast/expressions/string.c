@@ -7,9 +7,9 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status string_literal_expression_create(Token                     start_token,
-                                                  StringLiteralExpression** string_expr,
-                                                  Allocator                 allocator) {
+[[nodiscard]] Status string_literal_expression_create(Token                     start_token,
+                                                      StringLiteralExpression** string_expr,
+                                                      Allocator                 allocator) {
     ASSERT_ALLOCATOR(allocator);
     StringLiteralExpression* string = allocator.memory_alloc(sizeof(StringLiteralExpression));
     if (!string) { return ALLOCATION_FAILED; }
@@ -36,11 +36,9 @@ void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(string_expr);
 }
 
-NODISCARD Status string_literal_expression_reconstruct(Node*          node,
-                                                       const HashMap* symbol_map,
-                                                       StringBuilder* sb) {
+[[nodiscard]] Status string_literal_expression_reconstruct(
+    Node* node, [[maybe_unused]] const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     // The tokenizer drops the start of multiline strings so we have to reconstruct here
@@ -53,8 +51,8 @@ NODISCARD Status string_literal_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status string_literal_expression_analyze(Node*            node,
-                                                   SemanticContext* parent,
-                                                   ArrayList*       errors) {
+[[nodiscard]] Status string_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                       SemanticContext*            parent,
+                                                       [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_STR, false, semantic_context_allocator(parent).memory_alloc);
 }

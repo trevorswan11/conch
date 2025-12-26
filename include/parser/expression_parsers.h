@@ -2,7 +2,6 @@
 #define EXPRESSION_PARSERS_H
 
 #include <assert.h>
-#include <stdbool.h>
 
 #include "parser/parser.h"
 
@@ -10,59 +9,60 @@
 
 typedef struct TypeExpression TypeExpression;
 
-NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
-NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status
+expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
+[[nodiscard]] Status identifier_expression_parse(Parser* p, Expression** expression);
 
 // Allocates and parses all function parameters and consumes them from the parser.
-NODISCARD Status parameter_list_parse(Parser*    p,
-                                      ArrayList* parameters,
-                                      bool*      contains_default_param);
+[[nodiscard]] Status
+parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_param);
 
 // Parses a generic list, including the opening and closing delimiters.
 //
 // The generics are necessarily allocated internally, but can be empty.
 // If generics are not present for parsing, this only allocates the generics.
-NODISCARD Status generics_parse(Parser* p, ArrayList* generics);
+[[nodiscard]] Status generics_parse(Parser* p, ArrayList* generics);
 
 // Parses a function definition, assuming the current token is a function.
-NODISCARD Status function_definition_parse(Parser*          p,
-                                           ArrayList*       generics,
-                                           ArrayList*       parameters,
-                                           TypeExpression** return_type,
-                                           bool*            contains_default_param);
+[[nodiscard]] Status function_definition_parse(Parser*          p,
+                                               ArrayList*       generics,
+                                               ArrayList*       parameters,
+                                               TypeExpression** return_type,
+                                               bool*            contains_default_param);
 
 // Parses an explicit type without considering colon or assignment presence
-NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
+[[nodiscard]] Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
 
-NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool* initialized);
-NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status byte_literal_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status infix_expression_parse(Parser* p, Expression* left, Expression** expression);
-NODISCARD Status bool_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status string_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status if_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status function_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expression** expression);
-NODISCARD Status index_expression_parse(Parser* p, Expression* array, Expression** expression);
-NODISCARD Status struct_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status enum_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status nil_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status match_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status loop_expression_parse(Parser* p, Expression** expression);
-NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
-NODISCARD Status assignment_expression_parse(Parser*      p,
-                                             Expression*  assignee,
-                                             Expression** expression);
+[[nodiscard]] Status type_expression_parse(Parser* p, Expression** expression, bool* initialized);
+[[nodiscard]] Status integer_literal_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status byte_literal_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status float_literal_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status prefix_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status infix_expression_parse(Parser* p, Expression* left, Expression** expression);
+[[nodiscard]] Status bool_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status string_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status grouped_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status if_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status function_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status
+call_expression_parse(Parser* p, Expression* function, Expression** expression);
+[[nodiscard]] Status index_expression_parse(Parser* p, Expression* array, Expression** expression);
+[[nodiscard]] Status struct_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status enum_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status nil_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status match_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status array_literal_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status for_loop_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status while_loop_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status do_while_loop_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status loop_expression_parse(Parser* p, Expression** expression);
+[[nodiscard]] Status
+namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
+[[nodiscard]] Status
+assignment_expression_parse(Parser* p, Expression* assignee, Expression** expression);
 
-typedef NODISCARD Status (*prefix_parse_fn)(Parser*, Expression**);
-typedef NODISCARD Status (*infix_parse_fn)(Parser*, Expression*, Expression**);
+typedef Status (*prefix_parse_fn)(Parser*, Expression**);
+typedef Status (*infix_parse_fn)(Parser*, Expression*, Expression**);
 
 typedef struct PrefixFn {
     TokenType       token_key;
@@ -123,7 +123,7 @@ static inline bool poll_prefix(Parser* p, TokenType type, PrefixFn* prefix) {
     assert(p && prefix);
 
     SetEntry e;
-    PrefixFn prefix_probe = {type, NULL};
+    PrefixFn prefix_probe = {type, nullptr};
     if (STATUS_ERR(hash_set_get_entry(&p->prefix_parse_fns, &prefix_probe, &e))) { return false; }
 
     *prefix = *(PrefixFn*)e.key_ptr;
@@ -152,7 +152,7 @@ static inline bool poll_infix(Parser* p, TokenType type, InfixFn* infix) {
     assert(p && infix);
 
     SetEntry e;
-    InfixFn  infix_probe = {type, NULL};
+    InfixFn  infix_probe = {type, nullptr};
     if (STATUS_ERR(hash_set_get_entry(&p->infix_parse_fns, &infix_probe, &e))) { return false; }
 
     *infix = *(InfixFn*)e.key_ptr;

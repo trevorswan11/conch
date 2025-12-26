@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include "util/io.h"
@@ -12,7 +11,7 @@ FileIO file_io_std(void) {
     };
 }
 
-NODISCARD Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
+[[nodiscard]] Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
     assert(io && out && err);
 
     *io = (FileIO){

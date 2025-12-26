@@ -8,11 +8,11 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status impl_statement_create(Token                 start_token,
-                                       IdentifierExpression* parent,
-                                       BlockStatement*       implementation,
-                                       ImplStatement**       impl_stmt,
-                                       memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status impl_statement_create(Token                 start_token,
+                                           IdentifierExpression* parent,
+                                           BlockStatement*       implementation,
+                                           ImplStatement**       impl_stmt,
+                                           memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(parent);
     ASSERT_STATEMENT(implementation);
@@ -42,9 +42,8 @@ void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(impl);
 }
 
-NODISCARD Status impl_statement_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+impl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -61,17 +60,16 @@ NODISCARD Status impl_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status impl_statement_analyze(Node*                             node,
+                                            [[maybe_unused]] SemanticContext* parent,
+                                            [[maybe_unused]] ArrayList*       errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    ImplStatement* impl = (ImplStatement*)node;
+    [[maybe_unused]] ImplStatement* impl = (ImplStatement*)node;
     ASSERT_EXPRESSION(impl->parent);
     ASSERT_STATEMENT(impl->implementation);
     assert(impl->implementation->statements.data && impl->implementation->statements.length > 0);
 
-    MAYBE_UNUSED(impl);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

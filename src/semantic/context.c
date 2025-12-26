@@ -4,9 +4,8 @@
 #include "semantic/symbol.h"
 #include "semantic/type.h"
 
-NODISCARD Status semantic_context_create(SemanticContext*  parent,
-                                         SemanticContext** context,
-                                         Allocator         allocator) {
+[[nodiscard]] Status
+semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     SemanticContext* sem_con = allocator.memory_alloc(sizeof(SemanticContext));
     if (!sem_con) { return ALLOCATION_FAILED; }
@@ -31,7 +30,7 @@ Allocator semantic_context_allocator(SemanticContext* context) {
 SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
     assert(context);
     SemanticType* type     = context->analyzed_type;
-    context->analyzed_type = NULL;
+    context->analyzed_type = nullptr;
     return type;
 }
 
@@ -50,7 +49,7 @@ bool semantic_context_find(SemanticContext* context,
     if (!check_parents) { return symbol_table_find(context->symbol_table, symbol, type); }
 
     SemanticContext* current = context;
-    while (current != NULL) {
+    while (current != nullptr) {
         if (symbol_table_find(current->symbol_table, symbol, type)) { return true; }
 
         current = current->parent;
@@ -64,7 +63,7 @@ bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice
     if (!check_parents) { return symbol_table_has(context->symbol_table, symbol); }
 
     SemanticContext* current = context;
-    while (current != NULL) {
+    while (current != nullptr) {
         if (symbol_table_has(current->symbol_table, symbol)) { return true; }
 
         current = current->parent;

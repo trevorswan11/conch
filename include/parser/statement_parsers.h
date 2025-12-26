@@ -13,13 +13,13 @@ typedef struct ImplStatement       ImplStatement;
 typedef struct ImportStatement     ImportStatement;
 typedef struct DiscardStatement    DiscardStatement;
 
-NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt);
-NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt);
-NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt);
-NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stmt);
-NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt);
-NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt);
-NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt);
-NODISCARD Status discard_statement_parse(Parser* p, DiscardStatement** stmt);
+[[nodiscard]] Status decl_statement_parse(Parser* p, DeclStatement** stmt);
+[[nodiscard]] Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt);
+[[nodiscard]] Status jump_statement_parse(Parser* p, JumpStatement** stmt);
+[[nodiscard]] Status expression_statement_parse(Parser* p, ExpressionStatement** stmt);
+[[nodiscard]] Status block_statement_parse(Parser* p, BlockStatement** stmt);
+[[nodiscard]] Status impl_statement_parse(Parser* p, ImplStatement** stmt);
+[[nodiscard]] Status import_statement_parse(Parser* p, ImportStatement** stmt);
+[[nodiscard]] Status discard_statement_parse(Parser* p, DiscardStatement** stmt);
 
 #endif

@@ -7,12 +7,12 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status import_statement_create(Token                 start_token,
-                                         ImportTag             tag,
-                                         ImportUnion           variant,
-                                         IdentifierExpression* alias,
-                                         ImportStatement**     import_stmt,
-                                         memory_alloc_fn       memory_alloc) {
+[[nodiscard]] Status import_statement_create(Token                 start_token,
+                                             ImportTag             tag,
+                                             ImportUnion           variant,
+                                             IdentifierExpression* alias,
+                                             ImportStatement**     import_stmt,
+                                             memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     ImportStatement* import = memory_alloc(sizeof(ImportStatement));
     if (!import) { return ALLOCATION_FAILED; }
@@ -46,9 +46,8 @@ void import_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(import);
 }
 
-NODISCARD Status import_statement_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+import_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -78,14 +77,13 @@ NODISCARD Status import_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status import_statement_analyze(Node*                             node,
+                                              [[maybe_unused]] SemanticContext* parent,
+                                              [[maybe_unused]] ArrayList*       errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    ImportStatement* import = (ImportStatement*)node;
+    [[maybe_unused]] ImportStatement* import = (ImportStatement*)node;
 
-    MAYBE_UNUSED(import);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

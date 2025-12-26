@@ -8,16 +8,16 @@ typedef struct PrefixExpression {
     Expression* rhs;
 } PrefixExpression;
 
-NODISCARD Status prefix_expression_create(Token              start_token,
-                                          Expression*        rhs,
-                                          PrefixExpression** prefix_expr,
-                                          memory_alloc_fn    memory_alloc);
+[[nodiscard]] Status prefix_expression_create(Token              start_token,
+                                              Expression*        rhs,
+                                              PrefixExpression** prefix_expr,
+                                              memory_alloc_fn    memory_alloc);
 
-void             prefix_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status prefix_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb);
-NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable PREFIX_VTABLE = {
     .base =

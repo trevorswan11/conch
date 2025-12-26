@@ -4,6 +4,7 @@
 #include <string>
 
 #include "fixtures.hpp"
+#include "util/memory.h"
 
 extern "C" {
 #include "ast/ast.h"
@@ -20,6 +21,21 @@ static void test_reconstruction(const char* input, std::string expected) {
     REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
     REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
     REQUIRE(expected == sb.to_string());
+}
+
+TEST_CASE("Symbol map poll") {
+    AST a;
+    REQUIRE(STATUS_OK(ast_init(&a, STANDARD_ALLOCATOR)));
+    const Fixture<AST> af(a, ast_deinit);
+    const auto*        symbols = &a.token_type_symbols;
+
+    const auto  actual_found = poll_tt_symbol(symbols, TokenType::IN);
+    std::string expected     = "in";
+    REQUIRE(expected == actual_found.ptr);
+
+    const auto actual_not_found = poll_tt_symbol(symbols, TokenType::IDENT);
+    expected                    = "IDENT";
+    REQUIRE(expected == actual_not_found.ptr);
 }
 
 TEST_CASE("Declaration reconstructions") {
@@ -52,10 +68,10 @@ TEST_CASE("Declaration reconstructions") {
 
     SECTION("Array types") {
         test_reconstruction("var a: [2uz]int;", "var a: [2uz]int;");
-        test_reconstruction("var a: [2uz]int = [_]{};", "var a: [2uz]int = [_]{ };");
-        test_reconstruction("var a: ?[2uz]int = [_]{};", "var a: ?[2uz]int = [_]{ };");
-        test_reconstruction("var a: [2uz]?int = [_]{};", "var a: [2uz]?int = [_]{ };");
-        test_reconstruction("var a: [2uz, 2uz]int = [_]{};", "var a: [2uz, 2uz]int = [_]{ };");
+        test_reconstruction("var a: [2uz]int = [_]{1,};", "var a: [2uz]int = [_]{ 1, };");
+        test_reconstruction("var a: ?[2uz]int = [_]{1,};", "var a: ?[2uz]int = [_]{ 1, };");
+        test_reconstruction("var a: [2uz]?int = [_]{1,};", "var a: [2uz]?int = [_]{ 1, };");
+        test_reconstruction("var a: [2uz, 2uz]int = [_]{1,};", "var a: [2uz, 2uz]int = [_]{ 1, };");
         test_reconstruction("var a: [2uz]int = [0b10uz]{2, 3, };",
                             "var a: [2uz]int = [2uz]{ 2, 3, };");
         test_reconstruction("const a := a..3u;", "const a := a..3u;");
@@ -111,7 +127,7 @@ TEST_CASE("Short statements") {
 
     SECTION("Discard statements") {
         test_reconstruction("_ = 2", "_ = 2;");
-        test_reconstruction("_ = [_]{}", "_ = [_]{ };");
+        test_reconstruction("_ = [_]{1, }", "_ = [_]{ 1, };");
     }
 
     SECTION("Impl statements") {
@@ -238,5 +254,18 @@ TEST_CASE("Assignment") {
         test_reconstruction("something >>= 2 + 0o237 & 6", "something >>= 2 + 0o237 & 6");
         test_reconstruction("something ~= 2 + 0o237 & 6", "something ~= 2 + 0o237 & 6");
         test_reconstruction("something ^= 2 + 0o237 & 6", "something ^= 2 + 0o237 & 6");
+    }
+}
+
+TEST_CASE("Free functions") {
+    void (*const destructors[])(ArrayList*, free_alloc_fn) = {
+        clear_error_list,
+        free_error_list,
+        free_statement_list,
+        free_expression_list,
+    };
+
+    for (const auto& dtor : destructors) {
+        dtor(nullptr, free);
     }
 }

@@ -268,6 +268,7 @@ TEST_CASE("Enum types") {
                      {"UNDECLARED_IDENTIFIER [Ln 1, Col 34]"});
         test_analyze("var a: enum { b, }", {"ANONYMOUS_ENUM [Ln 1, Col 8]"});
         test_analyze("enum { ONE, TWO, THREE, }", {"ANONYMOUS_ENUM [Ln 1, Col 1]"});
+        test_analyze("type a = enum {ONE,}; a::TWO", {"UNKNOWN_ENUM_VARIANT [Ln 1, Col 23]"});
     }
 }
 
@@ -415,20 +416,53 @@ TEST_CASE("Infix operators") {
     }
 }
 
-TEST_CASE("Indexing") {
-    SECTION("Range Expressions") {
-        test_analyze("const a := 3..60; const b := 20uz; a[b]");
-        test_analyze("const a := 3..6; const b: int = a[2uz]");
-        test_analyze("const a := 3u..=6u; var b: ?uint = a[3uz]");
+TEST_CASE("Arrays") {
+    SECTION("Single dimension arrays") {
+        SECTION("Definitions") {
+            test_analyze("[4uz]{1, 3, 5, 6, }");
+            test_analyze("[_]{1u, 3u, 5u, 6u, }");
+            test_analyze(R"(const strs := [_]{"hello", "world", "!", }; strs[2uz])");
+            test_analyze(R"([_]{[_]{"hello", "world", "!", }, [_]{"hello", "world", "!", }, })");
+            test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, };)");
+            test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[9uz];)");
+            test_analyze(
+                R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[2uz] = [_]{"hello", "world", "?", };)");
+            test_analyze("var a := 3..6; a[2uz] = 4");
+        }
+
+        SECTION("Type mismatches") {
+            test_analyze("[4uz]{1, 3u, 5, 6, }", {"ARRAY_ITEM_TYPE_MISMATCH [Ln 1, Col 1]"});
+            test_analyze("[_]{[4uz]{1, 3, 5, 6, }, [3uz]{1, 3, 5, }, }",
+                         {"ARRAY_ITEM_TYPE_MISMATCH [Ln 1, Col 1]"});
+            test_analyze("[4uz]{1, 3, 5, 6, }[3uz] = 4u", {"TYPE_MISMATCH [Ln 1, Col 20]"});
+            test_analyze(
+                R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[2uz] = [_]{"hello", ",", "world", "?", };)",
+                {"TYPE_MISMATCH [Ln 1, Col 57]"});
+            test_analyze("type a = enum {ONE, }; [_]{a, }",
+                         {"NON_VALUED_ARRAY_ITEM [Ln 1, Col 24]"});
+        }
     }
 
-    SECTION("Incorrect indexing") {
-        test_analyze("3[4]", {"NON_ARRAY_INDEX_TARGET [Ln 1, Col 2]"});
-        test_analyze("const a := 3..6; const b: int = a[2u]",
-                     {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
-        test_analyze("const a := 3..6; const b: int = a[2]",
-                     {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
+    SECTION("Indexing") {
+        SECTION("Range Expressions") {
+            test_analyze("const a := 3..60; const b := 20uz; a[b]");
+            test_analyze("const a := 3..6; const b: int = a[2uz]");
+            test_analyze("const a := 3u..=6u; var b: ?uint = a[3uz]");
+        }
+
+        SECTION("Incorrect indexing") {
+            test_analyze("3[4]", {"NON_ARRAY_INDEX_TARGET [Ln 1, Col 2]"});
+            test_analyze("const a := 3..6; const b: int = a[2u]",
+                         {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
+            test_analyze("const a := 3..6; const b: int = a[2]",
+                         {"UNEXPECTED_ARRAY_INDEX_TYPE [Ln 1, Col 35]"});
+            test_analyze("const a := 3..6; a[2uz] = 4", {"ASSIGNMENT_TO_CONSTANT [Ln 1, Col 19]"});
+        }
     }
+}
+
+TEST_CASE("Illegal namespaces") {
+    test_analyze("1::ONE", {"ILLEGAL_OUTER_NAMESPACE [Ln 1, Col 1]"});
 }
 
 TEST_CASE("Type introspection") {

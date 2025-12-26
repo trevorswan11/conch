@@ -1,7 +1,6 @@
 #ifndef ALPHANUM_H
 #define ALPHANUM_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,9 +14,7 @@ static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }
 //
 // An underscore is considered a letter.
 static inline bool is_letter(char byte) {
-    const bool lower = 'a' <= byte && byte <= 'z';
-    const bool upper = 'A' <= byte && byte <= 'Z';
-    return lower || upper;
+    return ('a' <= byte && byte <= 'z') || ('A' <= byte && byte <= 'Z');
 }
 
 // Checks if the given byte is a whitespace character.
@@ -42,7 +39,7 @@ typedef enum {
 // - The characters are valid for the given base.
 // - The requested integer is not a negative value.
 // - Non-decimal digits have their prefix.
-NODISCARD Status strntoll(const char* str, size_t n, Base base, int64_t* value);
+[[nodiscard]] Status strntoll(const char* str, size_t n, Base base, int64_t* value);
 
 // Returns the unsigned integer form of the input string. Case insensitive.
 //
@@ -51,7 +48,7 @@ NODISCARD Status strntoll(const char* str, size_t n, Base base, int64_t* value);
 // - The characters are valid for the given base.
 // - The requested integer is not a negative value.
 // - Non-decimal digits have their prefix.
-NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value);
+[[nodiscard]] Status strntoull(const char* str, size_t n, Base base, uint64_t* value);
 
 // Returns the size form of the input string. Case insensitive.
 //
@@ -60,16 +57,16 @@ NODISCARD Status strntoull(const char* str, size_t n, Base base, uint64_t* value
 // - The characters are valid for the given base.
 // - The requested integer is not a negative value.
 // - Non-decimal digits have their prefix.
-NODISCARD Status strntouz(const char* str, size_t n, Base base, size_t* value);
+[[nodiscard]] Status strntouz(const char* str, size_t n, Base base, size_t* value);
 
 // Returns the double precision floating point form of the input string.
 //
 // The string can be of any length, but only the first 128 bytes are considered.
-NODISCARD Status strntod(const char* str, size_t n, double* value);
+[[nodiscard]] Status strntod(const char* str, size_t n, double* value);
 
 // Returns the byte representation of a character.
 //
 // Asserts that the input is surrounded by single quotes and is a single logical ASCII character.
-NODISCARD Status strntochr(const char* str, size_t n, uint8_t* out);
+[[nodiscard]] Status strntochr(const char* str, size_t n, uint8_t* out);
 
 #endif

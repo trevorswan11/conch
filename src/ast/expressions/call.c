@@ -20,12 +20,12 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     array_list_deinit(arguments);
 }
 
-NODISCARD Status call_expression_create(Token            start_token,
-                                        Expression*      function,
-                                        ArrayList        arguments,
-                                        ArrayList        generics,
-                                        CallExpression** call_expr,
-                                        memory_alloc_fn  memory_alloc) {
+[[nodiscard]] Status call_expression_create(Token            start_token,
+                                            Expression*      function,
+                                            ArrayList        arguments,
+                                            ArrayList        generics,
+                                            CallExpression** call_expr,
+                                            memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
     assert(arguments.item_size == sizeof(CallArgument));
     ASSERT_EXPRESSION(function);
@@ -56,9 +56,8 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(call);
 }
 
-NODISCARD Status call_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -88,15 +87,14 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status call_expression_analyze(Node*                             node,
+                                             [[maybe_unused]] SemanticContext* parent,
+                                             [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    CallExpression* call = (CallExpression*)node;
+    [[maybe_unused]] CallExpression* call = (CallExpression*)node;
     ASSERT_EXPRESSION(call->function);
 
-    MAYBE_UNUSED(call);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

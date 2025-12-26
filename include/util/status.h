@@ -2,7 +2,6 @@
 #define STATUS_H
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stddef.h>
 
 #define ENUMERATE(ENUM) ENUM
@@ -58,26 +57,23 @@
         }                            \
     } while (0)
 
-// Allows a variable to be left unused.
-//
-// For unused error codes, see `UNREACHABLE_IF_ERROR` or `IGNORE_STATUS`.
-#define MAYBE_UNUSED(x) ((void)(x))
-
 // Prints to stderr without considering the chance of IO failure.
 void debug_print(const char* format, ...);
+
+#define STATUS_CONCAT(a, b) a##b
+#define STATUS_CONCAT2(a, b) STATUS_CONCAT(a, b)
+#define UNIQUE_STATUS_NAME STATUS_CONCAT2(status, __LINE__)
 
 // This raises an assertion when possible, only if the passed expression is true.
 //
 // A debug message is also emitted with the file and approximate line number.
 #ifdef DIST
-#define UNREACHABLE_IF(expr) IGNORE_STATUS(expr)
-#define UNREACHABLE_IF_ERROR(expr) IGNORE_STATUS(expr)
+#define UNREACHABLE_IF(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = ((Status)(expr))
+#define UNREACHABLE_IF_ERROR(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = (expr)
 #define UNREACHABLE
 #else
 #if defined(__GNUC__) || defined(__clang__)
 #define UNREACHABLE_IMPL __builtin_unreachable();
-#elif defined(_MSC_VER)
-#define UNREACHABLE_IMPL __assume(0);
 #else
 #define UNREACHABLE_IMPL abort()
 #endif
@@ -108,7 +104,7 @@ void debug_print(const char* format, ...);
         PROCESS(STRUCT_MEMBER_NOT_EXPLICIT), PROCESS(MISSING_TRAILING_COMMA),                      \
         PROCESS(EMPTY_IMPL_BLOCK), PROCESS(ARMLESS_MATCH_EXPR), PROCESS(ILLEGAL_MATCH_ARM),        \
         PROCESS(UNEXPECTED_ARRAY_SIZE_TOKEN), PROCESS(MISSING_ARRAY_SIZE_TOKEN),                   \
-        PROCESS(INCORRECT_EXPLICIT_ARRAY_SIZE), PROCESS(LOOP_MISSING_BODY),                        \
+        PROCESS(INCORRECT_EXPLICIT_ARRAY_SIZE), PROCESS(EMPTY_ARRAY), PROCESS(LOOP_MISSING_BODY),  \
         PROCESS(FOR_MISSING_ITERABLES), PROCESS(WHILE_MISSING_CONDITION), PROCESS(EMPTY_FOR_LOOP), \
         PROCESS(EMPTY_WHILE_LOOP), PROCESS(EMPTY_LOOP), PROCESS(ILLEGAL_LOOP_NON_BREAK),           \
         PROCESS(ILLEGAL_IF_BRANCH), PROCESS(FOR_ITERABLE_CAPTURE_MISMATCH),                        \
@@ -119,13 +115,15 @@ void debug_print(const char* format, ...);
         PROCESS(ASSIGNMENT_TO_CONSTANT), PROCESS(MALFORMED_TYPE_DECL), PROCESS(DOUBLE_NULLABLE),   \
         PROCESS(ILLEGAL_MATCH_CATCH_ALL), PROCESS(NULLABLE_ENUM_VARIANT),                          \
         PROCESS(NON_CONST_ENUM_VARIANT), PROCESS(NON_SIGNED_ENUM_VARIANT),                         \
-        PROCESS(NON_VALUED_ENUM_VARIANT), PROCESS(NAMESPACE_NAME_MIRRORS_MEMBER),                  \
-        PROCESS(NON_VALUED_DECL_VALUE), PROCESS(ILLEGAL_OUTER_NAMESPACE), PROCESS(ANONYMOUS_ENUM), \
+        PROCESS(NON_VALUED_ENUM_VARIANT), PROCESS(UNKNOWN_ENUM_VARIANT),                           \
+        PROCESS(NAMESPACE_NAME_MIRRORS_MEMBER), PROCESS(NON_VALUED_DECL_VALUE),                    \
+        PROCESS(ILLEGAL_OUTER_NAMESPACE), PROCESS(ANONYMOUS_ENUM),                                 \
         PROCESS(REDUNDANT_TYPE_INTROSPECTION), PROCESS(ILLEGAL_DECL_CONSTRUCT),                    \
         PROCESS(ILLEGAL_PREFIX_OPERAND), PROCESS(ILLEGAL_LHS_INFIX_OPERAND),                       \
         PROCESS(ILLEGAL_RHS_INFIX_OPERAND), PROCESS(NON_ARTITHMETIC_TYPES),                        \
         PROCESS(UNEXPECTED_ARRAY_INDEX_TYPE), PROCESS(INDEX_MISSING_EXPRESSION),                   \
-        PROCESS(NON_ARRAY_INDEX_TARGET)
+        PROCESS(NON_ARRAY_INDEX_TARGET), PROCESS(NON_VALUED_ARRAY_ITEM),                           \
+        PROCESS(ARRAY_ITEM_TYPE_MISMATCH)
 
 typedef enum Status {
     FOREACH_STATUS(ENUMERATE),
@@ -140,30 +138,19 @@ static const char* const STATUS_TYPE_NAMES[] = {
 
 const char* status_name(Status status);
 
-// Discards the status code. For use with `IGNORE_STATUS`
-void status_ignore(Status status);
-
-#if defined(__GNUC__) || defined(__clang__)
-#define NODISCARD __attribute__((warn_unused_result))
-#elif defined(_MSC_VER)
-#define NODISCARD _Check_return_
-#else
-#define NODISCARD
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 #define ALLOW_UNUSED_FN __attribute__((unused))
 #else
 #define ALLOW_UNUSED_FN
 #endif
 
-#define IGNORE_STATUS(expr) status_ignore(expr)
+#define IGNORE_STATUS(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = (expr)
 
 typedef struct ArrayList     ArrayList;
 typedef struct StringBuilder StringBuilder;
 
-NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
-NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
+[[nodiscard]] Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
+[[nodiscard]] Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
 
 #define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                     \
     IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \

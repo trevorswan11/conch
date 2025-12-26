@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <signal.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -10,13 +9,9 @@
 #include "util/containers/string_builder.h"
 
 static volatile sig_atomic_t interrupted = 0;
+static inline void           sigint_handler([[maybe_unused]] int sig) { interrupted = 1; }
 
-static inline void sigint_handler(int sig) {
-    MAYBE_UNUSED(sig);
-    interrupted = 1;
-}
-
-NODISCARD Status repl_start(void) {
+[[nodiscard]] Status repl_start(void) {
     signal(SIGINT, sigint_handler);
 
     char      buf_in[BUF_SIZE];
@@ -30,7 +25,7 @@ NODISCARD Status repl_start(void) {
     return SUCCESS;
 }
 
-NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+[[nodiscard]] Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     assert(stream_buffer && stream_receiver);
     if (stream_receiver->item_size != sizeof(char)) {
         TRY_IO(fprintf(io->err, "ArrayList must be initialized for bytes\n"));
@@ -76,7 +71,8 @@ NODISCARD Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_rec
     return SUCCESS;
 }
 
-NODISCARD Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+[[nodiscard]] Status
+repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     const char null = 0;
     while (true) {
         if (!fgets(stream_buffer, BUF_SIZE, io->in)) {

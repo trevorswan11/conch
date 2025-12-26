@@ -20,8 +20,6 @@
 
 #define SINGLE_STMT_RECONSTRUCT(string)           \
     ASSERT_EXPRESSION(node);                      \
-    MAYBE_UNUSED(node);                           \
-    MAYBE_UNUSED(symbol_map);                     \
     assert(sb);                                   \
                                                   \
     TRY(string_builder_append_str_z(sb, string)); \
@@ -33,39 +31,39 @@ void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(node);
 }
 
-NODISCARD Status nil_expression_create(Token           start_token,
-                                       NilExpression** nil_expr,
-                                       memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status
+nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc) {
     SINGLE_STMT_CREATE(NilExpression, NIL_VTABLE, nil_expr);
 }
 
-NODISCARD Status nil_expression_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status nil_expression_reconstruct([[maybe_unused]] Node*          node,
+                                                [[maybe_unused]] const HashMap* symbol_map,
+                                                StringBuilder*                  sb) {
     SINGLE_STMT_RECONSTRUCT("nil");
 }
 
-NODISCARD Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status nil_expression_analyze([[maybe_unused]] Node*      node,
+                                            SemanticContext*            parent,
+                                            [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_NIL, true, semantic_context_allocator(parent).memory_alloc);
 }
 
-NODISCARD Status ignore_expression_create(Token              start_token,
-                                          IgnoreExpression** ignore_expr,
-                                          memory_alloc_fn    memory_alloc) {
+[[nodiscard]] Status ignore_expression_create(Token              start_token,
+                                              IgnoreExpression** ignore_expr,
+                                              memory_alloc_fn    memory_alloc) {
     SINGLE_STMT_CREATE(IgnoreExpression, IGNORE_VTABLE, ignore_expr);
 }
 
-NODISCARD Status ignore_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb) {
+[[nodiscard]] Status ignore_expression_reconstruct([[maybe_unused]] Node*          node,
+                                                   [[maybe_unused]] const HashMap* symbol_map,
+                                                   StringBuilder*                  sb) {
     SINGLE_STMT_RECONSTRUCT("_");
 }
 
-NODISCARD Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status ignore_expression_analyze([[maybe_unused]] Node*            node,
+                                               [[maybe_unused]] SemanticContext* parent,
+                                               [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
-    MAYBE_UNUSED(node);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return SUCCESS;
 }
