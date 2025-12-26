@@ -149,9 +149,9 @@ void rc_release(void* rc_obj, free_alloc_fn free_alloc);
 #else
 #define RC_RELEASE(rc_obj, free_alloc)          \
     do {                                        \
-        if ((rc_obj) != NULL) {                 \
+        if ((rc_obj) != nullptr) {              \
             rc_release((rc_obj), (free_alloc)); \
-            (rc_obj) = NULL;                    \
+            (rc_obj) = nullptr;                 \
         }                                       \
     } while (0)
 #endif

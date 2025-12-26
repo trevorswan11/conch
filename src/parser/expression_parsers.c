@@ -300,7 +300,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
 
     // Arrays are a little weird especially with the function signature
     ArrayList dim_array;
-    dim_array.data              = NULL;
+    dim_array.data              = nullptr;
     bool is_array_type          = false;
     bool is_inner_type_nullable = false;
 

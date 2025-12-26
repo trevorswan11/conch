@@ -127,7 +127,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
                 new_symbol_type->variant  = SEMANTIC_DATALESS_TYPE;
                 new_symbol_type->nullable = explicit_type.nullable;
             } else if (semantic_context_find(parent, true, probe_type_name, &probe_symbol_type)) {
-                // Double null doesn't make sense, guard before making the new type
+                // Double nullable doesn't make sense, guard before making the new type
                 if (probe_symbol_type->nullable && explicit_type.nullable) {
                     PUT_STATUS_PROPAGATE(errors,
                                          DOUBLE_NULLABLE,

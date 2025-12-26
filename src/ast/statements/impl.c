@@ -60,18 +60,16 @@ impl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder*
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status impl_statement_analyze(Node*                             node,
+                                            [[maybe_unused]] SemanticContext* parent,
+                                            [[maybe_unused]] ArrayList*       errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    ImplStatement* impl = (ImplStatement*)node;
+    [[maybe_unused]] ImplStatement* impl = (ImplStatement*)node;
     ASSERT_EXPRESSION(impl->parent);
     ASSERT_STATEMENT(impl->implementation);
     assert(impl->implementation->statements.data && impl->implementation->statements.length > 0);
 
-    MAYBE_UNUSED(impl);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

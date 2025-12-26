@@ -5,10 +5,8 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-void debug_print(const char* format, ...) {
-#ifdef NDEBUG
-    MAYBE_UNUSED(format);
-#else
+void debug_print([[maybe_unused]] const char* format, ...) {
+#ifndef NDEBUG
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
@@ -19,8 +17,6 @@ void debug_print(const char* format, ...) {
 }
 
 const char* status_name(Status status) { return STATUS_TYPE_NAMES[status]; }
-
-void status_ignore(Status status) { MAYBE_UNUSED(status); }
 
 [[nodiscard]] Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col) {
     assert(errors);

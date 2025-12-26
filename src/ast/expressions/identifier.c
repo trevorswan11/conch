@@ -36,10 +36,10 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(ident);
 }
 
-[[nodiscard]] Status
-identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+[[nodiscard]] Status identifier_expression_reconstruct(Node*                           node,
+                                                       [[maybe_unused]] const HashMap* symbol_map,
+                                                       StringBuilder*                  sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;

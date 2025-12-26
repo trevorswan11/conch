@@ -18,7 +18,7 @@
         if (node_ptr_to_cast_and_free && node_obfuscated_nvf) {                    \
             node_obfuscated_nvf->vtable->destroy(node_obfuscated_nvf, free_alloc); \
         }                                                                          \
-        node_ptr_to_cast_and_free = NULL;                                          \
+        node_ptr_to_cast_and_free = nullptr;                                       \
     } while (0);
 
 // Casts the input pointer to a node and calls its virtual reconstruct function

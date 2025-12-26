@@ -29,10 +29,10 @@ void integer_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(node);
 }
 
-[[nodiscard]] Status
-integer_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+[[nodiscard]] Status integer_expression_reconstruct(Node*                           node,
+                                                    [[maybe_unused]] const HashMap* symbol_map,
+                                                    StringBuilder*                  sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
@@ -46,8 +46,9 @@ integer_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuil
     INTEGER_EXPR_CREATE(IntegerLiteralExpression, INTEGER_VTABLE, int_expr);
 }
 
-[[nodiscard]] Status
-integer_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status integer_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                        SemanticContext*            parent,
+                                                        [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_SIGNED_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
 
@@ -58,8 +59,9 @@ integer_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayLis
     INTEGER_EXPR_CREATE(UnsignedIntegerLiteralExpression, UINTEGER_VTABLE, int_expr);
 }
 
-[[nodiscard]] Status
-uinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status uinteger_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                         SemanticContext*            parent,
+                                                         [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(
         STYPE_UNSIGNED_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
@@ -71,8 +73,9 @@ uinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayLi
     INTEGER_EXPR_CREATE(SizeIntegerLiteralExpression, UZINTEGER_VTABLE, int_expr);
 }
 
-[[nodiscard]] Status
-uzinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status uzinteger_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                          SemanticContext*            parent,
+                                                          [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_SIZE_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }
 
@@ -83,7 +86,8 @@ uzinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayL
     INTEGER_EXPR_CREATE(ByteLiteralExpression, BYTE_VTABLE, byte_expr);
 }
 
-[[nodiscard]] Status
-byte_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status byte_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                     SemanticContext*            parent,
+                                                     [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_BYTE_INTEGER, false, semantic_context_allocator(parent).memory_alloc);
 }

@@ -36,10 +36,9 @@ void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(string_expr);
 }
 
-[[nodiscard]] Status
-string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+[[nodiscard]] Status string_literal_expression_reconstruct(
+    Node* node, [[maybe_unused]] const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     // The tokenizer drops the start of multiline strings so we have to reconstruct here
@@ -52,7 +51,8 @@ string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Str
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-string_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status string_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                       SemanticContext*            parent,
+                                                       [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_STR, false, semantic_context_allocator(parent).memory_alloc);
 }

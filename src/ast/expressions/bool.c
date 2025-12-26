@@ -33,10 +33,10 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(bool_expr);
 }
 
-[[nodiscard]] Status
-bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+[[nodiscard]] Status bool_literal_expression_reconstruct(Node*                           node,
+                                                         [[maybe_unused]] const HashMap* symbol_map,
+                                                         StringBuilder*                  sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
@@ -44,7 +44,8 @@ bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, Strin
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-bool_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status bool_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                     SemanticContext*            parent,
+                                                     [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_BOOL, false, semantic_context_allocator(parent).memory_alloc);
 }

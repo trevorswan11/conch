@@ -9,11 +9,7 @@
 #include "util/containers/string_builder.h"
 
 static volatile sig_atomic_t interrupted = 0;
-
-static inline void sigint_handler(int sig) {
-    MAYBE_UNUSED(sig);
-    interrupted = 1;
-}
+static inline void           sigint_handler([[maybe_unused]] int sig) { interrupted = 1; }
 
 [[nodiscard]] Status repl_start(void) {
     signal(SIGINT, sigint_handler);

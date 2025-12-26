@@ -77,15 +77,13 @@ import_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilde
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status import_statement_analyze(Node*                             node,
+                                              [[maybe_unused]] SemanticContext* parent,
+                                              [[maybe_unused]] ArrayList*       errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    ImportStatement* import = (ImportStatement*)node;
+    [[maybe_unused]] ImportStatement* import = (ImportStatement*)node;
 
-    MAYBE_UNUSED(import);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

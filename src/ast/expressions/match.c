@@ -92,17 +92,15 @@ match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilde
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status match_expression_analyze(Node*                             node,
+                                              [[maybe_unused]] SemanticContext* parent,
+                                              [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    MatchExpression* match = (MatchExpression*)node;
+    [[maybe_unused]] MatchExpression* match = (MatchExpression*)node;
     ASSERT_EXPRESSION(match->expression);
     assert(match->arms.data && match->arms.length > 0);
 
-    MAYBE_UNUSED(match);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

@@ -34,7 +34,7 @@ void array_list_deinit(ArrayList* a) {
     ASSERT_ALLOCATOR(a->allocator);
 
     a->allocator.free_alloc(a->data);
-    a->data     = NULL;
+    a->data     = nullptr;
     a->length   = 0;
     a->capacity = 0;
 }
@@ -196,7 +196,7 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
 array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*)) {
     size_t index;
     TRY(array_list_find(a, &index, item, compare));
-    return array_list_remove(a, index, NULL);
+    return array_list_remove(a, index, nullptr);
 }
 
 [[nodiscard]] Status array_list_get(const ArrayList* a, size_t index, void* item) {

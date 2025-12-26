@@ -35,18 +35,18 @@ void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(float_expr);
 }
 
-[[nodiscard]] Status
-float_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
+[[nodiscard]] Status float_literal_expression_reconstruct(
+    Node* node, [[maybe_unused]] const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
-    MAYBE_UNUSED(symbol_map);
     assert(sb);
 
     TRY(string_builder_append_slice(sb, node->start_token.slice));
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-float_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status float_literal_expression_analyze([[maybe_unused]] Node*      node,
+                                                      SemanticContext*            parent,
+                                                      [[maybe_unused]] ArrayList* errors) {
     PRIMITIVE_ANALYZE(
         STYPE_FLOATING_POINT, false, parent->symbol_table->symbols.allocator.memory_alloc);
 }

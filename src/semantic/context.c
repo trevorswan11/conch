@@ -49,7 +49,7 @@ bool semantic_context_find(SemanticContext* context,
     if (!check_parents) { return symbol_table_find(context->symbol_table, symbol, type); }
 
     SemanticContext* current = context;
-    while (current != NULL) {
+    while (current != nullptr) {
         if (symbol_table_find(current->symbol_table, symbol, type)) { return true; }
 
         current = current->parent;
@@ -63,7 +63,7 @@ bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice
     if (!check_parents) { return symbol_table_has(context->symbol_table, symbol); }
 
     SemanticContext* current = context;
-    while (current != NULL) {
+    while (current != nullptr) {
         if (symbol_table_has(current->symbol_table, symbol)) { return true; }
 
         current = current->parent;

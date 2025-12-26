@@ -91,16 +91,14 @@ struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuild
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status struct_expression_analyze(Node*                             node,
+                                               [[maybe_unused]] SemanticContext* parent,
+                                               [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    StructExpression* struct_expr = (StructExpression*)node;
+    [[maybe_unused]] StructExpression* struct_expr = (StructExpression*)node;
     assert(struct_expr->members.data && struct_expr->members.length > 0);
 
-    MAYBE_UNUSED(struct_expr);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

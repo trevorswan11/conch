@@ -87,16 +87,14 @@ call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status call_expression_analyze(Node*                             node,
+                                             [[maybe_unused]] SemanticContext* parent,
+                                             [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    CallExpression* call = (CallExpression*)node;
+    [[maybe_unused]] CallExpression* call = (CallExpression*)node;
     ASSERT_EXPRESSION(call->function);
 
-    MAYBE_UNUSED(call);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

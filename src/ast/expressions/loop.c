@@ -116,18 +116,16 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-for_loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status for_loop_expression_analyze(Node*                             node,
+                                                 [[maybe_unused]] SemanticContext* parent,
+                                                 [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    ForLoopExpression* for_loop = (ForLoopExpression*)node;
+    [[maybe_unused]] ForLoopExpression* for_loop = (ForLoopExpression*)node;
     assert(for_loop->iterables.data && for_loop->iterables.length > 0);
     ASSERT_STATEMENT(for_loop->block);
 
-    MAYBE_UNUSED(for_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
@@ -202,18 +200,16 @@ while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringB
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-while_loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status while_loop_expression_analyze(Node*                             node,
+                                                   [[maybe_unused]] SemanticContext* parent,
+                                                   [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
+    [[maybe_unused]] WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
     ASSERT_EXPRESSION(while_loop->condition);
     ASSERT_STATEMENT(while_loop->block);
 
-    MAYBE_UNUSED(while_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
@@ -267,18 +263,16 @@ do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-do_while_loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status do_while_loop_expression_analyze(Node*                             node,
+                                                      [[maybe_unused]] SemanticContext* parent,
+                                                      [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    WhileLoopExpression* do_while_loop = (WhileLoopExpression*)node;
+    [[maybe_unused]] WhileLoopExpression* do_while_loop = (WhileLoopExpression*)node;
     ASSERT_STATEMENT(do_while_loop->block);
     ASSERT_EXPRESSION(do_while_loop->condition);
 
-    MAYBE_UNUSED(do_while_loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
 
@@ -323,16 +317,14 @@ loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status loop_expression_analyze(Node*                             node,
+                                             [[maybe_unused]] SemanticContext* parent,
+                                             [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    LoopExpression* loop = (LoopExpression*)node;
+    [[maybe_unused]] LoopExpression* loop = (LoopExpression*)node;
     ASSERT_STATEMENT(loop->block);
 
-    MAYBE_UNUSED(loop);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

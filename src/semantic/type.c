@@ -172,10 +172,10 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator allocator) {
+[[nodiscard]] Status semantic_type_copy_variant(SemanticType*              dest,
+                                                SemanticType*              src,
+                                                [[maybe_unused]] Allocator allocator) {
     dest->tag = src->tag;
-    MAYBE_UNUSED(allocator);
 
     switch (src->tag) {
     case STYPE_ENUM:

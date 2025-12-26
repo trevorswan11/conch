@@ -57,20 +57,19 @@
         }                            \
     } while (0)
 
-// Allows a variable to be left unused.
-//
-// For unused error codes, see `UNREACHABLE_IF_ERROR` or `IGNORE_STATUS`.
-#define MAYBE_UNUSED(x) ((void)(x))
-
 // Prints to stderr without considering the chance of IO failure.
 void debug_print(const char* format, ...);
+
+#define STATUS_CONCAT(a, b) a##b
+#define STATUS_CONCAT2(a, b) STATUS_CONCAT(a, b)
+#define UNIQUE_STATUS_NAME STATUS_CONCAT2(status, __LINE__)
 
 // This raises an assertion when possible, only if the passed expression is true.
 //
 // A debug message is also emitted with the file and approximate line number.
 #ifdef DIST
-#define UNREACHABLE_IF(expr) IGNORE_STATUS((Status)(expr))
-#define UNREACHABLE_IF_ERROR(expr) IGNORE_STATUS(expr)
+#define UNREACHABLE_IF(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = ((Status)(expr))
+#define UNREACHABLE_IF_ERROR(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = (expr)
 #define UNREACHABLE
 #else
 #if defined(__GNUC__) || defined(__clang__)
@@ -139,16 +138,13 @@ static const char* const STATUS_TYPE_NAMES[] = {
 
 const char* status_name(Status status);
 
-// Discards the status code. For use with `IGNORE_STATUS`
-void status_ignore(Status status);
-
 #if defined(__GNUC__) || defined(__clang__)
 #define ALLOW_UNUSED_FN __attribute__((unused))
 #else
 #define ALLOW_UNUSED_FN
 #endif
 
-#define IGNORE_STATUS(expr) status_ignore(expr)
+#define IGNORE_STATUS(expr) [[maybe_unused]] const Status UNIQUE_STATUS_NAME = (expr)
 
 typedef struct ArrayList     ArrayList;
 typedef struct StringBuilder StringBuilder;

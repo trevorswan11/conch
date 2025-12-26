@@ -118,16 +118,14 @@ function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-function_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status function_expression_analyze(Node*                             node,
+                                                 [[maybe_unused]] SemanticContext* parent,
+                                                 [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    FunctionExpression* func = (FunctionExpression*)node;
+    [[maybe_unused]] FunctionExpression* func = (FunctionExpression*)node;
     ASSERT_STATEMENT(func->body);
 
-    MAYBE_UNUSED(func);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }

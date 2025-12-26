@@ -20,8 +20,6 @@ typedef struct SemanticType SemanticType;
     ASSERT_EXPRESSION(node);           \
     assert(parent);                    \
     assert(errors);                    \
-    MAYBE_UNUSED(node);                \
-    MAYBE_UNUSED(errors);              \
     MAKE_PRIMITIVE(T, N, type, A, {}); \
                                        \
     parent->analyzed_type = type;      \

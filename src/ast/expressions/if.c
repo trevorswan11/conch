@@ -66,16 +66,15 @@ if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* 
     return SUCCESS;
 }
 
-[[nodiscard]] Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status if_expression_analyze(Node*                             node,
+                                           [[maybe_unused]] SemanticContext* parent,
+                                           [[maybe_unused]] ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    IfExpression* if_expr = (IfExpression*)node;
+    [[maybe_unused]] IfExpression* if_expr = (IfExpression*)node;
     ASSERT_EXPRESSION(if_expr->condition);
     ASSERT_EXPRESSION(if_expr->consequence);
 
-    MAYBE_UNUSED(if_expr);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
     return NOT_IMPLEMENTED;
 }
