@@ -100,58 +100,55 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
                              RC_RELEASE(operand_type, allocator.free_alloc));
     }
 
-    SemanticType* resulting_type;
-    TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
-           RC_RELEASE(operand_type, allocator.free_alloc));
-
-    const SemanticTypeTag operand_tag = operand_type->tag;
+    SemanticType*         resulting_type = NULL;
+    const SemanticTypeTag operand_tag    = operand_type->tag;
     switch (prefix_op) {
     case BANG:
-        if (semantic_type_is_primitive(operand_type)) {
-            resulting_type->tag      = STYPE_BOOL;
-            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
-            resulting_type->is_const = true;
-            resulting_type->valued   = true;
-            resulting_type->nullable = false;
-        } else {
-            // User defined types are not implicitly convertible to bools
-            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                RC_RELEASE(resulting_type, allocator.free_alloc);
-                RC_RELEASE(operand_type, allocator.free_alloc);
-            });
+        if (semantic_type_is_primitive(operand_type) || operand_type->nullable) {
+            MAKE_PRIMITIVE(STYPE_BOOL,
+                           false,
+                           new_type,
+                           allocator.memory_alloc,
+                           RC_RELEASE(operand_type, allocator.free_alloc));
+            resulting_type = new_type;
+            break;
         }
 
-        break;
+        // User defined types are not implicitly convertible to bools
+        PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+            RC_RELEASE(resulting_type, allocator.free_alloc);
+            RC_RELEASE(operand_type, allocator.free_alloc);
+        });
     case NOT:
-        if (operand_tag == STYPE_SIGNED_INTEGER || operand_tag == STYPE_UNSIGNED_INTEGER) {
-            resulting_type->tag      = operand_tag;
-            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
-            resulting_type->is_const = true;
-            resulting_type->valued   = true;
-            resulting_type->nullable = false;
-        } else {
-            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                RC_RELEASE(resulting_type, allocator.free_alloc);
-                RC_RELEASE(operand_type, allocator.free_alloc);
-            });
+        if (semantic_type_is_integer(operand_type)) {
+            MAKE_PRIMITIVE(operand_tag,
+                           false,
+                           new_type,
+                           allocator.memory_alloc,
+                           RC_RELEASE(operand_type, allocator.free_alloc));
+            resulting_type = new_type;
+            break;
         }
 
-        break;
+        PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+            RC_RELEASE(resulting_type, allocator.free_alloc);
+            RC_RELEASE(operand_type, allocator.free_alloc);
+        });
     case MINUS:
         if (semantic_type_is_arithmetic(operand_type)) {
-            resulting_type->tag      = operand_tag;
-            resulting_type->variant  = SEMANTIC_DATALESS_TYPE;
-            resulting_type->is_const = true;
-            resulting_type->valued   = true;
-            resulting_type->nullable = false;
-        } else {
-            PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-                RC_RELEASE(resulting_type, allocator.free_alloc);
-                RC_RELEASE(operand_type, allocator.free_alloc);
-            });
+            MAKE_PRIMITIVE(operand_tag,
+                           false,
+                           new_type,
+                           allocator.memory_alloc,
+                           RC_RELEASE(operand_type, allocator.free_alloc));
+            resulting_type = new_type;
+            break;
         }
 
-        break;
+        PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
+            RC_RELEASE(resulting_type, allocator.free_alloc);
+            RC_RELEASE(operand_type, allocator.free_alloc);
+        });
     default:
         UNREACHABLE;
     }

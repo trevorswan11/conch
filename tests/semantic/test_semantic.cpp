@@ -122,7 +122,18 @@ TEST_CASE("Assignment expressions") {
             const char* const inputs[] = {
                 "var v: int = 3; v += 7",
                 "var v: uint = 3u; v += 9u",
+                "var v: uint = 3u; v *= 9u",
+                "var v: uint = 3u; v &= 9u",
+                "var v: uint = 3u; v |= 9u",
+                "var v: uint = 3u; v ^= 9u",
+                "var v: uint = 3u; v <<= 9u",
+                "var v: uint = 3u; v >>= 9u",
+                "var v: uint = 3u; v %= 9u",
+                "var v: uint = 3u; v -= 9u",
+                "var v: uint = 3u; v /= 9u",
+                "var v: uint = 3u; v ~= 9u",
                 R"(var v: string = "H"; v += "i")",
+                R"(var v: string = "H"; v *= "i")",
             };
 
             for (const auto& i : inputs) {
@@ -131,9 +142,15 @@ TEST_CASE("Assignment expressions") {
         }
 
         SECTION("Incorrect assignments") {
-            test_analyze("var v: int = 3; v += nil", {"TYPE_MISMATCH [Ln 1, Col 17]"});
+            test_analyze("var v: int = 3; v += nil", {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 17]"});
             test_analyze("var v: int = 3; v += 3u", {"TYPE_MISMATCH [Ln 1, Col 17]"});
-            test_analyze("var v: ?int = 3; v += nil", {"TYPE_MISMATCH [Ln 1, Col 18]"});
+            test_analyze("var v: int = 3; v ~= 3u", {"TYPE_MISMATCH [Ln 1, Col 17]"});
+            test_analyze("var v: ?int = 3; v += nil", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 18]"});
+            test_analyze("type a = enum { ONE, }; var v := 2; v += a",
+                         {"ILLEGAL_RHS_INFIX_OPERAND [Ln 1, Col 37]"});
+            test_analyze("type a = enum { ONE, }; var v: a = a::ONE; v ~= 3",
+                         {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 44]"});
+            test_analyze("var v: int; v += 2", {"ILLEGAL_LHS_INFIX_OPERAND [Ln 1, Col 13]"});
         }
     }
 
@@ -335,6 +352,7 @@ TEST_CASE("Infix operators") {
 
     SECTION("Fallback arithmetic") {
         test_analyze("3 - 4");
+        test_analyze("3 / 4");
         test_analyze("3 / 4");
         test_analyze("3 ** 4");
         test_analyze("var v: uint = 3u ** 4u; v = 45u");

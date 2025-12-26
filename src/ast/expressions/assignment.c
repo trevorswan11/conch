@@ -2,6 +2,7 @@
 
 #include "ast/ast.h"
 #include "ast/expressions/assignment.h"
+#include "ast/expressions/infix.h"
 
 #include "semantic/context.h"
 #include "semantic/type.h"
@@ -77,38 +78,114 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     ASSERT_EXPRESSION(assign->lhs);
     ASSERT_EXPRESSION(assign->rhs);
 
-    const Token   start_token = node->start_token;
-    free_alloc_fn free_alloc  = semantic_context_allocator(parent).free_alloc;
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = semantic_context_allocator(parent);
 
     TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
 
     if (lhs_type->is_const) {
-        PUT_STATUS_PROPAGATE(
-            errors, ASSIGNMENT_TO_CONSTANT, start_token, RC_RELEASE(lhs_type, free_alloc));
+        PUT_STATUS_PROPAGATE(errors,
+                             ASSIGNMENT_TO_CONSTANT,
+                             start_token,
+                             RC_RELEASE(lhs_type, allocator.free_alloc));
     }
 
-    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), RC_RELEASE(lhs_type, free_alloc));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors),
+           RC_RELEASE(lhs_type, allocator.free_alloc));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
-    // Compound expressions are treated like a subset of infix expressions
-    // TODO: Narrow in restrictions as in infix
-    bool ok = type_assignable(lhs_type, rhs_type);
     if (assign->op != ASSIGN) {
-        // Neither side can be nullable and must be primitive
-        ok = ok && !lhs_type->nullable && !rhs_type->nullable;
-        ok = ok && semantic_type_is_primitive(lhs_type) && semantic_type_is_primitive(rhs_type);
+        // Sometimes a non valued type is valid for regular assignment
+        if (!lhs_type->valued || !rhs_type->valued) {
+            const Status error_code =
+                !lhs_type->valued ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+            PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        // Neither side can be nullable here since nil is explicit
+        if (lhs_type->nullable || rhs_type->nullable) {
+            const Status error_code =
+                lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
+            PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
     }
 
-    if (!ok) {
-        PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-            RC_RELEASE(lhs_type, free_alloc);
-            RC_RELEASE(rhs_type, free_alloc);
+    // Compound expressions are treated like a subset of infix expressions
+    SemanticType* resulting_type = NULL;
+    switch (assign->op) {
+    case ASSIGN:
+        if (!type_assignable(lhs_type, rhs_type)) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+        resulting_type = rc_retain(rhs_type);
+        break;
+    case PLUS_ASSIGN:
+    case STAR_ASSIGN: {
+        PLUS_STAR_INFIX_CASE
+    }
+    case AND_ASSIGN:
+    case OR_ASSIGN:
+    case XOR_ASSIGN:
+    case SHR_ASSIGN:
+    case SHL_ASSIGN:
+    case PERCENT_ASSIGN: {
+        MODULE_BITWISE_INFIX_CASE
+    }
+    case MINUS_ASSIGN:
+    case SLASH_ASSIGN: {
+        FALLBACK_ARITHMETIC(resulting_type, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
         });
+        break;
+    }
+    case NOT_ASSIGN: {
+        const bool lhs_ok = semantic_type_is_integer(lhs_type);
+        const bool rhs_ok = semantic_type_is_integer(rhs_type);
+        if (!lhs_ok || !rhs_ok) {
+            PUT_STATUS_PROPAGATE(errors,
+                                 !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
+                                 start_token,
+                                 {
+                                     RC_RELEASE(lhs_type, allocator.free_alloc);
+                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                 });
+        }
+
+        if (lhs_type->tag != rhs_type->tag) {
+            PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
+                RC_RELEASE(lhs_type, allocator.free_alloc);
+                RC_RELEASE(rhs_type, allocator.free_alloc);
+            });
+        }
+
+        MAKE_PRIMITIVE(rhs_type->tag, false, new_tye, allocator.memory_alloc, {
+            RC_RELEASE(lhs_type, allocator.free_alloc);
+            RC_RELEASE(rhs_type, allocator.free_alloc);
+        });
+
+        resulting_type = new_tye;
+        break;
+    }
+    default:
+        UNREACHABLE;
     }
 
     // Assignment expressions return the type of their assigned value
-    RC_RELEASE(lhs_type, free_alloc);
-    parent->analyzed_type = rhs_type;
+    RC_RELEASE(lhs_type, allocator.free_alloc);
+    RC_RELEASE(rhs_type, allocator.free_alloc);
+
+    assert(resulting_type);
+    parent->analyzed_type = resulting_type;
     return SUCCESS;
 }
