@@ -1,7 +1,7 @@
 <h1 align="center">🐚conch🐚</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/C-17-blue?logo=&logoColor=white" alt="C17" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage_summary.txt"><img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" /></a>
+<img src="https://img.shields.io/badge/C-23-blue?logo=&logoColor=white" alt="C17" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage_summary.txt"><img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" /></a>
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@ cmake --build . --target dist
 This builds the `dist` configuration, enabling maximum optimization and disabling assertions and debug symbols. 
 
 # Correctness & Availability
-[Catch2](https://github.com/catchorg/Catch2) is used with [C++20](https://en.cppreference.com/w/cpp/20.html) to run automated CI tests on Windows (MSVC & msys2), macOS (LLVM Clang), and Linux (GCC & Clang). This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness in the C code. 
+[Catch2](https://github.com/catchorg/Catch2) is used with [C++20](https://en.cppreference.com/w/cpp/20.html) to run automated CI tests on Windows (msys2), macOS (LLVM Clang), and Linux (GCC & Clang). This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness in the C code. 
 
 As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available.
 

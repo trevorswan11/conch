@@ -36,9 +36,6 @@ jobs:
             compiler: clang
           - os: macos-latest
           - os: windows-latest
-            windows_style: msys2
-          - os: windows-latest
-            windows_style: msvc
 
     steps:
       - name: Checkout repository
@@ -92,8 +89,8 @@ jobs:
 
           cmake --build . --parallel --target asan
 
-      - name: Install dependencies (Windows MSYS2)
-        if: runner.os == 'Windows' && matrix.windows_style == 'msys2'
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
           update: true
@@ -105,14 +102,14 @@ jobs:
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-make
 
-      - name: Fix make alias (Windows MSYS2)
-        if: runner.os == 'Windows' && matrix.windows_style == 'msys2'
+      - name: Fix make alias (Windows)
+        if: runner.os == 'Windows'
         run: |
           ln -s /ucrt64/bin/mingw32-make.exe /ucrt64/bin/make || true
         shell: msys2 {0}
 
-      - name: Run tests (Windows MSYS2)
-        if: runner.os == 'Windows' && matrix.windows_style == 'msys2'
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
         run: |
           mkdir build
           cd build
@@ -126,17 +123,3 @@ jobs:
           ctest --output-on-failure -R run_tests_release
           ctest --output-on-failure -R run_tests_dist
         shell: msys2 {0}
-
-      - name: Run tests (Windows Native)
-        if: runner.os == 'Windows' && matrix.windows_style == 'msvc'
-        run: |
-          mkdir build
-          cd build
-          cmake -G "Visual Studio 17 2022" ..
-          
-          cmake --build . --parallel --config Debug
-          cmake --build . --parallel --config Release
-          
-          ctest -C Debug --output-on-failure
-          ctest -C Release --output-on-failure
-        shell: cmd
