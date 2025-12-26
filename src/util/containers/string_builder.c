@@ -4,9 +4,8 @@
 
 #include "util/containers/string_builder.h"
 
-[[nodiscard]] Status string_builder_init_allocator(StringBuilder* sb,
-                                               size_t         initial_length,
-                                               Allocator      allocator) {
+[[nodiscard]] Status
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator) {
     if (!sb) { return NULL_PARAMETER; }
     return initial_length == 0
                ? EMPTY
@@ -27,7 +26,8 @@ void string_builder_deinit(StringBuilder* sb) {
     return array_list_push(&sb->buffer, &byte);
 }
 
-[[nodiscard]] Status string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
+[[nodiscard]] Status
+string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length) {
     assert(sb);
     if (!bytes) { return NULL_PARAMETER; }
 

@@ -8,10 +8,8 @@
 
 MAX_FN(size_t, size_t)
 
-[[nodiscard]] Status array_list_init_allocator(ArrayList* a,
-                                           size_t     capacity,
-                                           size_t     item_size,
-                                           Allocator  allocator) {
+[[nodiscard]] Status
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     if (item_size == 0) { return ZERO_ITEM_SIZE; }
     void* data = allocator.memory_alloc(capacity * item_size);
@@ -194,9 +192,8 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
     return SUCCESS;
 }
 
-[[nodiscard]] Status array_list_remove_item(ArrayList*  a,
-                                        const void* item,
-                                        int (*compare)(const void*, const void*)) {
+[[nodiscard]] Status
+array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*)) {
     size_t index;
     TRY(array_list_find(a, &index, item, compare));
     return array_list_remove(a, index, NULL);
@@ -228,9 +225,9 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
 }
 
 [[nodiscard]] Status array_list_find(const ArrayList* a,
-                                 size_t*          index,
-                                 const void*      item,
-                                 int (*compare)(const void*, const void*)) {
+                                     size_t*          index,
+                                     const void*      item,
+                                     int (*compare)(const void*, const void*)) {
     assert(a && a->data);
     if (!index || !item || !compare) { return NULL_PARAMETER; }
 

@@ -9,10 +9,10 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status index_expression_create(Token             start_token,
-                                         Expression*       array,
-                                         Expression*       idx,
-                                         IndexExpression** index_expr,
-                                         memory_alloc_fn   memory_alloc) {
+                                             Expression*       array,
+                                             Expression*       idx,
+                                             IndexExpression** index_expr,
+                                             memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(array);
     ASSERT_EXPRESSION(idx);
@@ -41,9 +41,8 @@ void index_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(index);
 }
 
-[[nodiscard]] Status index_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+index_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -59,7 +58,8 @@ void index_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

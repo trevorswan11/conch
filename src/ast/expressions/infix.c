@@ -9,11 +9,11 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status infix_expression_create(Token             start_token,
-                                         Expression*       lhs,
-                                         TokenType         op,
-                                         Expression*       rhs,
-                                         InfixExpression** infix_expr,
-                                         memory_alloc_fn   memory_alloc) {
+                                             Expression*       lhs,
+                                             TokenType         op,
+                                             Expression*       rhs,
+                                             InfixExpression** infix_expr,
+                                             memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     assert(lhs && rhs);
 
@@ -42,9 +42,8 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(infix);
 }
 
-[[nodiscard]] Status infix_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -70,7 +69,8 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

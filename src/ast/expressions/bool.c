@@ -8,8 +8,8 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status bool_literal_expression_create(Token                   start_token,
-                                                BoolLiteralExpression** bool_expr,
-                                                memory_alloc_fn         memory_alloc) {
+                                                    BoolLiteralExpression** bool_expr,
+                                                    memory_alloc_fn         memory_alloc) {
     assert(memory_alloc);
     assert(start_token.type == TRUE || start_token.type == FALSE);
 
@@ -33,9 +33,8 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(bool_expr);
 }
 
-[[nodiscard]] Status bool_literal_expression_reconstruct(Node*          node,
-                                                     const HashMap* symbol_map,
-                                                     StringBuilder* sb) {
+[[nodiscard]] Status
+bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     MAYBE_UNUSED(symbol_map);
     assert(sb);
@@ -45,8 +44,7 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status bool_literal_expression_analyze(Node*            node,
-                                                 SemanticContext* parent,
-                                                 ArrayList*       errors) {
+[[nodiscard]] Status
+bool_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_BOOL, false, semantic_context_allocator(parent).memory_alloc);
 }

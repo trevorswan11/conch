@@ -9,13 +9,13 @@
 
 typedef struct TypeExpression TypeExpression;
 
-[[nodiscard]] Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
+[[nodiscard]] Status
+expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression);
 [[nodiscard]] Status identifier_expression_parse(Parser* p, Expression** expression);
 
 // Allocates and parses all function parameters and consumes them from the parser.
-[[nodiscard]] Status parameter_list_parse(Parser*    p,
-                                      ArrayList* parameters,
-                                      bool*      contains_default_param);
+[[nodiscard]] Status
+parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_param);
 
 // Parses a generic list, including the opening and closing delimiters.
 //
@@ -25,10 +25,10 @@ typedef struct TypeExpression TypeExpression;
 
 // Parses a function definition, assuming the current token is a function.
 [[nodiscard]] Status function_definition_parse(Parser*          p,
-                                           ArrayList*       generics,
-                                           ArrayList*       parameters,
-                                           TypeExpression** return_type,
-                                           bool*            contains_default_param);
+                                               ArrayList*       generics,
+                                               ArrayList*       parameters,
+                                               TypeExpression** return_type,
+                                               bool*            contains_default_param);
 
 // Parses an explicit type without considering colon or assignment presence
 [[nodiscard]] Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type);
@@ -44,7 +44,8 @@ typedef struct TypeExpression TypeExpression;
 [[nodiscard]] Status grouped_expression_parse(Parser* p, Expression** expression);
 [[nodiscard]] Status if_expression_parse(Parser* p, Expression** expression);
 [[nodiscard]] Status function_expression_parse(Parser* p, Expression** expression);
-[[nodiscard]] Status call_expression_parse(Parser* p, Expression* function, Expression** expression);
+[[nodiscard]] Status
+call_expression_parse(Parser* p, Expression* function, Expression** expression);
 [[nodiscard]] Status index_expression_parse(Parser* p, Expression* array, Expression** expression);
 [[nodiscard]] Status struct_expression_parse(Parser* p, Expression** expression);
 [[nodiscard]] Status enum_expression_parse(Parser* p, Expression** expression);
@@ -55,10 +56,10 @@ typedef struct TypeExpression TypeExpression;
 [[nodiscard]] Status while_loop_expression_parse(Parser* p, Expression** expression);
 [[nodiscard]] Status do_while_loop_expression_parse(Parser* p, Expression** expression);
 [[nodiscard]] Status loop_expression_parse(Parser* p, Expression** expression);
-[[nodiscard]] Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
-[[nodiscard]] Status assignment_expression_parse(Parser*      p,
-                                             Expression*  assignee,
-                                             Expression** expression);
+[[nodiscard]] Status
+namespace_expression_parse(Parser* p, Expression* outer, Expression** expression);
+[[nodiscard]] Status
+assignment_expression_parse(Parser* p, Expression* assignee, Expression** expression);
 
 typedef Status (*prefix_parse_fn)(Parser*, Expression**);
 typedef Status (*infix_parse_fn)(Parser*, Expression*, Expression**);

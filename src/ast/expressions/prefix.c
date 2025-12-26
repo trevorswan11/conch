@@ -10,9 +10,9 @@
 #include "util/status.h"
 
 [[nodiscard]] Status prefix_expression_create(Token              start_token,
-                                          Expression*        rhs,
-                                          PrefixExpression** prefix_expr,
-                                          memory_alloc_fn    memory_alloc) {
+                                              Expression*        rhs,
+                                              PrefixExpression** prefix_expr,
+                                              memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(start_token.type == BANG || start_token.type == NOT || start_token.type == MINUS);
@@ -40,9 +40,8 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(prefix);
 }
 
-[[nodiscard]] Status prefix_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb) {
+[[nodiscard]] Status
+prefix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -60,7 +59,8 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

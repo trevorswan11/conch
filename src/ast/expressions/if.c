@@ -7,11 +7,11 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status if_expression_create(Token           start_token,
-                                      Expression*     condition,
-                                      Statement*      consequence,
-                                      Statement*      alternate,
-                                      IfExpression**  if_expr,
-                                      memory_alloc_fn memory_alloc) {
+                                          Expression*     condition,
+                                          Statement*      consequence,
+                                          Statement*      alternate,
+                                          IfExpression**  if_expr,
+                                          memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(condition);
     ASSERT_EXPRESSION(consequence);
@@ -42,9 +42,8 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(if_expr);
 }
 
-[[nodiscard]] Status if_expression_reconstruct(Node*          node,
-                                           const HashMap* symbol_map,
-                                           StringBuilder* sb) {
+[[nodiscard]] Status
+if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 

@@ -88,16 +88,16 @@ typedef struct TypeExpression {
 } TypeExpression;
 
 [[nodiscard]] Status type_expression_create(Token               start_token,
-                                        TypeExpressionTag   tag,
-                                        TypeExpressionUnion variant,
-                                        TypeExpression**    type_expr,
-                                        memory_alloc_fn     memory_alloc);
+                                            TypeExpressionTag   tag,
+                                            TypeExpressionUnion variant,
+                                            TypeExpression**    type_expr,
+                                            memory_alloc_fn     memory_alloc);
 
-void             type_expression_destroy(Node* node, free_alloc_fn free_alloc);
-[[nodiscard]] Status type_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb);
-[[nodiscard]] Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+void type_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable TYPE_VTABLE = {
     .base =
@@ -108,8 +108,7 @@ static const ExpressionVTable TYPE_VTABLE = {
         },
 };
 
-[[nodiscard]] Status explicit_type_reconstruct(ExplicitType   explicit_type,
-                                           const HashMap* symbol_map,
-                                           StringBuilder* sb);
+[[nodiscard]] Status
+explicit_type_reconstruct(ExplicitType explicit_type, const HashMap* symbol_map, StringBuilder* sb);
 
 #endif

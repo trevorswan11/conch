@@ -74,14 +74,14 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
 }
 
 [[nodiscard]] Status hash_map_init_allocator(HashMap* hm,
-                                         size_t   capacity,
-                                         size_t   key_size,
-                                         size_t   key_align,
-                                         size_t   value_size,
-                                         size_t   value_align,
-                                         Hash (*hash)(const void*),
-                                         int (*compare)(const void*, const void*),
-                                         Allocator allocator) {
+                                             size_t   capacity,
+                                             size_t   key_size,
+                                             size_t   key_align,
+                                             size_t   value_size,
+                                             size_t   value_align,
+                                             Hash (*hash)(const void*),
+                                             int (*compare)(const void*, const void*),
+                                             Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     if (!hm || !hash || !compare) { return NULL_PARAMETER; }
     if (key_size == 0 || value_size == 0) { return ZERO_ITEM_SIZE; }
@@ -151,13 +151,13 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
 }
 
 [[nodiscard]] Status hash_map_init(HashMap* hm,
-                               size_t   capacity,
-                               size_t   key_size,
-                               size_t   key_align,
-                               size_t   value_size,
-                               size_t   value_align,
-                               Hash (*hash)(const void*),
-                               int (*compare)(const void*, const void*)) {
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   size_t   value_size,
+                                   size_t   value_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*)) {
     return hash_map_init_allocator(hm,
                                    capacity,
                                    key_size,

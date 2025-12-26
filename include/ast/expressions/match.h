@@ -21,17 +21,17 @@ typedef struct MatchExpression {
 void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc);
 
 [[nodiscard]] Status match_expression_create(Token             start_token,
-                                         Expression*       expression,
-                                         ArrayList         arms,
-                                         Statement*        catch_all,
-                                         MatchExpression** match_expr,
-                                         memory_alloc_fn   memory_alloc);
+                                             Expression*       expression,
+                                             ArrayList         arms,
+                                             Statement*        catch_all,
+                                             MatchExpression** match_expr,
+                                             memory_alloc_fn   memory_alloc);
 
-void             match_expression_destroy(Node* node, free_alloc_fn free_alloc);
-[[nodiscard]] Status match_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb);
-[[nodiscard]] Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+void match_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable MATCH_VTABLE = {
     .base =

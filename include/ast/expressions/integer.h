@@ -7,9 +7,8 @@
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc);
 
-[[nodiscard]] Status integer_expression_reconstruct(Node*          node,
-                                                const HashMap* symbol_map,
-                                                StringBuilder* sb);
+[[nodiscard]] Status
+integer_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 
 typedef struct IntegerLiteralExpression {
     Expression base;
@@ -17,13 +16,12 @@ typedef struct IntegerLiteralExpression {
 } IntegerLiteralExpression;
 
 [[nodiscard]] Status integer_literal_expression_create(Token                      start_token,
-                                                   int64_t                    value,
-                                                   IntegerLiteralExpression** int_expr,
-                                                   memory_alloc_fn            memory_alloc);
+                                                       int64_t                    value,
+                                                       IntegerLiteralExpression** int_expr,
+                                                       memory_alloc_fn            memory_alloc);
 
-[[nodiscard]] Status integer_literal_expression_analyze(Node*            node,
-                                                    SemanticContext* parent,
-                                                    ArrayList*       errors);
+[[nodiscard]] Status
+integer_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable INTEGER_VTABLE = {
     .base =
@@ -39,14 +37,13 @@ typedef struct UnsignedIntegerLiteralExpression {
     uint64_t   value;
 } UnsignedIntegerLiteralExpression;
 
-[[nodiscard]] Status uinteger_literal_expression_create(Token                              start_token,
-                                                    uint64_t                           value,
-                                                    UnsignedIntegerLiteralExpression** int_expr,
-                                                    memory_alloc_fn memory_alloc);
+[[nodiscard]] Status uinteger_literal_expression_create(Token    start_token,
+                                                        uint64_t value,
+                                                        UnsignedIntegerLiteralExpression** int_expr,
+                                                        memory_alloc_fn memory_alloc);
 
-[[nodiscard]] Status uinteger_literal_expression_analyze(Node*            node,
-                                                     SemanticContext* parent,
-                                                     ArrayList*       errors);
+[[nodiscard]] Status
+uinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable UINTEGER_VTABLE = {
     .base =
@@ -63,13 +60,12 @@ typedef struct SizeIntegerLiteralExpression {
 } SizeIntegerLiteralExpression;
 
 [[nodiscard]] Status uzinteger_literal_expression_create(Token                          start_token,
-                                                     size_t                         value,
-                                                     SizeIntegerLiteralExpression** int_expr,
-                                                     memory_alloc_fn                memory_alloc);
+                                                         size_t                         value,
+                                                         SizeIntegerLiteralExpression** int_expr,
+                                                         memory_alloc_fn memory_alloc);
 
-[[nodiscard]] Status uzinteger_literal_expression_analyze(Node*            node,
-                                                      SemanticContext* parent,
-                                                      ArrayList*       errors);
+[[nodiscard]] Status
+uzinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable UZINTEGER_VTABLE = {
     .base =
@@ -86,13 +82,12 @@ typedef struct ByteLiteralExpression {
 } ByteLiteralExpression;
 
 [[nodiscard]] Status byte_literal_expression_create(Token                   start_token,
-                                                uint8_t                 value,
-                                                ByteLiteralExpression** byte_expr,
-                                                memory_alloc_fn         memory_alloc);
+                                                    uint8_t                 value,
+                                                    ByteLiteralExpression** byte_expr,
+                                                    memory_alloc_fn         memory_alloc);
 
-[[nodiscard]] Status byte_literal_expression_analyze(Node*            node,
-                                                 SemanticContext* parent,
-                                                 ArrayList*       errors);
+[[nodiscard]] Status
+byte_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable BYTE_VTABLE = {
     .base =

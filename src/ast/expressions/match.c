@@ -21,11 +21,11 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status match_expression_create(Token             start_token,
-                                         Expression*       expression,
-                                         ArrayList         arms,
-                                         Statement*        catch_all,
-                                         MatchExpression** match_expr,
-                                         memory_alloc_fn   memory_alloc) {
+                                             Expression*       expression,
+                                             ArrayList         arms,
+                                             Statement*        catch_all,
+                                             MatchExpression** match_expr,
+                                             memory_alloc_fn   memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(expression);
     assert(arms.item_size == sizeof(MatchArm));
@@ -57,9 +57,8 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(match);
 }
 
-[[nodiscard]] Status match_expression_reconstruct(Node*          node,
-                                              const HashMap* symbol_map,
-                                              StringBuilder* sb) {
+[[nodiscard]] Status
+match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -93,7 +92,8 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

@@ -31,12 +31,10 @@ typedef struct {
     size_t           index;
 } ArrayListConstIterator;
 
-[[nodiscard]] Status array_list_init_allocator(ArrayList* a,
-                                           size_t     capacity,
-                                           size_t     item_size,
-                                           Allocator  allocator);
+[[nodiscard]] Status
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator);
 [[nodiscard]] Status array_list_init(ArrayList* a, size_t capacity, size_t item_size);
-void             array_list_deinit(ArrayList* a);
+void                 array_list_deinit(ArrayList* a);
 
 size_t array_list_capacity(const ArrayList* a);
 size_t array_list_length(const ArrayList* a);
@@ -50,7 +48,7 @@ size_t array_list_length(const ArrayList* a);
 //
 // If the array does not need to be resized, then true is returned.
 [[nodiscard]] Status array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity);
-void             array_list_clear_retaining_capacity(ArrayList* a);
+void                 array_list_clear_retaining_capacity(ArrayList* a);
 [[nodiscard]] Status array_list_shrink_to_fit(ArrayList* a);
 
 // Inserts an item at the given position, maintaining relative order of the two regions.
@@ -66,12 +64,11 @@ void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const 
 void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, const void* item);
 
 [[nodiscard]] Status array_list_push(ArrayList* a, const void* item);
-void             array_list_push_assume_capacity(ArrayList* a, const void* item);
+void                 array_list_push_assume_capacity(ArrayList* a, const void* item);
 [[nodiscard]] Status array_list_pop(ArrayList* a, void* item);
 [[nodiscard]] Status array_list_remove(ArrayList* a, size_t index, void* item);
-[[nodiscard]] Status array_list_remove_item(ArrayList*  a,
-                                        const void* item,
-                                        int (*compare)(const void*, const void*));
+[[nodiscard]] Status
+array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void*, const void*));
 [[nodiscard]] Status array_list_get(const ArrayList* a, size_t index, void* item);
 [[nodiscard]] Status array_list_get_ptr(ArrayList* a, size_t index, void** item);
 [[nodiscard]] Status array_list_set(ArrayList* a, size_t index, const void* item);
@@ -83,9 +80,9 @@ void             array_list_push_assume_capacity(ArrayList* a, const void* item)
 //
 // The input index variable index of the first found element, and false is returned if not found.
 [[nodiscard]] Status array_list_find(const ArrayList* a,
-                                 size_t*          index,
-                                 const void*      item,
-                                 int (*compare)(const void*, const void*));
+                                     size_t*          index,
+                                     const void*      item,
+                                     int (*compare)(const void*, const void*));
 
 // Performs binary search on the array, setting the index to the real position if found.
 // If the element is not found, then the index is set to its insertion position.

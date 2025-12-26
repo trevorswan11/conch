@@ -19,9 +19,8 @@ typedef struct SemanticContext {
 Allocator     semantic_context_allocator(SemanticContext* context);
 SemanticType* semantic_context_move_analyzed(SemanticContext* context);
 
-[[nodiscard]] Status semantic_context_create(SemanticContext*  parent,
-                                         SemanticContext** context,
-                                         Allocator         allocator);
+[[nodiscard]] Status
+semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator);
 
 // Releases the provided context but does not wipe parents
 void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc);

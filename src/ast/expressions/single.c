@@ -33,35 +33,34 @@ void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(node);
 }
 
-[[nodiscard]] Status nil_expression_create(Token           start_token,
-                                       NilExpression** nil_expr,
-                                       memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status
+nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc) {
     SINGLE_STMT_CREATE(NilExpression, NIL_VTABLE, nil_expr);
 }
 
-[[nodiscard]] Status nil_expression_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+nil_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     SINGLE_STMT_RECONSTRUCT("nil");
 }
 
-[[nodiscard]] Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     PRIMITIVE_ANALYZE(STYPE_NIL, true, semantic_context_allocator(parent).memory_alloc);
 }
 
 [[nodiscard]] Status ignore_expression_create(Token              start_token,
-                                          IgnoreExpression** ignore_expr,
-                                          memory_alloc_fn    memory_alloc) {
+                                              IgnoreExpression** ignore_expr,
+                                              memory_alloc_fn    memory_alloc) {
     SINGLE_STMT_CREATE(IgnoreExpression, IGNORE_VTABLE, ignore_expr);
 }
 
-[[nodiscard]] Status ignore_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb) {
+[[nodiscard]] Status
+ignore_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     SINGLE_STMT_RECONSTRUCT("_");
 }
 
-[[nodiscard]] Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
     MAYBE_UNUSED(node);

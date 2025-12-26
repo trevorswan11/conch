@@ -21,11 +21,11 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status call_expression_create(Token            start_token,
-                                        Expression*      function,
-                                        ArrayList        arguments,
-                                        ArrayList        generics,
-                                        CallExpression** call_expr,
-                                        memory_alloc_fn  memory_alloc) {
+                                            Expression*      function,
+                                            ArrayList        arguments,
+                                            ArrayList        generics,
+                                            CallExpression** call_expr,
+                                            memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
     assert(arguments.item_size == sizeof(CallArgument));
     ASSERT_EXPRESSION(function);
@@ -56,9 +56,8 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(call);
 }
 
-[[nodiscard]] Status call_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -88,7 +87,8 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

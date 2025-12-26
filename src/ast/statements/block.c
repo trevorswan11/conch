@@ -7,9 +7,8 @@
 
 #include "util/containers/string_builder.h"
 
-[[nodiscard]] Status block_statement_create(Token            start_token,
-                                        BlockStatement** block_stmt,
-                                        Allocator        allocator) {
+[[nodiscard]] Status
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
 
     BlockStatement* block = allocator.memory_alloc(sizeof(BlockStatement));
@@ -38,9 +37,8 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(block);
 }
 
-[[nodiscard]] Status block_statement_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -59,7 +57,8 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
     Allocator allocator = semantic_context_allocator(parent);

@@ -10,15 +10,14 @@ typedef struct BlockStatement {
     ArrayList statements;
 } BlockStatement;
 
-[[nodiscard]] Status block_statement_create(Token            start_token,
-                                        BlockStatement** block_stmt,
-                                        Allocator        allocator);
+[[nodiscard]] Status
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator);
 
-void             block_statement_destroy(Node* node, free_alloc_fn free_alloc);
-[[nodiscard]] Status block_statement_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb);
-[[nodiscard]] Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+void block_statement_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable BLOCK_VTABLE = {
     .base =

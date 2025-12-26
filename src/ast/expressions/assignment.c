@@ -10,11 +10,11 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status assignment_expression_create(Token                  start_token,
-                                              Expression*            lhs,
-                                              TokenType              op,
-                                              Expression*            rhs,
-                                              AssignmentExpression** assignment_expr,
-                                              memory_alloc_fn        memory_alloc) {
+                                                  Expression*            lhs,
+                                                  TokenType              op,
+                                                  Expression*            rhs,
+                                                  AssignmentExpression** assignment_expr,
+                                                  memory_alloc_fn        memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(lhs);
     ASSERT_EXPRESSION(rhs);
@@ -44,9 +44,8 @@ void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(assign);
 }
 
-[[nodiscard]] Status assignment_expression_reconstruct(Node*          node,
-                                                   const HashMap* symbol_map,
-                                                   StringBuilder* sb) {
+[[nodiscard]] Status
+assignment_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -68,9 +67,8 @@ void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status assignment_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors) {
+[[nodiscard]] Status
+assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

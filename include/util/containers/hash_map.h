@@ -117,14 +117,14 @@ typedef struct {
 //
 // Heavily inspired by Zig's unmanaged HashMap.
 [[nodiscard]] Status hash_map_init_allocator(HashMap* hm,
-                                         size_t   capacity,
-                                         size_t   key_size,
-                                         size_t   key_align,
-                                         size_t   value_size,
-                                         size_t   value_align,
-                                         Hash (*hash)(const void*),
-                                         int (*compare)(const void*, const void*),
-                                         Allocator allocator);
+                                             size_t   capacity,
+                                             size_t   key_size,
+                                             size_t   key_align,
+                                             size_t   value_size,
+                                             size_t   value_align,
+                                             Hash (*hash)(const void*),
+                                             int (*compare)(const void*, const void*),
+                                             Allocator allocator);
 
 // Creates a HashMap with the given properties.
 //
@@ -137,19 +137,19 @@ typedef struct {
 //
 // Heavily inspired by Zig's unmanaged HashMap.
 [[nodiscard]] Status hash_map_init(HashMap* hm,
-                               size_t   capacity,
-                               size_t   key_size,
-                               size_t   key_align,
-                               size_t   value_size,
-                               size_t   value_align,
-                               Hash (*hash)(const void*),
-                               int (*compare)(const void*, const void*));
-void             hash_map_deinit(HashMap* hm);
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   size_t   value_size,
+                                   size_t   value_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*));
+void                 hash_map_deinit(HashMap* hm);
 
 size_t hash_map_capacity(const HashMap* hm);
 size_t hash_map_count(const HashMap* hm);
 
-void             hash_map_clear_retaining_capacity(HashMap* hm);
+void                 hash_map_clear_retaining_capacity(HashMap* hm);
 [[nodiscard]] Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size);
 [[nodiscard]] Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size);
 
@@ -170,12 +170,12 @@ void hash_map_rehash(HashMap* hm);
 void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const void* value);
 [[nodiscard]] Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value);
 
-MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
-[[nodiscard]] Status  hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
-void              hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
-[[nodiscard]] Status  hash_map_put(HashMap* hm, const void* key, const void* value);
+MapGetOrPutResult    hash_map_get_or_put_assume_capacity(HashMap* hm, const void* key);
+[[nodiscard]] Status hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result);
+void                 hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* value);
+[[nodiscard]] Status hash_map_put(HashMap* hm, const void* key, const void* value);
 
-bool             hash_map_contains(const HashMap* hm, const void* key);
+bool                 hash_map_contains(const HashMap* hm, const void* key);
 [[nodiscard]] Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index);
 [[nodiscard]] Status hash_map_get_value(const HashMap* hm, const void* key, void* value);
 [[nodiscard]] Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item);

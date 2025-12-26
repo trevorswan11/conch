@@ -47,8 +47,8 @@ void parser_deinit(Parser* p);
 [[nodiscard]] Status parser_consume(Parser* p, AST* ast);
 [[nodiscard]] Status parser_next_token(Parser* p);
 
-bool             parser_current_token_is(const Parser* p, TokenType t);
-bool             parser_peek_token_is(const Parser* p, TokenType t);
+bool                 parser_current_token_is(const Parser* p, TokenType t);
+bool                 parser_peek_token_is(const Parser* p, TokenType t);
 [[nodiscard]] Status parser_expect_current(Parser* p, TokenType t);
 [[nodiscard]] Status parser_expect_peek(Parser* p, TokenType t);
 [[nodiscard]] Status parser_current_error(Parser* p, TokenType t);

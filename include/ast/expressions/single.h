@@ -9,13 +9,11 @@ typedef struct NilExpression {
     Expression base;
 } NilExpression;
 
-[[nodiscard]] Status nil_expression_create(Token           start_token,
-                                       NilExpression** nil_expr,
-                                       memory_alloc_fn memory_alloc);
+[[nodiscard]] Status
+nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc);
 
-[[nodiscard]] Status nil_expression_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb);
+[[nodiscard]] Status
+nil_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status nil_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable NIL_VTABLE = {
@@ -32,13 +30,13 @@ typedef struct IgnoreExpression {
 } IgnoreExpression;
 
 [[nodiscard]] Status ignore_expression_create(Token              start_token,
-                                          IgnoreExpression** ignore_expr,
-                                          memory_alloc_fn    memory_alloc);
+                                              IgnoreExpression** ignore_expr,
+                                              memory_alloc_fn    memory_alloc);
 
-[[nodiscard]] Status ignore_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb);
-[[nodiscard]] Status ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status
+ignore_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+ignore_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable IGNORE_VTABLE = {
     .base =

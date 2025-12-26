@@ -26,7 +26,7 @@ typedef struct AST {
 } AST;
 
 [[nodiscard]] Status ast_init(AST* ast, Allocator allocator);
-void             ast_deinit(AST* ast);
+void                 ast_deinit(AST* ast);
 
 // Reconstructs the original source code from the AST.
 //
@@ -47,8 +47,7 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
 // Handles the reconstruction of generic lists.
 //
 // While the generics pointer must be valid, this is a no-op for empty lists.
-[[nodiscard]] Status generics_reconstruct(ArrayList*     generics,
-                                      const HashMap* symbol_map,
-                                      StringBuilder* sb);
+[[nodiscard]] Status
+generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb);
 
 #endif

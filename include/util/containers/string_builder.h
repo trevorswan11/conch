@@ -12,13 +12,13 @@ typedef struct StringBuilder {
     ArrayList buffer;
 } StringBuilder;
 
-[[nodiscard]] Status string_builder_init_allocator(StringBuilder* sb,
-                                               size_t         initial_length,
-                                               Allocator      allocator);
+[[nodiscard]] Status
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator);
 [[nodiscard]] Status string_builder_init(StringBuilder* sb, size_t initial_length);
-void             string_builder_deinit(StringBuilder* sb);
+void                 string_builder_deinit(StringBuilder* sb);
 [[nodiscard]] Status string_builder_append(StringBuilder* sb, char byte);
-[[nodiscard]] Status string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length);
+[[nodiscard]] Status
+string_builder_append_many(StringBuilder* sb, const char* bytes, size_t length);
 [[nodiscard]] Status string_builder_append_str_z(StringBuilder* sb, const char* str);
 [[nodiscard]] Status string_builder_append_slice(StringBuilder* sb, Slice slice);
 [[nodiscard]] Status string_builder_append_mut_slice(StringBuilder* sb, MutSlice slice);

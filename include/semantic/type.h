@@ -81,11 +81,11 @@ typedef struct {
 } SemanticArrayType;
 
 [[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
-                                       SemanticArrayUnion  variant,
-                                       SemanticType*       inner_type,
-                                       SemanticArrayType** array_type,
-                                       memory_alloc_fn     memory_alloc);
-void             semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
+                                           SemanticArrayUnion  variant,
+                                           SemanticType*       inner_type,
+                                           SemanticArrayType** array_type,
+                                           memory_alloc_fn     memory_alloc);
+void                 semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
 
 typedef struct {
     RcControlBlock rc_control;
@@ -95,11 +95,11 @@ typedef struct {
 } SemanticEnumType;
 
 [[nodiscard]] Status semantic_enum_create(Slice              name,
-                                      HashSet            variants,
-                                      SemanticEnumType** enum_type,
-                                      memory_alloc_fn    memory_alloc);
-void             free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
-void             semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
+                                          HashSet            variants,
+                                          SemanticEnumType** enum_type,
+                                          memory_alloc_fn    memory_alloc);
+void                 free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
+void                 semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
 
 typedef union {
     SematicDatalessType dataless_type;
@@ -125,12 +125,12 @@ typedef struct SemanticType {
 // Copies the tagged union data from src to dest, leaving flags alone.
 //
 // Reference counting is respected when possible.
-[[nodiscard]] Status semantic_type_copy_variant(SemanticType* dest,
-                                            SemanticType* src,
-                                            Allocator     allocator);
+[[nodiscard]] Status
+semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator allocator);
 
 // Creates and deep copies src into dest while respecting RC.
-[[nodiscard]] Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
+[[nodiscard]] Status
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
 
 // Never call this directly!
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);

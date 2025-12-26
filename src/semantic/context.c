@@ -4,9 +4,8 @@
 #include "semantic/symbol.h"
 #include "semantic/type.h"
 
-[[nodiscard]] Status semantic_context_create(SemanticContext*  parent,
-                                         SemanticContext** context,
-                                         Allocator         allocator) {
+[[nodiscard]] Status
+semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     SemanticContext* sem_con = allocator.memory_alloc(sizeof(SemanticContext));
     if (!sem_con) { return ALLOCATION_FAILED; }

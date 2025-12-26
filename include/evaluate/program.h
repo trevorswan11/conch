@@ -23,7 +23,7 @@ typedef struct {
 } Program;
 
 [[nodiscard]] Status program_init(Program* program, FileIO* io, Allocator allocator);
-void             program_deinit(Program* program);
+void                 program_deinit(Program* program);
 
 [[nodiscard]] Status program_run(Program* program, Slice input);
 [[nodiscard]] Status program_print_errors(ArrayList* errors, FileIO* io);

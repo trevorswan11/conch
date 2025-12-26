@@ -127,7 +127,8 @@ void swap(void* a, void* b, size_t size) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status
+mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc) {
     const Slice slice_src = slice_from_mut(src);
     return slice_dupe(dest, &slice_src, memory_alloc);
 }

@@ -9,10 +9,10 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status array_literal_expression_create(Token                    start_token,
-                                                 bool                     inferred_size,
-                                                 ArrayList                items,
-                                                 ArrayLiteralExpression** array_expr,
-                                                 memory_alloc_fn          memory_alloc) {
+                                                     bool                     inferred_size,
+                                                     ArrayList                items,
+                                                     ArrayLiteralExpression** array_expr,
+                                                     memory_alloc_fn          memory_alloc) {
     assert(memory_alloc);
     assert(items.item_size == sizeof(Expression*));
 
@@ -39,9 +39,8 @@ void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(array);
 }
 
-[[nodiscard]] Status array_literal_expression_reconstruct(Node*          node,
-                                                      const HashMap* symbol_map,
-                                                      StringBuilder* sb) {
+[[nodiscard]] Status
+array_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -67,9 +66,8 @@ void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status array_literal_expression_analyze(Node*            node,
-                                                  SemanticContext* parent,
-                                                  ArrayList*       errors) {
+[[nodiscard]] Status
+array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

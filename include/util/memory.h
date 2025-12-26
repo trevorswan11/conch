@@ -113,7 +113,8 @@ void      swap(void* a, void* b, size_t size);
 [[nodiscard]] char* strdup_s(const char* str, size_t size);
 
 [[nodiscard]] Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc);
-[[nodiscard]] Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc);
+[[nodiscard]] Status
+mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc);
 
 typedef void (*rc_dtor)(void*, free_alloc_fn);
 

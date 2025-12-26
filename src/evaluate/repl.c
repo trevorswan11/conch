@@ -75,7 +75,8 @@ static inline void sigint_handler(int sig) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+[[nodiscard]] Status
+repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
     const char null = 0;
     while (true) {
         if (!fgets(stream_buffer, BUF_SIZE, io->in)) {

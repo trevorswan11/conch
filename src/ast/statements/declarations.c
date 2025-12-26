@@ -21,11 +21,11 @@
     }
 
 [[nodiscard]] Status decl_statement_create(Token                 start_token,
-                                       IdentifierExpression* ident,
-                                       TypeExpression*       type,
-                                       Expression*           value,
-                                       DeclStatement**       decl_stmt,
-                                       memory_alloc_fn       memory_alloc) {
+                                           IdentifierExpression* ident,
+                                           TypeExpression*       type,
+                                           Expression*           value,
+                                           DeclStatement**       decl_stmt,
+                                           memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     ASSERT_EXPRESSION(ident);
@@ -78,9 +78,8 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(decl);
 }
 
-[[nodiscard]] Status decl_statement_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -107,7 +106,8 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
@@ -183,11 +183,11 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status type_decl_statement_create(Token                 start_token,
-                                            IdentifierExpression* ident,
-                                            Expression*           value,
-                                            bool                  primitive_alias,
-                                            TypeDeclStatement**   type_decl_stmt,
-                                            memory_alloc_fn       memory_alloc) {
+                                                IdentifierExpression* ident,
+                                                Expression*           value,
+                                                bool                  primitive_alias,
+                                                TypeDeclStatement**   type_decl_stmt,
+                                                memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(ident && value);
@@ -217,9 +217,8 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type_decl);
 }
 
-[[nodiscard]] Status type_decl_statement_reconstruct(Node*          node,
-                                                 const HashMap* symbol_map,
-                                                 StringBuilder* sb) {
+[[nodiscard]] Status
+type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -237,9 +236,8 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status type_decl_statement_analyze(Node*            node,
-                                             SemanticContext* parent,
-                                             ArrayList*       errors) {
+[[nodiscard]] Status
+type_decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

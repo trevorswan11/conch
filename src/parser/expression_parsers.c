@@ -87,7 +87,8 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
+[[nodiscard]] Status
+expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -133,9 +134,8 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status parameter_list_parse(Parser*    p,
-                                      ArrayList* parameters,
-                                      bool*      contains_default_param) {
+[[nodiscard]] Status
+parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_param) {
     assert(p && parameters);
     ASSERT_ALLOCATOR(p->allocator);
     Allocator allocator = p->allocator;
@@ -263,10 +263,10 @@
 }
 
 [[nodiscard]] Status function_definition_parse(Parser*          p,
-                                           ArrayList*       generics,
-                                           ArrayList*       parameters,
-                                           TypeExpression** return_type,
-                                           bool*            contains_default_param) {
+                                               ArrayList*       generics,
+                                               ArrayList*       parameters,
+                                               TypeExpression** return_type,
+                                               bool*            contains_default_param) {
     assert(parser_current_token_is(p, FUNCTION));
     TRY(generics_parse(p, generics));
 
@@ -801,7 +801,8 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status call_expression_parse(Parser* p, Expression* function, Expression** expression) {
+[[nodiscard]] Status
+call_expression_parse(Parser* p, Expression* function, Expression** expression) {
     const Token start_token = p->current_token;
 
     ArrayList arguments;
@@ -1559,7 +1560,8 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression) {
+[[nodiscard]] Status
+namespace_expression_parse(Parser* p, Expression* outer, Expression** expression) {
     ASSERT_EXPRESSION(outer);
     TRY(parser_expect_peek(p, IDENT));
 
@@ -1577,9 +1579,8 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status assignment_expression_parse(Parser*      p,
-                                             Expression*  assignee,
-                                             Expression** expression) {
+[[nodiscard]] Status
+assignment_expression_parse(Parser* p, Expression* assignee, Expression** expression) {
     const TokenType  op_token_type      = p->current_token.type;
     const Precedence current_precedence = parser_current_precedence(p);
     TRY(parser_next_token(p));

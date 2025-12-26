@@ -23,10 +23,10 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status struct_expression_create(Token              start_token,
-                                          ArrayList          generics,
-                                          ArrayList          members,
-                                          StructExpression** struct_expr,
-                                          memory_alloc_fn    memory_alloc) {
+                                              ArrayList          generics,
+                                              ArrayList          members,
+                                              StructExpression** struct_expr,
+                                              memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr);
     assert(generics.item_size == sizeof(Expression*));
@@ -57,9 +57,8 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(struct_expr);
 }
 
-[[nodiscard]] Status struct_expression_reconstruct(Node*          node,
-                                               const HashMap* symbol_map,
-                                               StringBuilder* sb) {
+[[nodiscard]] Status
+struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -92,7 +91,8 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

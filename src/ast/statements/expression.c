@@ -8,9 +8,9 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status expression_statement_create(Token                 start_token,
-                                             Expression*           expression,
-                                             ExpressionStatement** expr_stmt,
-                                             memory_alloc_fn       memory_alloc) {
+                                                 Expression*           expression,
+                                                 ExpressionStatement** expr_stmt,
+                                                 memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     assert(expression);
 
@@ -36,9 +36,8 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(expr_stmt);
 }
 
-[[nodiscard]] Status expression_statement_reconstruct(Node*          node,
-                                                  const HashMap* symbol_map,
-                                                  StringBuilder* sb) {
+[[nodiscard]] Status
+expression_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -47,9 +46,8 @@ void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     return NODE_VIRTUAL_RECONSTRUCT(expr_stmt->expression, symbol_map, sb);
 }
 
-[[nodiscard]] Status expression_statement_analyze(Node*            node,
-                                              SemanticContext* parent,
-                                              ArrayList*       errors) {
+[[nodiscard]] Status
+expression_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

@@ -79,10 +79,10 @@ bool semantic_type_is_integer(SemanticType* type) {
 }
 
 [[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
-                                       SemanticArrayUnion  variant,
-                                       SemanticType*       inner_type,
-                                       SemanticArrayType** array_type,
-                                       memory_alloc_fn     memory_alloc) {
+                                           SemanticArrayUnion  variant,
+                                           SemanticType*       inner_type,
+                                           SemanticArrayType** array_type,
+                                           memory_alloc_fn     memory_alloc) {
     assert(inner_type);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.length > 1 : true);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
@@ -114,9 +114,9 @@ void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status semantic_enum_create(Slice              name,
-                                      HashSet            variants,
-                                      SemanticEnumType** enum_type,
-                                      memory_alloc_fn    memory_alloc) {
+                                          HashSet            variants,
+                                          SemanticEnumType** enum_type,
+                                          memory_alloc_fn    memory_alloc) {
     assert(memory_alloc);
     assert(variants.header->key_size == sizeof(MutSlice));
 
@@ -172,9 +172,8 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status semantic_type_copy_variant(SemanticType* dest,
-                                            SemanticType* src,
-                                            Allocator     allocator) {
+[[nodiscard]] Status
+semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator allocator) {
     dest->tag = src->tag;
     MAYBE_UNUSED(allocator);
 
@@ -193,7 +192,8 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+[[nodiscard]] Status
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
     SemanticType* type;
     TRY(semantic_type_create(&type, allocator.memory_alloc));
 

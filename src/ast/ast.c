@@ -151,9 +151,8 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     array_list_deinit(expressions);
 }
 
-[[nodiscard]] Status generics_reconstruct(ArrayList*     generics,
-                                      const HashMap* symbol_map,
-                                      StringBuilder* sb) {
+[[nodiscard]] Status
+generics_reconstruct(ArrayList* generics, const HashMap* symbol_map, StringBuilder* sb) {
     assert(generics && symbol_map && sb);
 
     if (generics->length > 0) {

@@ -9,17 +9,15 @@ typedef struct IdentifierExpression {
 } IdentifierExpression;
 
 [[nodiscard]] Status identifier_expression_create(Token                  start_token,
-                                              MutSlice               name,
-                                              IdentifierExpression** ident_expr,
-                                              memory_alloc_fn        memory_alloc);
+                                                  MutSlice               name,
+                                                  IdentifierExpression** ident_expr,
+                                                  memory_alloc_fn        memory_alloc);
 
-void             identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
-[[nodiscard]] Status identifier_expression_reconstruct(Node*          node,
-                                                   const HashMap* symbol_map,
-                                                   StringBuilder* sb);
-[[nodiscard]] Status identifier_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors);
+void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
+[[nodiscard]] Status
+identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
+[[nodiscard]] Status
+identifier_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable IDENTIFIER_VTABLE = {
     .base =

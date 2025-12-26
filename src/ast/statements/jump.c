@@ -9,9 +9,9 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status jump_statement_create(Token           start_token,
-                                       Expression*     value,
-                                       JumpStatement** jump_stmt,
-                                       memory_alloc_fn memory_alloc) {
+                                           Expression*     value,
+                                           JumpStatement** jump_stmt,
+                                           memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
     assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
@@ -37,9 +37,8 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(jump);
 }
 
-[[nodiscard]] Status jump_statement_reconstruct(Node*          node,
-                                            const HashMap* symbol_map,
-                                            StringBuilder* sb) {
+[[nodiscard]] Status
+jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_STATEMENT(node);
     assert(sb);
 
@@ -62,7 +61,8 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

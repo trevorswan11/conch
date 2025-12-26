@@ -62,12 +62,12 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
 }
 
 [[nodiscard]] Status hash_set_init_allocator(HashSet* hs,
-                                         size_t   capacity,
-                                         size_t   key_size,
-                                         size_t   key_align,
-                                         Hash (*hash)(const void*),
-                                         int (*compare)(const void*, const void*),
-                                         Allocator allocator) {
+                                             size_t   capacity,
+                                             size_t   key_size,
+                                             size_t   key_align,
+                                             Hash (*hash)(const void*),
+                                             int (*compare)(const void*, const void*),
+                                             Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     if (!hs || !hash || !compare) { return NULL_PARAMETER; }
     if (key_size == 0 || key_align == 0) { return ZERO_ITEM_SIZE; }
@@ -126,11 +126,11 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
 }
 
 [[nodiscard]] Status hash_set_init(HashSet* hs,
-                               size_t   capacity,
-                               size_t   key_size,
-                               size_t   key_align,
-                               Hash (*hash)(const void*),
-                               int (*compare)(const void*, const void*)) {
+                                   size_t   capacity,
+                                   size_t   key_size,
+                                   size_t   key_align,
+                                   Hash (*hash)(const void*),
+                                   int (*compare)(const void*, const void*)) {
     return hash_set_init_allocator(
         hs, capacity, key_size, key_align, hash, compare, STANDARD_ALLOCATOR);
 }

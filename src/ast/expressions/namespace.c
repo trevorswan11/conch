@@ -9,10 +9,10 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status namespace_expression_create(Token                 start_token,
-                                             Expression*           outer,
-                                             IdentifierExpression* inner,
-                                             NamespaceExpression** namespace_expr,
-                                             memory_alloc_fn       memory_alloc) {
+                                                 Expression*           outer,
+                                                 IdentifierExpression* inner,
+                                                 NamespaceExpression** namespace_expr,
+                                                 memory_alloc_fn       memory_alloc) {
     assert(memory_alloc);
     ASSERT_EXPRESSION(outer);
     ASSERT_EXPRESSION(inner);
@@ -41,9 +41,8 @@ void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(namespace_expr);
 }
 
-[[nodiscard]] Status namespace_expression_reconstruct(Node*          node,
-                                                  const HashMap* symbol_map,
-                                                  StringBuilder* sb) {
+[[nodiscard]] Status
+namespace_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -58,9 +57,8 @@ void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status namespace_expression_analyze(Node*            node,
-                                              SemanticContext* parent,
-                                              ArrayList*       errors) {
+[[nodiscard]] Status
+namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

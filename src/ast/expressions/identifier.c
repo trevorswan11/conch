@@ -8,9 +8,9 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status identifier_expression_create(Token                  start_token,
-                                              MutSlice               name,
-                                              IdentifierExpression** ident_expr,
-                                              memory_alloc_fn        memory_alloc) {
+                                                  MutSlice               name,
+                                                  IdentifierExpression** ident_expr,
+                                                  memory_alloc_fn        memory_alloc) {
     assert(memory_alloc);
     assert(start_token.slice.ptr && start_token.slice.length > 0);
 
@@ -36,9 +36,8 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(ident);
 }
 
-[[nodiscard]] Status identifier_expression_reconstruct(Node*          node,
-                                                   const HashMap* symbol_map,
-                                                   StringBuilder* sb) {
+[[nodiscard]] Status
+identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     MAYBE_UNUSED(symbol_map);
     assert(sb);
@@ -49,9 +48,8 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status identifier_expression_analyze(Node*            node,
-                                               SemanticContext* parent,
-                                               ArrayList*       errors) {
+[[nodiscard]] Status
+identifier_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

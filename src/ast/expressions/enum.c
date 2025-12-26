@@ -25,9 +25,9 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status enum_expression_create(Token            start_token,
-                                        ArrayList        variants,
-                                        EnumExpression** enum_expr,
-                                        memory_alloc_fn  memory_alloc) {
+                                            ArrayList        variants,
+                                            EnumExpression** enum_expr,
+                                            memory_alloc_fn  memory_alloc) {
     assert(memory_alloc);
     assert(variants.item_size == sizeof(EnumVariant));
     assert(variants.length > 0);
@@ -54,9 +54,8 @@ void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(enum_expr);
 }
 
-[[nodiscard]] Status enum_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -82,7 +81,8 @@ void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

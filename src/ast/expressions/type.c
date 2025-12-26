@@ -13,10 +13,10 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status type_expression_create(Token               start_token,
-                                        TypeExpressionTag   tag,
-                                        TypeExpressionUnion variant,
-                                        TypeExpression**    type_expr,
-                                        memory_alloc_fn     memory_alloc) {
+                                            TypeExpressionTag   tag,
+                                            TypeExpressionUnion variant,
+                                            TypeExpression**    type_expr,
+                                            memory_alloc_fn     memory_alloc) {
     assert(memory_alloc);
     TypeExpression* type = memory_alloc(sizeof(TypeExpression));
     if (!type) { return ALLOCATION_FAILED; }
@@ -73,9 +73,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type);
 }
 
-[[nodiscard]] Status type_expression_reconstruct(Node*          node,
-                                             const HashMap* symbol_map,
-                                             StringBuilder* sb) {
+[[nodiscard]] Status
+type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
     assert(sb);
 
@@ -91,7 +90,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status
+type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -187,8 +187,8 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status explicit_type_reconstruct(ExplicitType   explicit_type,
-                                           const HashMap* symbol_map,
-                                           StringBuilder* sb) {
+                                               const HashMap* symbol_map,
+                                               StringBuilder* sb) {
     assert(sb);
 
     switch (explicit_type.tag) {
