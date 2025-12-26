@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
 
 #include "ast/expressions/enum.h"
 #include "ast/expressions/identifier.h"

@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -139,7 +137,7 @@ NODISCARD Status parser_null_init(Parser* p, FileIO* io, Allocator allocator) {
     });
 
     *p = (Parser){
-        .lexer            = NULL,
+        .lexer            = nullptr,
         .lexer_index      = 0,
         .current_token    = token_init(END, "", 0, 0, 0),
         .peek_token       = token_init(END, "", 0, 0, 0),
@@ -200,7 +198,7 @@ NODISCARD Status parser_consume(Parser* p, AST* ast) {
     // Traverse the tokens and append until exhausted
     while (!parser_current_token_is(p, END)) {
         if (!parser_current_token_is(p, COMMENT)) {
-            Statement* stmt = NULL;
+            Statement* stmt = nullptr;
             TRY_IS(parser_parse_statement(p, &stmt), ALLOCATION_FAILED);
             if (stmt) {
                 TRY_DO(array_list_push(&ast->statements, (void*)&stmt),

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"

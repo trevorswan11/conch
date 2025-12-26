@@ -100,7 +100,7 @@ NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, 
                              RC_RELEASE(operand_type, allocator.free_alloc));
     }
 
-    SemanticType*         resulting_type = NULL;
+    SemanticType*         resulting_type = nullptr;
     const SemanticTypeTag operand_tag    = operand_type->tag;
     switch (prefix_op) {
     case BANG:

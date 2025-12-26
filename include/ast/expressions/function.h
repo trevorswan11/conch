@@ -1,8 +1,6 @@
 #ifndef FUNCTION_EXPR_H
 #define FUNCTION_EXPR_H
 
-#include <stdbool.h>
-
 #include "ast/expressions/expression.h"
 
 #include "util/containers/array_list.h"

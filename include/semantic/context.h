@@ -1,8 +1,6 @@
 #ifndef SEMA_CONTEXT_H
 #define SEMA_CONTEXT_H
 
-#include <stdbool.h>
-
 #include "util/memory.h"
 #include "util/status.h"
 

@@ -1,7 +1,6 @@
 #ifndef IO_H
 #define IO_H
 
-#include <stdbool.h>
 #include <stdio.h>
 
 #include "util/status.h"

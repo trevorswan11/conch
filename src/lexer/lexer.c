@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,7 +79,7 @@ NODISCARD Status lexer_null_init(Lexer* l, Allocator allocator) {
     });
 
     *l = (Lexer){
-        .input             = NULL,
+        .input             = nullptr,
         .input_length      = 0,
         .position          = 0,
         .peek_position     = 0,
@@ -280,7 +278,9 @@ Token lexer_read_number(Lexer* l) {
     const size_t start_col       = l->col_no;
     bool         passed_decimal  = false;
     bool         passed_exponent = false;
-    bool         is_hex = false, is_bin = false, is_oct = false;
+    bool         is_hex          = false;
+    bool         is_bin          = false;
+    bool         is_oct          = false;
 
     // Detect numeric prefix
     if (l->current_byte == '0' && l->peek_position < l->input_length) {

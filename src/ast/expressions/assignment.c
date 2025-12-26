@@ -118,7 +118,7 @@ NODISCARD Status assignment_expression_analyze(Node*            node,
     }
 
     // Compound expressions are treated like a subset of infix expressions
-    SemanticType* resulting_type = NULL;
+    SemanticType* resulting_type = nullptr;
     switch (assign->op) {
     case ASSIGN:
         if (!type_assignable(lhs_type, rhs_type)) {

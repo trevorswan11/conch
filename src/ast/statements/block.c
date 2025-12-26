@@ -79,7 +79,7 @@ NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, Ar
         // If a type bubbled up we have to release it
         if (child->analyzed_type) {
             RC_RELEASE(child->analyzed_type, allocator.free_alloc);
-            child->analyzed_type = NULL;
+            child->analyzed_type = nullptr;
         }
     }
 

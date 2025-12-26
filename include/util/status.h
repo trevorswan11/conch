@@ -2,7 +2,6 @@
 #define STATUS_H
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stddef.h>
 
 #define ENUMERATE(ENUM) ENUM

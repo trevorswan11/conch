@@ -178,7 +178,7 @@ NODISCARD Status parameter_list_parse(Parser*    p,
             }
 
             // Parse the default value based on the types knowledge of it
-            Expression* default_value = NULL;
+            Expression* default_value = nullptr;
             if (initalized) {
                 some_initialized = some_initialized || initalized;
 
@@ -740,7 +740,7 @@ NODISCARD Status if_expression_parse(Parser* p, Expression** expression) {
     TRY_DO(if_expression_parse_branch(p, &consequence),
            NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
-    Statement* alternate = NULL;
+    Statement* alternate = nullptr;
     if (parser_peek_token_is(p, ELSE)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         TRY_DO(if_expression_parse_branch(p, &alternate), {
@@ -768,7 +768,7 @@ NODISCARD Status function_expression_parse(Parser* p, Expression** expression) {
     ArrayList       parameters;
     TypeExpression* return_type;
 
-    TRY(function_definition_parse(p, &generics, &parameters, &return_type, NULL));
+    TRY(function_definition_parse(p, &generics, &parameters, &return_type, nullptr));
     TRY_DO(parser_expect_peek(p, LBRACE), {
         free_expression_list(&generics, p->allocator.free_alloc);
         free_parameter_list(&parameters, p->allocator.free_alloc);
@@ -950,7 +950,7 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
         }
 
         // The type parser leaves with the current token on assignment in this case
-        Expression* default_value = NULL;
+        Expression* default_value = nullptr;
         if (has_default_value) {
             TRY_DO(expression_parse(p, LOWEST, &default_value), {
                 NODE_VIRTUAL_FREE(ident_expr, p->allocator.free_alloc);
@@ -1022,7 +1022,7 @@ NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
                free_enum_variant_list(&variants, p->allocator.free_alloc));
         IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
 
-        Expression* value = NULL;
+        Expression* value = nullptr;
         if (parser_peek_token_is(p, ASSIGN)) {
             UNREACHABLE_IF_ERROR(parser_next_token(p));
             TRY_DO(parser_next_token(p), {
@@ -1151,7 +1151,7 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
     });
 
     // Catch all statement is optional and is the equivalent of a switch default
-    Statement* catch_all = NULL;
+    Statement* catch_all = nullptr;
     POSSIBLE_TRAILING_ALTERNATE(
         catch_all,
         {
@@ -1371,7 +1371,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
     }
 
     // Finally, we should try to parse the non break clause
-    Statement* non_break = NULL;
+    Statement* non_break = nullptr;
     POSSIBLE_TRAILING_ALTERNATE(
         non_break,
         {
@@ -1415,7 +1415,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
     TRY_DO(parser_expect_peek(p, RPAREN), NODE_VIRTUAL_FREE(condition, p->allocator.free_alloc));
 
     // The continuation expression is optional but is parsed similar to captures
-    Expression* continuation = NULL;
+    Expression* continuation = nullptr;
     if (parser_peek_token_is(p, COLON)) {
         const Token continuation_start = p->current_token;
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -1461,7 +1461,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
     }
 
     // Finally, we should try to parse the non break clause
-    Statement* non_break = NULL;
+    Statement* non_break = nullptr;
     POSSIBLE_TRAILING_ALTERNATE(
         non_break,
         {

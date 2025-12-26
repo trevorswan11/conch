@@ -1,7 +1,6 @@
 #ifndef ALPHANUM_H
 #define ALPHANUM_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,9 +14,7 @@ static inline bool is_digit(char byte) { return '0' <= byte && byte <= '9'; }
 //
 // An underscore is considered a letter.
 static inline bool is_letter(char byte) {
-    const bool lower = 'a' <= byte && byte <= 'z';
-    const bool upper = 'A' <= byte && byte <= 'Z';
-    return lower || upper;
+    return ('a' <= byte && byte <= 'z') || ('A' <= byte && byte <= 'Z');
 }
 
 // Checks if the given byte is a whitespace character.

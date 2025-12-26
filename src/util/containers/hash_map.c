@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -176,9 +174,9 @@ void hash_map_deinit(HashMap* hm) {
     ASSERT_ALLOCATOR(hm->allocator);
 
     hm->allocator.free_alloc(hm->buffer);
-    hm->buffer    = NULL;
-    hm->header    = NULL;
-    hm->metadata  = NULL;
+    hm->buffer    = nullptr;
+    hm->header    = nullptr;
+    hm->metadata  = nullptr;
     hm->size      = 0;
     hm->available = 0;
 }
@@ -444,7 +442,7 @@ NODISCARD Status hash_map_put(HashMap* hm, const void* key, const void* value) {
 
 bool hash_map_contains(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
-    return STATUS_OK(hash_map_get_index(hm, key, NULL));
+    return STATUS_OK(hash_map_get_index(hm, key, nullptr));
 }
 
 NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
@@ -482,7 +480,7 @@ NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* 
 static inline const void* hash_map_get_value_ptr_impl(const HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     size_t index;
-    if (STATUS_ERR(hash_map_get_index(hm, key, &index))) { return NULL; }
+    if (STATUS_ERR(hash_map_get_index(hm, key, &index))) { return nullptr; }
 
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }

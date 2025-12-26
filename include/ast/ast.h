@@ -1,8 +1,6 @@
 #ifndef AST_H
 #define AST_H
 
-#include <stdbool.h>
-
 #include "lexer/token.h"
 
 #include "util/containers/array_list.h"

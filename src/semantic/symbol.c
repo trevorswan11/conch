@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
 
 #include "semantic/symbol.h"
 #include "semantic/type.h"

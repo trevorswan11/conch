@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
 
 #include "ast/ast.h"
 #include "ast/expressions/expression.h"

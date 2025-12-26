@@ -141,7 +141,7 @@ void free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc) {
     while (hash_set_iterator_has_next(&it, &variant)) {
         MutSlice* name = (MutSlice*)variant.key_ptr;
         free_alloc(name->ptr);
-        name->ptr = NULL;
+        name->ptr = nullptr;
     }
 
     hash_set_deinit(variants);

@@ -17,14 +17,14 @@ NODISCARD Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator
     ASSERT_ALLOCATOR(allocator);
 
     SemanticContext* global_ctx;
-    TRY(semantic_context_create(NULL, &global_ctx, allocator));
+    TRY(semantic_context_create(nullptr, &global_ctx, allocator));
 
     ArrayList errors;
     TRY_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator),
            semantic_context_destroy(global_ctx, allocator.free_alloc));
 
     SemanticAnalyzer seman = (SemanticAnalyzer){
-        .ast        = NULL,
+        .ast        = nullptr,
         .global_ctx = global_ctx,
         .errors     = errors,
         .allocator  = allocator,
@@ -39,7 +39,7 @@ void seman_deinit(SemanticAnalyzer* analyzer) {
     free_alloc_fn free_alloc = analyzer->allocator.free_alloc;
 
     semantic_context_destroy(analyzer->global_ctx, free_alloc);
-    analyzer->global_ctx = NULL;
+    analyzer->global_ctx = nullptr;
     free_error_list(&analyzer->errors, free_alloc);
 }
 
@@ -62,7 +62,7 @@ NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
         // If the global context never had the last type moved out, we must release it
         if (analyzer->global_ctx->analyzed_type) {
             RC_RELEASE(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
-            analyzer->global_ctx->analyzed_type = NULL;
+            analyzer->global_ctx->analyzed_type = nullptr;
         }
     }
 

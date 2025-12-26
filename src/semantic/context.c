@@ -31,7 +31,7 @@ Allocator semantic_context_allocator(SemanticContext* context) {
 SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
     assert(context);
     SemanticType* type     = context->analyzed_type;
-    context->analyzed_type = NULL;
+    context->analyzed_type = nullptr;
     return type;
 }
 

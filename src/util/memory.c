@@ -60,10 +60,10 @@ bool mut_slice_equals_str_s(const MutSlice* slice, const char* str, size_t size)
 
 Slice slice_from_mut(const MutSlice* slice) { return slice_from_str_s(slice->ptr, slice->length); }
 
-Slice       zeroed_slice(void) { return slice_from_str_s(NULL, 0); }
-MutSlice    zeroed_mut_slice(void) { return mut_slice_from_str_s(NULL, 0); }
-AnySlice    zeroed_any_slice(void) { return (AnySlice){NULL, 0}; }
-AnyMutSlice zeroed_any_mut_slice(void) { return (AnyMutSlice){NULL, 0}; }
+Slice       zeroed_slice(void) { return slice_from_str_s(nullptr, 0); }
+MutSlice    zeroed_mut_slice(void) { return mut_slice_from_str_s(nullptr, 0); }
+AnySlice    zeroed_any_slice(void) { return (AnySlice){nullptr, 0}; }
+AnyMutSlice zeroed_any_mut_slice(void) { return (AnyMutSlice){nullptr, 0}; }
 
 AnySlice any_from_slice(const Slice* slice) { return (AnySlice){slice->ptr, slice->length}; }
 AnySlice any_from_mut_slice(const MutSlice* slice) { return (AnySlice){slice->ptr, slice->length}; }
@@ -94,7 +94,7 @@ void swap(void* a, void* b, size_t size) {
 }
 
 NODISCARD char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
-    if (!str) { return NULL; }
+    if (!str) { return nullptr; }
     return strdup_s_allocator(str, strlen(str), memory_alloc);
 }
 
@@ -104,10 +104,10 @@ NODISCARD char* strdup_z(const char* str) {
 
 NODISCARD char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
-    if (!str) { return NULL; }
+    if (!str) { return nullptr; }
 
     char* copy = memory_alloc(size + 1);
-    if (!copy) { return NULL; }
+    if (!copy) { return nullptr; }
 
     memcpy(copy, str, size);
     copy[size] = '\0';

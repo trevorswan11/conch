@@ -11,6 +11,7 @@ Checks: >
   -readability-identifier-length,
   -readability-magic-numbers,
   -readability-function-cognitive-complexity,
+  -readability-implicit-bool-conversion,
   -misc-include-cleaner,
   -misc-no-recursion,
   -misc-use-anonymous-namespace,

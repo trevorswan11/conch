@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <stdalign.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -142,9 +140,9 @@ void hash_set_deinit(HashSet* hs) {
     ASSERT_ALLOCATOR(hs->allocator);
 
     hs->allocator.free_alloc(hs->buffer);
-    hs->buffer    = NULL;
-    hs->header    = NULL;
-    hs->metadata  = NULL;
+    hs->buffer    = nullptr;
+    hs->header    = nullptr;
+    hs->metadata  = nullptr;
     hs->size      = 0;
     hs->available = 0;
 }
@@ -392,7 +390,7 @@ NODISCARD Status hash_set_put(HashSet* hs, const void* key) {
 
 bool hash_set_contains(const HashSet* hs, const void* key) {
     assert(hs && hs->buffer && key);
-    return STATUS_OK(hash_set_get_index(hs, key, NULL));
+    return STATUS_OK(hash_set_get_index(hs, key, nullptr));
 }
 
 NODISCARD Status hash_set_get_index(const HashSet* hs, const void* key, size_t* index) {

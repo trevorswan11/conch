@@ -97,7 +97,7 @@ NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, A
     }
 
     // Subsets of operators have different behaviors and restrictions
-    SemanticType* resulting_type = NULL;
+    SemanticType* resulting_type = nullptr;
     switch (infix->op) {
     case PLUS:
     case STAR: {

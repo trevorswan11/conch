@@ -1,7 +1,6 @@
 #ifndef HASH_SET_H
 #define HASH_SET_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 

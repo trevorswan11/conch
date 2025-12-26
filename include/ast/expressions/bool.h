@@ -1,8 +1,6 @@
 #ifndef BOOL_EXPR_H
 #define BOOL_EXPR_H
 
-#include <stdbool.h>
-
 #include "ast/expressions/expression.h"
 
 typedef struct BoolLiteralExpression {

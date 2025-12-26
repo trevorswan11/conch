@@ -34,7 +34,7 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
            NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc));
     TypeExpression* type = (TypeExpression*)type_expr;
 
-    Expression* value = NULL;
+    Expression* value = nullptr;
     if (value_initialized) {
         TRY_DO(expression_parse(p, LOWEST, &value), {
             NODE_VIRTUAL_FREE(ident, p->allocator.free_alloc);
@@ -111,7 +111,7 @@ NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
     ASSERT_ALLOCATOR(p->allocator);
 
     const Token start_token = p->current_token;
-    Expression* value       = NULL;
+    Expression* value       = nullptr;
 
     if (start_token.type != CONTINUE && !parser_peek_token_is(p, END) &&
         !parser_peek_token_is(p, SEMICOLON)) {
@@ -234,7 +234,7 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
         PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_TOKEN, p->peek_token, {});
     }
 
-    IdentifierExpression* alias = NULL;
+    IdentifierExpression* alias = nullptr;
     if (parser_peek_token_is(p, AS)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         TRY_DO(parser_expect_peek(p, IDENT), NODE_VIRTUAL_FREE(payload, p->allocator.free_alloc));

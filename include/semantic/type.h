@@ -1,8 +1,6 @@
 #ifndef SEMA_TYPE_H
 #define SEMA_TYPE_H
 
-#include <stdbool.h>
-
 #include "util/containers/array_list.h"
 #include "util/containers/hash_set.h"
 
