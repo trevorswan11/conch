@@ -27,8 +27,8 @@ void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
 }
 
 void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
-    assert(free_alloc);
     if (!errors || !errors->data) { return; }
+    assert(free_alloc);
 
     clear_error_list(errors, free_alloc);
     array_list_deinit(errors);
@@ -45,14 +45,15 @@ NODISCARD Status ast_init(AST* ast, Allocator allocator) {
     const size_t num_keywords  = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     const size_t total_symbols = num_keywords + num_operators;
-    TRY_DO(hash_map_init(&tt_symbols,
-                         total_symbols,
-                         sizeof(TokenType),
-                         alignof(TokenType),
-                         sizeof(Slice),
-                         alignof(Slice),
-                         hash_token_type,
-                         compare_token_type),
+    TRY_DO(hash_map_init_allocator(&tt_symbols,
+                                   total_symbols,
+                                   sizeof(TokenType),
+                                   alignof(TokenType),
+                                   sizeof(Slice),
+                                   alignof(Slice),
+                                   hash_token_type,
+                                   compare_token_type,
+                                   allocator),
            array_list_deinit(&statements));
 
     for (size_t i = 0; i < num_keywords; i++) {
@@ -136,16 +137,16 @@ void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
 }
 
 void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
-    assert(free_alloc);
     if (!statements || !statements->data) { return; }
+    assert(free_alloc);
 
     clear_statement_list(statements, free_alloc);
     array_list_deinit(statements);
 }
 
 void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
-    assert(free_alloc);
     if (!expressions || !expressions->data) { return; }
+    assert(free_alloc);
 
     clear_expression_list(expressions, free_alloc);
     array_list_deinit(expressions);

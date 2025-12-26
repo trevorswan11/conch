@@ -333,10 +333,13 @@ NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt) {
     case UNDERSCORE:
         TRY(discard_statement_parse(p, (DiscardStatement**)stmt));
         break;
+    case SEMICOLON:
+        break;
     default:
         TRY(expression_statement_parse(p, (ExpressionStatement**)stmt));
         break;
     }
 
+    if (parser_peek_token_is(p, SEMICOLON)) { UNREACHABLE_IF_ERROR(parser_next_token(p)); }
     return SUCCESS;
 }

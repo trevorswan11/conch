@@ -262,6 +262,39 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
         }
         break;
     }
+    case STYPE_ARRAY:
+        if (lhs->variant.array_type->tag != rhs->variant.array_type->tag ||
+            !type_equal(lhs->variant.array_type->inner_type, rhs->variant.array_type->inner_type)) {
+            return false;
+        }
+
+        switch (lhs->variant.array_type->tag) {
+        case STYPE_ARRAY_SINGLE_DIM:
+            return lhs->variant.array_type->variant.length ==
+                   rhs->variant.array_type->variant.length;
+        case STYPE_ARRAY_MULTI_DIM: {
+            const ArrayList lhs_dims = lhs->variant.array_type->variant.dimensions;
+            const ArrayList rhs_dims = rhs->variant.array_type->variant.dimensions;
+            if (lhs_dims.length != rhs_dims.length) { return false; }
+
+            // Equal dimensions must be ordered exactly the same
+            ArrayListConstIterator lhs_it = array_list_const_iterator_init(&lhs_dims);
+            size_t                 lhs_next;
+            ArrayListConstIterator rhs_it = array_list_const_iterator_init(&rhs_dims);
+            size_t                 rhs_next;
+            while (array_list_const_iterator_has_next(&lhs_it, &lhs_next) &&
+                   array_list_const_iterator_has_next(&rhs_it, &rhs_next)) {
+                if (lhs_next != rhs_next) { return false; }
+            }
+
+            break;
+        }
+        case STYPE_ARRAY_RANGE:
+            return lhs->variant.array_type->variant.inclusive ==
+                   rhs->variant.array_type->variant.inclusive;
+        }
+
+        break;
     default:
         break;
     }

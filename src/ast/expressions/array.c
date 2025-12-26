@@ -4,6 +4,7 @@
 #include "ast/expressions/array.h"
 
 #include "semantic/context.h"
+#include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
 
@@ -72,10 +73,63 @@ NODISCARD Status array_literal_expression_analyze(Node*            node,
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
+    // Explicitly sized arrays have their argument number enforced by the size
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
+    assert(array->items.data && array->items.length > 0);
 
-    MAYBE_UNUSED(array);
-    MAYBE_UNUSED(parent);
-    MAYBE_UNUSED(errors);
-    return NOT_IMPLEMENTED;
+    const Token     start_token = node->start_token;
+    const Allocator allocator   = semantic_context_allocator(parent);
+
+    ArrayListConstIterator it = array_list_const_iterator_init(&array->items);
+    Expression*            item;
+    UNREACHABLE_IF(!array_list_const_iterator_has_next(&it, (void*)&item));
+
+    TRY(NODE_VIRTUAL_ANALYZE(item, parent, errors));
+    SemanticType* inner_type = semantic_context_move_analyzed(parent);
+    if (!inner_type->valued) {
+        PUT_STATUS_PROPAGATE(errors,
+                             NON_VALUED_ARRAY_ITEM,
+                             start_token,
+                             RC_RELEASE(inner_type, allocator.free_alloc));
+    }
+
+    // All following types must be exactly equal to the first type
+    while (array_list_const_iterator_has_next(&it, (void*)&item)) {
+        TRY_DO(NODE_VIRTUAL_ANALYZE(item, parent, errors),
+               RC_RELEASE(inner_type, allocator.free_alloc));
+        SemanticType* next_type = semantic_context_move_analyzed(parent);
+
+        if (!type_equal(inner_type, next_type)) {
+            PUT_STATUS_PROPAGATE(errors, ARRAY_ITEM_TYPE_MISMATCH, start_token, {
+                RC_RELEASE(inner_type, allocator.free_alloc);
+                RC_RELEASE(next_type, allocator.free_alloc);
+            });
+        }
+
+        RC_RELEASE(next_type, allocator.free_alloc);
+    }
+
+    SemanticType* resulting_type;
+    TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
+           RC_RELEASE(inner_type, allocator.free_alloc));
+    resulting_type->tag      = STYPE_ARRAY;
+    resulting_type->is_const = false;
+    resulting_type->valued   = true;
+    resulting_type->nullable = false;
+
+    SemanticArrayType* sarray;
+    TRY_DO(semantic_array_create(STYPE_ARRAY_SINGLE_DIM,
+                                 (SemanticArrayUnion){.length = array->items.length},
+                                 inner_type,
+                                 &sarray,
+                                 allocator.memory_alloc),
+           {
+               RC_RELEASE(inner_type, allocator.free_alloc);
+               RC_RELEASE(resulting_type, allocator.free_alloc);
+           });
+
+    // Everything allocated is moved into the resulting type
+    resulting_type->variant = (SemanticTypeUnion){.array_type = sarray};
+    parent->analyzed_type   = resulting_type;
+    return SUCCESS;
 }

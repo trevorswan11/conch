@@ -8,15 +8,15 @@
 
 typedef struct SemanticType SemanticType;
 
-#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)       \
-    SemanticType* name;                                     \
-    TRY_DO(semantic_type_create(&name, memory_alloc), err); \
-                                                            \
-    name->tag      = T;                                     \
-    name->variant  = SEMANTIC_DATALESS_TYPE;                \
-    name->is_const = true;                                  \
-    name->valued   = true;                                  \
-    name->nullable = N
+#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)         \
+    SemanticType* name;                                       \
+    TRY_DO(semantic_type_create(&(name), memory_alloc), err); \
+                                                              \
+    (name)->tag      = T;                                     \
+    (name)->variant  = SEMANTIC_DATALESS_TYPE;                \
+    (name)->is_const = true;                                  \
+    (name)->valued   = true;                                  \
+    (name)->nullable = N
 
 #define PRIMITIVE_ANALYZE(T, N, A)     \
     ASSERT_EXPRESSION(node);           \

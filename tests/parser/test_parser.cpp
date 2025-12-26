@@ -1087,8 +1087,7 @@ TEST_CASE("Function literals") {
         SECTION("Incorrect declaration with both default") {
             const char*   input = "const add: fn(a: int = -345, b: uint = 209u);";
             ParserFixture pf{input};
-            pf.check_errors({"Expected token COLON, found SEMICOLON [Ln 1, Col 45]",
-                             "No prefix parse function for SEMICOLON found [Ln 1, Col 45]"});
+            pf.check_errors({"Expected token COLON, found SEMICOLON [Ln 1, Col 45]"});
         }
     }
 
@@ -1931,6 +1930,24 @@ TEST_CASE("Array expressions") {
                                  "No prefix parse function for INT_TYPE found [Ln 1, Col 14]"},
                                 false);
             }
+
+            SECTION("Incorrect token integer type") {
+                const char*   input = "var a: [0uz]int";
+                ParserFixture pf{input};
+                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 9]",
+                                 "No prefix parse function for RBRACKET found [Ln 1, Col 12]",
+                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"},
+                                false);
+            }
+
+            SECTION("Incorrect token integer type") {
+                const char*   input = "var a: [2uz, 0uz]int";
+                ParserFixture pf{input};
+                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 14]",
+                                 "No prefix parse function for RBRACKET found [Ln 1, Col 17]",
+                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 18]"},
+                                false);
+            }
         }
     }
 
@@ -1973,9 +1990,16 @@ TEST_CASE("Array expressions") {
         SECTION("Incorrect token value") {
             const char*   input = "[23uz]{1, 2, 3, }";
             ParserFixture pf{input};
-            pf.check_errors({"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
-                            false);
+            pf.check_errors({"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]"}, false);
+        }
+
+        SECTION("Empty arrays") {
+            const char* const inputs[] = {"[0uz]{}", "[_]{}"};
+
+            for (const auto& input : inputs) {
+                ParserFixture pf{input};
+                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 1]"}, false);
+            }
         }
     }
 }

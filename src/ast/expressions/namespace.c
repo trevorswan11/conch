@@ -80,6 +80,14 @@ NODISCARD Status namespace_expression_analyze(Node*            node,
            RC_RELEASE(direct_parent, allocator.free_alloc));
     switch (direct_parent->tag) {
     case STYPE_ENUM: {
+        const HashSet variants = direct_parent->variant.enum_type->variants;
+        if (!hash_set_contains(&variants, &namespace_expr->inner->name)) {
+            PUT_STATUS_PROPAGATE(errors, UNKNOWN_ENUM_VARIANT, start_token, {
+                RC_RELEASE(direct_parent, allocator.free_alloc);
+                RC_RELEASE(inner_type, allocator.free_alloc);
+            });
+        }
+
         TRY_DO(semantic_type_copy_variant(inner_type, direct_parent, allocator), {
             RC_RELEASE(direct_parent, allocator.free_alloc);
             RC_RELEASE(inner_type, allocator.free_alloc);

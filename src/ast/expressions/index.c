@@ -91,9 +91,18 @@ NODISCARD Status index_expression_analyze(Node* node, SemanticContext* parent, A
         });
     }
 
-    // Retaining the inner array type is straightforward here
+    // We need to check the constness of the array, not the inner item
     assert(array_type->variant.array_type);
-    parent->analyzed_type = rc_retain(array_type->variant.array_type->inner_type);
+    SemanticType* resulting_type;
+    TRY_DO(
+        semantic_type_copy(&resulting_type, array_type->variant.array_type->inner_type, allocator),
+        {
+            RC_RELEASE(idx_type, allocator.free_alloc);
+            RC_RELEASE(array_type, allocator.free_alloc);
+        });
+    resulting_type->is_const = array_type->is_const;
+
+    parent->analyzed_type = resulting_type;
     RC_RELEASE(idx_type, allocator.free_alloc);
     RC_RELEASE(array_type, allocator.free_alloc);
     return SUCCESS;
