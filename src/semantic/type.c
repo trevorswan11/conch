@@ -78,7 +78,7 @@ bool semantic_type_is_integer(SemanticType* type) {
     }
 }
 
-NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
+[[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
                                        SemanticArrayUnion  variant,
                                        SemanticType*       inner_type,
                                        SemanticArrayType** array_type,
@@ -113,7 +113,7 @@ void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
     RC_RELEASE(sema_array->inner_type, free_alloc);
 }
 
-NODISCARD Status semantic_enum_create(Slice              name,
+[[nodiscard]] Status semantic_enum_create(Slice              name,
                                       HashSet            variants,
                                       SemanticEnumType** enum_type,
                                       memory_alloc_fn    memory_alloc) {
@@ -155,7 +155,7 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     free_enum_variant_set(&type_variant->variants, free_alloc);
 }
 
-NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
     assert(memory_alloc);
 
     SemanticType* empty_type = memory_alloc(sizeof(SemanticType));
@@ -172,7 +172,7 @@ NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memor
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
+[[nodiscard]] Status semantic_type_copy_variant(SemanticType* dest,
                                             SemanticType* src,
                                             Allocator     allocator) {
     dest->tag = src->tag;
@@ -193,7 +193,7 @@ NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
     return SUCCESS;
 }
 
-NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+[[nodiscard]] Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
     SemanticType* type;
     TRY(semantic_type_create(&type, allocator.memory_alloc));
 

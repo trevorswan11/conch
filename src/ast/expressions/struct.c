@@ -22,7 +22,7 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     array_list_deinit(members);
 }
 
-NODISCARD Status struct_expression_create(Token              start_token,
+[[nodiscard]] Status struct_expression_create(Token              start_token,
                                           ArrayList          generics,
                                           ArrayList          members,
                                           StructExpression** struct_expr,
@@ -57,7 +57,7 @@ void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(struct_expr);
 }
 
-NODISCARD Status struct_expression_reconstruct(Node*          node,
+[[nodiscard]] Status struct_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -92,7 +92,7 @@ NODISCARD Status struct_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status struct_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

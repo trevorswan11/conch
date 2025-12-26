@@ -8,7 +8,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status infix_expression_create(Token             start_token,
+[[nodiscard]] Status infix_expression_create(Token             start_token,
                                          Expression*       lhs,
                                          TokenType         op,
                                          Expression*       rhs,
@@ -42,7 +42,7 @@ void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(infix);
 }
 
-NODISCARD Status infix_expression_reconstruct(Node*          node,
+[[nodiscard]] Status infix_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -70,7 +70,7 @@ NODISCARD Status infix_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

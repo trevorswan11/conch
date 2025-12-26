@@ -9,16 +9,16 @@ typedef struct JumpStatement {
     Expression* value;
 } JumpStatement;
 
-NODISCARD Status jump_statement_create(Token           start_token,
+[[nodiscard]] Status jump_statement_create(Token           start_token,
                                        Expression*     value,
-                                       JumpStatement** ret_stmt,
+                                       JumpStatement** jump_stmt,
                                        memory_alloc_fn memory_alloc);
 
 void             jump_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status jump_statement_reconstruct(Node*          node,
+[[nodiscard]] Status jump_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb);
-NODISCARD Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable JUMP_VTABLE = {
     .base =

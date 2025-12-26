@@ -7,7 +7,7 @@
 
 void integer_expression_destroy(Node* node, free_alloc_fn free_alloc);
 
-NODISCARD Status integer_expression_reconstruct(Node*          node,
+[[nodiscard]] Status integer_expression_reconstruct(Node*          node,
                                                 const HashMap* symbol_map,
                                                 StringBuilder* sb);
 
@@ -16,12 +16,12 @@ typedef struct IntegerLiteralExpression {
     int64_t    value;
 } IntegerLiteralExpression;
 
-NODISCARD Status integer_literal_expression_create(Token                      start_token,
+[[nodiscard]] Status integer_literal_expression_create(Token                      start_token,
                                                    int64_t                    value,
                                                    IntegerLiteralExpression** int_expr,
                                                    memory_alloc_fn            memory_alloc);
 
-NODISCARD Status integer_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status integer_literal_expression_analyze(Node*            node,
                                                     SemanticContext* parent,
                                                     ArrayList*       errors);
 
@@ -39,12 +39,12 @@ typedef struct UnsignedIntegerLiteralExpression {
     uint64_t   value;
 } UnsignedIntegerLiteralExpression;
 
-NODISCARD Status uinteger_literal_expression_create(Token                              start_token,
+[[nodiscard]] Status uinteger_literal_expression_create(Token                              start_token,
                                                     uint64_t                           value,
                                                     UnsignedIntegerLiteralExpression** int_expr,
                                                     memory_alloc_fn memory_alloc);
 
-NODISCARD Status uinteger_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status uinteger_literal_expression_analyze(Node*            node,
                                                      SemanticContext* parent,
                                                      ArrayList*       errors);
 
@@ -62,12 +62,12 @@ typedef struct SizeIntegerLiteralExpression {
     size_t     value;
 } SizeIntegerLiteralExpression;
 
-NODISCARD Status uzinteger_literal_expression_create(Token                          start_token,
+[[nodiscard]] Status uzinteger_literal_expression_create(Token                          start_token,
                                                      size_t                         value,
                                                      SizeIntegerLiteralExpression** int_expr,
                                                      memory_alloc_fn                memory_alloc);
 
-NODISCARD Status uzinteger_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status uzinteger_literal_expression_analyze(Node*            node,
                                                       SemanticContext* parent,
                                                       ArrayList*       errors);
 
@@ -85,12 +85,12 @@ typedef struct ByteLiteralExpression {
     uint8_t    value;
 } ByteLiteralExpression;
 
-NODISCARD Status byte_literal_expression_create(Token                   start_token,
+[[nodiscard]] Status byte_literal_expression_create(Token                   start_token,
                                                 uint8_t                 value,
                                                 ByteLiteralExpression** byte_expr,
                                                 memory_alloc_fn         memory_alloc);
 
-NODISCARD Status byte_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status byte_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors);
 

@@ -8,15 +8,15 @@ typedef struct BoolLiteralExpression {
     bool       value;
 } BoolLiteralExpression;
 
-NODISCARD Status bool_literal_expression_create(Token                   start_token,
+[[nodiscard]] Status bool_literal_expression_create(Token                   start_token,
                                                 BoolLiteralExpression** bool_expr,
                                                 memory_alloc_fn         memory_alloc);
 
 void             bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
+[[nodiscard]] Status bool_literal_expression_reconstruct(Node*          node,
                                                      const HashMap* symbol_map,
                                                      StringBuilder* sb);
-NODISCARD Status bool_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status bool_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors);
 

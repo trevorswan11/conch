@@ -15,7 +15,7 @@ typedef struct DeclStatement {
     Expression*           value;
 } DeclStatement;
 
-NODISCARD Status decl_statement_create(Token                 start_token,
+[[nodiscard]] Status decl_statement_create(Token                 start_token,
                                        IdentifierExpression* ident,
                                        TypeExpression*       type,
                                        Expression*           value,
@@ -23,10 +23,10 @@ NODISCARD Status decl_statement_create(Token                 start_token,
                                        memory_alloc_fn       memory_alloc);
 
 void             decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status decl_statement_reconstruct(Node*          node,
+[[nodiscard]] Status decl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb);
-NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable DECL_VTABLE = {
     .base =
@@ -44,7 +44,7 @@ typedef struct TypeDeclStatement {
     bool                  primitive_alias;
 } TypeDeclStatement;
 
-NODISCARD Status type_decl_statement_create(Token                 start_token,
+[[nodiscard]] Status type_decl_statement_create(Token                 start_token,
                                             IdentifierExpression* ident,
                                             Expression*           value,
                                             bool                  primitive_alias,
@@ -52,10 +52,10 @@ NODISCARD Status type_decl_statement_create(Token                 start_token,
                                             memory_alloc_fn       memory_alloc);
 
 void             type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status type_decl_statement_reconstruct(Node*          node,
+[[nodiscard]] Status type_decl_statement_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb);
-NODISCARD Status type_decl_statement_analyze(Node*            node,
+[[nodiscard]] Status type_decl_statement_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors);
 

@@ -6,14 +6,14 @@
 #include "semantic/analyzer.h"
 #include "semantic/context.h"
 
-NODISCARD Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
+[[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
     assert(ast);
     TRY(seman_null_init(analyzer, allocator));
     analyzer->ast = ast;
     return SUCCESS;
 }
 
-NODISCARD Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator) {
+[[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
 
     SemanticContext* global_ctx;
@@ -43,7 +43,7 @@ void seman_deinit(SemanticAnalyzer* analyzer) {
     free_error_list(&analyzer->errors, free_alloc);
 }
 
-NODISCARD Status seman_analyze(SemanticAnalyzer* analyzer) {
+[[nodiscard]] Status seman_analyze(SemanticAnalyzer* analyzer) {
     assert(analyzer);
     assert(analyzer->ast);
     assert(analyzer->global_ctx);

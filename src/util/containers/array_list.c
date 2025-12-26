@@ -8,7 +8,7 @@
 
 MAX_FN(size_t, size_t)
 
-NODISCARD Status array_list_init_allocator(ArrayList* a,
+[[nodiscard]] Status array_list_init_allocator(ArrayList* a,
                                            size_t     capacity,
                                            size_t     item_size,
                                            Allocator  allocator) {
@@ -27,7 +27,7 @@ NODISCARD Status array_list_init_allocator(ArrayList* a,
     return SUCCESS;
 }
 
-NODISCARD Status array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
+[[nodiscard]] Status array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
     return array_list_init_allocator(a, capacity, item_size, STANDARD_ALLOCATOR);
 }
 
@@ -51,7 +51,7 @@ size_t array_list_length(const ArrayList* a) {
     return a->length;
 }
 
-NODISCARD Status array_list_resize(ArrayList* a, size_t new_capacity) {
+[[nodiscard]] Status array_list_resize(ArrayList* a, size_t new_capacity) {
     assert(a);
     ASSERT_ALLOCATOR(a->allocator);
 
@@ -71,7 +71,7 @@ NODISCARD Status array_list_resize(ArrayList* a, size_t new_capacity) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
+[[nodiscard]] Status array_list_ensure_total_capacity(ArrayList* a, size_t new_capacity) {
     assert(a && a->data);
     if (a->capacity < new_capacity) { return array_list_resize(a, new_capacity); }
     return SUCCESS;
@@ -82,7 +82,7 @@ void array_list_clear_retaining_capacity(ArrayList* a) {
     a->length = 0;
 }
 
-NODISCARD Status array_list_shrink_to_fit(ArrayList* a) {
+[[nodiscard]] Status array_list_shrink_to_fit(ArrayList* a) {
     assert(a && a->data);
     if (a->length < a->capacity) { return array_list_resize(a, a->length); }
     return SUCCESS;
@@ -98,7 +98,7 @@ static inline const void* array_list_get_unsafe(const ArrayList* a, size_t index
     return ptr_offset(a->data, index * a->item_size);
 }
 
-NODISCARD Status array_list_push(ArrayList* a, const void* item) {
+[[nodiscard]] Status array_list_push(ArrayList* a, const void* item) {
     assert(a && a->data);
 
     if (a->length == a->capacity) { TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4))); }
@@ -116,7 +116,7 @@ void array_list_push_assume_capacity(ArrayList* a, const void* item) {
     a->length += 1;
 }
 
-NODISCARD Status array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
+[[nodiscard]] Status array_list_insert_stable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
@@ -138,7 +138,7 @@ void array_list_insert_stable_assume_capacity(ArrayList* a, size_t index, const 
     a->length += 1;
 }
 
-NODISCARD Status array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
+[[nodiscard]] Status array_list_insert_unstable(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     assert(index <= a->length);
 
@@ -167,7 +167,7 @@ void array_list_insert_unstable_assume_capacity(ArrayList* a, size_t index, cons
     }
 }
 
-NODISCARD Status array_list_pop(ArrayList* a, void* item) {
+[[nodiscard]] Status array_list_pop(ArrayList* a, void* item) {
     assert(a && a->data);
     if (a->length == 0) { return EMPTY; }
 
@@ -177,7 +177,7 @@ NODISCARD Status array_list_pop(ArrayList* a, void* item) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_remove(ArrayList* a, size_t index, void* item) {
+[[nodiscard]] Status array_list_remove(ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
@@ -194,7 +194,7 @@ NODISCARD Status array_list_remove(ArrayList* a, size_t index, void* item) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_remove_item(ArrayList*  a,
+[[nodiscard]] Status array_list_remove_item(ArrayList*  a,
                                         const void* item,
                                         int (*compare)(const void*, const void*)) {
     size_t index;
@@ -202,7 +202,7 @@ NODISCARD Status array_list_remove_item(ArrayList*  a,
     return array_list_remove(a, index, NULL);
 }
 
-NODISCARD Status array_list_get(const ArrayList* a, size_t index, void* item) {
+[[nodiscard]] Status array_list_get(const ArrayList* a, size_t index, void* item) {
     assert(a && a->data);
     if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
@@ -210,7 +210,7 @@ NODISCARD Status array_list_get(const ArrayList* a, size_t index, void* item) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_get_ptr(ArrayList* a, size_t index, void** item) {
+[[nodiscard]] Status array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     assert(a && a->data);
     if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
@@ -218,7 +218,7 @@ NODISCARD Status array_list_get_ptr(ArrayList* a, size_t index, void** item) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_set(ArrayList* a, size_t index, const void* item) {
+[[nodiscard]] Status array_list_set(ArrayList* a, size_t index, const void* item) {
     assert(a && a->data);
     if (index >= a->length) { return INDEX_OUT_OF_BOUNDS; }
 
@@ -227,7 +227,7 @@ NODISCARD Status array_list_set(ArrayList* a, size_t index, const void* item) {
     return SUCCESS;
 }
 
-NODISCARD Status array_list_find(const ArrayList* a,
+[[nodiscard]] Status array_list_find(const ArrayList* a,
                                  size_t*          index,
                                  const void*      item,
                                  int (*compare)(const void*, const void*)) {

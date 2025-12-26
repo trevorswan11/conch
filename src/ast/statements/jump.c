@@ -8,7 +8,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status jump_statement_create(Token           start_token,
+[[nodiscard]] Status jump_statement_create(Token           start_token,
                                        Expression*     value,
                                        JumpStatement** jump_stmt,
                                        memory_alloc_fn memory_alloc) {
@@ -37,7 +37,7 @@ void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(jump);
 }
 
-NODISCARD Status jump_statement_reconstruct(Node*          node,
+[[nodiscard]] Status jump_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
     ASSERT_STATEMENT(node);
@@ -62,7 +62,7 @@ NODISCARD Status jump_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

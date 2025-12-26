@@ -19,7 +19,7 @@ typedef struct CallExpression {
 
 void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc);
 
-NODISCARD Status call_expression_create(Token            start_token,
+[[nodiscard]] Status call_expression_create(Token            start_token,
                                         Expression*      function,
                                         ArrayList        arguments,
                                         ArrayList        generics,
@@ -27,10 +27,10 @@ NODISCARD Status call_expression_create(Token            start_token,
                                         memory_alloc_fn  memory_alloc);
 
 void             call_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status call_expression_reconstruct(Node*          node,
+[[nodiscard]] Status call_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb);
-NODISCARD Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable CALL_VTABLE = {
     .base =

@@ -17,7 +17,7 @@
 
 #include "util/status.h"
 
-NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
+[[nodiscard]] Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -57,7 +57,7 @@ NODISCARD Status decl_statement_parse(Parser* p, DeclStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
+[[nodiscard]] Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -106,7 +106,7 @@ NODISCARD Status type_decl_statement_parse(Parser* p, TypeDeclStatement** stmt) 
     return SUCCESS;
 }
 
-NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
+[[nodiscard]] Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -127,7 +127,7 @@ NODISCARD Status jump_statement_parse(Parser* p, JumpStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
+[[nodiscard]] Status expression_statement_parse(Parser* p, ExpressionStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
     const Token start_token = p->current_token;
@@ -143,7 +143,7 @@ NODISCARD Status expression_statement_parse(Parser* p, ExpressionStatement** stm
     return SUCCESS;
 }
 
-NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
+[[nodiscard]] Status block_statement_parse(Parser* p, BlockStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -170,7 +170,7 @@ NODISCARD Status block_statement_parse(Parser* p, BlockStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
+[[nodiscard]] Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -202,7 +202,7 @@ NODISCARD Status impl_statement_parse(Parser* p, ImplStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
+[[nodiscard]] Status import_statement_parse(Parser* p, ImportStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -259,7 +259,7 @@ NODISCARD Status import_statement_parse(Parser* p, ImportStatement** stmt) {
     return SUCCESS;
 }
 
-NODISCARD Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
+[[nodiscard]] Status discard_statement_parse(Parser* p, DiscardStatement** stmt) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 

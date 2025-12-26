@@ -25,7 +25,7 @@ void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc) {
     array_list_deinit(parameters);
 }
 
-NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
+[[nodiscard]] Status reconstruct_parameter_list(ArrayList*     parameters,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
     assert(parameters && symbol_map && sb);
@@ -56,7 +56,7 @@ NODISCARD Status reconstruct_parameter_list(ArrayList*     parameters,
     return SUCCESS;
 }
 
-NODISCARD Status function_expression_create(Token                start_token,
+[[nodiscard]] Status function_expression_create(Token                start_token,
                                             ArrayList            generics,
                                             ArrayList            parameters,
                                             TypeExpression*      return_type,
@@ -97,7 +97,7 @@ void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(func);
 }
 
-NODISCARD Status function_expression_reconstruct(Node*          node,
+[[nodiscard]] Status function_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -120,7 +120,7 @@ NODISCARD Status function_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status function_expression_analyze(Node*            node,
+[[nodiscard]] Status function_expression_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors) {
     ASSERT_EXPRESSION(node);

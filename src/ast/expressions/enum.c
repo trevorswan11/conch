@@ -24,7 +24,7 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     array_list_deinit(variants);
 }
 
-NODISCARD Status enum_expression_create(Token            start_token,
+[[nodiscard]] Status enum_expression_create(Token            start_token,
                                         ArrayList        variants,
                                         EnumExpression** enum_expr,
                                         memory_alloc_fn  memory_alloc) {
@@ -54,7 +54,7 @@ void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(enum_expr);
 }
 
-NODISCARD Status enum_expression_reconstruct(Node*          node,
+[[nodiscard]] Status enum_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -82,7 +82,7 @@ NODISCARD Status enum_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

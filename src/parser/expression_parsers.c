@@ -65,7 +65,7 @@
         }                                                                       \
     }
 
-static inline NODISCARD Status record_missing_prefix(Parser* p) {
+[[nodiscard]] static inline Status record_missing_prefix(Parser* p) {
     const Token   current = p->current_token;
     StringBuilder sb;
     TRY(string_builder_init_allocator(&sb, 50, p->allocator));
@@ -87,7 +87,7 @@ static inline NODISCARD Status record_missing_prefix(Parser* p) {
     return SUCCESS;
 }
 
-NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
+[[nodiscard]] Status expression_parse(Parser* p, Precedence precedence, Expression** lhs_expression) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -117,7 +117,7 @@ NODISCARD Status expression_parse(Parser* p, Precedence precedence, Expression**
     return SUCCESS;
 }
 
-NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status identifier_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     if (start_token.type != IDENT && !hash_set_contains(&p->primitives, &start_token.type)) {
         PUT_STATUS_PROPAGATE(&p->errors, ILLEGAL_IDENTIFIER, start_token, {});
@@ -133,7 +133,7 @@ NODISCARD Status identifier_expression_parse(Parser* p, Expression** expression)
     return SUCCESS;
 }
 
-NODISCARD Status parameter_list_parse(Parser*    p,
+[[nodiscard]] Status parameter_list_parse(Parser*    p,
                                       ArrayList* parameters,
                                       bool*      contains_default_param) {
     assert(p && parameters);
@@ -227,7 +227,7 @@ NODISCARD Status parameter_list_parse(Parser*    p,
     return SUCCESS;
 }
 
-NODISCARD Status generics_parse(Parser* p, ArrayList* generics) {
+[[nodiscard]] Status generics_parse(Parser* p, ArrayList* generics) {
     TRY(array_list_init_allocator(generics, 1, sizeof(Expression*), p->allocator));
     if (parser_peek_token_is(p, LT)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
@@ -262,7 +262,7 @@ NODISCARD Status generics_parse(Parser* p, ArrayList* generics) {
     return SUCCESS;
 }
 
-NODISCARD Status function_definition_parse(Parser*          p,
+[[nodiscard]] Status function_definition_parse(Parser*          p,
                                            ArrayList*       generics,
                                            ArrayList*       parameters,
                                            TypeExpression** return_type,
@@ -290,7 +290,7 @@ NODISCARD Status function_definition_parse(Parser*          p,
     return SUCCESS;
 }
 
-NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type) {
+[[nodiscard]] Status explicit_type_parse(Parser* p, Token start_token, TypeExpression** type) {
     // Check for a question mark and to allow nil
     bool is_nullable = false;
     if (parser_peek_token_is(p, WHAT)) {
@@ -542,7 +542,7 @@ NODISCARD Status explicit_type_parse(Parser* p, Token start_token, TypeExpressio
     return SUCCESS;
 }
 
-NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
+[[nodiscard]] Status type_expression_parse(Parser* p, Expression** expression, bool* initialized) {
     const Token start_token = p->current_token;
     assert(p->primitives.buffer);
     bool is_default_initialized = false;
@@ -589,7 +589,7 @@ NODISCARD Status type_expression_parse(Parser* p, Expression** expression, bool*
     TRY(create_fn(start_token, value, &integer, p->allocator.memory_alloc));      \
     *expression = (Expression*)integer;
 
-NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status integer_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     const int   base        = integer_token_to_base(start_token.type);
 
@@ -621,7 +621,7 @@ NODISCARD Status integer_literal_expression_parse(Parser* p, Expression** expres
     return SUCCESS;
 }
 
-NODISCARD Status byte_literal_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status byte_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     uint8_t     value;
     TRY(strntochr(start_token.slice.ptr, start_token.slice.length, &value));
@@ -633,7 +633,7 @@ NODISCARD Status byte_literal_expression_parse(Parser* p, Expression** expressio
     return SUCCESS;
 }
 
-NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status float_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     assert(start_token.slice.length > 0);
 
@@ -651,7 +651,7 @@ NODISCARD Status float_literal_expression_parse(Parser* p, Expression** expressi
     return SUCCESS;
 }
 
-NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status prefix_expression_parse(Parser* p, Expression** expression) {
     const Token prefix_token = p->current_token;
     assert(prefix_token.slice.length > 0);
 
@@ -671,7 +671,7 @@ NODISCARD Status prefix_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status infix_expression_parse(Parser* p, Expression* left, Expression** expression) {
+[[nodiscard]] Status infix_expression_parse(Parser* p, Expression* left, Expression** expression) {
     const TokenType  op_token_type      = p->current_token.type;
     const Precedence current_precedence = parser_current_precedence(p);
     TRY(parser_next_token(p));
@@ -691,21 +691,21 @@ NODISCARD Status infix_expression_parse(Parser* p, Expression* left, Expression*
     return SUCCESS;
 }
 
-NODISCARD Status bool_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status bool_expression_parse(Parser* p, Expression** expression) {
     BoolLiteralExpression* boolean;
     TRY(bool_literal_expression_create(p->current_token, &boolean, p->allocator.memory_alloc));
     *expression = (Expression*)boolean;
     return SUCCESS;
 }
 
-NODISCARD Status string_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status string_expression_parse(Parser* p, Expression** expression) {
     StringLiteralExpression* string;
     TRY(string_literal_expression_create(p->current_token, &string, p->allocator));
     *expression = (Expression*)string;
     return SUCCESS;
 }
 
-NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status grouped_expression_parse(Parser* p, Expression** expression) {
     UNREACHABLE_IF_ERROR(parser_next_token(p));
 
     Expression* inner;
@@ -717,7 +717,7 @@ NODISCARD Status grouped_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-static inline NODISCARD Status if_expression_parse_branch(Parser* p, Statement** stmt) {
+[[nodiscard]] static inline Status if_expression_parse_branch(Parser* p, Statement** stmt) {
     TRY(parser_next_token(p));
 
     Statement* alternate;
@@ -726,7 +726,7 @@ static inline NODISCARD Status if_expression_parse_branch(Parser* p, Statement**
     return SUCCESS;
 }
 
-NODISCARD Status if_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status if_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LPAREN));
     TRY(parser_next_token(p));
@@ -762,7 +762,7 @@ NODISCARD Status if_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status function_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status function_expression_parse(Parser* p, Expression** expression) {
     const Token     start_token = p->current_token;
     ArrayList       generics;
     ArrayList       parameters;
@@ -801,7 +801,7 @@ NODISCARD Status function_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expression** expression) {
+[[nodiscard]] Status call_expression_parse(Parser* p, Expression* function, Expression** expression) {
     const Token start_token = p->current_token;
 
     ArrayList arguments;
@@ -876,7 +876,7 @@ NODISCARD Status call_expression_parse(Parser* p, Expression* function, Expressi
     return SUCCESS;
 }
 
-NODISCARD Status index_expression_parse(Parser* p, Expression* array, Expression** expression) {
+[[nodiscard]] Status index_expression_parse(Parser* p, Expression* array, Expression** expression) {
     const Token start_token = p->current_token;
     ASSERT_EXPRESSION(array);
 
@@ -899,7 +899,7 @@ NODISCARD Status index_expression_parse(Parser* p, Expression* array, Expression
     return SUCCESS;
 }
 
-NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status struct_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     ArrayList   generics;
     TRY(generics_parse(p, &generics));
@@ -1003,7 +1003,7 @@ NODISCARD Status struct_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status enum_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LBRACE));
     if (parser_peek_token_is(p, RBRACE)) {
@@ -1063,14 +1063,14 @@ NODISCARD Status enum_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status nil_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status nil_expression_parse(Parser* p, Expression** expression) {
     NilExpression* nil;
     TRY(nil_expression_create(p->current_token, &nil, p->allocator.memory_alloc));
     *expression = (Expression*)nil;
     return SUCCESS;
 }
 
-NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status match_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_next_token(p));
 
@@ -1172,7 +1172,7 @@ NODISCARD Status match_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status array_literal_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_next_token(p));
 
@@ -1248,7 +1248,7 @@ NODISCARD Status array_literal_expression_parse(Parser* p, Expression** expressi
     return SUCCESS;
 }
 
-NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status for_loop_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LPAREN));
 
@@ -1401,7 +1401,7 @@ NODISCARD Status for_loop_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status while_loop_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LPAREN));
     TRY(parser_next_token(p));
@@ -1490,7 +1490,7 @@ NODISCARD Status while_loop_expression_parse(Parser* p, Expression** expression)
     return SUCCESS;
 }
 
-NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status do_while_loop_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LBRACE));
 
@@ -1537,7 +1537,7 @@ NODISCARD Status do_while_loop_expression_parse(Parser* p, Expression** expressi
     return SUCCESS;
 }
 
-NODISCARD Status loop_expression_parse(Parser* p, Expression** expression) {
+[[nodiscard]] Status loop_expression_parse(Parser* p, Expression** expression) {
     const Token start_token = p->current_token;
     TRY(parser_expect_peek(p, LBRACE));
 
@@ -1559,7 +1559,7 @@ NODISCARD Status loop_expression_parse(Parser* p, Expression** expression) {
     return SUCCESS;
 }
 
-NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression) {
+[[nodiscard]] Status namespace_expression_parse(Parser* p, Expression* outer, Expression** expression) {
     ASSERT_EXPRESSION(outer);
     TRY(parser_expect_peek(p, IDENT));
 
@@ -1577,7 +1577,7 @@ NODISCARD Status namespace_expression_parse(Parser* p, Expression* outer, Expres
     return SUCCESS;
 }
 
-NODISCARD Status assignment_expression_parse(Parser*      p,
+[[nodiscard]] Status assignment_expression_parse(Parser*      p,
                                              Expression*  assignee,
                                              Expression** expression) {
     const TokenType  op_token_type      = p->current_token.type;

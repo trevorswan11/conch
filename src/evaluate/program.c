@@ -5,7 +5,7 @@
 
 #include "semantic/analyzer.h"
 
-NODISCARD Status program_init(Program* program, FileIO* io, Allocator allocator) {
+[[nodiscard]] Status program_init(Program* program, FileIO* io, Allocator allocator) {
     Lexer l;
     TRY(lexer_null_init(&l, allocator));
 
@@ -55,7 +55,7 @@ void program_deinit(Program* program) {
     string_builder_deinit(&program->output_buffer);
 }
 
-NODISCARD Status program_run(Program* program, Slice input) {
+[[nodiscard]] Status program_run(Program* program, Slice input) {
     assert(program);
     if (input.length == 0) { return SUCCESS; }
 
@@ -94,7 +94,7 @@ NODISCARD Status program_run(Program* program, Slice input) {
     return SUCCESS;
 }
 
-NODISCARD Status program_print_errors(ArrayList* errors, FileIO* io) {
+[[nodiscard]] Status program_print_errors(ArrayList* errors, FileIO* io) {
     assert(errors && errors->data && io);
     if (errors->length == 0) { return SUCCESS; }
 

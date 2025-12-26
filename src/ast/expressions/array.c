@@ -8,7 +8,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status array_literal_expression_create(Token                    start_token,
+[[nodiscard]] Status array_literal_expression_create(Token                    start_token,
                                                  bool                     inferred_size,
                                                  ArrayList                items,
                                                  ArrayLiteralExpression** array_expr,
@@ -39,7 +39,7 @@ void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(array);
 }
 
-NODISCARD Status array_literal_expression_reconstruct(Node*          node,
+[[nodiscard]] Status array_literal_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -67,7 +67,7 @@ NODISCARD Status array_literal_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status array_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status array_literal_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
     ASSERT_EXPRESSION(node);

@@ -12,17 +12,17 @@ typedef struct ImplStatement {
     BlockStatement*       implementation;
 } ImplStatement;
 
-NODISCARD Status impl_statement_create(Token                 start_token,
+[[nodiscard]] Status impl_statement_create(Token                 start_token,
                                        IdentifierExpression* parent,
                                        BlockStatement*       implementation,
                                        ImplStatement**       impl_stmt,
                                        memory_alloc_fn       memory_alloc);
 
 void             impl_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status impl_statement_reconstruct(Node*          node,
+[[nodiscard]] Status impl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb);
-NODISCARD Status impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable IMPL_VTABLE = {
     .base =

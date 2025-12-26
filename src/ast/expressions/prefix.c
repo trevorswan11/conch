@@ -9,7 +9,7 @@
 #include "util/containers/string_builder.h"
 #include "util/status.h"
 
-NODISCARD Status prefix_expression_create(Token              start_token,
+[[nodiscard]] Status prefix_expression_create(Token              start_token,
                                           Expression*        rhs,
                                           PrefixExpression** prefix_expr,
                                           memory_alloc_fn    memory_alloc) {
@@ -40,7 +40,7 @@ void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(prefix);
 }
 
-NODISCARD Status prefix_expression_reconstruct(Node*          node,
+[[nodiscard]] Status prefix_expression_reconstruct(Node*          node,
                                                const HashMap* symbol_map,
                                                StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -60,7 +60,7 @@ NODISCARD Status prefix_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

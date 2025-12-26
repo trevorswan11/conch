@@ -75,8 +75,6 @@ void debug_print(const char* format, ...);
 #else
 #if defined(__GNUC__) || defined(__clang__)
 #define UNREACHABLE_IMPL __builtin_unreachable();
-#elif defined(_MSC_VER)
-#define UNREACHABLE_IMPL __assume(0);
 #else
 #define UNREACHABLE_IMPL abort()
 #endif
@@ -145,14 +143,6 @@ const char* status_name(Status status);
 void status_ignore(Status status);
 
 #if defined(__GNUC__) || defined(__clang__)
-#define NODISCARD __attribute__((warn_unused_result))
-#elif defined(_MSC_VER)
-#define NODISCARD _Check_return_
-#else
-#define NODISCARD
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
 #define ALLOW_UNUSED_FN __attribute__((unused))
 #else
 #define ALLOW_UNUSED_FN
@@ -163,8 +153,8 @@ void status_ignore(Status status);
 typedef struct ArrayList     ArrayList;
 typedef struct StringBuilder StringBuilder;
 
-NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
-NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
+[[nodiscard]] Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col);
+[[nodiscard]] Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb);
 
 #define PUT_STATUS_PROPAGATE(errors, status, tok, cleanup)                     \
     IGNORE_STATUS(put_status_error(errors, status, (tok).line, (tok).column)); \

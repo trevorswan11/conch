@@ -5,7 +5,7 @@
 
 #include "util/hash.h"
 
-NODISCARD Status symbol_table_create(SymbolTable** table, Allocator allocator) {
+[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator allocator) {
     ASSERT_ALLOCATOR(allocator);
     SymbolTable* st = allocator.memory_alloc(sizeof(SymbolTable));
     if (!st) { return ALLOCATION_FAILED; }
@@ -50,7 +50,7 @@ void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
     free_alloc(table);
 }
 
-NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType* type) {
+[[nodiscard]] Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType* type) {
     assert(st);
     assert(!symbol_table_has(st, symbol));
 
@@ -58,7 +58,7 @@ NODISCARD Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType
     return hash_map_put(&st->symbols, &symbol, (const void*)&retained);
 }
 
-NODISCARD Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType** type) {
+[[nodiscard]] Status symbol_table_get(SymbolTable* st, MutSlice symbol, SemanticType** type) {
     assert(st);
     assert(symbol_table_has(st, symbol));
 

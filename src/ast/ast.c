@@ -33,7 +33,7 @@ void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
     array_list_deinit(errors);
 }
 
-NODISCARD Status ast_init(AST* ast, Allocator allocator) {
+[[nodiscard]] Status ast_init(AST* ast, Allocator allocator) {
     assert(ast);
     ASSERT_ALLOCATOR(allocator);
 
@@ -81,7 +81,7 @@ void ast_deinit(AST* ast) {
     hash_map_deinit(&ast->token_type_symbols);
 }
 
-NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb) {
+[[nodiscard]] Status ast_reconstruct(AST* ast, StringBuilder* sb) {
     assert(ast && ast->statements.data);
     assert(sb && sb->buffer.data);
 
@@ -151,7 +151,7 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
     array_list_deinit(expressions);
 }
 
-NODISCARD Status generics_reconstruct(ArrayList*     generics,
+[[nodiscard]] Status generics_reconstruct(ArrayList*     generics,
                                       const HashMap* symbol_map,
                                       StringBuilder* sb) {
     assert(generics && symbol_map && sb);

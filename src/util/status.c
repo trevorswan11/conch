@@ -22,7 +22,7 @@ const char* status_name(Status status) { return STATUS_TYPE_NAMES[status]; }
 
 void status_ignore(Status status) { MAYBE_UNUSED(status); }
 
-NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col) {
+[[nodiscard]] Status put_status_error(ArrayList* errors, Status status, size_t line, size_t col) {
     assert(errors);
     assert(STATUS_ERR(status));
 
@@ -40,7 +40,7 @@ NODISCARD Status put_status_error(ArrayList* errors, Status status, size_t line,
     return SUCCESS;
 }
 
-NODISCARD Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb) {
+[[nodiscard]] Status error_append_ln_col(size_t line, size_t col, StringBuilder* sb) {
     assert(sb);
     const char line_no[] = " [Ln ";
     const char col_no[]  = ", Col ";

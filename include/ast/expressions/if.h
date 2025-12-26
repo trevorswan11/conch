@@ -13,7 +13,7 @@ typedef struct IfExpression {
     Statement*  alternate;
 } IfExpression;
 
-NODISCARD Status if_expression_create(Token           start_token,
+[[nodiscard]] Status if_expression_create(Token           start_token,
                                       Expression*     condition,
                                       Statement*      consequence,
                                       Statement*      alternate,
@@ -21,10 +21,10 @@ NODISCARD Status if_expression_create(Token           start_token,
                                       memory_alloc_fn memory_alloc);
 
 void             if_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status if_expression_reconstruct(Node*          node,
+[[nodiscard]] Status if_expression_reconstruct(Node*          node,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb);
-NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable IF_VTABLE = {
     .base =

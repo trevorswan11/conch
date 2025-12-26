@@ -6,7 +6,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status if_expression_create(Token           start_token,
+[[nodiscard]] Status if_expression_create(Token           start_token,
                                       Expression*     condition,
                                       Statement*      consequence,
                                       Statement*      alternate,
@@ -42,7 +42,7 @@ void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(if_expr);
 }
 
-NODISCARD Status if_expression_reconstruct(Node*          node,
+[[nodiscard]] Status if_expression_reconstruct(Node*          node,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -67,7 +67,7 @@ NODISCARD Status if_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

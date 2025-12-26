@@ -8,7 +8,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status index_expression_create(Token             start_token,
+[[nodiscard]] Status index_expression_create(Token             start_token,
                                          Expression*       array,
                                          Expression*       idx,
                                          IndexExpression** index_expr,
@@ -41,7 +41,7 @@ void index_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(index);
 }
 
-NODISCARD Status index_expression_reconstruct(Node*          node,
+[[nodiscard]] Status index_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -59,7 +59,7 @@ NODISCARD Status index_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status index_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

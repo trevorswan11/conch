@@ -11,7 +11,7 @@
 #include "util/alphanum.h"
 #include "util/hash.h"
 
-static inline NODISCARD Status init_keywords(HashMap* keyword_map, Allocator allocator) {
+[[nodiscard]] static inline Status init_keywords(HashMap* keyword_map, Allocator allocator) {
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     TRY(hash_map_init_allocator(keyword_map,
                                 num_keywords,
@@ -31,7 +31,7 @@ static inline NODISCARD Status init_keywords(HashMap* keyword_map, Allocator all
     return SUCCESS;
 }
 
-static inline NODISCARD Status init_operators(HashMap* operator_map, Allocator allocator) {
+[[nodiscard]] static inline Status init_operators(HashMap* operator_map, Allocator allocator) {
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     TRY(hash_map_init_allocator(operator_map,
                                 num_operators,
@@ -51,7 +51,7 @@ static inline NODISCARD Status init_operators(HashMap* operator_map, Allocator a
     return SUCCESS;
 }
 
-NODISCARD Status lexer_init(Lexer* l, const char* input, Allocator allocator) {
+[[nodiscard]] Status lexer_init(Lexer* l, const char* input, Allocator allocator) {
     assert(input);
     TRY(lexer_null_init(l, allocator));
 
@@ -62,7 +62,7 @@ NODISCARD Status lexer_init(Lexer* l, const char* input, Allocator allocator) {
     return SUCCESS;
 }
 
-NODISCARD Status lexer_null_init(Lexer* l, Allocator allocator) {
+[[nodiscard]] Status lexer_null_init(Lexer* l, Allocator allocator) {
     assert(l);
     ASSERT_ALLOCATOR(allocator);
 
@@ -103,7 +103,7 @@ void lexer_deinit(Lexer* l) {
     array_list_deinit(&l->token_accumulator);
 }
 
-NODISCARD Status lexer_consume(Lexer* l) {
+[[nodiscard]] Status lexer_consume(Lexer* l) {
     l->peek_position = 0;
     l->line_no       = 1;
     l->col_no        = 0;
@@ -194,7 +194,7 @@ TokenType lexer_lookup_identifier(Lexer* l, const Slice* literal) {
     return value;
 }
 
-NODISCARD Status lexer_print_tokens(Lexer* l, FileIO* io) {
+[[nodiscard]] Status lexer_print_tokens(Lexer* l, FileIO* io) {
     assert(l);
     ArrayList*   list        = &l->token_accumulator;
     const size_t accumulated = array_list_length(list);

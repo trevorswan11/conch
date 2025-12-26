@@ -21,7 +21,7 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     array_list_deinit(captures);
 }
 
-NODISCARD Status for_loop_expression_create(Token               start_token,
+[[nodiscard]] Status for_loop_expression_create(Token               start_token,
                                             ArrayList           iterables,
                                             ArrayList           captures,
                                             BlockStatement*     block,
@@ -61,7 +61,7 @@ void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(for_loop);
 }
 
-NODISCARD Status for_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status for_loop_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -117,7 +117,7 @@ NODISCARD Status for_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status for_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status for_loop_expression_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
@@ -133,7 +133,7 @@ NODISCARD Status for_loop_expression_analyze(Node*            node,
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status while_loop_expression_create(Token                 start_token,
+[[nodiscard]] Status while_loop_expression_create(Token                 start_token,
                                               Expression*           condition,
                                               Expression*           continuation,
                                               BlockStatement*       block,
@@ -170,7 +170,7 @@ void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(while_loop);
 }
 
-NODISCARD Status while_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status while_loop_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -205,7 +205,7 @@ NODISCARD Status while_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status while_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status while_loop_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
@@ -221,7 +221,7 @@ NODISCARD Status while_loop_expression_analyze(Node*            node,
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status do_while_loop_expression_create(Token                   start_token,
+[[nodiscard]] Status do_while_loop_expression_create(Token                   start_token,
                                                  BlockStatement*         block,
                                                  Expression*             condition,
                                                  DoWhileLoopExpression** do_while_expr,
@@ -252,7 +252,7 @@ void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(do_while_loop);
 }
 
-NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status do_while_loop_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -272,7 +272,7 @@ NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status do_while_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status do_while_loop_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors) {
     ASSERT_EXPRESSION(node);
@@ -288,7 +288,7 @@ NODISCARD Status do_while_loop_expression_analyze(Node*            node,
     return NOT_IMPLEMENTED;
 }
 
-NODISCARD Status loop_expression_create(Token            start_token,
+[[nodiscard]] Status loop_expression_create(Token            start_token,
                                         BlockStatement*  block,
                                         LoopExpression** loop_expr,
                                         memory_alloc_fn  memory_alloc) {
@@ -316,7 +316,7 @@ void loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(loop);
 }
 
-NODISCARD Status loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status loop_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -330,7 +330,7 @@ NODISCARD Status loop_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

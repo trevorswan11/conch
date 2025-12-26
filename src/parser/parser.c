@@ -19,7 +19,7 @@
 
 #include "util/containers/string_builder.h"
 
-static inline NODISCARD Status init_prefix(HashSet* prefix_set, Allocator allocator) {
+[[nodiscard]] static inline Status init_prefix(HashSet* prefix_set, Allocator allocator) {
     const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
     TRY(hash_set_init_allocator(prefix_set,
                                 num_prefix,
@@ -37,7 +37,7 @@ static inline NODISCARD Status init_prefix(HashSet* prefix_set, Allocator alloca
     return SUCCESS;
 }
 
-static inline NODISCARD Status init_infix(HashSet* infix_set, Allocator allocator) {
+[[nodiscard]] static inline Status init_infix(HashSet* infix_set, Allocator allocator) {
     const size_t num_infix = sizeof(INFIX_FUNCTIONS) / sizeof(INFIX_FUNCTIONS[0]);
     const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
     if (num_infix < num_pairs) { return VIOLATED_INVARIANT; }
@@ -58,7 +58,7 @@ static inline NODISCARD Status init_infix(HashSet* infix_set, Allocator allocato
     return SUCCESS;
 }
 
-static inline NODISCARD Status init_primitives(HashSet* primitive_set, Allocator allocator) {
+[[nodiscard]] static inline Status init_primitives(HashSet* primitive_set, Allocator allocator) {
     const size_t num_primitives = sizeof(ALL_PRIMITIVES) / sizeof(ALL_PRIMITIVES[0]);
     TRY(hash_set_init_allocator(primitive_set,
                                 num_primitives,
@@ -76,7 +76,7 @@ static inline NODISCARD Status init_primitives(HashSet* primitive_set, Allocator
     return SUCCESS;
 }
 
-static inline NODISCARD Status init_precedences(HashMap* precedence_map, Allocator allocator) {
+[[nodiscard]] static inline Status init_precedences(HashMap* precedence_map, Allocator allocator) {
     const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
     TRY(hash_map_init_allocator(precedence_map,
                                 num_pairs,
@@ -96,7 +96,7 @@ static inline NODISCARD Status init_precedences(HashMap* precedence_map, Allocat
     return SUCCESS;
 }
 
-NODISCARD Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
+[[nodiscard]] Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator) {
     assert(p && l && io);
     ASSERT_ALLOCATOR(allocator);
 
@@ -105,7 +105,7 @@ NODISCARD Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocato
     return SUCCESS;
 }
 
-NODISCARD Status parser_null_init(Parser* p, FileIO* io, Allocator allocator) {
+[[nodiscard]] Status parser_null_init(Parser* p, FileIO* io, Allocator allocator) {
     assert(p && io);
     ASSERT_ALLOCATOR(allocator);
 
@@ -153,7 +153,7 @@ NODISCARD Status parser_null_init(Parser* p, FileIO* io, Allocator allocator) {
     return SUCCESS;
 }
 
-NODISCARD Status parser_reset(Parser* p, Lexer* l) {
+[[nodiscard]] Status parser_reset(Parser* p, Lexer* l) {
     assert(l);
 
     p->lexer         = l;
@@ -180,7 +180,7 @@ void parser_deinit(Parser* p) {
     hash_map_deinit(&p->precedences);
 }
 
-NODISCARD Status parser_consume(Parser* p, AST* ast) {
+[[nodiscard]] Status parser_consume(Parser* p, AST* ast) {
     assert(p && p->lexer && p->io);
     assert(ast);
     ASSERT_ALLOCATOR(ast->allocator);
@@ -215,7 +215,7 @@ NODISCARD Status parser_consume(Parser* p, AST* ast) {
     return SUCCESS;
 }
 
-NODISCARD Status parser_next_token(Parser* p) {
+[[nodiscard]] Status parser_next_token(Parser* p) {
     assert(p);
     p->current_token = p->peek_token;
     return array_list_get(&p->lexer->token_accumulator, p->lexer_index++, &p->peek_token);
@@ -231,7 +231,7 @@ bool parser_peek_token_is(const Parser* p, TokenType t) {
     return p->peek_token.type == t;
 }
 
-NODISCARD Status parser_expect_current(Parser* p, TokenType t) {
+[[nodiscard]] Status parser_expect_current(Parser* p, TokenType t) {
     assert(p);
     if (parser_current_token_is(p, t)) { return parser_next_token(p); }
 
@@ -239,7 +239,7 @@ NODISCARD Status parser_expect_current(Parser* p, TokenType t) {
     return UNEXPECTED_TOKEN;
 }
 
-NODISCARD Status parser_expect_peek(Parser* p, TokenType t) {
+[[nodiscard]] Status parser_expect_peek(Parser* p, TokenType t) {
     assert(p);
     if (parser_peek_token_is(p, t)) { return parser_next_token(p); }
 
@@ -247,7 +247,7 @@ NODISCARD Status parser_expect_peek(Parser* p, TokenType t) {
     return UNEXPECTED_TOKEN;
 }
 
-static inline NODISCARD Status parser_error(Parser* p, TokenType t, Token actual_tok) {
+[[nodiscard]] static inline Status parser_error(Parser* p, TokenType t, Token actual_tok) {
     assert(p);
     ASSERT_ALLOCATOR(p->allocator);
 
@@ -280,11 +280,11 @@ static inline NODISCARD Status parser_error(Parser* p, TokenType t, Token actual
     return SUCCESS;
 }
 
-NODISCARD Status parser_current_error(Parser* p, TokenType t) {
+[[nodiscard]] Status parser_current_error(Parser* p, TokenType t) {
     return parser_error(p, t, p->current_token);
 }
 
-NODISCARD Status parser_peek_error(Parser* p, TokenType t) {
+[[nodiscard]] Status parser_peek_error(Parser* p, TokenType t) {
     return parser_error(p, t, p->peek_token);
 }
 
@@ -304,7 +304,7 @@ Precedence parser_peek_precedence(Parser* p) {
     return LOWEST;
 }
 
-NODISCARD Status parser_parse_statement(Parser* p, Statement** stmt) {
+[[nodiscard]] Status parser_parse_statement(Parser* p, Statement** stmt) {
     assert(p);
     switch (p->current_token.type) {
     case VAR:

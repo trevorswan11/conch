@@ -12,7 +12,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status type_expression_create(Token               start_token,
+[[nodiscard]] Status type_expression_create(Token               start_token,
                                         TypeExpressionTag   tag,
                                         TypeExpressionUnion variant,
                                         TypeExpression**    type_expr,
@@ -73,7 +73,7 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type);
 }
 
-NODISCARD Status type_expression_reconstruct(Node*          node,
+[[nodiscard]] Status type_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -91,7 +91,7 @@ NODISCARD Status type_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
@@ -186,7 +186,7 @@ NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, Ar
     return SUCCESS;
 }
 
-NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
+[[nodiscard]] Status explicit_type_reconstruct(ExplicitType   explicit_type,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb) {
     assert(sb);

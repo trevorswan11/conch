@@ -23,7 +23,7 @@ typedef struct ForLoopExpression {
 
 void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc);
 
-NODISCARD Status for_loop_expression_create(Token               start_token,
+[[nodiscard]] Status for_loop_expression_create(Token               start_token,
                                             ArrayList           iterables,
                                             ArrayList           captures,
                                             BlockStatement*     block,
@@ -32,10 +32,10 @@ NODISCARD Status for_loop_expression_create(Token               start_token,
                                             memory_alloc_fn     memory_alloc);
 
 void             for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status for_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status for_loop_expression_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb);
-NODISCARD Status for_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status for_loop_expression_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors);
 
@@ -56,7 +56,7 @@ typedef struct WhileLoopExpression {
     Statement*      non_break;
 } WhileLoopExpression;
 
-NODISCARD Status while_loop_expression_create(Token                 start_token,
+[[nodiscard]] Status while_loop_expression_create(Token                 start_token,
                                               Expression*           condition,
                                               Expression*           continuation,
                                               BlockStatement*       block,
@@ -65,10 +65,10 @@ NODISCARD Status while_loop_expression_create(Token                 start_token,
                                               memory_alloc_fn       memory_alloc);
 
 void             while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status while_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status while_loop_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb);
-NODISCARD Status while_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status while_loop_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors);
 
@@ -87,17 +87,17 @@ typedef struct DoWhileLoopExpression {
     Expression*     condition;
 } DoWhileLoopExpression;
 
-NODISCARD Status do_while_loop_expression_create(Token                   start_token,
+[[nodiscard]] Status do_while_loop_expression_create(Token                   start_token,
                                                  BlockStatement*         block,
                                                  Expression*             condition,
                                                  DoWhileLoopExpression** do_while_expr,
                                                  memory_alloc_fn         memory_alloc);
 
 void             do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status do_while_loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status do_while_loop_expression_reconstruct(Node*          node,
                                                       const HashMap* symbol_map,
                                                       StringBuilder* sb);
-NODISCARD Status do_while_loop_expression_analyze(Node*            node,
+[[nodiscard]] Status do_while_loop_expression_analyze(Node*            node,
                                                   SemanticContext* parent,
                                                   ArrayList*       errors);
 
@@ -115,16 +115,16 @@ typedef struct LoopExpression {
     BlockStatement* block;
 } LoopExpression;
 
-NODISCARD Status loop_expression_create(Token            start_token,
+[[nodiscard]] Status loop_expression_create(Token            start_token,
                                         BlockStatement*  block,
                                         LoopExpression** loop_expr,
                                         memory_alloc_fn  memory_alloc);
 
 void             loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status loop_expression_reconstruct(Node*          node,
+[[nodiscard]] Status loop_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb);
-NODISCARD Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status loop_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable LOOP_VTABLE = {
     .base =

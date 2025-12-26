@@ -10,7 +10,7 @@ typedef struct InfixExpression {
     Expression* rhs;
 } InfixExpression;
 
-NODISCARD Status infix_expression_create(Token             start_token,
+[[nodiscard]] Status infix_expression_create(Token             start_token,
                                          Expression*       lhs,
                                          TokenType         op,
                                          Expression*       rhs,
@@ -18,10 +18,10 @@ NODISCARD Status infix_expression_create(Token             start_token,
                                          memory_alloc_fn   memory_alloc);
 
 void             infix_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status infix_expression_reconstruct(Node*          node,
+[[nodiscard]] Status infix_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb);
-NODISCARD Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable INFIX_VTABLE = {
     .base =

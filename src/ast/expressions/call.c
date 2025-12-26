@@ -20,7 +20,7 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     array_list_deinit(arguments);
 }
 
-NODISCARD Status call_expression_create(Token            start_token,
+[[nodiscard]] Status call_expression_create(Token            start_token,
                                         Expression*      function,
                                         ArrayList        arguments,
                                         ArrayList        generics,
@@ -56,7 +56,7 @@ void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(call);
 }
 
-NODISCARD Status call_expression_reconstruct(Node*          node,
+[[nodiscard]] Status call_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -88,7 +88,7 @@ NODISCARD Status call_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status call_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

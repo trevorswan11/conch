@@ -80,7 +80,7 @@ typedef struct {
     SemanticType*      inner_type;
 } SemanticArrayType;
 
-NODISCARD Status semantic_array_create(SemanticArrayTag    tag,
+[[nodiscard]] Status semantic_array_create(SemanticArrayTag    tag,
                                        SemanticArrayUnion  variant,
                                        SemanticType*       inner_type,
                                        SemanticArrayType** array_type,
@@ -94,7 +94,7 @@ typedef struct {
     HashSet variants;
 } SemanticEnumType;
 
-NODISCARD Status semantic_enum_create(Slice              name,
+[[nodiscard]] Status semantic_enum_create(Slice              name,
                                       HashSet            variants,
                                       SemanticEnumType** enum_type,
                                       memory_alloc_fn    memory_alloc);
@@ -120,17 +120,17 @@ typedef struct SemanticType {
 } SemanticType;
 
 // Creates an empty semantic type.
-NODISCARD Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc);
+[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc);
 
 // Copies the tagged union data from src to dest, leaving flags alone.
 //
 // Reference counting is respected when possible.
-NODISCARD Status semantic_type_copy_variant(SemanticType* dest,
+[[nodiscard]] Status semantic_type_copy_variant(SemanticType* dest,
                                             SemanticType* src,
                                             Allocator     allocator);
 
 // Creates and deep copies src into dest while respecting RC.
-NODISCARD Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
+[[nodiscard]] Status semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
 
 // Never call this directly!
 void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);

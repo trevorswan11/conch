@@ -7,7 +7,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status import_statement_create(Token                 start_token,
+[[nodiscard]] Status import_statement_create(Token                 start_token,
                                          ImportTag             tag,
                                          ImportUnion           variant,
                                          IdentifierExpression* alias,
@@ -46,7 +46,7 @@ void import_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(import);
 }
 
-NODISCARD Status import_statement_reconstruct(Node*          node,
+[[nodiscard]] Status import_statement_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb) {
     ASSERT_STATEMENT(node);
@@ -78,7 +78,7 @@ NODISCARD Status import_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 

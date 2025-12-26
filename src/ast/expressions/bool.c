@@ -7,7 +7,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status bool_literal_expression_create(Token                   start_token,
+[[nodiscard]] Status bool_literal_expression_create(Token                   start_token,
                                                 BoolLiteralExpression** bool_expr,
                                                 memory_alloc_fn         memory_alloc) {
     assert(memory_alloc);
@@ -33,7 +33,7 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(bool_expr);
 }
 
-NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
+[[nodiscard]] Status bool_literal_expression_reconstruct(Node*          node,
                                                      const HashMap* symbol_map,
                                                      StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -45,7 +45,7 @@ NODISCARD Status bool_literal_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status bool_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status bool_literal_expression_analyze(Node*            node,
                                                  SemanticContext* parent,
                                                  ArrayList*       errors) {
     PRIMITIVE_ANALYZE(STYPE_BOOL, false, semantic_context_allocator(parent).memory_alloc);

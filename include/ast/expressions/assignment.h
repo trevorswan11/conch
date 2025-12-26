@@ -13,7 +13,7 @@ typedef struct AssignmentExpression {
     Expression* rhs;
 } AssignmentExpression;
 
-NODISCARD Status assignment_expression_create(Token                  start_token,
+[[nodiscard]] Status assignment_expression_create(Token                  start_token,
                                               Expression*            lhs,
                                               TokenType              op,
                                               Expression*            rhs,
@@ -21,10 +21,10 @@ NODISCARD Status assignment_expression_create(Token                  start_token
                                               memory_alloc_fn        memory_alloc);
 
 void             assignment_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status assignment_expression_reconstruct(Node*          node,
+[[nodiscard]] Status assignment_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb);
-NODISCARD Status assignment_expression_analyze(Node*            node,
+[[nodiscard]] Status assignment_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors);
 

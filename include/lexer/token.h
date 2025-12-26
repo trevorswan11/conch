@@ -93,7 +93,7 @@ Token token_init(TokenType t, const char* str, size_t length, size_t line, size_
 // - Multiline strings are stripped of their internal '\\' line prefixes.
 //
 // The returned memory is owned by the caller and must be freed.
-NODISCARD Status promote_token_string(Token token, MutSlice* slice, Allocator allocator);
+[[nodiscard]] Status promote_token_string(Token token, MutSlice* slice, Allocator allocator);
 
 Base integer_token_to_base(TokenType type);
 

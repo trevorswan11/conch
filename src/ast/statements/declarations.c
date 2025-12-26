@@ -20,7 +20,7 @@
             errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc((name).ptr)); \
     }
 
-NODISCARD Status decl_statement_create(Token                 start_token,
+[[nodiscard]] Status decl_statement_create(Token                 start_token,
                                        IdentifierExpression* ident,
                                        TypeExpression*       type,
                                        Expression*           value,
@@ -78,7 +78,7 @@ void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(decl);
 }
 
-NODISCARD Status decl_statement_reconstruct(Node*          node,
+[[nodiscard]] Status decl_statement_reconstruct(Node*          node,
                                             const HashMap* symbol_map,
                                             StringBuilder* sb) {
     ASSERT_STATEMENT(node);
@@ -107,7 +107,7 @@ NODISCARD Status decl_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
@@ -182,7 +182,7 @@ NODISCARD Status decl_statement_analyze(Node* node, SemanticContext* parent, Arr
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_create(Token                 start_token,
+[[nodiscard]] Status type_decl_statement_create(Token                 start_token,
                                             IdentifierExpression* ident,
                                             Expression*           value,
                                             bool                  primitive_alias,
@@ -217,7 +217,7 @@ void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(type_decl);
 }
 
-NODISCARD Status type_decl_statement_reconstruct(Node*          node,
+[[nodiscard]] Status type_decl_statement_reconstruct(Node*          node,
                                                  const HashMap* symbol_map,
                                                  StringBuilder* sb) {
     ASSERT_STATEMENT(node);
@@ -237,7 +237,7 @@ NODISCARD Status type_decl_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status type_decl_statement_analyze(Node*            node,
+[[nodiscard]] Status type_decl_statement_analyze(Node*            node,
                                              SemanticContext* parent,
                                              ArrayList*       errors) {
     ASSERT_STATEMENT(node);

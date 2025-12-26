@@ -23,7 +23,7 @@ typedef struct ImportStatement {
     IdentifierExpression* alias;
 } ImportStatement;
 
-NODISCARD Status import_statement_create(Token                 start_token,
+[[nodiscard]] Status import_statement_create(Token                 start_token,
                                          ImportTag             tag,
                                          ImportUnion           variant,
                                          IdentifierExpression* alias,
@@ -31,10 +31,10 @@ NODISCARD Status import_statement_create(Token                 start_token,
                                          memory_alloc_fn       memory_alloc);
 
 void             import_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status import_statement_reconstruct(Node*          node,
+[[nodiscard]] Status import_statement_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb);
-NODISCARD Status import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status import_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const StatementVTable IMPORT_VTABLE = {
     .base =

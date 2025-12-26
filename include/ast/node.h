@@ -43,8 +43,8 @@ typedef struct SemanticContext SemanticContext;
 
 struct NodeVTable {
     void (*destroy)(Node*, free_alloc_fn);
-    NODISCARD Status (*reconstruct)(Node*, const HashMap*, StringBuilder*);
-    NODISCARD Status (*analyze)(Node*, SemanticContext*, ArrayList*);
+    [[nodiscard]] Status (*reconstruct)(Node*, const HashMap*, StringBuilder*);
+    [[nodiscard]] Status (*analyze)(Node*, SemanticContext*, ArrayList*);
 };
 
 struct Node {

@@ -9,16 +9,16 @@ typedef struct ExpressionStatement {
     Expression* expression;
 } ExpressionStatement;
 
-NODISCARD Status expression_statement_create(Token                 start_token,
+[[nodiscard]] Status expression_statement_create(Token                 start_token,
                                              Expression*           expression,
                                              ExpressionStatement** expr_stmt,
                                              memory_alloc_fn       memory_alloc);
 
 void             expression_statement_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status expression_statement_reconstruct(Node*          node,
+[[nodiscard]] Status expression_statement_reconstruct(Node*          node,
                                                   const HashMap* symbol_map,
                                                   StringBuilder* sb);
-NODISCARD Status expression_statement_analyze(Node*            node,
+[[nodiscard]] Status expression_statement_analyze(Node*            node,
                                               SemanticContext* parent,
                                               ArrayList*       errors);
 

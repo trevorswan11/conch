@@ -8,15 +8,15 @@ typedef struct StringLiteralExpression {
     MutSlice   slice;
 } StringLiteralExpression;
 
-NODISCARD Status string_literal_expression_create(Token                     start_token,
+[[nodiscard]] Status string_literal_expression_create(Token                     start_token,
                                                   StringLiteralExpression** string_expr,
                                                   Allocator                 allocator);
 
 void             string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status string_literal_expression_reconstruct(Node*          node,
+[[nodiscard]] Status string_literal_expression_reconstruct(Node*          node,
                                                        const HashMap* symbol_map,
                                                        StringBuilder* sb);
-NODISCARD Status string_literal_expression_analyze(Node*            node,
+[[nodiscard]] Status string_literal_expression_analyze(Node*            node,
                                                    SemanticContext* parent,
                                                    ArrayList*       errors);
 

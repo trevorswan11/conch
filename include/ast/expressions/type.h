@@ -87,17 +87,17 @@ typedef struct TypeExpression {
     TypeExpressionUnion variant;
 } TypeExpression;
 
-NODISCARD Status type_expression_create(Token               start_token,
+[[nodiscard]] Status type_expression_create(Token               start_token,
                                         TypeExpressionTag   tag,
                                         TypeExpressionUnion variant,
                                         TypeExpression**    type_expr,
                                         memory_alloc_fn     memory_alloc);
 
 void             type_expression_destroy(Node* node, free_alloc_fn free_alloc);
-NODISCARD Status type_expression_reconstruct(Node*          node,
+[[nodiscard]] Status type_expression_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb);
-NODISCARD Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
+[[nodiscard]] Status type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
 
 static const ExpressionVTable TYPE_VTABLE = {
     .base =
@@ -108,7 +108,7 @@ static const ExpressionVTable TYPE_VTABLE = {
         },
 };
 
-NODISCARD Status explicit_type_reconstruct(ExplicitType   explicit_type,
+[[nodiscard]] Status explicit_type_reconstruct(ExplicitType   explicit_type,
                                            const HashMap* symbol_map,
                                            StringBuilder* sb);
 

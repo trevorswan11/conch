@@ -4,7 +4,7 @@
 #include "semantic/symbol.h"
 #include "semantic/type.h"
 
-NODISCARD Status semantic_context_create(SemanticContext*  parent,
+[[nodiscard]] Status semantic_context_create(SemanticContext*  parent,
                                          SemanticContext** context,
                                          Allocator         allocator) {
     ASSERT_ALLOCATOR(allocator);

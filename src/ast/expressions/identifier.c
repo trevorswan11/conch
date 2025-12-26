@@ -7,7 +7,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status identifier_expression_create(Token                  start_token,
+[[nodiscard]] Status identifier_expression_create(Token                  start_token,
                                               MutSlice               name,
                                               IdentifierExpression** ident_expr,
                                               memory_alloc_fn        memory_alloc) {
@@ -36,7 +36,7 @@ void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(ident);
 }
 
-NODISCARD Status identifier_expression_reconstruct(Node*          node,
+[[nodiscard]] Status identifier_expression_reconstruct(Node*          node,
                                                    const HashMap* symbol_map,
                                                    StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -49,7 +49,7 @@ NODISCARD Status identifier_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status identifier_expression_analyze(Node*            node,
+[[nodiscard]] Status identifier_expression_analyze(Node*            node,
                                                SemanticContext* parent,
                                                ArrayList*       errors) {
     ASSERT_EXPRESSION(node);

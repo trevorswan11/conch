@@ -20,7 +20,7 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     array_list_deinit(arms);
 }
 
-NODISCARD Status match_expression_create(Token             start_token,
+[[nodiscard]] Status match_expression_create(Token             start_token,
                                          Expression*       expression,
                                          ArrayList         arms,
                                          Statement*        catch_all,
@@ -57,7 +57,7 @@ void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(match);
 }
 
-NODISCARD Status match_expression_reconstruct(Node*          node,
+[[nodiscard]] Status match_expression_reconstruct(Node*          node,
                                               const HashMap* symbol_map,
                                               StringBuilder* sb) {
     ASSERT_EXPRESSION(node);
@@ -93,7 +93,7 @@ NODISCARD Status match_expression_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status match_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 

@@ -19,7 +19,7 @@ static inline size_t hash_map_capacity_for_size(size_t size) {
 }
 
 // Grows the map to the new capacity, rehashing along the way.
-static inline NODISCARD Status hash_map_grow(HashMap* hm, size_t new_capacity) {
+[[nodiscard]] static inline Status hash_map_grow(HashMap* hm, size_t new_capacity) {
     assert(hm);
     new_capacity = max_size_t(2, new_capacity, HASH_MAP_MINIMUM_CAPACITY);
     assert(new_capacity > hm->header->capacity);
@@ -56,7 +56,7 @@ static inline NODISCARD Status hash_map_grow(HashMap* hm, size_t new_capacity) {
 }
 
 // Only grows if the requested count exceeds the current number of available slots.
-static inline NODISCARD Status hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
+[[nodiscard]] static inline Status hash_map_grow_if_needed(HashMap* hm, size_t new_count) {
     assert(hm);
     const size_t max_load = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
     if (hm->size + new_count <= max_load) { return SUCCESS; }
@@ -73,7 +73,7 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
     memset(hm->metadata, 0, sizeof(Metadata) * hm->header->capacity);
 }
 
-NODISCARD Status hash_map_init_allocator(HashMap* hm,
+[[nodiscard]] Status hash_map_init_allocator(HashMap* hm,
                                          size_t   capacity,
                                          size_t   key_size,
                                          size_t   key_align,
@@ -150,7 +150,7 @@ NODISCARD Status hash_map_init_allocator(HashMap* hm,
     return SUCCESS;
 }
 
-NODISCARD Status hash_map_init(HashMap* hm,
+[[nodiscard]] Status hash_map_init(HashMap* hm,
                                size_t   capacity,
                                size_t   key_size,
                                size_t   key_align,
@@ -197,7 +197,7 @@ void hash_map_clear_retaining_capacity(HashMap* hm) {
     hm->available = (hm->header->capacity * HASH_MAP_MAX_LOAD_PERCENTAGE) / 100;
 }
 
-NODISCARD Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
+[[nodiscard]] Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
     if (!hm || !hm->buffer) { return NULL_PARAMETER; }
 
     if (new_size > hm->size) {
@@ -206,7 +206,7 @@ NODISCARD Status hash_map_ensure_total_capacity(HashMap* hm, size_t new_size) {
     return SUCCESS;
 }
 
-NODISCARD Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size) {
+[[nodiscard]] Status hash_map_ensure_unused_capacity(HashMap* hm, size_t additional_size) {
     return hash_map_ensure_total_capacity(hm, hm->size + additional_size);
 }
 
@@ -341,7 +341,7 @@ void hash_map_put_assume_capacity_no_clobber(HashMap* hm, const void* key, const
     hm->size += 1;
 }
 
-NODISCARD Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
+[[nodiscard]] Status hash_map_put_no_clobber(HashMap* hm, const void* key, const void* value) {
     TRY_IS(hash_map_grow_if_needed(hm, 1), ALLOCATION_FAILED);
 
     hash_map_put_assume_capacity_no_clobber(hm, key, value);
@@ -397,7 +397,7 @@ MapGetOrPutResult hash_map_get_or_put_assume_capacity(HashMap* hm, const void* k
     };
 }
 
-NODISCARD Status hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result) {
+[[nodiscard]] Status hash_map_get_or_put(HashMap* hm, const void* key, MapGetOrPutResult* result) {
     assert(hm && hm->buffer && key);
 
     // If we fail to grow, still try to find the key
@@ -430,7 +430,7 @@ void hash_map_put_assume_capacity(HashMap* hm, const void* key, const void* valu
     memcpy(gop.value_ptr, value, hm->header->value_size);
 }
 
-NODISCARD Status hash_map_put(HashMap* hm, const void* key, const void* value) {
+[[nodiscard]] Status hash_map_put(HashMap* hm, const void* key, const void* value) {
     assert(hm && hm->buffer && key && value);
     MapGetOrPutResult gop;
     TRY(hash_map_get_or_put(hm, key, &gop));
@@ -445,7 +445,7 @@ bool hash_map_contains(const HashMap* hm, const void* key) {
     return STATUS_OK(hash_map_get_index(hm, key, nullptr));
 }
 
-NODISCARD Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
+[[nodiscard]] Status hash_map_get_index(const HashMap* hm, const void* key, size_t* index) {
     assert(hm && hm->buffer && key);
     if (hm->size == 0) { return EMPTY; }
 
@@ -485,7 +485,7 @@ static inline const void* hash_map_get_value_ptr_impl(const HashMap* hm, const v
     return ptr_offset(hm->header->values, index * hm->header->value_size);
 }
 
-NODISCARD Status hash_map_get_value(const HashMap* hm, const void* key, void* value) {
+[[nodiscard]] Status hash_map_get_value(const HashMap* hm, const void* key, void* value) {
     assert(hm && hm->buffer && key && value);
     const void* stored = hash_map_get_value_ptr_impl(hm, key);
     if (stored) {
@@ -496,7 +496,7 @@ NODISCARD Status hash_map_get_value(const HashMap* hm, const void* key, void* va
     return ELEMENT_MISSING;
 }
 
-NODISCARD Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item) {
+[[nodiscard]] Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** item) {
     assert(hm && hm->buffer && key);
     size_t index;
     TRY(hash_map_get_index(hm, key, &index));
@@ -505,7 +505,7 @@ NODISCARD Status hash_map_get_value_ptr(HashMap* hm, const void* key, void** ite
     return SUCCESS;
 }
 
-NODISCARD Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
+[[nodiscard]] Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
     assert(hm && hm->buffer && key);
     size_t index;
     TRY(hash_map_get_index(hm, key, &index));
@@ -517,7 +517,7 @@ NODISCARD Status hash_map_get_entry(HashMap* hm, const void* key, MapEntry* e) {
     return SUCCESS;
 }
 
-NODISCARD Status hash_map_remove(HashMap* hm, const void* key) {
+[[nodiscard]] Status hash_map_remove(HashMap* hm, const void* key) {
     assert(hm && hm->buffer && key);
     size_t index;
     TRY(hash_map_get_index(hm, key, &index));

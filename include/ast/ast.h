@@ -25,13 +25,13 @@ typedef struct AST {
     Allocator allocator;
 } AST;
 
-NODISCARD Status ast_init(AST* ast, Allocator allocator);
+[[nodiscard]] Status ast_init(AST* ast, Allocator allocator);
 void             ast_deinit(AST* ast);
 
 // Reconstructs the original source code from the AST.
 //
 // The builder is cleared on entry, and freed on error.
-NODISCARD Status ast_reconstruct(AST* ast, StringBuilder* sb);
+[[nodiscard]] Status ast_reconstruct(AST* ast, StringBuilder* sb);
 
 // Tries to get the symbol for the given token type.
 //
@@ -47,7 +47,7 @@ void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
 // Handles the reconstruction of generic lists.
 //
 // While the generics pointer must be valid, this is a no-op for empty lists.
-NODISCARD Status generics_reconstruct(ArrayList*     generics,
+[[nodiscard]] Status generics_reconstruct(ArrayList*     generics,
                                       const HashMap* symbol_map,
                                       StringBuilder* sb);
 

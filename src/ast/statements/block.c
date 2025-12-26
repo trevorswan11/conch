@@ -7,7 +7,7 @@
 
 #include "util/containers/string_builder.h"
 
-NODISCARD Status block_statement_create(Token            start_token,
+[[nodiscard]] Status block_statement_create(Token            start_token,
                                         BlockStatement** block_stmt,
                                         Allocator        allocator) {
     ASSERT_ALLOCATOR(allocator);
@@ -38,7 +38,7 @@ void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
     free_alloc(block);
 }
 
-NODISCARD Status block_statement_reconstruct(Node*          node,
+[[nodiscard]] Status block_statement_reconstruct(Node*          node,
                                              const HashMap* symbol_map,
                                              StringBuilder* sb) {
     ASSERT_STATEMENT(node);
@@ -59,7 +59,7 @@ NODISCARD Status block_statement_reconstruct(Node*          node,
     return SUCCESS;
 }
 
-NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
+[[nodiscard]] Status block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
     Allocator allocator = semantic_context_allocator(parent);
@@ -87,7 +87,7 @@ NODISCARD Status block_statement_analyze(Node* node, SemanticContext* parent, Ar
     return SUCCESS;
 }
 
-NODISCARD Status block_statement_append(BlockStatement* block_stmt, const Statement* stmt) {
+[[nodiscard]] Status block_statement_append(BlockStatement* block_stmt, const Statement* stmt) {
     assert(block_stmt && block_stmt->statements.data && stmt);
     TRY(array_list_push(&block_stmt->statements, (const void*)&stmt));
     return SUCCESS;
