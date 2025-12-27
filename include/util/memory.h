@@ -58,7 +58,7 @@ static inline void* std_calloc(NO_CTX, size_t count, size_t size) { return callo
 static inline void* std_realloc(NO_CTX, void* ptr, size_t size) { return realloc(ptr, size); }
 static inline void  std_free(NO_CTX, void* ptr) { free(ptr); }
 
-static Allocator std_allocator = {
+[[maybe_unused]] static Allocator std_allocator = {
     .ctx              = nullptr,
     .memory_alloc     = &std_malloc,
     .continuous_alloc = &std_calloc,
