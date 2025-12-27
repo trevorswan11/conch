@@ -3,8 +3,8 @@
 #include <cassert>
 #include <cstdlib>
 #include <string>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 extern "C" {
 #include "ast/ast.h"
@@ -25,8 +25,7 @@ template <typename T> class Fixture {
     using Dtor = void (*)(T*);
 
   public:
-    explicit Fixture(std::type_identity_t<T>& t, Dtor dtor)
-        : underlying{t}, dtor{dtor} {}
+    explicit Fixture(std::type_identity_t<T>& t, Dtor dtor) : underlying{t}, dtor{dtor} {}
     explicit Fixture(std::type_identity_t<T>& t) : underlying{t}, dtor{nullptr} {}
 
     ~Fixture() {

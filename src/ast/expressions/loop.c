@@ -8,14 +8,14 @@
 
 #include "util/containers/string_builder.h"
 
-void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
+void free_for_capture_list(ArrayList* captures, Allocator* allocator) {
     assert(captures && captures->data);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(captures);
     ForLoopCapture         capture;
     while (array_list_const_iterator_has_next(&it, &capture)) {
-        NODE_VIRTUAL_FREE(capture.capture, free_alloc);
+        NODE_VIRTUAL_FREE(capture.capture, allocator);
     }
 
     array_list_deinit(captures);
@@ -27,13 +27,13 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
                                                 BlockStatement*     block,
                                                 Statement*          non_break,
                                                 ForLoopExpression** for_expr,
-                                                memory_alloc_fn     memory_alloc) {
-    assert(memory_alloc);
+                                                Allocator*          allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(block);
     assert(iterables.item_size == sizeof(Expression*));
     assert(captures.item_size == sizeof(ForLoopCapture));
 
-    ForLoopExpression* for_loop = memory_alloc(sizeof(ForLoopExpression));
+    ForLoopExpression* for_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ForLoopExpression));
     if (!for_loop) { return ALLOCATION_FAILED; }
 
     *for_loop = (ForLoopExpression){
@@ -48,17 +48,17 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void for_loop_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ForLoopExpression* for_loop = (ForLoopExpression*)node;
-    free_expression_list(&for_loop->iterables, free_alloc);
-    free_for_capture_list(&for_loop->captures, free_alloc);
-    NODE_VIRTUAL_FREE(for_loop->block, free_alloc);
-    NODE_VIRTUAL_FREE(for_loop->non_break, free_alloc);
+    free_expression_list(&for_loop->iterables, allocator);
+    free_for_capture_list(&for_loop->captures, allocator);
+    NODE_VIRTUAL_FREE(for_loop->block, allocator);
+    NODE_VIRTUAL_FREE(for_loop->non_break, allocator);
 
-    free_alloc(for_loop);
+    ALLOCATOR_PTR_FREE(allocator, for_loop);
 }
 
 [[nodiscard]] Status
@@ -135,10 +135,10 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
                                                   BlockStatement*       block,
                                                   Statement*            non_break,
                                                   WhileLoopExpression** while_expr,
-                                                  memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                                  Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    WhileLoopExpression* while_loop = memory_alloc(sizeof(WhileLoopExpression));
+    WhileLoopExpression* while_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(WhileLoopExpression));
     if (!while_loop) { return ALLOCATION_FAILED; }
 
     *while_loop = (WhileLoopExpression){
@@ -153,17 +153,17 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
     return SUCCESS;
 }
 
-void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void while_loop_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     WhileLoopExpression* while_loop = (WhileLoopExpression*)node;
-    NODE_VIRTUAL_FREE(while_loop->condition, free_alloc);
-    NODE_VIRTUAL_FREE(while_loop->continuation, free_alloc);
-    NODE_VIRTUAL_FREE(while_loop->block, free_alloc);
-    NODE_VIRTUAL_FREE(while_loop->non_break, free_alloc);
+    NODE_VIRTUAL_FREE(while_loop->condition, allocator);
+    NODE_VIRTUAL_FREE(while_loop->continuation, allocator);
+    NODE_VIRTUAL_FREE(while_loop->block, allocator);
+    NODE_VIRTUAL_FREE(while_loop->non_break, allocator);
 
-    free_alloc(while_loop);
+    ALLOCATOR_PTR_FREE(allocator, while_loop);
 }
 
 [[nodiscard]] Status
@@ -217,10 +217,11 @@ while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringB
                                                      BlockStatement*         block,
                                                      Expression*             condition,
                                                      DoWhileLoopExpression** do_while_expr,
-                                                     memory_alloc_fn         memory_alloc) {
-    assert(memory_alloc);
+                                                     Allocator*              allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    DoWhileLoopExpression* do_while_loop = memory_alloc(sizeof(DoWhileLoopExpression));
+    DoWhileLoopExpression* do_while_loop =
+        ALLOCATOR_PTR_MALLOC(allocator, sizeof(DoWhileLoopExpression));
     if (!do_while_loop) { return ALLOCATION_FAILED; }
 
     *do_while_loop = (DoWhileLoopExpression){
@@ -233,15 +234,15 @@ while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringB
     return SUCCESS;
 }
 
-void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void do_while_loop_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     DoWhileLoopExpression* do_while_loop = (DoWhileLoopExpression*)node;
-    NODE_VIRTUAL_FREE(do_while_loop->block, free_alloc);
-    NODE_VIRTUAL_FREE(do_while_loop->condition, free_alloc);
+    NODE_VIRTUAL_FREE(do_while_loop->block, allocator);
+    NODE_VIRTUAL_FREE(do_while_loop->condition, allocator);
 
-    free_alloc(do_while_loop);
+    ALLOCATOR_PTR_FREE(allocator, do_while_loop);
 }
 
 [[nodiscard]] Status
@@ -279,10 +280,10 @@ do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
 [[nodiscard]] Status loop_expression_create(Token            start_token,
                                             BlockStatement*  block,
                                             LoopExpression** loop_expr,
-                                            memory_alloc_fn  memory_alloc) {
-    assert(memory_alloc);
+                                            Allocator*       allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    LoopExpression* loop = memory_alloc(sizeof(LoopExpression));
+    LoopExpression* loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(LoopExpression));
     if (!loop) { return ALLOCATION_FAILED; }
 
     *loop = (LoopExpression){
@@ -294,14 +295,14 @@ do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
     return SUCCESS;
 }
 
-void loop_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void loop_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     LoopExpression* loop = (LoopExpression*)node;
-    NODE_VIRTUAL_FREE(loop->block, free_alloc);
+    NODE_VIRTUAL_FREE(loop->block, allocator);
 
-    free_alloc(loop);
+    ALLOCATOR_PTR_FREE(allocator, loop);
 }
 
 [[nodiscard]] Status

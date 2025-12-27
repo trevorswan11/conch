@@ -11,15 +11,15 @@
 
 #include "util/containers/string_builder.h"
 
-void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc) {
+void free_parameter_list(ArrayList* parameters, Allocator* allocator) {
     ASSERT_ALLOCATOR(parameters->allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(parameters);
     Parameter              parameter;
     while (array_list_const_iterator_has_next(&it, &parameter)) {
-        NODE_VIRTUAL_FREE(parameter.ident, free_alloc);
-        NODE_VIRTUAL_FREE(parameter.type, free_alloc);
-        NODE_VIRTUAL_FREE(parameter.default_value, free_alloc);
+        NODE_VIRTUAL_FREE(parameter.ident, allocator);
+        NODE_VIRTUAL_FREE(parameter.type, allocator);
+        NODE_VIRTUAL_FREE(parameter.default_value, allocator);
     }
 
     array_list_deinit(parameters);
@@ -61,14 +61,14 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
                                                 TypeExpression*      return_type,
                                                 BlockStatement*      body,
                                                 FunctionExpression** function_expr,
-                                                memory_alloc_fn      memory_alloc) {
-    assert(memory_alloc);
+                                                Allocator*           allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(generics.item_size == sizeof(Expression*));
     assert(parameters.item_size == sizeof(Parameter));
     ASSERT_EXPRESSION(return_type);
     ASSERT_STATEMENT(body);
 
-    FunctionExpression* func = memory_alloc(sizeof(FunctionExpression));
+    FunctionExpression* func = ALLOCATOR_PTR_MALLOC(allocator, sizeof(FunctionExpression));
     if (!func) { return ALLOCATION_FAILED; }
 
     *func = (FunctionExpression){
@@ -83,17 +83,17 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
     return SUCCESS;
 }
 
-void function_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void function_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     FunctionExpression* func = (FunctionExpression*)node;
-    free_expression_list(&func->generics, free_alloc);
-    free_parameter_list(&func->parameters, free_alloc);
-    NODE_VIRTUAL_FREE(func->body, free_alloc);
-    NODE_VIRTUAL_FREE(func->return_type, free_alloc);
+    free_expression_list(&func->generics, allocator);
+    free_parameter_list(&func->parameters, allocator);
+    NODE_VIRTUAL_FREE(func->body, allocator);
+    NODE_VIRTUAL_FREE(func->return_type, allocator);
 
-    free_alloc(func);
+    ALLOCATOR_PTR_FREE(allocator, func);
 }
 
 [[nodiscard]] Status

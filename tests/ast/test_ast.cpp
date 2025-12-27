@@ -25,7 +25,7 @@ static void test_reconstruction(const char* input, std::string expected) {
 
 TEST_CASE("Symbol map poll") {
     AST a;
-    REQUIRE(STATUS_OK(ast_init(&a, std_allocator)));
+    REQUIRE(STATUS_OK(ast_init(&a, &std_allocator)));
     const Fixture<AST> af(a, ast_deinit);
     const auto*        symbols = &a.token_type_symbols;
 

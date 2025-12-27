@@ -20,13 +20,13 @@ typedef struct StructExpression {
     ArrayList  members;
 } StructExpression;
 
-void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc);
+void free_struct_member_list(ArrayList* members, Allocator* allocator);
 
 [[nodiscard]] Status struct_expression_create(Token              start_token,
                                               ArrayList          generics,
                                               ArrayList          members,
                                               StructExpression** struct_expr,
-                                              Allocator* allocator);
+                                              Allocator*         allocator);
 
 void struct_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

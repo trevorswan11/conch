@@ -12,13 +12,13 @@
     assert(((Node*)node)->start_token.slice.ptr);
 
 // Casts the input pointer to a node, calls is virtual destructor, and nulls the pointer
-#define NODE_VIRTUAL_FREE(node_ptr_to_cast_and_free, allocator)                    \
-    do {                                                                           \
-        Node* node_obfuscated_nvf = (Node*)node_ptr_to_cast_and_free;              \
-        if (node_ptr_to_cast_and_free && node_obfuscated_nvf) {                    \
-            node_obfuscated_nvf->vtable->destroy(node_obfuscated_nvf, &allocator); \
-        }                                                                          \
-        node_ptr_to_cast_and_free = nullptr;                                       \
+#define NODE_VIRTUAL_FREE(node_ptr_to_cast_and_free, a_ptr)                   \
+    do {                                                                      \
+        Node* node_obfuscated_nvf = (Node*)node_ptr_to_cast_and_free;         \
+        if (node_ptr_to_cast_and_free && node_obfuscated_nvf) {               \
+            node_obfuscated_nvf->vtable->destroy(node_obfuscated_nvf, a_ptr); \
+        }                                                                     \
+        node_ptr_to_cast_and_free = nullptr;                                  \
     } while (0);
 
 // Casts the input pointer to a node and calls its virtual reconstruct function

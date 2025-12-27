@@ -124,7 +124,7 @@ typedef struct {
                                              size_t   value_align,
                                              Hash (*hash)(const void*),
                                              int (*compare)(const void*, const void*),
-                                             Allocator allocator);
+                                             Allocator* allocator);
 
 // Creates a HashMap with the given properties.
 //

@@ -17,7 +17,7 @@ typedef struct ArrayLiteralExpression {
                                                      bool                     inferred_size,
                                                      ArrayList                items,
                                                      ArrayLiteralExpression** array_expr,
-                                                     Allocator* allocator);
+                                                     Allocator*               allocator);
 
 void array_literal_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

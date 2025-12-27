@@ -6,23 +6,23 @@
 
 typedef struct SemanticType SemanticType;
 
-#define MAKE_PRIMITIVE(T, N, name, memory_alloc, err)         \
-    SemanticType* name;                                       \
-    TRY_DO(semantic_type_create(&(name), memory_alloc), err); \
-                                                              \
-    (name)->tag      = T;                                     \
-    (name)->variant  = SEMANTIC_DATALESS_TYPE;                \
-    (name)->is_const = true;                                  \
-    (name)->valued   = true;                                  \
+#define MAKE_PRIMITIVE(T, N, name, a_ptr, err)           \
+    SemanticType* name;                                  \
+    TRY_DO(semantic_type_create(&(name), (a_ptr)), err); \
+                                                         \
+    (name)->tag      = T;                                \
+    (name)->variant  = SEMANTIC_DATALESS_TYPE;           \
+    (name)->is_const = true;                             \
+    (name)->valued   = true;                             \
     (name)->nullable = N
 
-#define PRIMITIVE_ANALYZE(T, N, A)     \
-    ASSERT_EXPRESSION(node);           \
-    assert(parent);                    \
-    assert(errors);                    \
-    MAKE_PRIMITIVE(T, N, type, A, {}); \
-                                       \
-    parent->analyzed_type = type;      \
+#define PRIMITIVE_ANALYZE(T, N, a_ptr)     \
+    ASSERT_EXPRESSION(node);               \
+    assert(parent);                        \
+    assert(errors);                        \
+    MAKE_PRIMITIVE(T, N, type, a_ptr, {}); \
+                                           \
+    parent->analyzed_type = type;          \
     return SUCCESS
 
 typedef enum {
@@ -82,7 +82,7 @@ typedef struct {
                                            SemanticArrayUnion  variant,
                                            SemanticType*       inner_type,
                                            SemanticArrayType** array_type,
-                                           Allocator* allocator);
+                                           Allocator*          allocator);
 void                 semantic_array_destroy(void* array_type, Allocator* allocator);
 
 typedef struct {
@@ -95,7 +95,7 @@ typedef struct {
 [[nodiscard]] Status semantic_enum_create(Slice              name,
                                           HashSet            variants,
                                           SemanticEnumType** enum_type,
-                                          Allocator* allocator);
+                                          Allocator*         allocator);
 void                 free_enum_variant_set(HashSet* variants, Allocator* allocator);
 void                 semantic_enum_destroy(void* enum_type, Allocator* allocator);
 

@@ -34,11 +34,17 @@ typedef struct Parser {
     Allocator allocator;
 } Parser;
 
-[[nodiscard]] Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator allocator);
-[[nodiscard]] Status parser_null_init(Parser* p, FileIO* io, Allocator allocator);
+[[nodiscard]] Status parser_init(Parser* p, Lexer* l, FileIO* io, Allocator* allocator);
+[[nodiscard]] Status parser_null_init(Parser* p, FileIO* io, Allocator* allocator);
 
 // Reinitializes the parser without reallocating internal resources.
 [[nodiscard]] Status parser_reset(Parser* p, Lexer* l);
+
+// Gets a pointer to the parser's allocator.
+// The parser is asserted to be non-null here.
+//
+// The returned allocator is guaranteed to have a valid vtable.
+Allocator* parser_allocator(Parser* p);
 
 // Deinitializes the parser, freeing only its personally allocated data.
 void parser_deinit(Parser* p);

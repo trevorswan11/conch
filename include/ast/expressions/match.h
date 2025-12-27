@@ -25,7 +25,7 @@ void free_match_arm_list(ArrayList* arms, Allocator* allocator);
                                              ArrayList         arms,
                                              Statement*        catch_all,
                                              MatchExpression** match_expr,
-                                             Allocator* allocator);
+                                             Allocator*        allocator);
 
 void match_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

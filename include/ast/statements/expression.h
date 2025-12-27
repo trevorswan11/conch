@@ -12,7 +12,7 @@ typedef struct ExpressionStatement {
 [[nodiscard]] Status expression_statement_create(Token                 start_token,
                                                  Expression*           expression,
                                                  ExpressionStatement** expr_stmt,
-                                                 Allocator* allocator);
+                                                 Allocator*            allocator);
 
 void expression_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

@@ -5,13 +5,13 @@
 #include "semantic/type.h"
 
 [[nodiscard]] Status
-semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
-    SemanticContext* sem_con = allocator.memory_alloc(sizeof(SemanticContext));
+semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    SemanticContext* sem_con = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticContext));
     if (!sem_con) { return ALLOCATION_FAILED; }
 
     SymbolTable* symbols;
-    TRY_DO(symbol_table_create(&symbols, allocator), allocator.free_alloc(sem_con));
+    TRY_DO(symbol_table_create(&symbols, allocator), ALLOCATOR_PTR_FREE(allocator, sem_con));
 
     *sem_con = (SemanticContext){
         .parent       = parent,
@@ -22,9 +22,10 @@ semantic_context_create(SemanticContext* parent, SemanticContext** context, Allo
     return SUCCESS;
 }
 
-Allocator semantic_context_allocator(SemanticContext* context) {
+Allocator* semantic_context_allocator(SemanticContext* context) {
     assert(context && context->symbol_table);
-    return context->symbol_table->symbols.allocator;
+    ASSERT_ALLOCATOR(context->symbol_table->symbols.allocator);
+    return &context->symbol_table->symbols.allocator;
 }
 
 SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
@@ -34,11 +35,12 @@ SemanticType* semantic_context_move_analyzed(SemanticContext* context) {
     return type;
 }
 
-void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc) {
+void semantic_context_destroy(SemanticContext* context, Allocator* allocator) {
     if (!context) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    symbol_table_destroy(context->symbol_table, free_alloc);
-    free_alloc(context);
+    symbol_table_destroy(context->symbol_table, allocator);
+    ALLOCATOR_PTR_FREE(allocator, context);
 }
 
 bool semantic_context_find(SemanticContext* context,
@@ -51,7 +53,6 @@ bool semantic_context_find(SemanticContext* context,
     SemanticContext* current = context;
     while (current != nullptr) {
         if (symbol_table_find(current->symbol_table, symbol, type)) { return true; }
-
         current = current->parent;
     }
 

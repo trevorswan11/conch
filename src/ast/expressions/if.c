@@ -6,17 +6,17 @@
 
 #include "util/containers/string_builder.h"
 
-[[nodiscard]] Status if_expression_create(Token           start_token,
-                                          Expression*     condition,
-                                          Statement*      consequence,
-                                          Statement*      alternate,
-                                          IfExpression**  if_expr,
-                                          memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
+[[nodiscard]] Status if_expression_create(Token          start_token,
+                                          Expression*    condition,
+                                          Statement*     consequence,
+                                          Statement*     alternate,
+                                          IfExpression** if_expr,
+                                          Allocator*     allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(condition);
     ASSERT_EXPRESSION(consequence);
 
-    IfExpression* if_local = memory_alloc(sizeof(IfExpression));
+    IfExpression* if_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(IfExpression));
     if (!if_local) { return ALLOCATION_FAILED; }
 
     *if_local = (IfExpression){
@@ -30,16 +30,16 @@
     return SUCCESS;
 }
 
-void if_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void if_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     IfExpression* if_expr = (IfExpression*)node;
-    NODE_VIRTUAL_FREE(if_expr->condition, free_alloc);
-    NODE_VIRTUAL_FREE(if_expr->consequence, free_alloc);
-    NODE_VIRTUAL_FREE(if_expr->alternate, free_alloc);
+    NODE_VIRTUAL_FREE(if_expr->condition, allocator);
+    NODE_VIRTUAL_FREE(if_expr->consequence, allocator);
+    NODE_VIRTUAL_FREE(if_expr->alternate, allocator);
 
-    free_alloc(if_expr);
+    ALLOCATOR_PTR_FREE(allocator, if_expr);
 }
 
 [[nodiscard]] Status

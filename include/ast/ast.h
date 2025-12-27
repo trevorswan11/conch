@@ -25,8 +25,14 @@ typedef struct AST {
     Allocator allocator;
 } AST;
 
-[[nodiscard]] Status ast_init(AST* ast, Allocator allocator);
+[[nodiscard]] Status ast_init(AST* ast, Allocator* allocator);
 void                 ast_deinit(AST* ast);
+
+// Gets a pointer to the AST's allocator.
+// The AST is asserted to be non-null here.
+//
+// The returned allocator is guaranteed to have a valid vtable.
+Allocator* ast_allocator(AST* ast);
 
 // Reconstructs the original source code from the AST.
 //

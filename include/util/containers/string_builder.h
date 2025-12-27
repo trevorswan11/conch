@@ -13,7 +13,7 @@ typedef struct StringBuilder {
 } StringBuilder;
 
 [[nodiscard]] Status
-string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator);
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator* allocator);
 [[nodiscard]] Status string_builder_init(StringBuilder* sb, size_t initial_length);
 void                 string_builder_deinit(StringBuilder* sb);
 [[nodiscard]] Status string_builder_append(StringBuilder* sb, char byte);

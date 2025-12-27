@@ -13,11 +13,11 @@
                                              TokenType         op,
                                              Expression*       rhs,
                                              InfixExpression** infix_expr,
-                                             memory_alloc_fn   memory_alloc) {
-    assert(memory_alloc);
+                                             Allocator*        allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(lhs && rhs);
 
-    InfixExpression* infix = memory_alloc(sizeof(InfixExpression));
+    InfixExpression* infix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(InfixExpression));
     if (!infix) { return ALLOCATION_FAILED; }
 
     *infix = (InfixExpression){
@@ -31,15 +31,15 @@
     return SUCCESS;
 }
 
-void infix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void infix_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     InfixExpression* infix = (InfixExpression*)node;
-    NODE_VIRTUAL_FREE(infix->lhs, free_alloc);
-    NODE_VIRTUAL_FREE(infix->rhs, free_alloc);
+    NODE_VIRTUAL_FREE(infix->lhs, allocator);
+    NODE_VIRTUAL_FREE(infix->rhs, allocator);
 
-    free_alloc(infix);
+    ALLOCATOR_PTR_FREE(allocator, infix);
 }
 
 [[nodiscard]] Status
@@ -74,8 +74,8 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     InfixExpression* infix = (InfixExpression*)node;
     ASSERT_EXPRESSION(infix->lhs);
@@ -83,16 +83,15 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
 
     TRY(NODE_VIRTUAL_ANALYZE(infix->lhs, parent, errors));
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
-    TRY_DO(NODE_VIRTUAL_ANALYZE(infix->rhs, parent, errors),
-           RC_RELEASE(lhs_type, allocator.free_alloc));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(infix->rhs, parent, errors), RC_RELEASE(lhs_type, allocator));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
     if (!lhs_type->valued || !rhs_type->valued) {
         const Status error_code =
             !lhs_type->valued ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
         PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
     }
 
@@ -115,8 +114,8 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
     case SLASH:
     case STAR_STAR: {
         FALLBACK_ARITHMETIC(resulting_type, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         break;
     }
@@ -133,21 +132,21 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
                                  start_token,
                                  {
-                                     RC_RELEASE(lhs_type, allocator.free_alloc);
-                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                     RC_RELEASE(lhs_type, allocator);
+                                     RC_RELEASE(rhs_type, allocator);
                                  });
         }
 
         if (lhs_type->tag != rhs_type->tag) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         resulting_type = new_type;
         break;
@@ -161,22 +160,22 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
                                  start_token,
                                  {
-                                     RC_RELEASE(lhs_type, allocator.free_alloc);
-                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                     RC_RELEASE(lhs_type, allocator);
+                                     RC_RELEASE(rhs_type, allocator);
                                  });
         }
 
         if (lhs_type->tag != rhs_type->tag &&
             (lhs_type->tag != STYPE_NIL && rhs_type->tag != STYPE_NIL)) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         resulting_type = new_type;
         break;
@@ -188,22 +187,22 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
             const Status error_code =
                 lhs_type->tag != STYPE_BOOL ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         resulting_type = new_type;
         break;
     }
     case IS: {
-        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         resulting_type = new_type;
         break;
@@ -217,8 +216,8 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
                                  start_token,
                                  {
-                                     RC_RELEASE(lhs_type, allocator.free_alloc);
-                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                     RC_RELEASE(lhs_type, allocator);
+                                     RC_RELEASE(rhs_type, allocator);
                                  });
         }
 
@@ -226,14 +225,14 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
         SemanticType* inner_array_type = rhs_type->variant.array_type->inner_type;
         if (!type_assignable(lhs_type, inner_array_type)) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(STYPE_BOOL, false, new_type, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         resulting_type = new_type;
         break;
@@ -248,21 +247,21 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
                                  start_token,
                                  {
-                                     RC_RELEASE(lhs_type, allocator.free_alloc);
-                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                     RC_RELEASE(lhs_type, allocator);
+                                     RC_RELEASE(rhs_type, allocator);
                                  });
         }
 
         if (lhs_type->tag != rhs_type->tag) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc), {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        TRY_DO(semantic_type_create(&resulting_type, allocator), {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
 
         SemanticType*      inner_type = rc_retain(lhs_type);
@@ -271,12 +270,12 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
                                      (SemanticArrayUnion){.inclusive = infix->op == DOT_DOT_EQ},
                                      inner_type,
                                      &array_type,
-                                     allocator.memory_alloc),
+                                     allocator),
                {
-                   RC_RELEASE(inner_type, allocator.free_alloc);
-                   RC_RELEASE(resulting_type, allocator.free_alloc);
-                   RC_RELEASE(lhs_type, allocator.free_alloc);
-                   RC_RELEASE(rhs_type, allocator.free_alloc);
+                   RC_RELEASE(inner_type, allocator);
+                   RC_RELEASE(resulting_type, allocator);
+                   RC_RELEASE(lhs_type, allocator);
+                   RC_RELEASE(rhs_type, allocator);
                });
 
         resulting_type->tag      = STYPE_ARRAY;
@@ -291,22 +290,22 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
             const Status error_code =
                 !lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
         if (!type_assignable(lhs_type, rhs_type)) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
         // Copy the right hand side since the result cannot be nullable
         TRY_DO(semantic_type_copy(&resulting_type, rhs_type, allocator), {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         break;
     default:
@@ -316,7 +315,7 @@ infix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors)
     assert(resulting_type);
     parent->analyzed_type = resulting_type;
 
-    RC_RELEASE(lhs_type, allocator.free_alloc);
-    RC_RELEASE(rhs_type, allocator.free_alloc);
+    RC_RELEASE(lhs_type, allocator);
+    RC_RELEASE(rhs_type, allocator);
     return SUCCESS;
 }

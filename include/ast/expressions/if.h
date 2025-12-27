@@ -13,14 +13,14 @@ typedef struct IfExpression {
     Statement*  alternate;
 } IfExpression;
 
-[[nodiscard]] Status if_expression_create(Token           start_token,
-                                          Expression*     condition,
-                                          Statement*      consequence,
-                                          Statement*      alternate,
-                                          IfExpression**  if_expr,
-                                          Allocator*           allocator);
+[[nodiscard]] Status if_expression_create(Token          start_token,
+                                          Expression*    condition,
+                                          Statement*     consequence,
+                                          Statement*     alternate,
+                                          IfExpression** if_expr,
+                                          Allocator*     allocator);
 
-void if_expression_destroy(Node* node, Allocator*           allocator);
+void if_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);

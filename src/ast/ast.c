@@ -12,30 +12,30 @@
 
 bool group_expressions = false;
 
-void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
+void clear_error_list(ArrayList* errors, Allocator* allocator) {
     if (!errors) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(errors);
     MutSlice               error;
     while (array_list_const_iterator_has_next(&it, &error)) {
-        free_alloc(error.ptr);
+        ALLOCATOR_PTR_FREE(allocator, error.ptr);
     }
 
     array_list_clear_retaining_capacity(errors);
 }
 
-void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
+void free_error_list(ArrayList* errors, Allocator* allocator) {
     if (!errors || !errors->data) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    clear_error_list(errors, free_alloc);
+    clear_error_list(errors, allocator);
     array_list_deinit(errors);
 }
 
-[[nodiscard]] Status ast_init(AST* ast, Allocator allocator) {
+[[nodiscard]] Status ast_init(AST* ast, Allocator* allocator) {
     assert(ast);
-    ASSERT_ALLOCATOR(allocator);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayList statements;
     TRY(array_list_init_allocator(&statements, 64, sizeof(Statement*), allocator));
@@ -68,17 +68,23 @@ void free_error_list(ArrayList* errors, free_alloc_fn free_alloc) {
     *ast = (AST){
         .statements         = statements,
         .token_type_symbols = tt_symbols,
-        .allocator          = allocator,
+        .allocator          = *allocator,
     };
     return SUCCESS;
 }
 
 void ast_deinit(AST* ast) {
     if (!ast) { return; }
-    ASSERT_ALLOCATOR(ast->allocator);
+    Allocator* allocator = ast_allocator(ast);
 
-    free_statement_list(&ast->statements, ast->allocator.free_alloc);
+    free_statement_list(&ast->statements, allocator);
     hash_map_deinit(&ast->token_type_symbols);
+}
+
+Allocator* ast_allocator(AST* ast) {
+    assert(ast);
+    ASSERT_ALLOCATOR(ast->allocator);
+    return &ast->allocator;
 }
 
 [[nodiscard]] Status ast_reconstruct(AST* ast, StringBuilder* sb) {
@@ -107,47 +113,47 @@ Slice poll_tt_symbol(const HashMap* symbol_map, TokenType t) {
     return slice_from_str_z(name);
 }
 
-void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
+void clear_statement_list(ArrayList* statements, Allocator* allocator) {
     assert(statements && statements->data);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(statements);
     Statement*             stmt;
     while (array_list_const_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
-        NODE_VIRTUAL_FREE(stmt, free_alloc);
+        NODE_VIRTUAL_FREE(stmt, allocator);
     }
 
     array_list_clear_retaining_capacity(statements);
 }
 
-void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
+void clear_expression_list(ArrayList* expressions, Allocator* allocator) {
     assert(expressions && expressions->data);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(expressions);
     Expression*            expr;
     while (array_list_const_iterator_has_next(&it, (void*)&expr)) {
         ASSERT_EXPRESSION(expr);
-        NODE_VIRTUAL_FREE(expr, free_alloc);
+        NODE_VIRTUAL_FREE(expr, allocator);
     }
 
     array_list_clear_retaining_capacity(expressions);
 }
 
-void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc) {
+void free_statement_list(ArrayList* statements, Allocator* allocator) {
     if (!statements || !statements->data) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    clear_statement_list(statements, free_alloc);
+    clear_statement_list(statements, allocator);
     array_list_deinit(statements);
 }
 
-void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc) {
+void free_expression_list(ArrayList* expressions, Allocator* allocator) {
     if (!expressions || !expressions->data) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    clear_expression_list(expressions, free_alloc);
+    clear_expression_list(expressions, allocator);
     array_list_deinit(expressions);
 }
 

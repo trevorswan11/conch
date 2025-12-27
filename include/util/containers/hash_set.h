@@ -77,7 +77,7 @@ typedef struct {
                                              size_t   key_align,
                                              Hash (*hash)(const void*),
                                              int (*compare)(const void*, const void*),
-                                             Allocator allocator);
+                                             Allocator* allocator);
 
 // Creates a HashSet with the given properties.
 //

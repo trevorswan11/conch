@@ -9,10 +9,10 @@
 MAX_FN(size_t, size_t)
 
 [[nodiscard]] Status
-array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (item_size == 0) { return ZERO_ITEM_SIZE; }
-    void* data = ALLOCATOR_CALLOC(allocator, capacity, item_size);
+    void* data = ALLOCATOR_PTR_CALLOC(allocator, capacity, item_size);
     if (!data && capacity > 0) { return ALLOCATION_FAILED; }
 
     *a = (ArrayList){
@@ -20,13 +20,13 @@ array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Alloc
         .item_size = item_size,
         .capacity  = capacity,
         .length    = 0,
-        .allocator = allocator,
+        .allocator = *allocator,
     };
     return SUCCESS;
 }
 
 [[nodiscard]] Status array_list_init(ArrayList* a, size_t capacity, size_t item_size) {
-    return array_list_init_allocator(a, capacity, item_size, std_allocator);
+    return array_list_init_allocator(a, capacity, item_size, &std_allocator);
 }
 
 void array_list_deinit(ArrayList* a) {

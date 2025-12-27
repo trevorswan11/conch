@@ -10,11 +10,11 @@
 [[nodiscard]] Status identifier_expression_create(Token                  start_token,
                                                   MutSlice               name,
                                                   IdentifierExpression** ident_expr,
-                                                  memory_alloc_fn        memory_alloc) {
-    assert(memory_alloc);
+                                                  Allocator*             allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr && start_token.slice.length > 0);
 
-    IdentifierExpression* ident = memory_alloc(sizeof(IdentifierExpression));
+    IdentifierExpression* ident = ALLOCATOR_PTR_MALLOC(allocator, sizeof(IdentifierExpression));
     if (!ident) { return ALLOCATION_FAILED; }
 
     *ident = (IdentifierExpression){
@@ -26,14 +26,14 @@
     return SUCCESS;
 }
 
-void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void identifier_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     IdentifierExpression* ident = (IdentifierExpression*)node;
-    free_alloc(ident->name.ptr);
+    ALLOCATOR_PTR_FREE(allocator, ident->name.ptr);
 
-    free_alloc(ident);
+    ALLOCATOR_PTR_FREE(allocator, ident);
 }
 
 [[nodiscard]] Status identifier_expression_reconstruct(Node*                           node,

@@ -18,7 +18,7 @@ typedef struct IntegerLiteralExpression {
 [[nodiscard]] Status integer_literal_expression_create(Token                      start_token,
                                                        int64_t                    value,
                                                        IntegerLiteralExpression** int_expr,
-                                                       Allocator* allocator);
+                                                       Allocator*                 allocator);
 
 [[nodiscard]] Status
 integer_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
@@ -62,7 +62,7 @@ typedef struct SizeIntegerLiteralExpression {
 [[nodiscard]] Status uzinteger_literal_expression_create(Token                          start_token,
                                                          size_t                         value,
                                                          SizeIntegerLiteralExpression** int_expr,
-                                                         Allocator* allocator);
+                                                         Allocator*                     allocator);
 
 [[nodiscard]] Status
 uzinteger_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
@@ -84,7 +84,7 @@ typedef struct ByteLiteralExpression {
 [[nodiscard]] Status byte_literal_expression_create(Token                   start_token,
                                                     uint8_t                 value,
                                                     ByteLiteralExpression** byte_expr,
-                                                    memory_alloc_fn         memory_alloc);
+                                                    Allocator*              allocator);
 
 [[nodiscard]] Status
 byte_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);

@@ -11,7 +11,7 @@ typedef struct {
 [[nodiscard]] Status float_literal_expression_create(Token                    start_token,
                                                      double                   value,
                                                      FloatLiteralExpression** float_expr,
-                                                     Allocator* allocator);
+                                                     Allocator*               allocator);
 
 void float_literal_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

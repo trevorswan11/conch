@@ -29,9 +29,8 @@ typedef struct IgnoreExpression {
     Expression base;
 } IgnoreExpression;
 
-[[nodiscard]] Status ignore_expression_create(Token              start_token,
-                                              IgnoreExpression** ignore_expr,
-                                              Allocator* allocator);
+[[nodiscard]] Status
+ignore_expression_create(Token start_token, IgnoreExpression** ignore_expr, Allocator* allocator);
 
 [[nodiscard]] Status
 ignore_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);

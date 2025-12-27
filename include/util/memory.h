@@ -17,15 +17,15 @@
 #error "Unsupported architecture"
 #endif
 
-#define ASSERT_ALLOCATOR(a)     \
-    assert(a.memory_alloc);     \
-    assert(a.continuous_alloc); \
-    assert(a.re_alloc);         \
-    assert(a.free_alloc);
+#define ASSERT_ALLOCATOR(a)       \
+    assert((a).memory_alloc);     \
+    assert((a).continuous_alloc); \
+    assert((a).re_alloc);         \
+    assert((a).free_alloc)
 
 #define ASSERT_ALLOCATOR_PTR(a_ptr) \
     assert(a_ptr);                  \
-    ASSERT_ALLOCATOR(*(a_ptr));
+    ASSERT_ALLOCATOR(*(a_ptr))
 
 typedef void* (*memory_alloc_fn)(void*, size_t);
 typedef void* (*continuous_alloc_fn)(void*, size_t, size_t);
@@ -168,14 +168,14 @@ RcControlBlock rc_init(rc_dtor dtor);
 void rc_release(void* rc_obj, Allocator* allocator);
 
 #ifdef DIST
-#define RC_RELEASE(rc_obj, allocator) rc_release((rc_obj), (allocator))
+#define RC_RELEASE(rc_obj, a_ptr) rc_release((rc_obj), (a_ptr))
 #else
-#define RC_RELEASE(rc_obj, allocator)          \
-    do {                                       \
-        if ((rc_obj) != nullptr) {             \
-            rc_release((rc_obj), (allocator)); \
-            (rc_obj) = nullptr;                \
-        }                                      \
+#define RC_RELEASE(rc_obj, a_ptr)          \
+    do {                                   \
+        if ((rc_obj) != nullptr) {         \
+            rc_release((rc_obj), (a_ptr)); \
+            (rc_obj) = nullptr;            \
+        }                                  \
     } while (0)
 #endif
 

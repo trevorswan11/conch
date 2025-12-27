@@ -13,9 +13,9 @@ typedef struct IndexExpression {
                                              Expression*       array,
                                              Expression*       idx,
                                              IndexExpression** index_expr,
-                                             Allocator*           allocator);
+                                             Allocator*        allocator);
 
-void index_expression_destroy(Node* node, Allocator*           allocator);
+void index_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 index_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

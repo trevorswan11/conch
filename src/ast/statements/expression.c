@@ -10,11 +10,11 @@
 [[nodiscard]] Status expression_statement_create(Token                 start_token,
                                                  Expression*           expression,
                                                  ExpressionStatement** expr_stmt,
-                                                 memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                                 Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(expression);
 
-    ExpressionStatement* expr = memory_alloc(sizeof(ExpressionStatement));
+    ExpressionStatement* expr = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ExpressionStatement));
     if (!expr) { return ALLOCATION_FAILED; }
 
     *expr = (ExpressionStatement){
@@ -26,14 +26,14 @@
     return SUCCESS;
 }
 
-void expression_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void expression_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ExpressionStatement* expr_stmt = (ExpressionStatement*)node;
-    NODE_VIRTUAL_FREE(expr_stmt->expression, free_alloc);
+    NODE_VIRTUAL_FREE(expr_stmt->expression, allocator);
 
-    free_alloc(expr_stmt);
+    ALLOCATOR_PTR_FREE(allocator, expr_stmt);
 }
 
 [[nodiscard]] Status

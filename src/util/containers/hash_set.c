@@ -67,8 +67,8 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
                                              size_t   key_align,
                                              Hash (*hash)(const void*),
                                              int (*compare)(const void*, const void*),
-                                             Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
+                                             Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (!hs || !hash || !compare) { return NULL_PARAMETER; }
     if (key_size == 0 || key_align == 0) { return ZERO_ITEM_SIZE; }
 
@@ -84,7 +84,7 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
     if (metadata_size > SIZE_MAX - header_size) { return SIZE_OVERFLOW; }
 
     const size_t total_size = header_size + metadata_size + (keys_size + key_align - 1);
-    void*        buffer     = ALLOCATOR_CALLOC(allocator, 1, total_size);
+    void*        buffer     = ALLOCATOR_PTR_CALLOC(allocator, 1, total_size);
     if (!buffer) { return ALLOCATION_FAILED; }
 
     // Unpack the allocated block of memory
@@ -118,7 +118,7 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
         .available = capacity,
         .hash      = hash,
         .compare   = compare,
-        .allocator = allocator,
+        .allocator = *allocator,
     };
 
     hash_set_init_metadatas(hs);
@@ -132,7 +132,7 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
                                    Hash (*hash)(const void*),
                                    int (*compare)(const void*, const void*)) {
     return hash_set_init_allocator(
-        hs, capacity, key_size, key_align, hash, compare, std_allocator);
+        hs, capacity, key_size, key_align, hash, compare, &std_allocator);
 }
 
 void hash_set_deinit(HashSet* hs) {

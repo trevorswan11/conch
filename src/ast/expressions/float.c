@@ -3,7 +3,6 @@
 #include "ast/expressions/float.h"
 
 #include "semantic/context.h"
-#include "semantic/symbol.h"
 #include "semantic/type.h"
 
 #include "util/containers/string_builder.h"
@@ -11,11 +10,12 @@
 [[nodiscard]] Status float_literal_expression_create(Token                    start_token,
                                                      double                   value,
                                                      FloatLiteralExpression** float_expr,
-                                                     memory_alloc_fn          memory_alloc) {
-    assert(memory_alloc);
+                                                     Allocator*               allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
 
-    FloatLiteralExpression* float_local = memory_alloc(sizeof(FloatLiteralExpression));
+    FloatLiteralExpression* float_local =
+        ALLOCATOR_PTR_MALLOC(allocator, sizeof(FloatLiteralExpression));
     if (!float_local) { return ALLOCATION_FAILED; }
 
     *float_local = (FloatLiteralExpression){
@@ -27,12 +27,12 @@
     return SUCCESS;
 }
 
-void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void float_literal_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     FloatLiteralExpression* float_expr = (FloatLiteralExpression*)node;
-    free_alloc(float_expr);
+    ALLOCATOR_PTR_FREE(allocator, float_expr);
 }
 
 [[nodiscard]] Status float_literal_expression_reconstruct(
@@ -47,6 +47,5 @@ void float_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 [[nodiscard]] Status float_literal_expression_analyze([[maybe_unused]] Node*      node,
                                                       SemanticContext*            parent,
                                                       [[maybe_unused]] ArrayList* errors) {
-    PRIMITIVE_ANALYZE(
-        STYPE_FLOATING_POINT, false, parent->symbol_table->symbols.allocator.memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_FLOATING_POINT, false, semantic_context_allocator(parent));
 }

@@ -97,7 +97,7 @@ void swap(void* a, void* b, size_t size) {
 [[nodiscard]] char* strdup_z(const char* str) { return strdup_z_allocator(str, &std_allocator); }
 
 [[nodiscard]] char* strdup_s_allocator(const char* str, size_t size, Allocator* allocator) {
-    assert(memory_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (!str) { return nullptr; }
 
     char* copy = ALLOCATOR_PTR_MALLOC(allocator, size + 1);

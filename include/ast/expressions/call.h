@@ -24,7 +24,7 @@ void free_call_expression_list(ArrayList* arguments, Allocator* allocator);
                                             ArrayList        arguments,
                                             ArrayList        generics,
                                             CallExpression** call_expr,
-                                            Allocator* allocator);
+                                            Allocator*       allocator);
 
 void call_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

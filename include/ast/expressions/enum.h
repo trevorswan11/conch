@@ -22,7 +22,7 @@ void free_enum_variant_list(ArrayList* variants, Allocator* allocator);
 [[nodiscard]] Status enum_expression_create(Token            start_token,
                                             ArrayList        variants,
                                             EnumExpression** enum_expr,
-                                            Allocator* allocator);
+                                            Allocator*       allocator);
 
 void enum_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

@@ -11,7 +11,7 @@ typedef struct PrefixExpression {
 [[nodiscard]] Status prefix_expression_create(Token              start_token,
                                               Expression*        rhs,
                                               PrefixExpression** prefix_expr,
-                                              Allocator* allocator);
+                                              Allocator*         allocator);
 
 void prefix_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

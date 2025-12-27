@@ -27,8 +27,8 @@ typedef struct Lexer {
     Allocator allocator;
 } Lexer;
 
-[[nodiscard]] Status lexer_init(Lexer* l, const char* input, Allocator allocator);
-[[nodiscard]] Status lexer_null_init(Lexer* l, Allocator allocator);
+[[nodiscard]] Status lexer_init(Lexer* l, const char* input, Allocator* allocator);
+[[nodiscard]] Status lexer_null_init(Lexer* l, Allocator* allocator);
 void                 lexer_deinit(Lexer* l);
 
 // Consumes all tokens in the input and saves them to the internal token list.

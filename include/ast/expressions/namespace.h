@@ -15,7 +15,7 @@ typedef struct NamespaceExpression {
                                                  Expression*           outer,
                                                  IdentifierExpression* inner,
                                                  NamespaceExpression** namespace_expr,
-                                                 Allocator* allocator);
+                                                 Allocator*            allocator);
 
 void namespace_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

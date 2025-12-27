@@ -15,8 +15,8 @@ typedef struct SemanticAnalyzer {
     Allocator        allocator;
 } SemanticAnalyzer;
 
-[[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator);
-[[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator);
+[[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator* allocator);
+[[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator* allocator);
 void                 seman_deinit(SemanticAnalyzer* analyzer);
 
 [[nodiscard]] Status seman_analyze(SemanticAnalyzer* analyzer);

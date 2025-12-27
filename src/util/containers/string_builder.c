@@ -5,15 +5,17 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status
-string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator allocator) {
+string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (!sb) { return NULL_PARAMETER; }
+
     return initial_length == 0
                ? EMPTY
                : array_list_init_allocator(&sb->buffer, initial_length, sizeof(char), allocator);
 }
 
 [[nodiscard]] Status string_builder_init(StringBuilder* sb, size_t initial_length) {
-    return string_builder_init_allocator(sb, initial_length, std_allocator);
+    return string_builder_init_allocator(sb, initial_length, &std_allocator);
 }
 
 void string_builder_deinit(StringBuilder* sb) {

@@ -16,7 +16,7 @@ typedef struct Parameter {
     Expression*           default_value;
 } Parameter;
 
-void free_parameter_list(ArrayList* parameters, free_alloc_fn free_alloc);
+void free_parameter_list(ArrayList* parameters, Allocator* allocator);
 [[nodiscard]] Status
 reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, StringBuilder* sb);
 

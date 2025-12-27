@@ -10,14 +10,14 @@
 
 #include "util/containers/string_builder.h"
 
-#define DECL_NAME(tok, field, name)                                                     \
-    const Allocator allocator = semantic_context_allocator(parent);                     \
-    MutSlice        name;                                                               \
-    TRY(mut_slice_dupe(&(name), &(field), allocator.memory_alloc));                     \
-                                                                                        \
-    if (semantic_context_has(parent, true, (name))) {                                   \
-        PUT_STATUS_PROPAGATE(                                                           \
-            errors, REDEFINITION_OF_IDENTIFIER, tok, allocator.free_alloc((name).ptr)); \
+#define DECL_NAME(tok, field, name)                                                              \
+    Allocator* allocator = semantic_context_allocator(parent);                                   \
+    MutSlice   name;                                                                             \
+    TRY(mut_slice_dupe(&(name), &(field), allocator));                                           \
+                                                                                                 \
+    if (semantic_context_has(parent, true, (name))) {                                            \
+        PUT_STATUS_PROPAGATE(                                                                    \
+            errors, REDEFINITION_OF_IDENTIFIER, tok, ALLOCATOR_PTR_FREE(allocator, (name).ptr)); \
     }
 
 [[nodiscard]] Status decl_statement_create(Token                 start_token,
@@ -25,8 +25,8 @@
                                            TypeExpression*       type,
                                            Expression*           value,
                                            DeclStatement**       decl_stmt,
-                                           memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                           Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
     ASSERT_EXPRESSION(ident);
     ASSERT_EXPRESSION(type);
@@ -51,7 +51,7 @@
         ASSERT_EXPRESSION(value);
     }
 
-    DeclStatement* declaration = memory_alloc(sizeof(DeclStatement));
+    DeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(DeclStatement));
     if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (DeclStatement){
@@ -66,16 +66,16 @@
     return SUCCESS;
 }
 
-void decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void decl_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     DeclStatement* decl = (DeclStatement*)node;
-    NODE_VIRTUAL_FREE(decl->ident, free_alloc);
-    NODE_VIRTUAL_FREE(decl->type, free_alloc);
-    NODE_VIRTUAL_FREE(decl->value, free_alloc);
+    NODE_VIRTUAL_FREE(decl->ident, allocator);
+    NODE_VIRTUAL_FREE(decl->type, allocator);
+    NODE_VIRTUAL_FREE(decl->value, allocator);
 
-    free_alloc(decl);
+    ALLOCATOR_PTR_FREE(allocator, decl);
 }
 
 [[nodiscard]] Status
@@ -118,48 +118,49 @@ decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     const Token ident_token = NODE_TOKEN(decl->ident);
     DECL_NAME(ident_token, decl->ident->name, decl_name);
 
-    TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors), allocator.free_alloc(decl_name.ptr));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(decl->type, parent, errors),
+           ALLOCATOR_PTR_FREE(allocator, decl_name.ptr));
     SemanticType* analyzed_decl_type = semantic_context_move_analyzed(parent);
 
     SemanticType* decl_type;
     TRY_DO(semantic_type_copy(&decl_type, analyzed_decl_type, allocator), {
-        allocator.free_alloc(decl_name.ptr);
-        RC_RELEASE(analyzed_decl_type, allocator.free_alloc);
+        ALLOCATOR_PTR_FREE(allocator, decl_name.ptr);
+        RC_RELEASE(analyzed_decl_type, allocator);
     });
-    RC_RELEASE(analyzed_decl_type, allocator.free_alloc);
+    RC_RELEASE(analyzed_decl_type, allocator);
 
     if (decl->value) {
         TRY_DO(NODE_VIRTUAL_ANALYZE(decl->value, parent, errors), {
-            allocator.free_alloc(decl_name.ptr);
-            RC_RELEASE(decl_type, allocator.free_alloc);
+            ALLOCATOR_PTR_FREE(allocator, decl_name.ptr);
+            RC_RELEASE(decl_type, allocator);
         });
 
         SemanticType* value_type = semantic_context_move_analyzed(parent);
         if (!value_type->valued) {
             const Token t = NODE_TOKEN(decl->value);
             PUT_STATUS_PROPAGATE(errors, NON_VALUED_DECL_VALUE, t, {
-                allocator.free_alloc(decl_name.ptr);
-                RC_RELEASE(decl_type, allocator.free_alloc);
-                RC_RELEASE(value_type, allocator.free_alloc);
+                ALLOCATOR_PTR_FREE(allocator, decl_name.ptr);
+                RC_RELEASE(decl_type, allocator);
+                RC_RELEASE(value_type, allocator);
             });
         }
 
         if (decl_type->tag == STYPE_IMPLICIT_DECLARATION) {
             // We can now release the decl and just have it set to the value's type
-            RC_RELEASE(decl_type, allocator.free_alloc);
+            RC_RELEASE(decl_type, allocator);
             decl_type = value_type;
         } else {
             decl_type->valued = true;
 
             // In this case, we can drop the value type since all we need is the decl
             const bool assignable = type_assignable(decl_type, value_type);
-            RC_RELEASE(value_type, allocator.free_alloc);
+            RC_RELEASE(value_type, allocator);
 
             if (!assignable) {
                 const Token t = NODE_TOKEN(decl);
                 PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, t, {
-                    allocator.free_alloc(decl_name.ptr);
-                    RC_RELEASE(decl_type, allocator.free_alloc);
+                    ALLOCATOR_PTR_FREE(allocator, decl_name.ptr);
+                    RC_RELEASE(decl_type, allocator);
                 });
             }
         }
@@ -173,12 +174,12 @@ decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(!parent->analyzed_type);
 
     TRY_DO(symbol_table_add(parent->symbol_table, decl_name, decl_type), {
-        allocator.free_alloc(decl_name.ptr);
-        RC_RELEASE(decl_type, allocator.free_alloc);
+        ALLOCATOR_PTR_FREE(allocator, decl_name.ptr);
+        RC_RELEASE(decl_type, allocator);
     });
 
     // The table retains the type, so we can release this control flow's ownership
-    RC_RELEASE(decl_type, allocator.free_alloc);
+    RC_RELEASE(decl_type, allocator);
     return SUCCESS;
 }
 
@@ -187,12 +188,12 @@ decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
                                                 Expression*           value,
                                                 bool                  primitive_alias,
                                                 TypeDeclStatement**   type_decl_stmt,
-                                                memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                                Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
     assert(ident && value);
 
-    TypeDeclStatement* declaration = memory_alloc(sizeof(TypeDeclStatement));
+    TypeDeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(TypeDeclStatement));
     if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (TypeDeclStatement){
@@ -206,15 +207,15 @@ decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     return SUCCESS;
 }
 
-void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void type_decl_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     TypeDeclStatement* type_decl = (TypeDeclStatement*)node;
-    NODE_VIRTUAL_FREE(type_decl->ident, free_alloc);
-    NODE_VIRTUAL_FREE(type_decl->value, free_alloc);
+    NODE_VIRTUAL_FREE(type_decl->ident, allocator);
+    NODE_VIRTUAL_FREE(type_decl->value, allocator);
 
-    free_alloc(type_decl);
+    ALLOCATOR_PTR_FREE(allocator, type_decl);
 }
 
 [[nodiscard]] Status
@@ -253,7 +254,7 @@ type_decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* erro
         IdentifierExpression* primitive = (IdentifierExpression*)type_decl->value;
         SemanticTypeTag       primitive_type_tag;
         if (!semantic_name_to_primitive_type_tag(primitive->name, &primitive_type_tag)) {
-            allocator.free_alloc(type_decl_name.ptr);
+            ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr);
             return VIOLATED_INVARIANT;
         }
 
@@ -261,40 +262,40 @@ type_decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* erro
         MAKE_PRIMITIVE(primitive_type_tag,
                        false,
                        primitive_type,
-                       parent->symbol_table->symbols.allocator.memory_alloc,
-                       allocator.free_alloc(type_decl_name.ptr));
+                       allocator,
+                       ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr));
         primitive_type->valued = false;
 
         // Now we just move the type into the context and release our ownership
         TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, primitive_type), {
-            allocator.free_alloc(type_decl_name.ptr);
-            RC_RELEASE(primitive_type, allocator.free_alloc);
+            ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr);
+            RC_RELEASE(primitive_type, allocator);
         });
 
-        RC_RELEASE(primitive_type, allocator.free_alloc);
+        RC_RELEASE(primitive_type, allocator);
         return SUCCESS;
     }
 
     // Otherwise the value has to be a type
     parent->namespace_type_name = slice_from_mut(&type_decl_name);
     TRY_DO(NODE_VIRTUAL_ANALYZE(type_decl->value, parent, errors),
-           allocator.free_alloc(type_decl_name.ptr));
+           ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr));
     parent->namespace_type_name = zeroed_slice();
 
     SemanticType* type_decl_type_probe = semantic_context_move_analyzed(parent);
     if (type_decl_type_probe->valued || !type_decl_type_probe->is_const) {
         const Token value_token = NODE_TOKEN(type_decl->ident);
         PUT_STATUS_PROPAGATE(errors, MALFORMED_TYPE_DECL, value_token, {
-            allocator.free_alloc(type_decl_name.ptr);
-            RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
+            ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr);
+            RC_RELEASE(type_decl_type_probe, allocator);
         });
     }
 
     TRY_DO(symbol_table_add(parent->symbol_table, type_decl_name, type_decl_type_probe), {
-        allocator.free_alloc(type_decl_name.ptr);
-        RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
+        ALLOCATOR_PTR_FREE(allocator, type_decl_name.ptr);
+        RC_RELEASE(type_decl_type_probe, allocator);
     });
 
-    RC_RELEASE(type_decl_type_probe, allocator.free_alloc);
+    RC_RELEASE(type_decl_type_probe, allocator);
     return SUCCESS;
 }

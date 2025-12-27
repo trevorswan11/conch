@@ -196,8 +196,8 @@ TEST_CASE("String duplication") {
     }
 
     SECTION("Null string") {
-        REQUIRE_FALSE(strdup_z_allocator(nullptr, standard_allocator.memory_alloc));
-        REQUIRE_FALSE(strdup_s_allocator(nullptr, 0, standard_allocator.memory_alloc));
+        REQUIRE_FALSE(strdup_z_allocator(nullptr, &std_allocator));
+        REQUIRE_FALSE(strdup_s_allocator(nullptr, 0, &std_allocator));
     }
 }
 
@@ -208,10 +208,11 @@ TEST_CASE("Reference counting") {
         int*           heap;
     };
 
-    const auto int_dtor = [](void* i, free_alloc_fn free_alloc) {
+    const auto int_dtor = [](void* i, Allocator* allocator) {
+        REQUIRE(allocator);
         Int* ii = static_cast<Int*>(i);
         if (ii->heap) {
-            free_alloc(ii->heap);
+            ALLOCATOR_PTR_FREE(allocator, ii->heap);
             ii->heap = nullptr;
         }
     };
@@ -237,9 +238,9 @@ TEST_CASE("Reference counting") {
         Int* i_ref = static_cast<Int*>(rc_retain(i));
         REQUIRE(i->rc_control.ref_count == 2);
 
-        rc_release(i_ref, free);
+        rc_release(i_ref, &std_allocator);
         REQUIRE(i->rc_control.ref_count == 1);
-        rc_release(i, free);
+        rc_release(i, &std_allocator);
     }
 
     SECTION("Without destructor") {
@@ -248,10 +249,10 @@ TEST_CASE("Reference counting") {
         Int* i_ref = static_cast<Int*>(rc_retain(i));
         REQUIRE(i->rc_control.ref_count == 2);
 
-        rc_release(i_ref, free);
+        rc_release(i_ref, &std_allocator);
         REQUIRE(i->rc_control.ref_count == 1);
-        rc_release(i, free);
+        rc_release(i, &std_allocator);
     }
 
-    SECTION("Null release") { rc_release(nullptr, free); }
+    SECTION("Null release") { rc_release(nullptr, &std_allocator); }
 }

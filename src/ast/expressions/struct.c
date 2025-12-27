@@ -8,16 +8,16 @@
 
 #include "util/containers/string_builder.h"
 
-void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
+void free_struct_member_list(ArrayList* members, Allocator* allocator) {
     assert(members);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(members);
     StructMember           member;
     while (array_list_const_iterator_has_next(&it, &member)) {
-        NODE_VIRTUAL_FREE(member.name, free_alloc);
-        NODE_VIRTUAL_FREE(member.type, free_alloc);
-        NODE_VIRTUAL_FREE(member.default_value, free_alloc);
+        NODE_VIRTUAL_FREE(member.name, allocator);
+        NODE_VIRTUAL_FREE(member.type, allocator);
+        NODE_VIRTUAL_FREE(member.default_value, allocator);
     }
     array_list_deinit(members);
 }
@@ -26,14 +26,14 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
                                               ArrayList          generics,
                                               ArrayList          members,
                                               StructExpression** struct_expr,
-                                              memory_alloc_fn    memory_alloc) {
-    assert(memory_alloc);
+                                              Allocator*         allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
     assert(generics.item_size == sizeof(Expression*));
     assert(members.length > 0);
     assert(members.item_size == sizeof(StructMember));
 
-    StructExpression* struct_local = memory_alloc(sizeof(StructExpression));
+    StructExpression* struct_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(StructExpression));
     if (!struct_local) { return ALLOCATION_FAILED; }
 
     *struct_local = (StructExpression){
@@ -46,15 +46,15 @@ void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void struct_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void struct_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     StructExpression* struct_expr = (StructExpression*)node;
-    free_expression_list(&struct_expr->generics, free_alloc);
-    free_struct_member_list(&struct_expr->members, free_alloc);
+    free_expression_list(&struct_expr->generics, allocator);
+    free_struct_member_list(&struct_expr->members, allocator);
 
-    free_alloc(struct_expr);
+    ALLOCATOR_PTR_FREE(allocator, struct_expr);
 }
 
 [[nodiscard]] Status

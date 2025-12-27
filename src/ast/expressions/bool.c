@@ -9,11 +9,12 @@
 
 [[nodiscard]] Status bool_literal_expression_create(Token                   start_token,
                                                     BoolLiteralExpression** bool_expr,
-                                                    memory_alloc_fn         memory_alloc) {
-    assert(memory_alloc);
+                                                    Allocator*              allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.type == TRUE || start_token.type == FALSE);
 
-    BoolLiteralExpression* bool_local = memory_alloc(sizeof(BoolLiteralExpression));
+    BoolLiteralExpression* bool_local =
+        ALLOCATOR_PTR_MALLOC(allocator, sizeof(BoolLiteralExpression));
     if (!bool_local) { return ALLOCATION_FAILED; }
 
     *bool_local = (BoolLiteralExpression){
@@ -25,12 +26,12 @@
     return SUCCESS;
 }
 
-void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void bool_literal_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     BoolLiteralExpression* bool_expr = (BoolLiteralExpression*)node;
-    free_alloc(bool_expr);
+    ALLOCATOR_PTR_FREE(allocator, bool_expr);
 }
 
 [[nodiscard]] Status bool_literal_expression_reconstruct(Node*                           node,
@@ -47,5 +48,5 @@ void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
 [[nodiscard]] Status bool_literal_expression_analyze([[maybe_unused]] Node*      node,
                                                      SemanticContext*            parent,
                                                      [[maybe_unused]] ArrayList* errors) {
-    PRIMITIVE_ANALYZE(STYPE_BOOL, false, semantic_context_allocator(parent).memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_BOOL, false, semantic_context_allocator(parent));
 }

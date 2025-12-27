@@ -8,15 +8,15 @@
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status
-block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    BlockStatement* block = allocator.memory_alloc(sizeof(BlockStatement));
+    BlockStatement* block = ALLOCATOR_PTR_MALLOC(allocator, sizeof(BlockStatement));
     if (!block) { return ALLOCATION_FAILED; }
 
     ArrayList statements;
     TRY_DO(array_list_init_allocator(&statements, 8, sizeof(Statement*), allocator),
-           allocator.free_alloc(block));
+           ALLOCATOR_PTR_FREE(allocator, block));
 
     *block = (BlockStatement){
         .base       = STATEMENT_INIT(BLOCK_VTABLE, start_token),
@@ -27,14 +27,14 @@ block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator
     return SUCCESS;
 }
 
-void block_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void block_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     BlockStatement* block = (BlockStatement*)node;
-    free_statement_list(&block->statements, free_alloc);
+    free_statement_list(&block->statements, allocator);
 
-    free_alloc(block);
+    ALLOCATOR_PTR_FREE(allocator, block);
 }
 
 [[nodiscard]] Status
@@ -61,7 +61,7 @@ block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder
 block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
-    Allocator allocator = semantic_context_allocator(parent);
+    Allocator* allocator = semantic_context_allocator(parent);
 
     SemanticContext* child;
     TRY(semantic_context_create(parent, &child, allocator));
@@ -73,16 +73,16 @@ block_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     while (array_list_const_iterator_has_next(&it, (void*)&stmt)) {
         ASSERT_STATEMENT(stmt);
         TRY_DO(NODE_VIRTUAL_ANALYZE(stmt, child, errors),
-               semantic_context_destroy(child, allocator.free_alloc));
+               semantic_context_destroy(child, allocator));
 
         // If a type bubbled up we have to release it
         if (child->analyzed_type) {
-            RC_RELEASE(child->analyzed_type, allocator.free_alloc);
+            RC_RELEASE(child->analyzed_type, allocator);
             child->analyzed_type = nullptr;
         }
     }
 
-    semantic_context_destroy(child, allocator.free_alloc);
+    semantic_context_destroy(child, allocator);
     return SUCCESS;
 }
 

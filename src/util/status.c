@@ -22,8 +22,11 @@ const char* status_name(Status status) { return STATUS_TYPE_NAMES[status]; }
     assert(errors);
     assert(STATUS_ERR(status));
 
+    Allocator* allocator = &errors->allocator;
+    ASSERT_ALLOCATOR_PTR(allocator);
+
     StringBuilder builder;
-    TRY(string_builder_init_allocator(&builder, 30, errors->allocator));
+    TRY(string_builder_init_allocator(&builder, 30, allocator));
 
     const char* status_literal = status_name(status);
     TRY_DO(string_builder_append_str_z(&builder, status_literal), string_builder_deinit(&builder));

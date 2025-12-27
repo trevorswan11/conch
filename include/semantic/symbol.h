@@ -11,7 +11,7 @@ typedef struct SymbolTable {
     HashMap symbols;
 } SymbolTable;
 
-[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator allocator);
+[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator* allocator);
 void                 symbol_table_destroy(SymbolTable* table, Allocator* allocator);
 
 // Adds a symbol/type pair to the table.

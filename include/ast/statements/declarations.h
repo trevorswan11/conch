@@ -48,7 +48,7 @@ typedef struct TypeDeclStatement {
                                                 Expression*           value,
                                                 bool                  primitive_alias,
                                                 TypeDeclStatement**   type_decl_stmt,
-                                                Allocator* allocator);
+                                                Allocator*            allocator);
 
 void type_decl_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

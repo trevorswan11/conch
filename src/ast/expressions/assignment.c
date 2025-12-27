@@ -14,12 +14,12 @@
                                                   TokenType              op,
                                                   Expression*            rhs,
                                                   AssignmentExpression** assignment_expr,
-                                                  memory_alloc_fn        memory_alloc) {
-    assert(memory_alloc);
+                                                  Allocator*             allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(lhs);
     ASSERT_EXPRESSION(rhs);
 
-    AssignmentExpression* assign = memory_alloc(sizeof(AssignmentExpression));
+    AssignmentExpression* assign = ALLOCATOR_PTR_MALLOC(allocator, sizeof(AssignmentExpression));
     if (!assign) { return ALLOCATION_FAILED; }
 
     *assign = (AssignmentExpression){
@@ -33,15 +33,15 @@
     return SUCCESS;
 }
 
-void assignment_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void assignment_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     AssignmentExpression* assign = (AssignmentExpression*)node;
-    NODE_VIRTUAL_FREE(assign->lhs, free_alloc);
-    NODE_VIRTUAL_FREE(assign->rhs, free_alloc);
+    NODE_VIRTUAL_FREE(assign->lhs, allocator);
+    NODE_VIRTUAL_FREE(assign->rhs, allocator);
 
-    free_alloc(assign);
+    ALLOCATOR_PTR_FREE(allocator, assign);
 }
 
 [[nodiscard]] Status
@@ -76,21 +76,18 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
     ASSERT_EXPRESSION(assign->lhs);
     ASSERT_EXPRESSION(assign->rhs);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     TRY(NODE_VIRTUAL_ANALYZE(assign->lhs, parent, errors));
     SemanticType* lhs_type = semantic_context_move_analyzed(parent);
 
     if (lhs_type->is_const) {
-        PUT_STATUS_PROPAGATE(errors,
-                             ASSIGNMENT_TO_CONSTANT,
-                             start_token,
-                             RC_RELEASE(lhs_type, allocator.free_alloc));
+        PUT_STATUS_PROPAGATE(
+            errors, ASSIGNMENT_TO_CONSTANT, start_token, RC_RELEASE(lhs_type, allocator));
     }
 
-    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors),
-           RC_RELEASE(lhs_type, allocator.free_alloc));
+    TRY_DO(NODE_VIRTUAL_ANALYZE(assign->rhs, parent, errors), RC_RELEASE(lhs_type, allocator));
     SemanticType* rhs_type = semantic_context_move_analyzed(parent);
 
     if (assign->op != ASSIGN) {
@@ -99,8 +96,8 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
             const Status error_code =
                 !lhs_type->valued ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
@@ -109,8 +106,8 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
             const Status error_code =
                 lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND;
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
     }
@@ -121,8 +118,8 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
     case ASSIGN:
         if (!type_assignable(lhs_type, rhs_type)) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
         resulting_type = rc_retain(rhs_type);
@@ -142,8 +139,8 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
     case MINUS_ASSIGN:
     case SLASH_ASSIGN: {
         FALLBACK_ARITHMETIC(resulting_type, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
         break;
     }
@@ -155,21 +152,21 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
                                  !lhs_ok ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND,
                                  start_token,
                                  {
-                                     RC_RELEASE(lhs_type, allocator.free_alloc);
-                                     RC_RELEASE(rhs_type, allocator.free_alloc);
+                                     RC_RELEASE(lhs_type, allocator);
+                                     RC_RELEASE(rhs_type, allocator);
                                  });
         }
 
         if (lhs_type->tag != rhs_type->tag) {
             PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, {
-                RC_RELEASE(lhs_type, allocator.free_alloc);
-                RC_RELEASE(rhs_type, allocator.free_alloc);
+                RC_RELEASE(lhs_type, allocator);
+                RC_RELEASE(rhs_type, allocator);
             });
         }
 
-        MAKE_PRIMITIVE(rhs_type->tag, false, new_tye, allocator.memory_alloc, {
-            RC_RELEASE(lhs_type, allocator.free_alloc);
-            RC_RELEASE(rhs_type, allocator.free_alloc);
+        MAKE_PRIMITIVE(rhs_type->tag, false, new_tye, allocator, {
+            RC_RELEASE(lhs_type, allocator);
+            RC_RELEASE(rhs_type, allocator);
         });
 
         resulting_type = new_tye;
@@ -180,8 +177,8 @@ assignment_expression_analyze(Node* node, SemanticContext* parent, ArrayList* er
     }
 
     // Assignment expressions return the type of their assigned value
-    RC_RELEASE(lhs_type, allocator.free_alloc);
-    RC_RELEASE(rhs_type, allocator.free_alloc);
+    RC_RELEASE(lhs_type, allocator);
+    RC_RELEASE(rhs_type, allocator);
 
     assert(resulting_type);
     parent->analyzed_type = resulting_type;

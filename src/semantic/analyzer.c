@@ -6,28 +6,28 @@
 #include "semantic/analyzer.h"
 #include "semantic/context.h"
 
-[[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator allocator) {
+[[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator* allocator) {
     assert(ast);
     TRY(seman_null_init(analyzer, allocator));
     analyzer->ast = ast;
     return SUCCESS;
 }
 
-[[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
+[[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     SemanticContext* global_ctx;
     TRY(semantic_context_create(nullptr, &global_ctx, allocator));
 
     ArrayList errors;
     TRY_DO(array_list_init_allocator(&errors, 10, sizeof(MutSlice), allocator),
-           semantic_context_destroy(global_ctx, allocator.free_alloc));
+           semantic_context_destroy(global_ctx, allocator));
 
     SemanticAnalyzer seman = (SemanticAnalyzer){
         .ast        = nullptr,
         .global_ctx = global_ctx,
         .errors     = errors,
-        .allocator  = allocator,
+        .allocator  = *allocator,
     };
 
     *analyzer = seman;
@@ -36,11 +36,12 @@
 
 void seman_deinit(SemanticAnalyzer* analyzer) {
     if (!analyzer) { return; }
-    free_alloc_fn free_alloc = analyzer->allocator.free_alloc;
+    Allocator* allocator = &analyzer->allocator;
+    ASSERT_ALLOCATOR_PTR(allocator);
 
-    semantic_context_destroy(analyzer->global_ctx, free_alloc);
+    semantic_context_destroy(analyzer->global_ctx, allocator);
     analyzer->global_ctx = nullptr;
-    free_error_list(&analyzer->errors, free_alloc);
+    free_error_list(&analyzer->errors, allocator);
 }
 
 [[nodiscard]] Status seman_analyze(SemanticAnalyzer* analyzer) {
@@ -48,8 +49,9 @@ void seman_deinit(SemanticAnalyzer* analyzer) {
     assert(analyzer->ast);
     assert(analyzer->global_ctx);
 
-    const Allocator allocator = analyzer->allocator;
-    clear_error_list(&analyzer->errors, allocator.free_alloc);
+    Allocator* allocator = &analyzer->allocator;
+    ASSERT_ALLOCATOR_PTR(allocator);
+    clear_error_list(&analyzer->errors, allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(&analyzer->ast->statements);
     Statement*             stmt;
@@ -61,7 +63,7 @@ void seman_deinit(SemanticAnalyzer* analyzer) {
 
         // If the global context never had the last type moved out, we must release it
         if (analyzer->global_ctx->analyzed_type) {
-            RC_RELEASE(analyzer->global_ctx->analyzed_type, allocator.free_alloc);
+            RC_RELEASE(analyzer->global_ctx->analyzed_type, allocator);
             analyzer->global_ctx->analyzed_type = nullptr;
         }
     }

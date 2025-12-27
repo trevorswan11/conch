@@ -16,9 +16,9 @@
                                             TypeExpressionTag   tag,
                                             TypeExpressionUnion variant,
                                             TypeExpression**    type_expr,
-                                            memory_alloc_fn     memory_alloc) {
-    assert(memory_alloc);
-    TypeExpression* type = memory_alloc(sizeof(TypeExpression));
+                                            Allocator*          allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    TypeExpression* type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(TypeExpression));
     if (!type) { return ALLOCATION_FAILED; }
 
     *type = (TypeExpression){
@@ -31,9 +31,9 @@
     return SUCCESS;
 }
 
-void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void type_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
     TypeExpression* type = (TypeExpression*)node;
 
     if (type->tag == EXPLICIT) {
@@ -41,36 +41,36 @@ void type_expression_destroy(Node* node, free_alloc_fn free_alloc) {
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
             ExplicitIdentType ident_type = explicit_type.variant.ident_type;
-            NODE_VIRTUAL_FREE(ident_type.name, free_alloc);
-            free_expression_list(&ident_type.generics, free_alloc);
+            NODE_VIRTUAL_FREE(ident_type.name, allocator);
+            free_expression_list(&ident_type.generics, allocator);
             break;
         }
         case EXPLICIT_TYPEOF:
-            NODE_VIRTUAL_FREE(explicit_type.variant.referred_type, free_alloc);
+            NODE_VIRTUAL_FREE(explicit_type.variant.referred_type, allocator);
             break;
         case EXPLICIT_FN: {
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
-            free_expression_list(&function_type.generics, free_alloc);
-            free_parameter_list(&function_type.parameters, free_alloc);
-            NODE_VIRTUAL_FREE(function_type.return_type, free_alloc);
+            free_expression_list(&function_type.generics, allocator);
+            free_parameter_list(&function_type.parameters, allocator);
+            NODE_VIRTUAL_FREE(function_type.return_type, allocator);
             break;
         }
         case EXPLICIT_STRUCT:
-            NODE_VIRTUAL_FREE(explicit_type.variant.struct_type, free_alloc);
+            NODE_VIRTUAL_FREE(explicit_type.variant.struct_type, allocator);
             break;
         case EXPLICIT_ENUM:
-            NODE_VIRTUAL_FREE(explicit_type.variant.enum_type, free_alloc);
+            NODE_VIRTUAL_FREE(explicit_type.variant.enum_type, allocator);
             break;
         case EXPLICIT_ARRAY: {
             TypeExpression* inner = explicit_type.variant.array_type.inner_type;
             array_list_deinit(&explicit_type.variant.array_type.dimensions);
-            NODE_VIRTUAL_FREE(inner, free_alloc);
+            NODE_VIRTUAL_FREE(inner, allocator);
             break;
         }
         }
     }
 
-    free_alloc(type);
+    ALLOCATOR_PTR_FREE(allocator, type);
 }
 
 [[nodiscard]] Status
@@ -95,14 +95,14 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     TypeExpression* type = (TypeExpression*)node;
     SemanticType*   new_symbol_type;
 
     if (type->tag == IMPLICIT) {
-        TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
+        TRY(semantic_type_create(&new_symbol_type, allocator));
         new_symbol_type->tag      = STYPE_IMPLICIT_DECLARATION;
         new_symbol_type->variant  = SEMANTIC_DATALESS_TYPE;
         new_symbol_type->is_const = true;
@@ -112,7 +112,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
         const ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
         case EXPLICIT_IDENT: {
-            TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
+            TRY(semantic_type_create(&new_symbol_type, allocator));
             new_symbol_type->is_const = true;
             new_symbol_type->valued   = false;
 
@@ -132,36 +132,36 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
                     PUT_STATUS_PROPAGATE(errors,
                                          DOUBLE_NULLABLE,
                                          start_token,
-                                         RC_RELEASE(new_symbol_type, allocator.free_alloc));
+                                         RC_RELEASE(new_symbol_type, allocator));
                 }
 
                 // Underlying copy ignores nullable, so inherit from either source
                 TRY_DO(semantic_type_copy_variant(new_symbol_type, probe_symbol_type, allocator),
-                       RC_RELEASE(new_symbol_type, allocator.free_alloc));
+                       RC_RELEASE(new_symbol_type, allocator));
                 new_symbol_type->nullable = probe_symbol_type->nullable || explicit_type.nullable;
             } else {
                 PUT_STATUS_PROPAGATE(errors,
                                      UNDECLARED_IDENTIFIER,
                                      start_token,
-                                     RC_RELEASE(new_symbol_type, allocator.free_alloc));
+                                     RC_RELEASE(new_symbol_type, allocator));
             }
             break;
         }
         case EXPLICIT_TYPEOF: {
-            TRY(semantic_type_create(&new_symbol_type, allocator.memory_alloc));
+            TRY(semantic_type_create(&new_symbol_type, allocator));
 
             // We need to copy into since we may be changing nullable status
             const Expression* referred = explicit_type.variant.referred_type;
             TRY_DO(NODE_VIRTUAL_ANALYZE(referred, parent, errors),
-                   RC_RELEASE(new_symbol_type, allocator.free_alloc));
+                   RC_RELEASE(new_symbol_type, allocator));
             SemanticType* analyzed = semantic_context_move_analyzed(parent);
 
             TRY_DO(semantic_type_copy_variant(new_symbol_type, analyzed, allocator), {
-                RC_RELEASE(analyzed, allocator.free_alloc);
-                RC_RELEASE(new_symbol_type, allocator.free_alloc);
+                RC_RELEASE(analyzed, allocator);
+                RC_RELEASE(new_symbol_type, allocator);
             });
 
-            RC_RELEASE(analyzed, allocator.free_alloc);
+            RC_RELEASE(analyzed, allocator);
             new_symbol_type->nullable = explicit_type.nullable;
             break;
         }

@@ -12,7 +12,7 @@ typedef struct DiscardStatement {
 [[nodiscard]] Status discard_statement_create(Token              start_token,
                                               Expression*        to_discard,
                                               DiscardStatement** discard_stmt,
-                                              Allocator* allocator);
+                                              Allocator*         allocator);
 
 void discard_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status

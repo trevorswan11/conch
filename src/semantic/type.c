@@ -82,12 +82,13 @@ bool semantic_type_is_integer(SemanticType* type) {
                                            SemanticArrayUnion  variant,
                                            SemanticType*       inner_type,
                                            SemanticArrayType** array_type,
-                                           memory_alloc_fn     memory_alloc) {
+                                           Allocator*          allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(inner_type);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.length > 1 : true);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
 
-    SemanticArrayType* sema_array = memory_alloc(sizeof(SemanticArrayType));
+    SemanticArrayType* sema_array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticArrayType));
     if (!sema_array) { return ALLOCATION_FAILED; }
 
     *sema_array = (SemanticArrayType){
@@ -101,26 +102,26 @@ bool semantic_type_is_integer(SemanticType* type) {
     return SUCCESS;
 }
 
-void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
+void semantic_array_destroy(void* array_type, Allocator* allocator) {
     if (!array_type) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     SemanticArrayType* sema_array = (SemanticArrayType*)array_type;
     if (sema_array->tag == STYPE_ARRAY_MULTI_DIM) {
         array_list_deinit(&sema_array->variant.dimensions);
     }
 
-    RC_RELEASE(sema_array->inner_type, free_alloc);
+    RC_RELEASE(sema_array->inner_type, allocator);
 }
 
 [[nodiscard]] Status semantic_enum_create(Slice              name,
                                           HashSet            variants,
                                           SemanticEnumType** enum_type,
-                                          memory_alloc_fn    memory_alloc) {
-    assert(memory_alloc);
+                                          Allocator*         allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(variants.header->key_size == sizeof(MutSlice));
 
-    SemanticEnumType* type_variant = memory_alloc(sizeof(SemanticEnumType));
+    SemanticEnumType* type_variant = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticEnumType));
     if (!type_variant) { return ALLOCATION_FAILED; }
 
     *type_variant = (SemanticEnumType){
@@ -133,32 +134,33 @@ void semantic_array_destroy(void* array_type, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc) {
-    assert(variants);
+void free_enum_variant_set(HashSet* variants, Allocator* allocator) {
+    if (!variants) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
+
     HashSetIterator it = hash_set_iterator_init(variants);
     SetEntry        variant;
 
     while (hash_set_iterator_has_next(&it, &variant)) {
         MutSlice* name = (MutSlice*)variant.key_ptr;
-        free_alloc(name->ptr);
+        ALLOCATOR_PTR_FREE(allocator, name->ptr);
         name->ptr = nullptr;
     }
 
     hash_set_deinit(variants);
 }
 
-void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
+void semantic_enum_destroy(void* enum_type, Allocator* allocator) {
     if (!enum_type) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     SemanticEnumType* type_variant = (SemanticEnumType*)enum_type;
-    free_enum_variant_set(&type_variant->variants, free_alloc);
+    free_enum_variant_set(&type_variant->variants, allocator);
 }
 
-[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
-
-    SemanticType* empty_type = memory_alloc(sizeof(SemanticType));
+[[nodiscard]] Status semantic_type_create(SemanticType** type, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    SemanticType* empty_type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticType));
     if (!empty_type) { return ALLOCATION_FAILED; }
 
     *empty_type = (SemanticType){
@@ -172,9 +174,9 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-[[nodiscard]] Status semantic_type_copy_variant(SemanticType*              dest,
-                                                SemanticType*              src,
-                                                [[maybe_unused]] Allocator allocator) {
+[[nodiscard]] Status semantic_type_copy_variant(SemanticType*               dest,
+                                                SemanticType*               src,
+                                                [[maybe_unused]] Allocator* allocator) {
     dest->tag = src->tag;
 
     switch (src->tag) {
@@ -193,12 +195,12 @@ void semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc) {
 }
 
 [[nodiscard]] Status
-semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) {
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     SemanticType* type;
-    TRY(semantic_type_create(&type, allocator.memory_alloc));
+    TRY(semantic_type_create(&type, allocator));
 
-    TRY_DO(semantic_type_copy_variant(type, src, allocator),
-           RC_RELEASE(type, allocator.free_alloc));
+    TRY_DO(semantic_type_copy_variant(type, src, allocator), RC_RELEASE(type, allocator));
     type->is_const = src->is_const;
     type->valued   = src->valued;
     type->nullable = src->nullable;
@@ -207,17 +209,17 @@ semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator) 
     return SUCCESS;
 }
 
-void semantic_type_destroy(void* stype, free_alloc_fn free_alloc) {
+void semantic_type_destroy(void* stype, Allocator* allocator) {
     if (!stype) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     SemanticType* type = (SemanticType*)stype;
     switch (type->tag) {
     case STYPE_ENUM:
-        RC_RELEASE(type->variant.enum_type, free_alloc);
+        RC_RELEASE(type->variant.enum_type, allocator);
         break;
     case STYPE_ARRAY:
-        RC_RELEASE(type->variant.array_type, free_alloc);
+        RC_RELEASE(type->variant.array_type, allocator);
         break;
     default:
         break;
