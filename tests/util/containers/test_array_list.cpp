@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
-
 #include <vector>
 
 extern "C" {

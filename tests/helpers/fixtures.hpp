@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 extern "C" {
 #include "ast/ast.h"
@@ -18,19 +19,15 @@ void check_errors(const ArrayList*         actual_errors,
                   std::vector<std::string> expected_errors,
                   bool                     print_anyways);
 
-template <typename T> struct DeductionLimiter {
-    using type = T;
-};
-
 // Behaves like a stack allocated unique pointer
 template <typename T> class Fixture {
   private:
     using Dtor = void (*)(T*);
 
   public:
-    explicit Fixture(typename DeductionLimiter<T>::type& t, Dtor dtor)
+    explicit Fixture(std::type_identity_t<T>& t, Dtor dtor)
         : underlying{t}, dtor{dtor} {}
-    explicit Fixture(typename DeductionLimiter<T>::type& t) : underlying{t}, dtor{nullptr} {}
+    explicit Fixture(std::type_identity_t<T>& t) : underlying{t}, dtor{nullptr} {}
 
     ~Fixture() {
         if constexpr (std::is_pointer_v<T>) {
