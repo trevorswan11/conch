@@ -28,9 +28,9 @@ typedef struct ImportStatement {
                                              ImportUnion           variant,
                                              IdentifierExpression* alias,
                                              ImportStatement**     import_stmt,
-                                             memory_alloc_fn       memory_alloc);
+                                             Allocator* allocator);
 
-void import_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void import_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 import_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

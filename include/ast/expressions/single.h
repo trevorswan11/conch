@@ -3,14 +3,14 @@
 
 #include "ast/expressions/expression.h"
 
-void single_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void single_expression_destroy(Node* node, Allocator* allocator);
 
 typedef struct NilExpression {
     Expression base;
 } NilExpression;
 
 [[nodiscard]] Status
-nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc);
+nil_expression_create(Token start_token, NilExpression** nil_expr, Allocator* allocator);
 
 [[nodiscard]] Status
 nil_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
@@ -31,7 +31,7 @@ typedef struct IgnoreExpression {
 
 [[nodiscard]] Status ignore_expression_create(Token              start_token,
                                               IgnoreExpression** ignore_expr,
-                                              memory_alloc_fn    memory_alloc);
+                                              Allocator* allocator);
 
 [[nodiscard]] Status
 ignore_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);

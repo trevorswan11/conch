@@ -11,9 +11,9 @@ typedef struct BlockStatement {
 } BlockStatement;
 
 [[nodiscard]] Status
-block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator allocator);
+block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator* allocator);
 
-void block_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void block_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 block_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

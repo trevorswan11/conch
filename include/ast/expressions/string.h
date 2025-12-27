@@ -10,9 +10,9 @@ typedef struct StringLiteralExpression {
 
 [[nodiscard]] Status string_literal_expression_create(Token                     start_token,
                                                       StringLiteralExpression** string_expr,
-                                                      Allocator                 allocator);
+                                                      Allocator*                allocator);
 
-void string_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void string_literal_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 string_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

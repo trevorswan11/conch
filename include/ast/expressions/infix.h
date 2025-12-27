@@ -15,9 +15,9 @@ typedef struct InfixExpression {
                                              TokenType         op,
                                              Expression*       rhs,
                                              InfixExpression** infix_expr,
-                                             memory_alloc_fn   memory_alloc);
+                                             Allocator*        allocator);
 
-void infix_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void infix_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 infix_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status
@@ -46,7 +46,7 @@ static const ExpressionVTable INFIX_VTABLE = {
         PUT_STATUS_PROPAGATE(errors, TYPE_MISMATCH, start_token, cleanup);                    \
     }                                                                                         \
                                                                                               \
-    MAKE_PRIMITIVE(lhs_type->tag, false, new_type, allocator.memory_alloc, cleanup);          \
+    MAKE_PRIMITIVE(lhs_type->tag, false, new_type, allocator, cleanup);                       \
     (result) = new_type;
 
 #define PLUS_STAR_INFIX_CASE                                                                \
@@ -55,14 +55,14 @@ static const ExpressionVTable INFIX_VTABLE = {
             const Status error_code =                                                       \
                 lhs_type->nullable ? ILLEGAL_LHS_INFIX_OPERAND : ILLEGAL_RHS_INFIX_OPERAND; \
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {                         \
-                RC_RELEASE(lhs_type, allocator.free_alloc);                                 \
-                RC_RELEASE(rhs_type, allocator.free_alloc);                                 \
+                RC_RELEASE(lhs_type, allocator);                                            \
+                RC_RELEASE(rhs_type, allocator);                                            \
             });                                                                             \
         }                                                                                   \
                                                                                             \
-        MAKE_PRIMITIVE(STYPE_STR, false, new_type, allocator.memory_alloc, {                \
-            RC_RELEASE(lhs_type, allocator.free_alloc);                                     \
-            RC_RELEASE(rhs_type, allocator.free_alloc);                                     \
+        MAKE_PRIMITIVE(STYPE_STR, false, new_type, allocator, {                             \
+            RC_RELEASE(lhs_type, allocator);                                                \
+            RC_RELEASE(rhs_type, allocator);                                                \
         });                                                                                 \
         resulting_type = new_type;                                                          \
         break;                                                                              \
@@ -70,14 +70,14 @@ static const ExpressionVTable INFIX_VTABLE = {
                                                                                             \
     if (semantic_type_is_primitive(lhs_type) && rhs_type->tag == STYPE_STR) {               \
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_LHS_INFIX_OPERAND, start_token, {              \
-            RC_RELEASE(lhs_type, allocator.free_alloc);                                     \
-            RC_RELEASE(rhs_type, allocator.free_alloc);                                     \
+            RC_RELEASE(lhs_type, allocator);                                                \
+            RC_RELEASE(rhs_type, allocator);                                                \
         });                                                                                 \
     }                                                                                       \
                                                                                             \
     FALLBACK_ARITHMETIC(resulting_type, {                                                   \
-        RC_RELEASE(lhs_type, allocator.free_alloc);                                         \
-        RC_RELEASE(rhs_type, allocator.free_alloc);                                         \
+        RC_RELEASE(lhs_type, allocator);                                                    \
+        RC_RELEASE(rhs_type, allocator);                                                    \
     });                                                                                     \
     break;
 
@@ -87,14 +87,14 @@ static const ExpressionVTable INFIX_VTABLE = {
                                       ? ILLEGAL_LHS_INFIX_OPERAND                         \
                                       : ILLEGAL_RHS_INFIX_OPERAND;                        \
         PUT_STATUS_PROPAGATE(errors, error_code, start_token, {                           \
-            RC_RELEASE(lhs_type, allocator.free_alloc);                                   \
-            RC_RELEASE(rhs_type, allocator.free_alloc);                                   \
+            RC_RELEASE(lhs_type, allocator);                                              \
+            RC_RELEASE(rhs_type, allocator);                                              \
         });                                                                               \
     }                                                                                     \
                                                                                           \
     FALLBACK_ARITHMETIC(resulting_type, {                                                 \
-        RC_RELEASE(lhs_type, allocator.free_alloc);                                       \
-        RC_RELEASE(rhs_type, allocator.free_alloc);                                       \
+        RC_RELEASE(lhs_type, allocator);                                                  \
+        RC_RELEASE(rhs_type, allocator);                                                  \
     });                                                                                   \
     break;
 

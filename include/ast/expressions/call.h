@@ -17,16 +17,16 @@ typedef struct CallExpression {
     ArrayList   generics;
 } CallExpression;
 
-void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc);
+void free_call_expression_list(ArrayList* arguments, Allocator* allocator);
 
 [[nodiscard]] Status call_expression_create(Token            start_token,
                                             Expression*      function,
                                             ArrayList        arguments,
                                             ArrayList        generics,
                                             CallExpression** call_expr,
-                                            memory_alloc_fn  memory_alloc);
+                                            Allocator* allocator);
 
-void call_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void call_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 call_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

@@ -18,9 +18,9 @@ typedef struct IfExpression {
                                           Statement*      consequence,
                                           Statement*      alternate,
                                           IfExpression**  if_expr,
-                                          memory_alloc_fn memory_alloc);
+                                          Allocator*           allocator);
 
-void if_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void if_expression_destroy(Node* node, Allocator*           allocator);
 [[nodiscard]] Status
 if_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status if_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors);

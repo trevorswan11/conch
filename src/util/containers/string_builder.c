@@ -13,7 +13,7 @@ string_builder_init_allocator(StringBuilder* sb, size_t initial_length, Allocato
 }
 
 [[nodiscard]] Status string_builder_init(StringBuilder* sb, size_t initial_length) {
-    return string_builder_init_allocator(sb, initial_length, STANDARD_ALLOCATOR);
+    return string_builder_init_allocator(sb, initial_length, std_allocator);
 }
 
 void string_builder_deinit(StringBuilder* sb) {

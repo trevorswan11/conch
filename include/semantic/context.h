@@ -23,7 +23,7 @@ SemanticType* semantic_context_move_analyzed(SemanticContext* context);
 semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator);
 
 // Releases the provided context but does not wipe parents
-void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc);
+void semantic_context_destroy(SemanticContext* context, Allocator* allocator);
 
 bool semantic_context_find(SemanticContext* context,
                            bool             check_parents,

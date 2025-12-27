@@ -82,8 +82,8 @@ typedef struct {
                                            SemanticArrayUnion  variant,
                                            SemanticType*       inner_type,
                                            SemanticArrayType** array_type,
-                                           memory_alloc_fn     memory_alloc);
-void                 semantic_array_destroy(void* array_type, free_alloc_fn free_alloc);
+                                           Allocator* allocator);
+void                 semantic_array_destroy(void* array_type, Allocator* allocator);
 
 typedef struct {
     RcControlBlock rc_control;
@@ -95,9 +95,9 @@ typedef struct {
 [[nodiscard]] Status semantic_enum_create(Slice              name,
                                           HashSet            variants,
                                           SemanticEnumType** enum_type,
-                                          memory_alloc_fn    memory_alloc);
-void                 free_enum_variant_set(HashSet* variants, free_alloc_fn free_alloc);
-void                 semantic_enum_destroy(void* enum_type, free_alloc_fn free_alloc);
+                                          Allocator* allocator);
+void                 free_enum_variant_set(HashSet* variants, Allocator* allocator);
+void                 semantic_enum_destroy(void* enum_type, Allocator* allocator);
 
 typedef union {
     SematicDatalessType dataless_type;
@@ -118,20 +118,20 @@ typedef struct SemanticType {
 } SemanticType;
 
 // Creates an empty semantic type.
-[[nodiscard]] Status semantic_type_create(SemanticType** type, memory_alloc_fn memory_alloc);
+[[nodiscard]] Status semantic_type_create(SemanticType** type, Allocator* allocator);
 
 // Copies the tagged union data from src to dest, leaving flags alone.
 //
 // Reference counting is respected when possible.
 [[nodiscard]] Status
-semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator allocator);
+semantic_type_copy_variant(SemanticType* dest, SemanticType* src, Allocator* allocator);
 
 // Creates and deep copies src into dest while respecting RC.
 [[nodiscard]] Status
-semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator allocator);
+semantic_type_copy(SemanticType** dest, SemanticType* src, Allocator* allocator);
 
 // Never call this directly!
-void semantic_type_destroy(void* stype, free_alloc_fn free_alloc);
+void semantic_type_destroy(void* stype, Allocator* allocator);
 
 // Checks if a type of rhs can be assigned to a type lhs
 bool type_assignable(const SemanticType* lhs, const SemanticType* rhs);

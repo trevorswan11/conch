@@ -12,9 +12,9 @@ typedef struct JumpStatement {
 [[nodiscard]] Status jump_statement_create(Token           start_token,
                                            Expression*     value,
                                            JumpStatement** jump_stmt,
-                                           memory_alloc_fn memory_alloc);
+                                           Allocator*      allocator);
 
-void jump_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void jump_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);

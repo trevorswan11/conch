@@ -196,8 +196,8 @@ TEST_CASE("String duplication") {
     }
 
     SECTION("Null string") {
-        REQUIRE_FALSE(strdup_z_allocator(nullptr, STANDARD_ALLOCATOR.memory_alloc));
-        REQUIRE_FALSE(strdup_s_allocator(nullptr, 0, STANDARD_ALLOCATOR.memory_alloc));
+        REQUIRE_FALSE(strdup_z_allocator(nullptr, standard_allocator.memory_alloc));
+        REQUIRE_FALSE(strdup_s_allocator(nullptr, 0, standard_allocator.memory_alloc));
     }
 }
 

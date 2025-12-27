@@ -26,7 +26,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         const char* input = "月😭🎶";
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         REQUIRE(STATUS_OK(lexer_consume(&l)));
@@ -57,7 +57,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -101,13 +101,13 @@ TEST_CASE("Basic next token and lexer consuming") {
         };
 
         Lexer l_accumulator;
-        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l_accumulator, input, standard_allocator)));
         const Fixture<Lexer> lfa(l_accumulator, lexer_deinit);
         REQUIRE(STATUS_OK(lexer_consume(&l_accumulator)));
         const ArrayList* accumulated_tokens = &l_accumulator.token_accumulator;
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lfb(l, lexer_deinit);
 
         for (size_t i = 0; i < std::size(expecteds); i++) {
@@ -126,7 +126,7 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Numbers and lexer consumer resets") {
     Lexer reseting_lexer;
-    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(lexer_null_init(&reseting_lexer, standard_allocator)));
     const Fixture<Lexer> lfr(reseting_lexer, lexer_deinit);
 
     SECTION("Correct base-10 ints and floats") {
@@ -151,7 +151,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (size_t i = 0; i < std::size(expecteds); i++) {
@@ -189,7 +189,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (size_t i = 0; i < std::size(expecteds); i++) {
@@ -236,7 +236,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (size_t i = 0; i < std::size(expecteds); i++) {
@@ -275,7 +275,7 @@ TEST_CASE("Numbers and lexer consumer resets") {
         REQUIRE(STATUS_OK(lexer_consume(&reseting_lexer)));
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (size_t i = 0; i < std::size(expecteds); i++) {
@@ -316,7 +316,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -344,7 +344,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -367,7 +367,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -396,7 +396,7 @@ TEST_CASE("Advanced next token") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -482,7 +482,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (auto [t, s] : expecteds) {
@@ -520,7 +520,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -553,7 +553,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -593,7 +593,7 @@ TEST_CASE("Advanced literals") {
         };
 
         Lexer l;
-        REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+        REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
         const Fixture<Lexer> lf(l, lexer_deinit);
 
         for (const auto& [t, s] : expecteds) {
@@ -608,7 +608,7 @@ TEST_CASE("Advanced literals") {
         const auto string_tok =
             token_init(TokenType::INT_10, token_slice.ptr, token_slice.length, 0, 0);
         MutSlice promoted_string;
-        REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
+        REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
                 Status::TYPE_MISMATCH);
     }
 
@@ -619,7 +619,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected = "Hello, World!";
@@ -633,7 +633,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected = R"("Hello, World!")";
@@ -647,7 +647,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected;
@@ -660,7 +660,7 @@ TEST_CASE("Advanced literals") {
             const auto string_tok =
                 token_init(TokenType::STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
-            REQUIRE(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR) ==
+            REQUIRE(promote_token_string(string_tok, &promoted_string, standard_allocator) ==
                     Status::UNEXPECTED_TOKEN);
         }
     }
@@ -672,7 +672,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected = R"(Hello,"World!")";
@@ -686,7 +686,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected = "Hello,\nWorld!\n";
@@ -700,7 +700,7 @@ TEST_CASE("Advanced literals") {
                 token_init(TokenType::MULTILINE_STRING, token_slice.ptr, token_slice.length, 0, 0);
             MutSlice promoted_string;
             REQUIRE(
-                STATUS_OK(promote_token_string(string_tok, &promoted_string, STANDARD_ALLOCATOR)));
+                STATUS_OK(promote_token_string(string_tok, &promoted_string, standard_allocator)));
             const Fixture<char*> msf(promoted_string.ptr);
 
             std::string expected;
@@ -713,7 +713,7 @@ TEST_CASE("Advanced literals") {
 TEST_CASE("Token dumping") {
     const char* input = "true false and or orelse";
     Lexer       l;
-    REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
     const Fixture<Lexer> lf(l, lexer_deinit);
 
     REQUIRE(STATUS_OK(lexer_consume(&l)));

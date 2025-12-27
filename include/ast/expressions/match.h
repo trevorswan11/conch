@@ -18,16 +18,16 @@ typedef struct MatchExpression {
     Statement*  catch_all;
 } MatchExpression;
 
-void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc);
+void free_match_arm_list(ArrayList* arms, Allocator* allocator);
 
 [[nodiscard]] Status match_expression_create(Token             start_token,
                                              Expression*       expression,
                                              ArrayList         arms,
                                              Statement*        catch_all,
                                              MatchExpression** match_expr,
-                                             memory_alloc_fn   memory_alloc);
+                                             Allocator* allocator);
 
-void match_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void match_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 match_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

@@ -10,9 +10,9 @@ typedef struct BoolLiteralExpression {
 
 [[nodiscard]] Status bool_literal_expression_create(Token                   start_token,
                                                     BoolLiteralExpression** bool_expr,
-                                                    memory_alloc_fn         memory_alloc);
+                                                    Allocator* allocator);
 
-void bool_literal_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void bool_literal_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 bool_literal_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

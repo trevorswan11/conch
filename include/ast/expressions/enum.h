@@ -17,14 +17,14 @@ typedef struct EnumExpression {
     ArrayList  variants;
 } EnumExpression;
 
-void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc);
+void free_enum_variant_list(ArrayList* variants, Allocator* allocator);
 
 [[nodiscard]] Status enum_expression_create(Token            start_token,
                                             ArrayList        variants,
                                             EnumExpression** enum_expr,
-                                            memory_alloc_fn  memory_alloc);
+                                            Allocator* allocator);
 
-void enum_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void enum_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 enum_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

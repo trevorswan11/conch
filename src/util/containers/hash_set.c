@@ -84,7 +84,7 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
     if (metadata_size > SIZE_MAX - header_size) { return SIZE_OVERFLOW; }
 
     const size_t total_size = header_size + metadata_size + (keys_size + key_align - 1);
-    void*        buffer     = allocator.continuous_alloc(1, total_size);
+    void*        buffer     = ALLOCATOR_CALLOC(allocator, 1, total_size);
     if (!buffer) { return ALLOCATION_FAILED; }
 
     // Unpack the allocated block of memory
@@ -132,14 +132,14 @@ static inline void hash_set_init_metadatas(HashSet* hs) {
                                    Hash (*hash)(const void*),
                                    int (*compare)(const void*, const void*)) {
     return hash_set_init_allocator(
-        hs, capacity, key_size, key_align, hash, compare, STANDARD_ALLOCATOR);
+        hs, capacity, key_size, key_align, hash, compare, std_allocator);
 }
 
 void hash_set_deinit(HashSet* hs) {
     if (!hs || !hs->buffer) { return; }
     ASSERT_ALLOCATOR(hs->allocator);
 
-    hs->allocator.free_alloc(hs->buffer);
+    ALLOCATOR_FREE(hs->allocator, hs->buffer);
     hs->buffer    = nullptr;
     hs->header    = nullptr;
     hs->metadata  = nullptr;

@@ -34,9 +34,9 @@ typedef struct FunctionExpression {
                                                 TypeExpression*      return_type,
                                                 BlockStatement*      body,
                                                 FunctionExpression** function_expr,
-                                                memory_alloc_fn      memory_alloc);
+                                                Allocator*           allocator);
 
-void function_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void function_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 function_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

@@ -26,12 +26,12 @@ void check_errors(const ArrayList*         actual_errors,
 }
 
 ParserFixture::ParserFixture(const char* input) : stdio(file_io_std()) {
-    REQUIRE(STATUS_OK(lexer_init(&l, input, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(lexer_init(&l, input, standard_allocator)));
     REQUIRE(STATUS_OK(lexer_consume(&l)));
 
-    REQUIRE(STATUS_OK(ast_init(&a, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(ast_init(&a, standard_allocator)));
 
-    REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(parser_init(&p, &l, &stdio, standard_allocator)));
     REQUIRE(STATUS_OK(parser_consume(&p, &a)));
 }
 
@@ -46,7 +46,7 @@ void ParserFixture::check_errors(std::vector<std::string> expected_errors, bool 
 
 SemanticFixture::SemanticFixture(const char* input) : pf{input} {
     pf.check_errors();
-    REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, standard_allocator)));
     REQUIRE(STATUS_OK(seman_analyze(&seman)));
 }
 

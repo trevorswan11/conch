@@ -20,9 +20,9 @@ typedef struct DeclStatement {
                                            TypeExpression*       type,
                                            Expression*           value,
                                            DeclStatement**       decl_stmt,
-                                           memory_alloc_fn       memory_alloc);
+                                           Allocator*            allocator);
 
-void decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void decl_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);
@@ -48,9 +48,9 @@ typedef struct TypeDeclStatement {
                                                 Expression*           value,
                                                 bool                  primitive_alias,
                                                 TypeDeclStatement**   type_decl_stmt,
-                                                memory_alloc_fn       memory_alloc);
+                                                Allocator* allocator);
 
-void type_decl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void type_decl_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 type_decl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status
