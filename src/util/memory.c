@@ -1,6 +1,3 @@
-#include <assert.h>
-#include <stdint.h>
-
 #include "util/memory.h"
 #include "util/status.h"
 
@@ -77,7 +74,6 @@ uintptr_t align_up(uintptr_t ptr, size_t alignment) {
 }
 
 void* align_ptr(void* ptr, size_t alignment) { return (void*)align_up((uintptr_t)ptr, alignment); }
-
 void* ptr_offset(void* p, size_t offset) { return (void*)((uintptr_t)p + offset); }
 
 void swap(void* a, void* b, size_t size) {
@@ -93,20 +89,18 @@ void swap(void* a, void* b, size_t size) {
     }
 }
 
-[[nodiscard]] char* strdup_z_allocator(const char* str, memory_alloc_fn memory_alloc) {
+[[nodiscard]] char* strdup_z_allocator(const char* str, Allocator* allocator) {
     if (!str) { return nullptr; }
-    return strdup_s_allocator(str, strlen(str), memory_alloc);
+    return strdup_s_allocator(str, strlen(str), allocator);
 }
 
-[[nodiscard]] char* strdup_z(const char* str) {
-    return strdup_z_allocator(str, STANDARD_ALLOCATOR.memory_alloc);
-}
+[[nodiscard]] char* strdup_z(const char* str) { return strdup_z_allocator(str, &std_allocator); }
 
-[[nodiscard]] char* strdup_s_allocator(const char* str, size_t size, memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
+[[nodiscard]] char* strdup_s_allocator(const char* str, size_t size, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (!str) { return nullptr; }
 
-    char* copy = memory_alloc(size + 1);
+    char* copy = ALLOCATOR_PTR_MALLOC(allocator, size + 1);
     if (!copy) { return nullptr; }
 
     memcpy(copy, str, size);
@@ -115,22 +109,21 @@ void swap(void* a, void* b, size_t size) {
 }
 
 [[nodiscard]] char* strdup_s(const char* str, size_t size) {
-    return strdup_s_allocator(str, size, STANDARD_ALLOCATOR.memory_alloc);
+    return strdup_s_allocator(str, size, &std_allocator);
 }
 
-[[nodiscard]] Status slice_dupe(MutSlice* dest, const Slice* src, memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status slice_dupe(MutSlice* dest, const Slice* src, Allocator* allocator) {
     assert(src && dest);
-    char* duped = strdup_s_allocator(src->ptr, src->length, memory_alloc);
+    char* duped = strdup_s_allocator(src->ptr, src->length, allocator);
     if (!duped) { return ALLOCATION_FAILED; }
 
     *dest = mut_slice_from_str_s(duped, src->length);
     return SUCCESS;
 }
 
-[[nodiscard]] Status
-mut_slice_dupe(MutSlice* dest, const MutSlice* src, memory_alloc_fn memory_alloc) {
+[[nodiscard]] Status mut_slice_dupe(MutSlice* dest, const MutSlice* src, Allocator* allocator) {
     const Slice slice_src = slice_from_mut(src);
-    return slice_dupe(dest, &slice_src, memory_alloc);
+    return slice_dupe(dest, &slice_src, allocator);
 }
 
 RcControlBlock rc_init(rc_dtor dtor) {
@@ -147,15 +140,15 @@ RcControlBlock rc_init(rc_dtor dtor) {
     return rc_obj;
 }
 
-void rc_release(void* rc_obj, free_alloc_fn free_alloc) {
+void rc_release(void* rc_obj, Allocator* allocator) {
     if (!rc_obj) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     RcControlBlock* rc = (RcControlBlock*)rc_obj;
     rc->ref_count -= 1;
 
     if (rc->ref_count == 0) {
-        if (rc->dtor) { rc->dtor(rc_obj, free_alloc); }
-
-        free_alloc(rc_obj);
+        if (rc->dtor) { rc->dtor(rc_obj, allocator); }
+        ALLOCATOR_PTR_FREE(allocator, rc_obj);
     }
 }

@@ -9,11 +9,11 @@
 [[nodiscard]] Status discard_statement_create(Token              start_token,
                                               Expression*        to_discard,
                                               DiscardStatement** discard_stmt,
-                                              memory_alloc_fn    memory_alloc) {
-    assert(memory_alloc);
+                                              Allocator*         allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(to_discard);
 
-    DiscardStatement* discard = memory_alloc(sizeof(DiscardStatement));
+    DiscardStatement* discard = ALLOCATOR_PTR_MALLOC(allocator, sizeof(DiscardStatement));
     if (!discard) { return ALLOCATION_FAILED; }
 
     *discard = (DiscardStatement){
@@ -25,14 +25,14 @@
     return SUCCESS;
 }
 
-void discard_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void discard_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     DiscardStatement* discard = (DiscardStatement*)node;
-    NODE_VIRTUAL_FREE(discard->to_discard, free_alloc);
+    NODE_VIRTUAL_FREE(discard->to_discard, allocator);
 
-    free_alloc(discard);
+    ALLOCATOR_PTR_FREE(allocator, discard);
 }
 
 [[nodiscard]] Status

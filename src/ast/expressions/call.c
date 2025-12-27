@@ -7,14 +7,14 @@
 
 #include "util/containers/string_builder.h"
 
-void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
+void free_call_expression_list(ArrayList* arguments, Allocator* allocator) {
     assert(arguments && arguments->data);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(arguments);
     CallArgument           argument;
     while (array_list_const_iterator_has_next(&it, &argument)) {
-        NODE_VIRTUAL_FREE(argument.argument, free_alloc);
+        NODE_VIRTUAL_FREE(argument.argument, allocator);
     }
 
     array_list_deinit(arguments);
@@ -25,12 +25,12 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
                                             ArrayList        arguments,
                                             ArrayList        generics,
                                             CallExpression** call_expr,
-                                            memory_alloc_fn  memory_alloc) {
-    assert(memory_alloc);
+                                            Allocator*       allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(arguments.item_size == sizeof(CallArgument));
     ASSERT_EXPRESSION(function);
 
-    CallExpression* call = memory_alloc(sizeof(CallExpression));
+    CallExpression* call = ALLOCATOR_PTR_MALLOC(allocator, sizeof(CallExpression));
     if (!call) { return ALLOCATION_FAILED; }
 
     *call = (CallExpression){
@@ -44,16 +44,16 @@ void free_call_expression_list(ArrayList* arguments, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void call_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void call_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     CallExpression* call = (CallExpression*)node;
-    NODE_VIRTUAL_FREE(call->function, free_alloc);
-    free_call_expression_list(&call->arguments, free_alloc);
-    free_expression_list(&call->generics, free_alloc);
+    NODE_VIRTUAL_FREE(call->function, allocator);
+    free_call_expression_list(&call->arguments, allocator);
+    free_expression_list(&call->generics, allocator);
 
-    free_alloc(call);
+    ALLOCATOR_PTR_FREE(allocator, call);
 }
 
 [[nodiscard]] Status

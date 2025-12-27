@@ -25,7 +25,7 @@ static void test_reconstruction(const char* input, std::string expected) {
 
 TEST_CASE("Symbol map poll") {
     AST a;
-    REQUIRE(STATUS_OK(ast_init(&a, STANDARD_ALLOCATOR)));
+    REQUIRE(STATUS_OK(ast_init(&a, &std_allocator)));
     const Fixture<AST> af(a, ast_deinit);
     const auto*        symbols = &a.token_type_symbols;
 
@@ -258,7 +258,7 @@ TEST_CASE("Assignment") {
 }
 
 TEST_CASE("Free functions") {
-    void (*const destructors[])(ArrayList*, free_alloc_fn) = {
+    void (*const destructors[])(ArrayList*, Allocator*) = {
         clear_error_list,
         free_error_list,
         free_statement_list,
@@ -266,6 +266,6 @@ TEST_CASE("Free functions") {
     };
 
     for (const auto& dtor : destructors) {
-        dtor(nullptr, free);
+        dtor(nullptr, &std_allocator);
     }
 }

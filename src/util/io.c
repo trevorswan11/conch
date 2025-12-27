@@ -11,15 +11,12 @@ FileIO file_io_std(void) {
     };
 }
 
-[[nodiscard]] Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err) {
-    assert(io && out && err);
-
-    *io = (FileIO){
+FileIO file_io_init(FILE* in, FILE* out, FILE* err) {
+    return (FileIO){
         .in  = in,
         .out = out,
         .err = err,
     };
-    return SUCCESS;
 }
 
 void file_io_deinit(FileIO* io) {

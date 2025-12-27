@@ -12,12 +12,13 @@
                                                  Expression*           outer,
                                                  IdentifierExpression* inner,
                                                  NamespaceExpression** namespace_expr,
-                                                 memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                                 Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(outer);
     ASSERT_EXPRESSION(inner);
 
-    NamespaceExpression* namespace_local = memory_alloc(sizeof(NamespaceExpression));
+    NamespaceExpression* namespace_local =
+        ALLOCATOR_PTR_MALLOC(allocator, sizeof(NamespaceExpression));
     if (!namespace_local) { return ALLOCATION_FAILED; }
 
     *namespace_local = (NamespaceExpression){
@@ -30,15 +31,15 @@
     return SUCCESS;
 }
 
-void namespace_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void namespace_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
-    NODE_VIRTUAL_FREE(namespace_expr->outer, free_alloc);
-    NODE_VIRTUAL_FREE(namespace_expr->inner, free_alloc);
+    NODE_VIRTUAL_FREE(namespace_expr->outer, allocator);
+    NODE_VIRTUAL_FREE(namespace_expr->inner, allocator);
 
-    free_alloc(namespace_expr);
+    ALLOCATOR_PTR_FREE(allocator, namespace_expr);
 }
 
 [[nodiscard]] Status
@@ -62,8 +63,8 @@ namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* err
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     NamespaceExpression* namespace_expr = (NamespaceExpression*)node;
     ASSERT_EXPRESSION(namespace_expr->outer);
@@ -74,21 +75,20 @@ namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* err
 
     // All we need to check is the inner presence in the namespace
     SemanticType* inner_type;
-    TRY_DO(semantic_type_create(&inner_type, allocator.memory_alloc),
-           RC_RELEASE(direct_parent, allocator.free_alloc));
+    TRY_DO(semantic_type_create(&inner_type, allocator), RC_RELEASE(direct_parent, allocator));
     switch (direct_parent->tag) {
     case STYPE_ENUM: {
         const HashSet variants = direct_parent->variant.enum_type->variants;
         if (!hash_set_contains(&variants, &namespace_expr->inner->name)) {
             PUT_STATUS_PROPAGATE(errors, UNKNOWN_ENUM_VARIANT, start_token, {
-                RC_RELEASE(direct_parent, allocator.free_alloc);
-                RC_RELEASE(inner_type, allocator.free_alloc);
+                RC_RELEASE(direct_parent, allocator);
+                RC_RELEASE(inner_type, allocator);
             });
         }
 
         TRY_DO(semantic_type_copy_variant(inner_type, direct_parent, allocator), {
-            RC_RELEASE(direct_parent, allocator.free_alloc);
-            RC_RELEASE(inner_type, allocator.free_alloc);
+            RC_RELEASE(direct_parent, allocator);
+            RC_RELEASE(inner_type, allocator);
         });
 
         inner_type->is_const = true;
@@ -98,13 +98,13 @@ namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* err
     }
     default:
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_OUTER_NAMESPACE, start_token, {
-            RC_RELEASE(direct_parent, allocator.free_alloc);
-            RC_RELEASE(inner_type, allocator.free_alloc);
+            RC_RELEASE(direct_parent, allocator);
+            RC_RELEASE(inner_type, allocator);
         });
     }
 
     // The parent type doesn't matter for the resulting type
-    RC_RELEASE(direct_parent, allocator.free_alloc);
+    RC_RELEASE(direct_parent, allocator);
     parent->analyzed_type = inner_type;
     return SUCCESS;
 }

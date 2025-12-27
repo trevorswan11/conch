@@ -81,8 +81,8 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
                                              size_t   value_align,
                                              Hash (*hash)(const void*),
                                              int (*compare)(const void*, const void*),
-                                             Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
+                                             Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     if (!hm || !hash || !compare) { return NULL_PARAMETER; }
     if (key_size == 0 || value_size == 0) { return ZERO_ITEM_SIZE; }
     if (key_align == 0 || value_align == 0) { return ZERO_ITEM_ALIGN; }
@@ -102,7 +102,7 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
 
     const size_t total_size =
         header_size + metadata_size + (keys_size + key_align - 1) + (values_size + value_align - 1);
-    void* buffer = allocator.continuous_alloc(1, total_size);
+    void* buffer = ALLOCATOR_PTR_CALLOC(allocator, 1, total_size);
     if (!buffer) { return ALLOCATION_FAILED; }
 
     // Unpack the allocated block of memory
@@ -143,7 +143,7 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
         .available = capacity,
         .hash      = hash,
         .compare   = compare,
-        .allocator = allocator,
+        .allocator = *allocator,
     };
 
     hash_map_init_metadatas(hm);
@@ -158,22 +158,15 @@ static inline void hash_map_init_metadatas(HashMap* hm) {
                                    size_t   value_align,
                                    Hash (*hash)(const void*),
                                    int (*compare)(const void*, const void*)) {
-    return hash_map_init_allocator(hm,
-                                   capacity,
-                                   key_size,
-                                   key_align,
-                                   value_size,
-                                   value_align,
-                                   hash,
-                                   compare,
-                                   STANDARD_ALLOCATOR);
+    return hash_map_init_allocator(
+        hm, capacity, key_size, key_align, value_size, value_align, hash, compare, &std_allocator);
 }
 
 void hash_map_deinit(HashMap* hm) {
     if (!hm || !hm->buffer) { return; }
     ASSERT_ALLOCATOR(hm->allocator);
 
-    hm->allocator.free_alloc(hm->buffer);
+    ALLOCATOR_FREE(hm->allocator, hm->buffer);
     hm->buffer    = nullptr;
     hm->header    = nullptr;
     hm->metadata  = nullptr;

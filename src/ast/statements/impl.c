@@ -12,13 +12,13 @@
                                            IdentifierExpression* parent,
                                            BlockStatement*       implementation,
                                            ImplStatement**       impl_stmt,
-                                           memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
+                                           Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(parent);
     ASSERT_STATEMENT(implementation);
     assert(implementation->statements.length > 0);
 
-    ImplStatement* impl = memory_alloc(sizeof(ImplStatement));
+    ImplStatement* impl = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ImplStatement));
     if (!impl) { return ALLOCATION_FAILED; }
 
     *impl = (ImplStatement){
@@ -31,15 +31,15 @@
     return SUCCESS;
 }
 
-void impl_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void impl_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ImplStatement* impl = (ImplStatement*)node;
-    NODE_VIRTUAL_FREE(impl->parent, free_alloc);
-    NODE_VIRTUAL_FREE(impl->implementation, free_alloc);
+    NODE_VIRTUAL_FREE(impl->parent, allocator);
+    NODE_VIRTUAL_FREE(impl->implementation, allocator);
 
-    free_alloc(impl);
+    ALLOCATOR_PTR_FREE(allocator, impl);
 }
 
 [[nodiscard]] Status

@@ -16,8 +16,8 @@ typedef struct StringBuilder StringBuilder;
 // This can be useful for verifying operator precedence, but is disabled by default.
 extern bool group_expressions;
 
-void clear_error_list(ArrayList* errors, free_alloc_fn free_alloc);
-void free_error_list(ArrayList* errors, free_alloc_fn free_alloc);
+void clear_error_list(ArrayList* errors, Allocator* allocator);
+void free_error_list(ArrayList* errors, Allocator* allocator);
 
 typedef struct AST {
     ArrayList statements;
@@ -25,8 +25,14 @@ typedef struct AST {
     Allocator allocator;
 } AST;
 
-[[nodiscard]] Status ast_init(AST* ast, Allocator allocator);
+[[nodiscard]] Status ast_init(AST* ast, Allocator* allocator);
 void                 ast_deinit(AST* ast);
+
+// Gets a pointer to the AST's allocator.
+// The AST is asserted to be non-null here.
+//
+// The returned allocator is guaranteed to have a valid vtable.
+Allocator* ast_allocator(AST* ast);
 
 // Reconstructs the original source code from the AST.
 //
@@ -38,11 +44,11 @@ void                 ast_deinit(AST* ast);
 // If the symbol does not exist, returns the standard representation.
 Slice poll_tt_symbol(const HashMap* symbol_map, TokenType t);
 
-void clear_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
-void clear_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
+void clear_statement_list(ArrayList* statements, Allocator* allocator);
+void clear_expression_list(ArrayList* expressions, Allocator* allocator);
 
-void free_statement_list(ArrayList* statements, free_alloc_fn free_alloc);
-void free_expression_list(ArrayList* expressions, free_alloc_fn free_alloc);
+void free_statement_list(ArrayList* statements, Allocator* allocator);
+void free_expression_list(ArrayList* expressions, Allocator* allocator);
 
 // Handles the reconstruction of generic lists.
 //

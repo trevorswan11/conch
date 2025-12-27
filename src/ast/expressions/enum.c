@@ -10,15 +10,15 @@
 #include "util/containers/hash_set.h"
 #include "util/containers/string_builder.h"
 
-void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
+void free_enum_variant_list(ArrayList* variants, Allocator* allocator) {
     assert(variants);
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(variants);
     EnumVariant            variant;
     while (array_list_const_iterator_has_next(&it, &variant)) {
-        NODE_VIRTUAL_FREE(variant.name, free_alloc);
-        NODE_VIRTUAL_FREE(variant.value, free_alloc);
+        NODE_VIRTUAL_FREE(variant.name, allocator);
+        NODE_VIRTUAL_FREE(variant.value, allocator);
     }
 
     array_list_deinit(variants);
@@ -27,12 +27,12 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
 [[nodiscard]] Status enum_expression_create(Token            start_token,
                                             ArrayList        variants,
                                             EnumExpression** enum_expr,
-                                            memory_alloc_fn  memory_alloc) {
-    assert(memory_alloc);
+                                            Allocator*       allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(variants.item_size == sizeof(EnumVariant));
     assert(variants.length > 0);
 
-    EnumExpression* enum_local = memory_alloc(sizeof(EnumExpression));
+    EnumExpression* enum_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(EnumExpression));
     if (!enum_local) { return ALLOCATION_FAILED; }
 
     *enum_local = (EnumExpression){
@@ -44,14 +44,14 @@ void free_enum_variant_list(ArrayList* variants, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void enum_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void enum_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     EnumExpression* enum_expr = (EnumExpression*)node;
-    free_enum_variant_list(&enum_expr->variants, free_alloc);
+    free_enum_variant_list(&enum_expr->variants, allocator);
 
-    free_alloc(enum_expr);
+    ALLOCATOR_PTR_FREE(allocator, enum_expr);
 }
 
 [[nodiscard]] Status
@@ -86,9 +86,9 @@ enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    const Token     start_token    = node->start_token;
-    const Allocator allocator      = semantic_context_allocator(parent);
-    const Slice     enum_type_name = parent->namespace_type_name;
+    const Token start_token    = node->start_token;
+    Allocator*  allocator      = semantic_context_allocator(parent);
+    const Slice enum_type_name = parent->namespace_type_name;
 
     EnumExpression* enum_expr = (EnumExpression*)node;
     assert(enum_expr->variants.data && enum_expr->variants.length > 0);
@@ -100,7 +100,7 @@ enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     }
 
     SemanticType* type;
-    TRY(semantic_type_create(&type, allocator.memory_alloc));
+    TRY(semantic_type_create(&type, allocator));
     type->tag      = STYPE_ENUM;
     type->is_const = true;
     type->nullable = false;
@@ -114,16 +114,16 @@ enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
                                    hash_mut_slice,
                                    compare_mut_slices,
                                    allocator),
-           RC_RELEASE(type, allocator.free_alloc););
+           RC_RELEASE(type, allocator););
 
     ArrayListConstIterator it = array_list_const_iterator_init(&enum_expr->variants);
     EnumVariant            variant;
     while (array_list_const_iterator_has_next(&it, &variant)) {
         IdentifierExpression* ident = (IdentifierExpression*)variant.name;
         MutSlice              variant_name;
-        TRY_DO(mut_slice_dupe(&variant_name, &ident->name, allocator.memory_alloc), {
-            RC_RELEASE(type, allocator.free_alloc);
-            free_enum_variant_set(&variants, allocator.free_alloc);
+        TRY_DO(mut_slice_dupe(&variant_name, &ident->name, allocator), {
+            RC_RELEASE(type, allocator);
+            free_enum_variant_set(&variants, allocator);
         });
 
         // Shadowing of variant names is not allowed inside or outside the parent context
@@ -135,18 +135,18 @@ enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
                                     : REDEFINITION_OF_IDENTIFIER;
 
             PUT_STATUS_PROPAGATE(errors, error_code, start_token, {
-                RC_RELEASE(type, allocator.free_alloc);
-                free_enum_variant_set(&variants, allocator.free_alloc);
-                allocator.free_alloc(variant_name.ptr);
+                RC_RELEASE(type, allocator);
+                free_enum_variant_set(&variants, allocator);
+                ALLOCATOR_PTR_FREE(allocator, variant_name.ptr);
             });
         }
 
         // The value type of a variant is ephemeral and optional
         if (variant.value) {
             TRY_DO(NODE_VIRTUAL_ANALYZE(variant.value, parent, errors), {
-                RC_RELEASE(type, allocator.free_alloc);
-                free_enum_variant_set(&variants, allocator.free_alloc);
-                allocator.free_alloc(variant_name.ptr);
+                RC_RELEASE(type, allocator);
+                free_enum_variant_set(&variants, allocator);
+                ALLOCATOR_PTR_FREE(allocator, variant_name.ptr);
             });
 
             // Explicit values must be constant, non-nullable, signed integers
@@ -163,29 +163,29 @@ enum_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
             }
 
             // Since the types are ephemeral we just release now before error code is sent
-            RC_RELEASE(variant_type, allocator.free_alloc);
+            RC_RELEASE(variant_type, allocator);
             if (STATUS_ERR(type_check_result)) {
                 PUT_STATUS_PROPAGATE(errors, type_check_result, start_token, {
-                    RC_RELEASE(type, allocator.free_alloc);
-                    free_enum_variant_set(&variants, allocator.free_alloc);
-                    allocator.free_alloc(variant_name.ptr);
+                    RC_RELEASE(type, allocator);
+                    free_enum_variant_set(&variants, allocator);
+                    ALLOCATOR_PTR_FREE(allocator, variant_name.ptr);
                 });
             }
         }
 
         // Now the variant must be valid and should be added to the set
         TRY_DO(hash_set_put(&variants, &variant_name), {
-            RC_RELEASE(type, allocator.free_alloc);
-            free_enum_variant_set(&variants, allocator.free_alloc);
-            allocator.free_alloc(variant_name.ptr);
+            RC_RELEASE(type, allocator);
+            free_enum_variant_set(&variants, allocator);
+            ALLOCATOR_PTR_FREE(allocator, variant_name.ptr);
         });
     }
 
     // The enum stores a reference to its parent name
     SemanticEnumType* enum_type;
-    TRY_DO(semantic_enum_create(enum_type_name, variants, &enum_type, allocator.memory_alloc), {
-        RC_RELEASE(type, allocator.free_alloc);
-        free_enum_variant_set(&variants, allocator.free_alloc);
+    TRY_DO(semantic_enum_create(enum_type_name, variants, &enum_type, allocator), {
+        RC_RELEASE(type, allocator);
+        free_enum_variant_set(&variants, allocator);
     });
 
     type->variant.enum_type = enum_type;

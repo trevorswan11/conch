@@ -3,8 +3,6 @@
 
 #include <stdio.h>
 
-#include "util/status.h"
-
 typedef struct FileIO {
     FILE* in;
     FILE* out;
@@ -14,7 +12,7 @@ typedef struct FileIO {
 FileIO file_io_std(void);
 
 // Fills the io object, returning false if any arguments are NULL.
-[[nodiscard]] Status file_io_init(FileIO* io, FILE* in, FILE* out, FILE* err);
+FileIO file_io_init(FILE* in, FILE* out, FILE* err);
 
 // Only call this if you want to close the internal files.
 void file_io_deinit(FileIO* io);

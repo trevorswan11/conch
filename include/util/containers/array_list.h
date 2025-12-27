@@ -32,7 +32,7 @@ typedef struct {
 } ArrayListConstIterator;
 
 [[nodiscard]] Status
-array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator allocator);
+array_list_init_allocator(ArrayList* a, size_t capacity, size_t item_size, Allocator* allocator);
 [[nodiscard]] Status array_list_init(ArrayList* a, size_t capacity, size_t item_size);
 void                 array_list_deinit(ArrayList* a);
 

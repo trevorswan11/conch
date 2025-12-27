@@ -11,11 +11,11 @@
 [[nodiscard]] Status jump_statement_create(Token           start_token,
                                            Expression*     value,
                                            JumpStatement** jump_stmt,
-                                           memory_alloc_fn memory_alloc) {
-    assert(memory_alloc);
+                                           Allocator*      allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
-    JumpStatement* jump = memory_alloc(sizeof(JumpStatement));
+    JumpStatement* jump = ALLOCATOR_PTR_MALLOC(allocator, sizeof(JumpStatement));
     if (!jump) { return ALLOCATION_FAILED; }
 
     *jump = (JumpStatement){
@@ -27,14 +27,14 @@
     return SUCCESS;
 }
 
-void jump_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void jump_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     JumpStatement* jump = (JumpStatement*)node;
-    NODE_VIRTUAL_FREE(jump->value, free_alloc);
+    NODE_VIRTUAL_FREE(jump->value, allocator);
 
-    free_alloc(jump);
+    ALLOCATOR_PTR_FREE(allocator, jump);
 }
 
 [[nodiscard]] Status

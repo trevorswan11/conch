@@ -20,15 +20,15 @@ typedef struct StructExpression {
     ArrayList  members;
 } StructExpression;
 
-void free_struct_member_list(ArrayList* members, free_alloc_fn free_alloc);
+void free_struct_member_list(ArrayList* members, Allocator* allocator);
 
 [[nodiscard]] Status struct_expression_create(Token              start_token,
                                               ArrayList          generics,
                                               ArrayList          members,
                                               StructExpression** struct_expr,
-                                              memory_alloc_fn    memory_alloc);
+                                              Allocator*         allocator);
 
-void struct_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void struct_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

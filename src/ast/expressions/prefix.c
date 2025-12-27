@@ -12,13 +12,13 @@
 [[nodiscard]] Status prefix_expression_create(Token              start_token,
                                               Expression*        rhs,
                                               PrefixExpression** prefix_expr,
-                                              memory_alloc_fn    memory_alloc) {
-    assert(memory_alloc);
+                                              Allocator*         allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
     assert(start_token.type == BANG || start_token.type == NOT || start_token.type == MINUS);
     ASSERT_EXPRESSION(rhs);
 
-    PrefixExpression* prefix = memory_alloc(sizeof(PrefixExpression));
+    PrefixExpression* prefix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(PrefixExpression));
     if (!prefix) { return ALLOCATION_FAILED; }
 
     *prefix = (PrefixExpression){
@@ -30,14 +30,14 @@
     return SUCCESS;
 }
 
-void prefix_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void prefix_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     PrefixExpression* prefix = (PrefixExpression*)node;
-    NODE_VIRTUAL_FREE(prefix->rhs, free_alloc);
+    NODE_VIRTUAL_FREE(prefix->rhs, allocator);
 
-    free_alloc(prefix);
+    ALLOCATOR_PTR_FREE(allocator, prefix);
 }
 
 [[nodiscard]] Status
@@ -64,8 +64,8 @@ prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors
     ASSERT_EXPRESSION(node);
     assert(parent && errors);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     const TokenType prefix_op = start_token.type;
     assert(prefix_op == BANG || prefix_op == NOT || prefix_op == MINUS);
@@ -81,23 +81,18 @@ prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors
     // We can save an allocation and error check if we handle special cases now
     const Token value_tok = NODE_TOKEN(operand);
     if (prefix_op == BANG && operand_type->nullable) {
-        MAKE_PRIMITIVE(STYPE_BOOL,
-                       false,
-                       resulting_type,
-                       allocator.memory_alloc,
-                       RC_RELEASE(operand_type, allocator.free_alloc));
+        MAKE_PRIMITIVE(
+            STYPE_BOOL, false, resulting_type, allocator, RC_RELEASE(operand_type, allocator));
 
-        RC_RELEASE(operand_type, allocator.free_alloc);
+        RC_RELEASE(operand_type, allocator);
         parent->analyzed_type = resulting_type;
         return SUCCESS;
     }
 
     // It doesn't make sense to operate on types or potential nil values
     if (!operand_type->valued || operand_type->nullable) {
-        PUT_STATUS_PROPAGATE(errors,
-                             ILLEGAL_PREFIX_OPERAND,
-                             value_tok,
-                             RC_RELEASE(operand_type, allocator.free_alloc));
+        PUT_STATUS_PROPAGATE(
+            errors, ILLEGAL_PREFIX_OPERAND, value_tok, RC_RELEASE(operand_type, allocator));
     }
 
     SemanticType*         resulting_type = nullptr;
@@ -105,55 +100,46 @@ prefix_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors
     switch (prefix_op) {
     case BANG:
         if (semantic_type_is_primitive(operand_type) || operand_type->nullable) {
-            MAKE_PRIMITIVE(STYPE_BOOL,
-                           false,
-                           new_type,
-                           allocator.memory_alloc,
-                           RC_RELEASE(operand_type, allocator.free_alloc));
+            MAKE_PRIMITIVE(
+                STYPE_BOOL, false, new_type, allocator, RC_RELEASE(operand_type, allocator));
             resulting_type = new_type;
             break;
         }
 
         // User defined types are not implicitly convertible to bools
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-            RC_RELEASE(resulting_type, allocator.free_alloc);
-            RC_RELEASE(operand_type, allocator.free_alloc);
+            RC_RELEASE(resulting_type, allocator);
+            RC_RELEASE(operand_type, allocator);
         });
     case NOT:
         if (semantic_type_is_integer(operand_type)) {
-            MAKE_PRIMITIVE(operand_tag,
-                           false,
-                           new_type,
-                           allocator.memory_alloc,
-                           RC_RELEASE(operand_type, allocator.free_alloc));
+            MAKE_PRIMITIVE(
+                operand_tag, false, new_type, allocator, RC_RELEASE(operand_type, allocator));
             resulting_type = new_type;
             break;
         }
 
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-            RC_RELEASE(resulting_type, allocator.free_alloc);
-            RC_RELEASE(operand_type, allocator.free_alloc);
+            RC_RELEASE(resulting_type, allocator);
+            RC_RELEASE(operand_type, allocator);
         });
     case MINUS:
         if (semantic_type_is_arithmetic(operand_type)) {
-            MAKE_PRIMITIVE(operand_tag,
-                           false,
-                           new_type,
-                           allocator.memory_alloc,
-                           RC_RELEASE(operand_type, allocator.free_alloc));
+            MAKE_PRIMITIVE(
+                operand_tag, false, new_type, allocator, RC_RELEASE(operand_type, allocator));
             resulting_type = new_type;
             break;
         }
 
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_PREFIX_OPERAND, value_tok, {
-            RC_RELEASE(resulting_type, allocator.free_alloc);
-            RC_RELEASE(operand_type, allocator.free_alloc);
+            RC_RELEASE(resulting_type, allocator);
+            RC_RELEASE(operand_type, allocator);
         });
     default:
         UNREACHABLE;
     }
 
-    RC_RELEASE(operand_type, allocator.free_alloc);
+    RC_RELEASE(operand_type, allocator);
     parent->analyzed_type = resulting_type;
     return SUCCESS;
 }

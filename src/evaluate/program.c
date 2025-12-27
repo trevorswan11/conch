@@ -5,7 +5,7 @@
 
 #include "semantic/analyzer.h"
 
-[[nodiscard]] Status program_init(Program* program, FileIO* io, Allocator allocator) {
+[[nodiscard]] Status program_init(Program* program, FileIO* io, Allocator* allocator) {
     Lexer l;
     TRY(lexer_null_init(&l, allocator));
 
@@ -26,7 +26,7 @@
     });
 
     StringBuilder output_buffer;
-    TRY_DO(string_builder_init(&output_buffer, BUF_SIZE), {
+    TRY_DO(string_builder_init_allocator(&output_buffer, BUF_SIZE, allocator), {
         lexer_deinit(&l);
         ast_deinit(&ast);
         parser_deinit(&p);
@@ -40,7 +40,7 @@
         .seman         = seman,
         .output_buffer = output_buffer,
         .io            = io,
-        .allocator     = allocator,
+        .allocator     = *allocator,
     };
     return SUCCESS;
 }

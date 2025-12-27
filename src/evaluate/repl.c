@@ -16,7 +16,7 @@ static inline void           sigint_handler([[maybe_unused]] int sig) { interrup
 
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), STANDARD_ALLOCATOR));
+    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), &std_allocator));
 
     FileIO io = file_io_std();
     TRY_DO(repl_run(&io, buf_in, &buf_out), array_list_deinit(&buf_out));
@@ -34,7 +34,7 @@ static inline void           sigint_handler([[maybe_unused]] int sig) { interrup
     }
 
     Program program;
-    TRY(program_init(&program, io, STANDARD_ALLOCATOR));
+    TRY(program_init(&program, io, &std_allocator));
 
     TRY_IO(fprintf(io->out, WELCOME_MESSAGE));
     TRY_IO(fprintf(io->out, "\n"));

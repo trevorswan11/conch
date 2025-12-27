@@ -2705,7 +2705,7 @@ TEST_CASE("Generics") {
 }
 
 TEST_CASE("Null passed to destructors") {
-    void (*const destructors[])(Node*, free_alloc_fn) = {
+    void (*const destructors[])(Node*, Allocator*) = {
         array_literal_expression_destroy,
         assignment_expression_destroy,
         bool_literal_expression_destroy,
@@ -2740,6 +2740,6 @@ TEST_CASE("Null passed to destructors") {
     };
 
     for (const auto d : destructors) {
-        d(nullptr, free);
+        d(nullptr, &std_allocator);
     }
 }

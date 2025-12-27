@@ -91,9 +91,9 @@ typedef struct TypeExpression {
                                             TypeExpressionTag   tag,
                                             TypeExpressionUnion variant,
                                             TypeExpression**    type_expr,
-                                            memory_alloc_fn     memory_alloc);
+                                            Allocator*          allocator);
 
-void type_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void type_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 type_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

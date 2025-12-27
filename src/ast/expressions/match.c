@@ -6,15 +6,15 @@
 
 #include "util/containers/string_builder.h"
 
-void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
+void free_match_arm_list(ArrayList* arms, Allocator* allocator) {
     assert(arms && arms->item_size == sizeof(MatchArm));
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayListConstIterator it = array_list_const_iterator_init(arms);
     MatchArm               arm;
     while (array_list_const_iterator_has_next(&it, &arm)) {
-        NODE_VIRTUAL_FREE(arm.pattern, free_alloc);
-        NODE_VIRTUAL_FREE(arm.dispatch, free_alloc);
+        NODE_VIRTUAL_FREE(arm.pattern, allocator);
+        NODE_VIRTUAL_FREE(arm.dispatch, allocator);
     }
 
     array_list_deinit(arms);
@@ -25,13 +25,13 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
                                              ArrayList         arms,
                                              Statement*        catch_all,
                                              MatchExpression** match_expr,
-                                             memory_alloc_fn   memory_alloc) {
-    assert(memory_alloc);
+                                             Allocator*        allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     ASSERT_EXPRESSION(expression);
     assert(arms.item_size == sizeof(MatchArm));
     assert(arms.length > 0);
 
-    MatchExpression* match = memory_alloc(sizeof(MatchExpression));
+    MatchExpression* match = ALLOCATOR_PTR_MALLOC(allocator, sizeof(MatchExpression));
     if (!match) { return ALLOCATION_FAILED; }
 
     *match = (MatchExpression){
@@ -45,16 +45,16 @@ void free_match_arm_list(ArrayList* arms, free_alloc_fn free_alloc) {
     return SUCCESS;
 }
 
-void match_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void match_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     MatchExpression* match = (MatchExpression*)node;
-    NODE_VIRTUAL_FREE(match->expression, free_alloc);
-    free_match_arm_list(&match->arms, free_alloc);
-    NODE_VIRTUAL_FREE(match->catch_all, free_alloc);
+    NODE_VIRTUAL_FREE(match->expression, allocator);
+    free_match_arm_list(&match->arms, allocator);
+    NODE_VIRTUAL_FREE(match->catch_all, allocator);
 
-    free_alloc(match);
+    ALLOCATOR_PTR_FREE(allocator, match);
 }
 
 [[nodiscard]] Status

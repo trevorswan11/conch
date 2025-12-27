@@ -16,14 +16,18 @@ typedef struct SemanticContext {
     Slice         namespace_type_name;
 } SemanticContext;
 
-Allocator     semantic_context_allocator(SemanticContext* context);
+// Gets a pointer to the context's allocator.
+// The context and its symbol table are asserted to be non-null here.
+//
+// The returned allocator is guaranteed to have a valid vtable.
+Allocator*    semantic_context_allocator(SemanticContext* context);
 SemanticType* semantic_context_move_analyzed(SemanticContext* context);
 
 [[nodiscard]] Status
-semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator allocator);
+semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator* allocator);
 
 // Releases the provided context but does not wipe parents
-void semantic_context_destroy(SemanticContext* context, free_alloc_fn free_alloc);
+void semantic_context_destroy(SemanticContext* context, Allocator* allocator);
 
 bool semantic_context_find(SemanticContext* context,
                            bool             check_parents,

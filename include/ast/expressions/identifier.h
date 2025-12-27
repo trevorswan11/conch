@@ -11,9 +11,9 @@ typedef struct IdentifierExpression {
 [[nodiscard]] Status identifier_expression_create(Token                  start_token,
                                                   MutSlice               name,
                                                   IdentifierExpression** ident_expr,
-                                                  memory_alloc_fn        memory_alloc);
+                                                  Allocator*             allocator);
 
-void identifier_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void identifier_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 identifier_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

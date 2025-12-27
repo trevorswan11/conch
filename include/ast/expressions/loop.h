@@ -21,7 +21,7 @@ typedef struct ForLoopExpression {
     Statement*      non_break;
 } ForLoopExpression;
 
-void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc);
+void free_for_capture_list(ArrayList* captures, Allocator* allocator);
 
 [[nodiscard]] Status for_loop_expression_create(Token               start_token,
                                                 ArrayList           iterables,
@@ -29,9 +29,9 @@ void free_for_capture_list(ArrayList* captures, free_alloc_fn free_alloc);
                                                 BlockStatement*     block,
                                                 Statement*          non_break,
                                                 ForLoopExpression** for_expr,
-                                                memory_alloc_fn     memory_alloc);
+                                                Allocator*          allocator);
 
-void for_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void for_loop_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status
@@ -60,9 +60,9 @@ typedef struct WhileLoopExpression {
                                                   BlockStatement*       block,
                                                   Statement*            non_break,
                                                   WhileLoopExpression** while_expr,
-                                                  memory_alloc_fn       memory_alloc);
+                                                  Allocator*            allocator);
 
-void while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void while_loop_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status
@@ -87,9 +87,9 @@ typedef struct DoWhileLoopExpression {
                                                      BlockStatement*         block,
                                                      Expression*             condition,
                                                      DoWhileLoopExpression** do_while_expr,
-                                                     memory_alloc_fn         memory_alloc);
+                                                     Allocator*              allocator);
 
-void do_while_loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void do_while_loop_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status
@@ -112,9 +112,9 @@ typedef struct LoopExpression {
 [[nodiscard]] Status loop_expression_create(Token            start_token,
                                             BlockStatement*  block,
                                             LoopExpression** loop_expr,
-                                            memory_alloc_fn  memory_alloc);
+                                            Allocator*       allocator);
 
-void loop_expression_destroy(Node* node, free_alloc_fn free_alloc);
+void loop_expression_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status

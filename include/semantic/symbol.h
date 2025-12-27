@@ -11,8 +11,8 @@ typedef struct SymbolTable {
     HashMap symbols;
 } SymbolTable;
 
-[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator allocator);
-void                 symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc);
+[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator* allocator);
+void                 symbol_table_destroy(SymbolTable* table, Allocator* allocator);
 
 // Adds a symbol/type pair to the table.
 // The type is retained by the table, so it can never be released if the table holds it.

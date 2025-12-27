@@ -5,9 +5,9 @@
 
 #include "util/hash.h"
 
-[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator allocator) {
-    ASSERT_ALLOCATOR(allocator);
-    SymbolTable* st = allocator.memory_alloc(sizeof(SymbolTable));
+[[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    SymbolTable* st = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SymbolTable));
     if (!st) { return ALLOCATION_FAILED; }
 
     HashMap symbols;
@@ -20,7 +20,7 @@
                                    hash_mut_slice,
                                    compare_mut_slices,
                                    allocator),
-           allocator.free_alloc(st));
+           ALLOCATOR_PTR_FREE(allocator, st));
 
     *st = (SymbolTable){
         .symbols = symbols,
@@ -30,24 +30,25 @@
     return SUCCESS;
 }
 
-void symbol_table_destroy(SymbolTable* table, free_alloc_fn free_alloc) {
+void symbol_table_destroy(SymbolTable* table, Allocator* allocator) {
     if (!table) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     MapEntry        next;
     HashMapIterator it = hash_map_iterator_init(&table->symbols);
     while (hash_map_iterator_has_next(&it, &next)) {
         MutSlice* name = (MutSlice*)next.key_ptr;
         if (name->ptr) {
-            free_alloc(name->ptr);
+            ALLOCATOR_PTR_FREE(allocator, name->ptr);
             *name = zeroed_mut_slice();
         }
 
         SemanticType** type = (SemanticType**)next.value_ptr;
-        RC_RELEASE(*type, free_alloc);
+        RC_RELEASE(*type, allocator);
     }
 
     hash_map_deinit(&table->symbols);
-    free_alloc(table);
+    ALLOCATOR_PTR_FREE(allocator, table);
 }
 
 [[nodiscard]] Status symbol_table_add(SymbolTable* st, MutSlice symbol, SemanticType* type) {

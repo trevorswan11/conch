@@ -12,9 +12,9 @@
                                              ImportUnion           variant,
                                              IdentifierExpression* alias,
                                              ImportStatement**     import_stmt,
-                                             memory_alloc_fn       memory_alloc) {
-    assert(memory_alloc);
-    ImportStatement* import = memory_alloc(sizeof(ImportStatement));
+                                             Allocator*            allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    ImportStatement* import = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ImportStatement));
     if (!import) { return ALLOCATION_FAILED; }
 
     *import = (ImportStatement){
@@ -28,22 +28,22 @@
     return SUCCESS;
 }
 
-void import_statement_destroy(Node* node, free_alloc_fn free_alloc) {
+void import_statement_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ImportStatement* import = (ImportStatement*)node;
     switch (import->tag) {
     case STANDARD:
-        NODE_VIRTUAL_FREE(import->variant.standard_import, free_alloc);
+        NODE_VIRTUAL_FREE(import->variant.standard_import, allocator);
         break;
     case USER:
-        NODE_VIRTUAL_FREE(import->variant.user_import, free_alloc);
+        NODE_VIRTUAL_FREE(import->variant.user_import, allocator);
         break;
     }
 
-    NODE_VIRTUAL_FREE(import->alias, free_alloc);
-    free_alloc(import);
+    NODE_VIRTUAL_FREE(import->alias, allocator);
+    ALLOCATOR_PTR_FREE(allocator, import);
 }
 
 [[nodiscard]] Status

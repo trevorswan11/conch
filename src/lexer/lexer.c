@@ -11,7 +11,7 @@
 #include "util/alphanum.h"
 #include "util/hash.h"
 
-[[nodiscard]] static inline Status init_keywords(HashMap* keyword_map, Allocator allocator) {
+[[nodiscard]] static inline Status init_keywords(HashMap* keyword_map, Allocator* allocator) {
     const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
     TRY(hash_map_init_allocator(keyword_map,
                                 num_keywords,
@@ -31,7 +31,7 @@
     return SUCCESS;
 }
 
-[[nodiscard]] static inline Status init_operators(HashMap* operator_map, Allocator allocator) {
+[[nodiscard]] static inline Status init_operators(HashMap* operator_map, Allocator* allocator) {
     const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
     TRY(hash_map_init_allocator(operator_map,
                                 num_operators,
@@ -51,7 +51,7 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status lexer_init(Lexer* l, const char* input, Allocator allocator) {
+[[nodiscard]] Status lexer_init(Lexer* l, const char* input, Allocator* allocator) {
     assert(input);
     TRY(lexer_null_init(l, allocator));
 
@@ -62,9 +62,9 @@
     return SUCCESS;
 }
 
-[[nodiscard]] Status lexer_null_init(Lexer* l, Allocator allocator) {
+[[nodiscard]] Status lexer_null_init(Lexer* l, Allocator* allocator) {
     assert(l);
-    ASSERT_ALLOCATOR(allocator);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     HashMap keywords;
     TRY(init_keywords(&keywords, allocator));
@@ -89,7 +89,7 @@
         .col_no            = 0,
         .keywords          = keywords,
         .operators         = operators,
-        .allocator         = allocator,
+        .allocator         = *allocator,
     };
 
     return SUCCESS;

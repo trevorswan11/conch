@@ -12,11 +12,11 @@
                                                      bool                     inferred_size,
                                                      ArrayList                items,
                                                      ArrayLiteralExpression** array_expr,
-                                                     memory_alloc_fn          memory_alloc) {
-    assert(memory_alloc);
+                                                     Allocator*               allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(items.item_size == sizeof(Expression*));
 
-    ArrayLiteralExpression* array = memory_alloc(sizeof(ArrayLiteralExpression));
+    ArrayLiteralExpression* array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ArrayLiteralExpression));
     if (!array) { return ALLOCATION_FAILED; }
 
     *array = (ArrayLiteralExpression){
@@ -29,14 +29,14 @@
     return SUCCESS;
 }
 
-void array_literal_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void array_literal_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
+    ASSERT_ALLOCATOR_PTR(allocator);
 
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
-    free_expression_list(&array->items, free_alloc);
+    free_expression_list(&array->items, allocator);
 
-    free_alloc(array);
+    ALLOCATOR_PTR_FREE(allocator, array);
 }
 
 [[nodiscard]] Status
@@ -75,8 +75,8 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
     ArrayLiteralExpression* array = (ArrayLiteralExpression*)node;
     assert(array->items.data && array->items.length > 0);
 
-    const Token     start_token = node->start_token;
-    const Allocator allocator   = semantic_context_allocator(parent);
+    const Token start_token = node->start_token;
+    Allocator*  allocator   = semantic_context_allocator(parent);
 
     ArrayListConstIterator it = array_list_const_iterator_init(&array->items);
     Expression*            item;
@@ -85,31 +85,27 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
     TRY(NODE_VIRTUAL_ANALYZE(item, parent, errors));
     SemanticType* inner_type = semantic_context_move_analyzed(parent);
     if (!inner_type->valued) {
-        PUT_STATUS_PROPAGATE(errors,
-                             NON_VALUED_ARRAY_ITEM,
-                             start_token,
-                             RC_RELEASE(inner_type, allocator.free_alloc));
+        PUT_STATUS_PROPAGATE(
+            errors, NON_VALUED_ARRAY_ITEM, start_token, RC_RELEASE(inner_type, allocator));
     }
 
     // All following types must be exactly equal to the first type
     while (array_list_const_iterator_has_next(&it, (void*)&item)) {
-        TRY_DO(NODE_VIRTUAL_ANALYZE(item, parent, errors),
-               RC_RELEASE(inner_type, allocator.free_alloc));
+        TRY_DO(NODE_VIRTUAL_ANALYZE(item, parent, errors), RC_RELEASE(inner_type, allocator));
         SemanticType* next_type = semantic_context_move_analyzed(parent);
 
         if (!type_equal(inner_type, next_type)) {
             PUT_STATUS_PROPAGATE(errors, ARRAY_ITEM_TYPE_MISMATCH, start_token, {
-                RC_RELEASE(inner_type, allocator.free_alloc);
-                RC_RELEASE(next_type, allocator.free_alloc);
+                RC_RELEASE(inner_type, allocator);
+                RC_RELEASE(next_type, allocator);
             });
         }
 
-        RC_RELEASE(next_type, allocator.free_alloc);
+        RC_RELEASE(next_type, allocator);
     }
 
     SemanticType* resulting_type;
-    TRY_DO(semantic_type_create(&resulting_type, allocator.memory_alloc),
-           RC_RELEASE(inner_type, allocator.free_alloc));
+    TRY_DO(semantic_type_create(&resulting_type, allocator), RC_RELEASE(inner_type, allocator));
     resulting_type->tag      = STYPE_ARRAY;
     resulting_type->is_const = false;
     resulting_type->valued   = true;
@@ -120,10 +116,10 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
                                  (SemanticArrayUnion){.length = array->items.length},
                                  inner_type,
                                  &sarray,
-                                 allocator.memory_alloc),
+                                 allocator),
            {
-               RC_RELEASE(inner_type, allocator.free_alloc);
-               RC_RELEASE(resulting_type, allocator.free_alloc);
+               RC_RELEASE(inner_type, allocator);
+               RC_RELEASE(resulting_type, allocator);
            });
 
     // Everything allocated is moved into the resulting type

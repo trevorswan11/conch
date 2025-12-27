@@ -16,9 +16,9 @@ typedef struct ImplStatement {
                                            IdentifierExpression* parent,
                                            BlockStatement*       implementation,
                                            ImplStatement**       impl_stmt,
-                                           memory_alloc_fn       memory_alloc);
+                                           Allocator*            allocator);
 
-void impl_statement_destroy(Node* node, free_alloc_fn free_alloc);
+void impl_statement_destroy(Node* node, Allocator* allocator);
 [[nodiscard]] Status
 impl_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder* sb);
 [[nodiscard]] Status impl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors);

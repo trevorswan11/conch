@@ -8,10 +8,10 @@
 #include "util/containers/string_builder.h"
 
 #define SINGLE_STMT_CREATE(T, custom_vtab, out_expr)              \
-    assert(memory_alloc);                                         \
+    ASSERT_ALLOCATOR_PTR(allocator);                              \
                                                                   \
     typedef T S;                                                  \
-    S*        temp = memory_alloc(sizeof(S));                     \
+    S*        temp = ALLOCATOR_PTR_MALLOC(allocator, sizeof(S));  \
     if (!temp) { return ALLOCATION_FAILED; }                      \
                                                                   \
     *temp       = (S){EXPRESSION_INIT(custom_vtab, start_token)}; \
@@ -25,14 +25,14 @@
     TRY(string_builder_append_str_z(sb, string)); \
     return SUCCESS
 
-void single_expression_destroy(Node* node, free_alloc_fn free_alloc) {
+void single_expression_destroy(Node* node, Allocator* allocator) {
     if (!node) { return; }
-    assert(free_alloc);
-    free_alloc(node);
+    ASSERT_ALLOCATOR_PTR(allocator);
+    ALLOCATOR_PTR_FREE(allocator, node);
 }
 
 [[nodiscard]] Status
-nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_fn memory_alloc) {
+nil_expression_create(Token start_token, NilExpression** nil_expr, Allocator* allocator) {
     SINGLE_STMT_CREATE(NilExpression, NIL_VTABLE, nil_expr);
 }
 
@@ -45,12 +45,11 @@ nil_expression_create(Token start_token, NilExpression** nil_expr, memory_alloc_
 [[nodiscard]] Status nil_expression_analyze([[maybe_unused]] Node*      node,
                                             SemanticContext*            parent,
                                             [[maybe_unused]] ArrayList* errors) {
-    PRIMITIVE_ANALYZE(STYPE_NIL, true, semantic_context_allocator(parent).memory_alloc);
+    PRIMITIVE_ANALYZE(STYPE_NIL, true, semantic_context_allocator(parent));
 }
 
-[[nodiscard]] Status ignore_expression_create(Token              start_token,
-                                              IgnoreExpression** ignore_expr,
-                                              memory_alloc_fn    memory_alloc) {
+[[nodiscard]] Status
+ignore_expression_create(Token start_token, IgnoreExpression** ignore_expr, Allocator* allocator) {
     SINGLE_STMT_CREATE(IgnoreExpression, IGNORE_VTABLE, ignore_expr);
 }
 
