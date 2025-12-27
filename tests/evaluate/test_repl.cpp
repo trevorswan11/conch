@@ -67,7 +67,7 @@ TEST_CASE("REPL with error input") {
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
-    FileIO io = file_io_init(in, out, err);
+    FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
