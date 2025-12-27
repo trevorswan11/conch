@@ -37,8 +37,7 @@ TEST_CASE("REPL with acceptable input") {
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
-    FileIO io;
-    REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
@@ -68,8 +67,7 @@ TEST_CASE("REPL with error input") {
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
-    FileIO io;
-    REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    FileIO io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];
@@ -100,8 +98,7 @@ TEST_CASE("REPL with incorrect buffer") {
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
-    FileIO io;
-    REQUIRE(STATUS_OK(file_io_init(&io, in, out, err)));
+    FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
     char      buf[BUF_SIZE];

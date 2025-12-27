@@ -718,8 +718,7 @@ TEST_CASE("Token dumping") {
     FILE* out = temp_out.open("wb");
     FILE* err = temp_err.open("wb");
 
-    FileIO io;
-    REQUIRE(STATUS_OK(file_io_init(&io, nullptr, out, err)));
+    FileIO                io = file_io_init(nullptr, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
     REQUIRE(STATUS_OK(lexer_print_tokens(&l, &io)));
