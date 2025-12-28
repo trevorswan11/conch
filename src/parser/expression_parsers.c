@@ -392,7 +392,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
         UNREACHABLE_IF_ERROR(parser_next_token(p));
 
         switch (p->current_token.type) {
-        case TYPEOF: {
+        case TYPEOF:
             // Using arrays, functions, enums, or structs now is weird
             switch (p->peek_token.type) {
             case LBRACKET:
@@ -421,8 +421,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
                 array_list_deinit(&dim_array);
             });
             break;
-        }
-        case FUNCTION: {
+        case FUNCTION:
             bool            contains_default_param;
             ArrayList       generics;
             ArrayList       parameters;
@@ -461,8 +460,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
                 array_list_deinit(&dim_array);
             });
             break;
-        }
-        case STRUCT: {
+        case STRUCT:
             Expression* struct_expr;
             TRY_DO(struct_expression_parse(p, &struct_expr), array_list_deinit(&dim_array));
             StructExpression* struct_type = (StructExpression*)struct_expr;
@@ -477,8 +475,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
                 array_list_deinit(&dim_array);
             });
             break;
-        }
-        case ENUM: {
+        case ENUM:
             Expression* enum_expr;
             TRY_DO(enum_expression_parse(p, &enum_expr), array_list_deinit(&dim_array));
             EnumExpression* enum_type = (EnumExpression*)enum_expr;
@@ -493,7 +490,6 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
                 array_list_deinit(&dim_array);
             });
             break;
-        }
         default:
             array_list_deinit(&dim_array);
             return UNEXPECTED_TOKEN;

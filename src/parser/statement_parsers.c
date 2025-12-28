@@ -197,7 +197,7 @@
     Expression* payload;
 
     switch (p->peek_token.type) {
-    case IDENT: {
+    case IDENT:
         UNREACHABLE_IF_ERROR(parser_expect_peek(p, IDENT));
         TRY(identifier_expression_parse(p, &payload));
         IdentifierExpression* ident = (IdentifierExpression*)payload;
@@ -205,8 +205,7 @@
         tag     = STANDARD;
         variant = (ImportUnion){.standard_import = ident};
         break;
-    }
-    case STRING: {
+    case STRING:
         UNREACHABLE_IF_ERROR(parser_expect_peek(p, STRING));
         TRY(string_expression_parse(p, &payload));
         StringLiteralExpression* string = (StringLiteralExpression*)payload;
@@ -214,7 +213,6 @@
         tag     = USER;
         variant = (ImportUnion){.user_import = string};
         break;
-    }
     default:
         PUT_STATUS_PROPAGATE(&p->errors, UNEXPECTED_TOKEN, p->peek_token, {});
     }

@@ -39,34 +39,31 @@ void type_expression_destroy(Node* node, Allocator* allocator) {
     if (type->tag == EXPLICIT) {
         ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
-        case EXPLICIT_IDENT: {
+        case EXPLICIT_IDENT:
             ExplicitIdentType ident_type = explicit_type.variant.ident_type;
             NODE_VIRTUAL_FREE(ident_type.name, allocator);
             free_expression_list(&ident_type.generics, allocator);
             break;
-        }
         case EXPLICIT_TYPEOF:
             NODE_VIRTUAL_FREE(explicit_type.variant.referred_type, allocator);
             break;
-        case EXPLICIT_FN: {
+        case EXPLICIT_FN:
             ExplicitFunctionType function_type = explicit_type.variant.function_type;
             free_expression_list(&function_type.generics, allocator);
             free_parameter_list(&function_type.parameters, allocator);
             NODE_VIRTUAL_FREE(function_type.return_type, allocator);
             break;
-        }
         case EXPLICIT_STRUCT:
             NODE_VIRTUAL_FREE(explicit_type.variant.struct_type, allocator);
             break;
         case EXPLICIT_ENUM:
             NODE_VIRTUAL_FREE(explicit_type.variant.enum_type, allocator);
             break;
-        case EXPLICIT_ARRAY: {
+        case EXPLICIT_ARRAY:
             TypeExpression* inner = explicit_type.variant.array_type.inner_type;
             array_list_deinit(&explicit_type.variant.array_type.dimensions);
             NODE_VIRTUAL_FREE(inner, allocator);
             break;
-        }
         }
     }
 
@@ -111,7 +108,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     } else {
         const ExplicitType explicit_type = type->variant.explicit_type;
         switch (explicit_type.tag) {
-        case EXPLICIT_IDENT: {
+        case EXPLICIT_IDENT:
             TRY(semantic_type_create(&new_symbol_type, allocator));
             new_symbol_type->is_const = true;
             new_symbol_type->valued   = false;
@@ -146,8 +143,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
                                      RC_RELEASE(new_symbol_type, allocator));
             }
             break;
-        }
-        case EXPLICIT_TYPEOF: {
+        case EXPLICIT_TYPEOF:
             TRY(semantic_type_create(&new_symbol_type, allocator));
 
             // We need to copy into since we may be changing nullable status
@@ -164,8 +160,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
             RC_RELEASE(analyzed, allocator);
             new_symbol_type->nullable = explicit_type.nullable;
             break;
-        }
-        case EXPLICIT_ENUM: {
+        case EXPLICIT_ENUM:
             // The enum is brand new lifting and we can safely alter nullable
             const EnumExpression* enum_expr = explicit_type.variant.enum_type;
             TRY(NODE_VIRTUAL_ANALYZE(enum_expr, parent, errors));
@@ -173,7 +168,59 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
             new_symbol_type           = semantic_context_move_analyzed(parent);
             new_symbol_type->nullable = explicit_type.nullable;
             break;
-        }
+        case EXPLICIT_ARRAY:
+            const ExplicitArrayType array_expr = explicit_type.variant.array_type;
+            assert(array_expr.dimensions.length > 0);
+            TRY(NODE_VIRTUAL_ANALYZE(array_expr.inner_type, parent, errors));
+            SemanticType* inner_array_type = semantic_context_move_analyzed(parent);
+
+            TRY_DO(semantic_type_create(&new_symbol_type, allocator),
+                   RC_RELEASE(inner_array_type, allocator));
+            new_symbol_type->nullable = explicit_type.nullable;
+
+            SemanticArrayType* sarray;
+            if (array_expr.dimensions.length == 1) {
+                size_t length;
+                UNREACHABLE_IF_ERROR(array_list_get(&array_expr.dimensions, 0, &length));
+                TRY_DO(semantic_array_create(STYPE_ARRAY_SINGLE_DIM,
+                                             (SemanticArrayUnion){.length = length},
+                                             inner_array_type,
+                                             &sarray,
+                                             allocator),
+                       {
+                           RC_RELEASE(inner_array_type, allocator);
+                           RC_RELEASE(new_symbol_type, allocator);
+                       });
+            } else {
+                ArrayList dimensions;
+                TRY_DO(array_list_init_allocator(
+                           &dimensions, array_expr.dimensions.length, sizeof(size_t), allocator),
+                       {
+                           RC_RELEASE(inner_array_type, allocator);
+                           RC_RELEASE(new_symbol_type, allocator);
+                       });
+
+                ArrayListConstIterator it = array_list_const_iterator_init(&array_expr.dimensions);
+                size_t                 dim;
+                while (array_list_const_iterator_has_next(&it, &dim)) {
+                    array_list_push_assume_capacity(&dimensions, &dim);
+                }
+
+                TRY_DO(semantic_array_create(STYPE_ARRAY_MULTI_DIM,
+                                             (SemanticArrayUnion){.dimensions = dimensions},
+                                             inner_array_type,
+                                             &sarray,
+                                             allocator),
+                       {
+                           array_list_deinit(&dimensions);
+                           RC_RELEASE(inner_array_type, allocator);
+                           RC_RELEASE(new_symbol_type, allocator);
+                       });
+            }
+
+            new_symbol_type->tag     = STYPE_ARRAY;
+            new_symbol_type->variant = (SemanticTypeUnion){.array_type = sarray};
+            break;
         default:
             return NOT_IMPLEMENTED;
         }
@@ -192,19 +239,18 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
     assert(sb);
 
     switch (explicit_type.tag) {
-    case EXPLICIT_IDENT: {
+    case EXPLICIT_IDENT:
         ExplicitIdentType ident_type = explicit_type.variant.ident_type;
         ASSERT_EXPRESSION(ident_type.name);
         TRY(string_builder_append_mut_slice(sb, ident_type.name->name));
         TRY(generics_reconstruct(&ident_type.generics, symbol_map, sb));
         break;
-    }
     case EXPLICIT_TYPEOF:
         ASSERT_EXPRESSION(explicit_type.variant.referred_type);
         TRY(string_builder_append_str_z(sb, "typeof "));
         TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.referred_type, symbol_map, sb));
         break;
-    case EXPLICIT_FN: {
+    case EXPLICIT_FN:
         ExplicitFunctionType function_type = explicit_type.variant.function_type;
         TRY(string_builder_append_str_z(sb, "fn"));
         TRY(generics_reconstruct(&function_type.generics, symbol_map, sb));
@@ -215,7 +261,6 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
         ASSERT_EXPRESSION(function_type.return_type);
         TRY(NODE_VIRTUAL_RECONSTRUCT(function_type.return_type, symbol_map, sb));
         break;
-    }
     case EXPLICIT_STRUCT:
         ASSERT_EXPRESSION(explicit_type.variant.struct_type);
         TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.struct_type, symbol_map, sb));
@@ -224,7 +269,7 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
         ASSERT_EXPRESSION(explicit_type.variant.enum_type);
         TRY(NODE_VIRTUAL_RECONSTRUCT(explicit_type.variant.enum_type, symbol_map, sb));
         break;
-    case EXPLICIT_ARRAY: {
+    case EXPLICIT_ARRAY:
         assert(explicit_type.variant.array_type.dimensions.length > 0);
         TRY(string_builder_append(sb, '['));
 
@@ -250,7 +295,6 @@ type_expression_analyze(Node* node, SemanticContext* parent, ArrayList* errors) 
 
         TRY(explicit_type_reconstruct(inner_explicit_type, symbol_map, sb));
         break;
-    }
     }
 
     return SUCCESS;

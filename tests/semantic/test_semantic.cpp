@@ -417,7 +417,7 @@ TEST_CASE("Infix operators") {
 }
 
 TEST_CASE("Arrays") {
-    SECTION("Single dimension arrays") {
+    SECTION("Inferred typed arrays") {
         SECTION("Definitions") {
             test_analyze("[4uz]{1, 3, 5, 6, }");
             test_analyze("[_]{1u, 3u, 5u, 6u, }");
@@ -425,21 +425,53 @@ TEST_CASE("Arrays") {
             test_analyze(R"([_]{[_]{"hello", "world", "!", }, [_]{"hello", "world", "!", }, })");
             test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, };)");
             test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[9uz];)");
+            test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[0uz..1uz];)");
+            test_analyze(R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[0uz..=1uz];)");
             test_analyze(
                 R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[2uz] = [_]{"hello", "world", "?", };)");
             test_analyze("var a := 3..6; a[2uz] = 4");
+            test_analyze(
+                R"(var d := [_]{ [_]{ "hello", "world", "!", }, [_]{ "hello", "world", "!", }, };
+                    var a := [_]{ d, d, d, d, }; a[0uz] = [_]{ [_]{ "hello", "world", "?", },
+                    [_]{ "hello", "world", "?", }, }; )");
         }
 
         SECTION("Type mismatches") {
             test_analyze("[4uz]{1, 3u, 5, 6, }", {"ARRAY_ITEM_TYPE_MISMATCH [Ln 1, Col 1]"});
             test_analyze("[_]{[4uz]{1, 3, 5, 6, }, [3uz]{1, 3, 5, }, }",
                          {"ARRAY_ITEM_TYPE_MISMATCH [Ln 1, Col 1]"});
+            test_analyze("[4uz]{1, 3, 5, 6, }[0..1]", {"TYPE_MISMATCH [Ln 1, Col 21]"});
+            test_analyze("[4uz]{1, 3, 5, 6, }[0u..=1u]", {"TYPE_MISMATCH [Ln 1, Col 21]"});
             test_analyze("[4uz]{1, 3, 5, 6, }[3uz] = 4u", {"TYPE_MISMATCH [Ln 1, Col 20]"});
             test_analyze(
                 R"(var a := [_]{"hello", "world", "!", }; [_]{a, a, a, a, }[2uz] = [_]{"hello", ",", "world", "?", };)",
                 {"TYPE_MISMATCH [Ln 1, Col 57]"});
             test_analyze("type a = enum {ONE, }; [_]{a, }",
                          {"NON_VALUED_ARRAY_ITEM [Ln 1, Col 24]"});
+            test_analyze("[_]{3u..5u, }", {"ILLEGAL_ARRAY_ITEM [Ln 1, Col 1]"});
+        }
+    }
+
+    SECTION("Explicitly typed") {
+        SECTION("Definitions") {
+            test_analyze(
+                R"(const d: [2uz, 3uz]string = [_]{ [_]{ "hello", "world", "!", },
+                    [_]{ "hello", "world", "!", }, };)");
+            test_analyze(
+                R"(const d: [2uz, 3uz]string = [_]{ [_]{ "hello", "world", "!", },
+                    [_]{ "hello", "world", "!", }, };
+                    const a: [4uz, 2uz, 3uz]string = [_]{ d, d, d, d, };)");
+        }
+
+        SECTION("Type mismatch") {
+            test_analyze(
+                R"(const d: [3uz, 3uz]string = [_]{ [_]{ "hello", "world", "!", },
+                    [_]{ "hello", "world", "!", }, };)",
+                {"TYPE_MISMATCH [Ln 1, Col 1]"});
+            test_analyze(
+                R"(const d: [2uz, 2uz]string = [_]{ [_]{ "hello", "world", "!", },
+                    [_]{ "hello", "world", "!", }, };)",
+                {"TYPE_MISMATCH [Ln 1, Col 1]"});
         }
     }
 

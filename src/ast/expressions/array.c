@@ -106,24 +106,89 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
 
     SemanticType* resulting_type;
     TRY_DO(semantic_type_create(&resulting_type, allocator), RC_RELEASE(inner_type, allocator));
-    resulting_type->tag      = STYPE_ARRAY;
     resulting_type->is_const = false;
     resulting_type->valued   = true;
     resulting_type->nullable = false;
 
+    // The type of the semantic array is dependent on the inner type
+    const size_t       num_items = array->items.length;
     SemanticArrayType* sarray;
-    TRY_DO(semantic_array_create(STYPE_ARRAY_SINGLE_DIM,
-                                 (SemanticArrayUnion){.length = array->items.length},
-                                 inner_type,
-                                 &sarray,
-                                 allocator),
-           {
-               RC_RELEASE(inner_type, allocator);
-               RC_RELEASE(resulting_type, allocator);
-           });
+    if (inner_type->tag == STYPE_ARRAY) {
+        SemanticArrayType* inner_array_type = inner_type->variant.array_type;
+        ArrayList          resulting_dimensions;
+        TRY_DO(array_list_init_allocator(&resulting_dimensions, 5, sizeof(size_t), allocator), {
+            RC_RELEASE(inner_type, allocator);
+            RC_RELEASE(resulting_type, allocator);
+        });
+
+        switch (inner_array_type->tag) {
+        // [_]{ [_]{1, }, ... }
+        case STYPE_ARRAY_SINGLE_DIM:
+            // The dimensions (2D) have to be [outer count, inner array length]
+            array_list_push_assume_capacity(&resulting_dimensions, &num_items);
+            array_list_push_assume_capacity(&resulting_dimensions,
+                                            &inner_array_type->variant.length);
+            break;
+        // [_]{ [2uz, 3uz]{[_]{...} }, ... }
+        case STYPE_ARRAY_MULTI_DIM:
+            // The dimensions (3D+) have to be [outer count, lengths of multi]
+            array_list_push_assume_capacity(&resulting_dimensions, &num_items);
+            const ArrayList* multi_lengths = &inner_array_type->variant.dimensions;
+
+            it = array_list_const_iterator_init(multi_lengths);
+            size_t multi_length;
+            while (array_list_const_iterator_has_next(&it, &multi_length)) {
+                TRY_DO(array_list_push(&resulting_dimensions, &multi_length), {
+                    array_list_deinit(&resulting_dimensions);
+                    RC_RELEASE(inner_type, allocator);
+                    RC_RELEASE(resulting_type, allocator);
+                });
+            }
+            break;
+        // [_]{ 0uz..6uz, }, ... }
+        case STYPE_ARRAY_RANGE:
+            // Error out since we cannot determine the length of a range expression at compile time
+            PUT_STATUS_PROPAGATE(errors, ILLEGAL_ARRAY_ITEM, start_token, {
+                array_list_deinit(&resulting_dimensions);
+                RC_RELEASE(inner_type, allocator);
+                RC_RELEASE(resulting_type, allocator);
+            });
+        }
+
+        SemanticType* actual_inner;
+        TRY_DO(semantic_type_copy(&actual_inner, inner_array_type->inner_type, allocator), {
+            array_list_deinit(&resulting_dimensions);
+            RC_RELEASE(inner_type, allocator);
+            RC_RELEASE(resulting_type, allocator);
+        });
+
+        TRY_DO(semantic_array_create(STYPE_ARRAY_MULTI_DIM,
+                                     (SemanticArrayUnion){.dimensions = resulting_dimensions},
+                                     actual_inner,
+                                     &sarray,
+                                     allocator),
+               {
+                   RC_RELEASE(actual_inner, allocator);
+                   array_list_deinit(&resulting_dimensions);
+                   RC_RELEASE(inner_type, allocator);
+                   RC_RELEASE(resulting_type, allocator);
+               });
+    } else {
+        TRY_DO(semantic_array_create(STYPE_ARRAY_SINGLE_DIM,
+                                     (SemanticArrayUnion){.length = array->items.length},
+                                     rc_retain(inner_type),
+                                     &sarray,
+                                     allocator),
+               {
+                   RC_RELEASE(inner_type, allocator);
+                   RC_RELEASE(resulting_type, allocator);
+               });
+    }
 
     // Everything allocated is moved into the resulting type
+    resulting_type->tag     = STYPE_ARRAY;
     resulting_type->variant = (SemanticTypeUnion){.array_type = sarray};
     parent->analyzed_type   = resulting_type;
+    RC_RELEASE(inner_type, allocator);
     return SUCCESS;
 }

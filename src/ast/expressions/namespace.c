@@ -77,7 +77,7 @@ namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* err
     SemanticType* inner_type;
     TRY_DO(semantic_type_create(&inner_type, allocator), RC_RELEASE(direct_parent, allocator));
     switch (direct_parent->tag) {
-    case STYPE_ENUM: {
+    case STYPE_ENUM:
         const HashSet variants = direct_parent->variant.enum_type->variants;
         if (!hash_set_contains(&variants, &namespace_expr->inner->name)) {
             PUT_STATUS_PROPAGATE(errors, UNKNOWN_ENUM_VARIANT, start_token, {
@@ -95,7 +95,6 @@ namespace_expression_analyze(Node* node, SemanticContext* parent, ArrayList* err
         inner_type->valued   = true;
         inner_type->nullable = false;
         break;
-    }
     default:
         PUT_STATUS_PROPAGATE(errors, ILLEGAL_OUTER_NAMESPACE, start_token, {
             RC_RELEASE(direct_parent, allocator);

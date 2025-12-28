@@ -8,10 +8,9 @@
 #include "semantic/type.h"
 
 #define PRIMITIVE_CASE(tok_type, tag_type) \
-    case tok_type: {                       \
+    case tok_type:                         \
         *tag = tag_type;                   \
-        return true;                       \
-    }
+        return true;
 
 bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag) {
     const size_t num_primitives = sizeof(ALL_PRIMITIVES) / sizeof(ALL_PRIMITIVES[0]);
@@ -248,7 +247,7 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
 
     // Both the lhs and rhs must be shallowly equal now, try to disprove deep equality
     switch (lhs->tag) {
-    case STYPE_ENUM: {
+    case STYPE_ENUM:
         SemanticEnumType* lhs_enum = lhs->variant.enum_type;
         SemanticEnumType* rhs_enum = rhs->variant.enum_type;
         if (!slice_equals(&lhs_enum->type_name, &rhs_enum->type_name)) { return false; }
@@ -263,7 +262,6 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
             if (!hash_set_contains(&rhs_enum->variants, name)) { return false; }
         }
         break;
-    }
     case STYPE_ARRAY:
         if (lhs->variant.array_type->tag != rhs->variant.array_type->tag ||
             !type_equal(lhs->variant.array_type->inner_type, rhs->variant.array_type->inner_type)) {
@@ -274,7 +272,7 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
         case STYPE_ARRAY_SINGLE_DIM:
             return lhs->variant.array_type->variant.length ==
                    rhs->variant.array_type->variant.length;
-        case STYPE_ARRAY_MULTI_DIM: {
+        case STYPE_ARRAY_MULTI_DIM:
             const ArrayList lhs_dims = lhs->variant.array_type->variant.dimensions;
             const ArrayList rhs_dims = rhs->variant.array_type->variant.dimensions;
             if (lhs_dims.length != rhs_dims.length) { return false; }
@@ -290,7 +288,6 @@ bool type_equal(const SemanticType* lhs, const SemanticType* rhs) {
             }
 
             break;
-        }
         case STYPE_ARRAY_RANGE:
             return lhs->variant.array_type->variant.inclusive ==
                    rhs->variant.array_type->variant.inclusive;
