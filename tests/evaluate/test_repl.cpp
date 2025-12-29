@@ -45,7 +45,7 @@ TEST_CASE("REPL with acceptable input") {
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
     const Fixture<ArrayList> alf(output, array_list_deinit);
 
-    REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
+    REQUIRE(STATUS_OK(repl_run(&std_allocator, &io, buf, &output)));
 
     std::ifstream     out_fs(temp_out.path(), std::ios::binary);
     const std::string captured_out((std::istreambuf_iterator<char>(out_fs)),
@@ -75,7 +75,7 @@ TEST_CASE("REPL with error input") {
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
     const Fixture<ArrayList> alf(output, array_list_deinit);
 
-    REQUIRE(STATUS_OK(repl_run(&io, buf, &output)));
+    REQUIRE(STATUS_OK(repl_run(&std_allocator, &io, buf, &output)));
 
     std::ifstream     out_fs(temp_out.path(), std::ios::binary);
     const std::string captured_out((std::istreambuf_iterator<char>(out_fs)),
@@ -106,7 +106,7 @@ TEST_CASE("REPL with incorrect buffer") {
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(size_t))));
     const Fixture<ArrayList> alf(output, array_list_deinit);
 
-    REQUIRE(repl_run(&io, buf, &output) == Status::TYPE_MISMATCH);
+    REQUIRE(repl_run(&std_allocator, &io, buf, &output) == Status::TYPE_MISMATCH);
 
     std::ifstream     err_fs(temp_err.path(), std::ios::binary);
     const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),

@@ -29,7 +29,7 @@
 
 typedef void* (*memory_alloc_fn)(void*, size_t);
 typedef void* (*continuous_alloc_fn)(void*, size_t, size_t);
-typedef void* (*re_alloc_fn)(void*, void*, size_t);
+typedef void* (*re_alloc_fn)(void*, void*, size_t, size_t);
 typedef void (*free_alloc_fn)(void*, void*);
 
 typedef struct Allocator {
@@ -42,21 +42,26 @@ typedef struct Allocator {
 
 #define ALLOCATOR_MALLOC(a, size) (a).memory_alloc((a).ctx, (size))
 #define ALLOCATOR_CALLOC(a, count, size) (a).continuous_alloc((a).ctx, (count), (size))
-#define ALLOCATOR_REALLOC(a, ptr, size) (a).re_alloc((a).ctx, (ptr), (size))
+#define ALLOCATOR_REALLOC(a, ptr, old_size, new_size) \
+    (a).re_alloc((a).ctx, (ptr), (old_size), (new_size))
 #define ALLOCATOR_FREE(a, ptr) (a).free_alloc((a).ctx, (ptr))
 
 #define ALLOCATOR_PTR_MALLOC(a_ptr, size) (a_ptr)->memory_alloc((a_ptr)->ctx, (size))
 #define ALLOCATOR_PTR_CALLOC(a_ptr, count, size) \
     (a_ptr)->continuous_alloc((a_ptr)->ctx, (count), (size))
-#define ALLOCATOR_PTR_REALLOC(a_ptr, ptr, size) (a_ptr)->re_alloc((a_ptr)->ctx, (ptr), (size))
+#define ALLOCATOR_PTR_REALLOC(a_ptr, ptr, old_size, new_size) \
+    (a_ptr)->re_alloc((a_ptr)->ctx, (ptr), (old_size), (new_size))
 #define ALLOCATOR_PTR_FREE(a_ptr, ptr) (a_ptr)->free_alloc((a_ptr)->ctx, (ptr))
 
 #define NO_CTX [[maybe_unused]] void* ctx // NOLINT
 
 static inline void* std_malloc(NO_CTX, size_t size) { return malloc(size); }
 static inline void* std_calloc(NO_CTX, size_t count, size_t size) { return calloc(count, size); }
-static inline void* std_realloc(NO_CTX, void* ptr, size_t size) { return realloc(ptr, size); }
-static inline void  std_free(NO_CTX, void* ptr) { free(ptr); }
+static inline void*
+std_realloc(NO_CTX, void* ptr, [[maybe_unused]] size_t old_size, size_t new_size) {
+    return realloc(ptr, new_size);
+}
+static inline void std_free(NO_CTX, void* ptr) { free(ptr); }
 
 [[maybe_unused]] static Allocator std_allocator = {
     .ctx              = nullptr,

@@ -11,21 +11,24 @@
 static volatile sig_atomic_t interrupted = 0;
 static inline void           sigint_handler([[maybe_unused]] int sig) { interrupted = 1; }
 
-[[nodiscard]] Status repl_start(void) {
+[[nodiscard]] Status repl_start(Allocator* allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     signal(SIGINT, sigint_handler);
 
     char      buf_in[BUF_SIZE];
     ArrayList buf_out;
-    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), &std_allocator));
+    TRY(array_list_init_allocator(&buf_out, BUF_SIZE, sizeof(char), allocator));
 
     FileIO io = file_io_std();
-    TRY_DO(repl_run(&io, buf_in, &buf_out), array_list_deinit(&buf_out));
+    TRY_DO(repl_run(allocator, &io, buf_in, &buf_out), array_list_deinit(&buf_out));
 
     array_list_deinit(&buf_out);
     return SUCCESS;
 }
 
-[[nodiscard]] Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+[[nodiscard]] Status
+repl_run(Allocator* allocator, FileIO* io, char* stream_buffer, ArrayList* stream_receiver) {
+    ASSERT_ALLOCATOR_PTR(allocator);
     assert(stream_buffer && stream_receiver);
     if (stream_receiver->item_size != sizeof(char)) {
         TRY_IO(fprintf(io->err, "ArrayList must be initialized for bytes\n"));
@@ -34,7 +37,7 @@ static inline void           sigint_handler([[maybe_unused]] int sig) { interrup
     }
 
     Program program;
-    TRY(program_init(&program, io, &std_allocator));
+    TRY(program_init(&program, io, allocator));
 
     TRY_IO(fprintf(io->out, WELCOME_MESSAGE));
     TRY_IO(fprintf(io->out, "\n"));

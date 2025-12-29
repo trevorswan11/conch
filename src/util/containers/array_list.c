@@ -59,7 +59,8 @@ size_t array_list_length(const ArrayList* a) {
         return SUCCESS;
     }
 
-    void* new_data = ALLOCATOR_REALLOC(a->allocator, a->data, new_capacity * a->item_size);
+    void* new_data = ALLOCATOR_REALLOC(
+        a->allocator, a->data, a->capacity * a->item_size, new_capacity * a->item_size);
     if (!new_data) { return REALLOCATION_FAILED; }
 
     a->data     = new_data;

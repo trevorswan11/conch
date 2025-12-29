@@ -5,6 +5,7 @@
 
 #include "util/containers/array_list.h"
 #include "util/io.h"
+#include "util/memory.h"
 #include "util/status.h"
 
 #define PROMPT ">>> "
@@ -13,8 +14,9 @@
 #define WELCOME_MESSAGE "Welcome to Conch REPL! Type 'exit' to quit."
 #define EXIT_TOKEN "exit"
 
-[[nodiscard]] Status repl_start(void);
-[[nodiscard]] Status repl_run(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
+[[nodiscard]] Status repl_start(Allocator* allocator);
+[[nodiscard]] Status
+repl_run(Allocator* allocator, FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
 [[nodiscard]] Status repl_read_chunked(FileIO* io, char* stream_buffer, ArrayList* stream_receiver);
 
 #endif
