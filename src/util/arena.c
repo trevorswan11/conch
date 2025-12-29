@@ -83,10 +83,8 @@ static inline void* arena_realloc(void* arena_ctx, void* ptr, size_t old_size, s
 
 static inline void arena_free(NO_CTX, [[maybe_unused]] void* ptr) {}
 
-[[nodiscard]] Status arena_init(Allocator*     arena,
-                                ArenaResetMode reset_mode,
-                                size_t         initial_block_size,
-                                Allocator*     child_allocator) {
+[[nodiscard]] Status
+arena_init(Allocator* arena, size_t initial_block_size, Allocator* child_allocator) {
     ASSERT_ALLOCATOR_PTR(child_allocator);
     const size_t true_block = ceil_power_of_two_size(initial_block_size);
 
@@ -117,7 +115,6 @@ static inline void arena_free(NO_CTX, [[maybe_unused]] void* ptr) {}
         .child_allocator     = *child_allocator,
         .head                = initial_block,
         .current             = initial_block,
-        .reset_mode          = reset_mode,
         .previous_block_size = true_block,
     };
 
@@ -150,13 +147,13 @@ void arena_deinit(Allocator* arena) {
     ALLOCATOR_PTR_FREE(allocator, arena_ctx);
 }
 
-void arena_reset(Allocator* arena) {
+void arena_reset(Allocator* arena, ArenaResetMode reset_mode) {
     assert(arena && arena->ctx);
 
     Arena*      arena_ctx = arena->ctx;
     ArenaBlock* block     = arena_ctx->head;
 
-    switch (arena_ctx->reset_mode) {
+    switch (reset_mode) {
     case DEFAULT:
     case RETAIN_CAPACITY:
     case ZERO_RETAIN_CAPACITY:

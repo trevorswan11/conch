@@ -1,5 +1,6 @@
 #include "catch_amalgamated.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,28 +18,27 @@ static void test_analyze(const char*                     input,
 
     // Rerun tests with arena allocator
     Allocator arena;
-    REQUIRE(
-        STATUS_OK(arena_init(&arena, ArenaResetMode::DEFAULT, ARENA_DEFAULT_SIZE, &std_allocator)));
+    REQUIRE(STATUS_OK(arena_init(&arena, ARENA_DEFAULT_SIZE, &std_allocator)));
     const Fixture<Allocator> af(arena, arena_deinit);
 
     // The first value is repeated to complete the cycle
-    const ArenaResetMode reset_modes[] = {
+    const std::optional<ArenaResetMode> reset_modes[] = {
+        std::nullopt,
         ArenaResetMode::DEFAULT,
         ArenaResetMode::RETAIN_CAPACITY,
         ArenaResetMode::ZERO_RETAIN_CAPACITY,
         ArenaResetMode::FULL_RESET,
-        ArenaResetMode::DEFAULT,
     };
 
     // Go through the reset modes to test each arena configuration
     for (const auto& mode : reset_modes) {
-        auto* ctx       = static_cast<Arena*>(arena.ctx);
-        ctx->reset_mode = mode;
+        // This has to be scoped since the reset can leave dangling pointers
+        {
+            SemanticFixture sf_arena{input, &arena};
+            sf_arena.check_errors(expected_errors, print_anyways);
+        }
 
-        SemanticFixture sf_arena{input, &arena};
-        sf_arena.check_errors(expected_errors, print_anyways);
-
-        arena_reset(&arena);
+        if (mode.has_value()) { arena_reset(&arena, mode.value()); }
     }
 }
 
