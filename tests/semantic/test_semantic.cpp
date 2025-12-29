@@ -5,15 +5,46 @@
 
 #include "fixtures.hpp"
 
-static void
-test_analyze(const char* input, std::vector<std::string> expected_errors, bool print_anyways) {
-    SemanticFixture sf{input};
-    sf.check_errors(std::move(expected_errors), print_anyways);
+extern "C" {
+#include "util/arena.h"
 }
 
-static void test_analyze(const char* input, std::vector<std::string> expected_errors = {}) {
+static void test_analyze(const char*                     input,
+                         const std::vector<std::string>& expected_errors,
+                         bool                            print_anyways) {
+    SemanticFixture sf_std{input, &std_allocator};
+    sf_std.check_errors(expected_errors, print_anyways);
+
+    // Rerun tests with arena allocator
+    Allocator arena;
+    REQUIRE(
+        STATUS_OK(arena_init(&arena, ArenaResetMode::DEFAULT, ARENA_DEFAULT_SIZE, &std_allocator)));
+    const Fixture<Allocator> af(arena, arena_deinit);
+
+    // The first value is repeated to complete the cycle
+    const ArenaResetMode reset_modes[] = {
+        ArenaResetMode::DEFAULT,
+        ArenaResetMode::RETAIN_CAPACITY,
+        ArenaResetMode::ZERO_RETAIN_CAPACITY,
+        ArenaResetMode::FULL_RESET,
+        ArenaResetMode::DEFAULT,
+    };
+
+    // Go through the reset modes to test each arena configuration
+    for (const auto& mode : reset_modes) {
+        auto* ctx       = static_cast<Arena*>(arena.ctx);
+        ctx->reset_mode = mode;
+
+        SemanticFixture sf_arena{input, &arena};
+        sf_arena.check_errors(expected_errors, print_anyways);
+
+        arena_reset(&arena);
+    }
+}
+
+static void test_analyze(const char* input, const std::vector<std::string>& expected_errors = {}) {
     const bool empty = expected_errors.empty();
-    test_analyze(input, std::move(expected_errors), empty);
+    test_analyze(input, expected_errors, empty);
 }
 
 TEST_CASE("Basic identifiers") {

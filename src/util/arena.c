@@ -157,6 +157,7 @@ void arena_reset(Allocator* arena) {
     ArenaBlock* block     = arena_ctx->head;
 
     switch (arena_ctx->reset_mode) {
+    case DEFAULT:
     case RETAIN_CAPACITY:
     case ZERO_RETAIN_CAPACITY:
         while (block != nullptr) {

@@ -72,7 +72,7 @@ class ParserFixture {
 
 class SemanticFixture {
   public:
-    explicit SemanticFixture(const char* input);
+    explicit SemanticFixture(const char* input, Allocator* allocator);
 
     ~SemanticFixture() { seman_deinit(&seman); }
 

@@ -12,12 +12,13 @@ typedef struct ArenaBlock {
 } ArenaBlock;
 
 typedef enum {
+    DEFAULT,
     RETAIN_CAPACITY,
     ZERO_RETAIN_CAPACITY,
     FULL_RESET,
 } ArenaResetMode;
 
-// A dynamic arena allocator.
+// A dynamic arena allocator. The backing allocator is externally managed.
 //
 // When a new block is needed, the size scales by a power of two.
 typedef struct {
@@ -27,6 +28,8 @@ typedef struct {
     ArenaResetMode reset_mode;
     size_t         previous_block_size;
 } Arena;
+
+const size_t ARENA_DEFAULT_SIZE = 256;
 
 [[nodiscard]] Status arena_init(Allocator*     arena,
                                 ArenaResetMode reset_mode,

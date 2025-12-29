@@ -44,9 +44,9 @@ void ParserFixture::check_errors(std::vector<std::string> expected_errors, bool 
     ::check_errors(&p.errors, std::move(expected_errors), print_anyways);
 }
 
-SemanticFixture::SemanticFixture(const char* input) : pf{input} {
+SemanticFixture::SemanticFixture(const char* input, Allocator* allocator) : pf{input} {
     pf.check_errors();
-    REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, &std_allocator)));
+    REQUIRE(STATUS_OK(seman_init(pf.ast(), &seman, allocator)));
     REQUIRE(STATUS_OK(seman_analyze(&seman)));
 }
 
