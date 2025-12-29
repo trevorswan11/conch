@@ -22,14 +22,13 @@ typedef enum {
 //
 // When a new block is needed, the size scales by a power of two.
 typedef struct {
-    Allocator      child_allocator;
-    ArenaBlock*    head;
-    ArenaBlock*    current;
-    ArenaResetMode reset_mode;
-    size_t         previous_block_size;
+    Allocator   child_allocator;
+    ArenaBlock* head;
+    ArenaBlock* current;
+    size_t      previous_block_size;
 } Arena;
 
-static const size_t ARENA_DEFAULT_SIZE = 256;
+static const size_t ARENA_DEFAULT_SIZE = 64;
 
 [[nodiscard]] Status
      arena_init(Allocator* arena, size_t initial_block_size, Allocator* child_allocator);

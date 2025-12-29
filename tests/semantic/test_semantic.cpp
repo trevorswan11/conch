@@ -21,13 +21,13 @@ static void test_analyze(const char*                     input,
     REQUIRE(STATUS_OK(arena_init(&arena, ARENA_DEFAULT_SIZE, &std_allocator)));
     const Fixture<Allocator> af(arena, arena_deinit);
 
-    // The first value is repeated to complete the cycle
     const std::optional<ArenaResetMode> reset_modes[] = {
         std::nullopt,
         ArenaResetMode::DEFAULT,
         ArenaResetMode::RETAIN_CAPACITY,
         ArenaResetMode::ZERO_RETAIN_CAPACITY,
         ArenaResetMode::FULL_RESET,
+        std::nullopt,
     };
 
     // Go through the reset modes to test each arena configuration

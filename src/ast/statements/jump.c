@@ -42,13 +42,18 @@ jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder*
     ASSERT_STATEMENT(node);
     assert(sb);
 
-    const TokenType start_token_type = node->start_token.type;
-    if (start_token_type == RETURN) {
+    switch (node->start_token.type) {
+    case RETURN:
         TRY(string_builder_append_str_z(sb, "return"));
-    } else if (start_token_type == BREAK) {
+        break;
+    case BREAK:
         TRY(string_builder_append_str_z(sb, "break"));
-    } else if (start_token_type == CONTINUE) {
+        break;
+    case CONTINUE:
         TRY(string_builder_append_str_z(sb, "continue"));
+        break;
+    default:
+        UNREACHABLE;
     }
 
     JumpStatement* jump = (JumpStatement*)node;
@@ -61,13 +66,30 @@ jump_statement_reconstruct(Node* node, const HashMap* symbol_map, StringBuilder*
     return SUCCESS;
 }
 
-[[nodiscard]] Status jump_statement_analyze(Node*                             node,
-                                            [[maybe_unused]] SemanticContext* parent,
-                                            [[maybe_unused]] ArrayList*       errors) {
+[[nodiscard]] Status
+jump_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    [[maybe_unused]] JumpStatement* jump = (JumpStatement*)node;
+    const Token start_token = node->start_token;
 
-    return NOT_IMPLEMENTED;
+    JumpStatement* jump           = (JumpStatement*)node;
+    SemanticType*  resulting_type = nullptr;
+    switch (start_token.type) {
+    case RETURN:
+    case BREAK:
+        if (jump->value) {
+            TRY(NODE_VIRTUAL_ANALYZE(jump->value, parent, errors));
+            resulting_type = semantic_context_move_analyzed(parent);
+        }
+        break;
+    case CONTINUE:
+        assert(!jump->value);
+        break;
+    default:
+        UNREACHABLE;
+    }
+
+    parent->analyzed_type = resulting_type;
+    return SUCCESS;
 }

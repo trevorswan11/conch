@@ -3,17 +3,21 @@
 
 #include "ast/statements/statement.h"
 
+#include "util/containers/array_list.h"
+
 typedef struct IdentifierExpression IdentifierExpression;
 typedef struct BlockStatement       BlockStatement;
 
 typedef struct ImplStatement {
     Statement             base;
     IdentifierExpression* parent;
+    ArrayList             generics;
     BlockStatement*       implementation;
 } ImplStatement;
 
 [[nodiscard]] Status impl_statement_create(Token                 start_token,
                                            IdentifierExpression* parent,
+                                           ArrayList             generics,
                                            BlockStatement*       implementation,
                                            ImplStatement**       impl_stmt,
                                            Allocator*            allocator);

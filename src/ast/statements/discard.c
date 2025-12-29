@@ -55,8 +55,12 @@ discard_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors
     ASSERT_STATEMENT(node);
     assert(parent && errors);
 
-    DiscardStatement* discard = (DiscardStatement*)node;
+    Allocator*        allocator = semantic_context_allocator(parent);
+    DiscardStatement* discard   = (DiscardStatement*)node;
     ASSERT_EXPRESSION(discard->to_discard);
 
-    return NODE_VIRTUAL_ANALYZE(discard->to_discard, parent, errors);
+    TRY(NODE_VIRTUAL_ANALYZE(discard->to_discard, parent, errors));
+    SemanticType* discarded = semantic_context_move_analyzed(parent);
+    RC_RELEASE(discarded, allocator);
+    return SUCCESS;
 }

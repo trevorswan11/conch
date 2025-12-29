@@ -231,6 +231,7 @@ parameter_list_parse(Parser* p, ArrayList* parameters, bool* contains_default_pa
     if (parser_peek_token_is(p, LT)) {
         UNREACHABLE_IF_ERROR(parser_next_token(p));
         if (parser_peek_token_is(p, GT)) {
+            UNREACHABLE_IF_ERROR(parser_next_token(p));
             PUT_STATUS_PROPAGATE(&p->errors,
                                  EMPTY_GENERIC_LIST,
                                  p->current_token,
