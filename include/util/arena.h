@@ -29,7 +29,7 @@ typedef struct {
     size_t         previous_block_size;
 } Arena;
 
-const size_t ARENA_DEFAULT_SIZE = 256;
+static const size_t ARENA_DEFAULT_SIZE = 256;
 
 [[nodiscard]] Status arena_init(Allocator*     arena,
                                 ArenaResetMode reset_mode,
