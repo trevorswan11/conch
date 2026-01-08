@@ -4,7 +4,7 @@ set(CMAKE_COLOR_MAKEFILE OFF)
 # Global configuration
 project(conch
     VERSION 0.1.0
-    LANGUAGES C CXX
+    LANGUAGES CXX
 )
 
 # Qualify compile commands database for tooling
@@ -15,11 +15,11 @@ if(APPLE)
     COMMAND xcrun --show-sdk-path
     OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+elseif(MSVC)
+    message(ERROR "MSVC is not supported. Please use a compiler from msys2")
 endif()
 
-set(CMAKE_C_STANDARD 23)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BASE_FLAGS "-Wall" "-Wextra" "-Werror" "-Wpedantic")
@@ -31,12 +31,12 @@ set(DEBUG_FLAGS "-O0" "-g" "-DDEBUG")
 
 # Source file collection
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
-file(GLOB_RECURSE ALL_SOURCES "${SRC_DIR}/*.c")
+file(GLOB_RECURSE ALL_SOURCES "${SRC_DIR}/*.cpp")
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
-file(GLOB_RECURSE HEADERS "${INCLUDE_DIR}/*.h")
+file(GLOB_RECURSE HEADERS "${INCLUDE_DIR}/*.hpp")
 
 set(LIB_SOURCES ${ALL_SOURCES})
-list(FILTER LIB_SOURCES EXCLUDE REGEX "main\\.c$")
+list(FILTER LIB_SOURCES EXCLUDE REGEX "main\\.cpp$")
 
 set(TEST_DIR "${CMAKE_SOURCE_DIR}/tests")
 file(GLOB_RECURSE TEST_SOURCES "${TEST_DIR}/*.cpp")
@@ -84,7 +84,7 @@ function(create_standard_target EXTRA_FLAGS TARGET_NAME)
         "${EXTRA_FLAGS}"
         "${CMAKE_BINARY_DIR}/${TARGET_NAME}")
 
-    add_executable(conch_${TARGET_NAME} src/main.c)
+    add_executable(conch_${TARGET_NAME} src/main.cpp)
     target_link_libraries(conch_${TARGET_NAME}
         PRIVATE conch_core_${TARGET_NAME})
     add_custom_target(${TARGET_NAME} DEPENDS
@@ -122,18 +122,18 @@ add_custom_target(conch_tests
 
 # Standard tooling disabled on windows due to clang/llvm weirdness
 if(NOT WIN32 AND
-    (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU"))
+    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
     # ASan configuration
-    if(APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # leaks tool is needed and asan pollutes its memory profiler
         set(ASAN_FLAGS "-fsanitize=undefined" "-fno-sanitize-recover=all" "-g")
         set(ASAN_RUN_CMD leaks --atExit -- $<TARGET_FILE:conch_tests_asan>)
-    elseif(APPLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    elseif(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         message(ERROR "The GNU Compiler is not supported on macOS")
-    elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(ASAN_FLAGS "-fsanitize=address" "-fsanitize=undefined" "-g")
         set(ASAN_RUN_CMD $<TARGET_FILE:conch_tests_asan>)
-    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(ASAN_FLAGS
             "-fsanitize=address,undefined"
             "-fno-sanitize-recover=all"
@@ -148,7 +148,7 @@ if(NOT WIN32 AND
         USES_TERMINAL)
 
     # Coverage configurations
-    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(COV_FLAGS "-fprofile-instr-generate" "-fcoverage-mapping" "-g")
         set(COV_DIR ${CMAKE_BINARY_DIR}/cov)
         create_conch_suite("cov" "${COV_FLAGS}" "${COV_DIR}")
@@ -188,15 +188,15 @@ if(NOT WIN32 AND
 elseif(NOT WIN32)
     message(WARNING
             "Skipped ASan and coverage generation as the active
-            compiler is not recognized.\n"
+            compiler (${CMAKE_CXX_COMPILER_ID}) is not recognized.\n"
             "Consider using the Clang toolchain by rebuilding with:\n"
             "    CC=clang CXX=clang++ cmake ..")
 endif()
 
 # Tooling
 file(GLOB_RECURSE TOOLING_SOURCES
-    ${SRC_DIR}/*.c
-    ${INCLUDE_DIR}/*.h
+    ${SRC_DIR}/*.cpp
+    ${INCLUDE_DIR}/*.hpp
     ${TEST_DIR}/*.cpp
     ${TEST_DIR}/*.hpp
 )
