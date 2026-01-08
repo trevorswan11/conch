@@ -85,6 +85,7 @@ TEST_CASE("Mutable slice hashing") {
     REQUIRE(h1 != h3);
 }
 
+// NOLINTBEGIN
 HASH_INTEGER_FN(uint8_t)
 HASH_INTEGER_FN(uint16_t)
 HASH_INTEGER_FN(uint32_t)
@@ -94,6 +95,7 @@ COMPARE_INTEGER_FN(uint8_t)
 COMPARE_INTEGER_FN(uint16_t)
 COMPARE_INTEGER_FN(uint32_t)
 COMPARE_INTEGER_FN(uint64_t)
+// NOLINTEND
 
 TEST_CASE("hash_uint8_t") {
     uint8_t a = 42;

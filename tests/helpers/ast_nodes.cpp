@@ -14,12 +14,12 @@ extern "C" {
 #include "ast/statements/expression.h"
 }
 
-void test_type_expression(const Expression* expression,
+auto test_type_expression(const Expression* expression,
                           bool              expect_nullable,
                           bool              expect_primitive,
                           TypeExpressionTag expected_tag,
                           ExplicitTypeTag   expected_explicit_tag,
-                          std::string       expected_type_literal) {
+                          std::string       expected_type_literal) -> void {
     const auto* type_expr = reinterpret_cast<const TypeExpression*>(expression);
     REQUIRE(type_expr->tag == expected_tag);
 
@@ -45,20 +45,21 @@ void test_type_expression(const Expression* expression,
     }
 }
 
-void test_decl_statement(const Statement* stmt, bool expect_const, std::string expected_ident) {
+auto test_decl_statement(const Statement* stmt, bool expect_const, std::string expected_ident)
+    -> void {
     const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
     REQUIRE(expect_const == decl_stmt->is_const);
     REQUIRE(expected_ident == decl_stmt->ident->name.ptr);
 }
 
-void test_decl_statement(const Statement*  stmt,
+auto test_decl_statement(const Statement*  stmt,
                          bool              expect_const,
                          std::string       expected_ident,
                          bool              expect_nullable,
                          bool              expect_primitive,
                          TypeExpressionTag expected_tag,
                          ExplicitTypeTag   expected_explicit_tag,
-                         std::string       expected_type_literal) {
+                         std::string       expected_type_literal) -> void {
     test_decl_statement(stmt, expect_const, std::move(expected_ident));
 
     const auto* decl_stmt = reinterpret_cast<const DeclStatement*>(stmt);
@@ -70,7 +71,8 @@ void test_decl_statement(const Statement*  stmt,
                          std::move(expected_type_literal));
 }
 
-template <typename T> void test_number_expression(const Expression* expression, T expected_value) {
+template <typename T>
+auto test_number_expression(const Expression* expression, T expected_value) -> void {
     if constexpr (std::is_same_v<T, double>) {
         const auto* f = reinterpret_cast<const FloatLiteralExpression*>(expression);
         REQUIRE(f->value == expected_value);
@@ -85,11 +87,11 @@ template <typename T> void test_number_expression(const Expression* expression, 
     }
 }
 
-template void test_number_expression<int64_t>(const Expression*, int64_t);
-template void test_number_expression<uint64_t>(const Expression*, uint64_t);
-template void test_number_expression<double>(const Expression*, double);
+template auto test_number_expression<int64_t>(const Expression*, int64_t) -> void;
+template auto test_number_expression<uint64_t>(const Expression*, uint64_t) -> void;
+template auto test_number_expression<double>(const Expression*, double) -> void;
 
-template <typename T> void test_number_expression(const char* input, T expected_value) {
+template <typename T> auto test_number_expression(const char* input, T expected_value) -> void {
     ParserFixture pf{input};
     const auto*   ast = pf.ast();
 
@@ -97,29 +99,30 @@ template <typename T> void test_number_expression(const char* input, T expected_
     REQUIRE(ast->statements.length == 1);
 
     Statement* stmt;
-    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, (void*)&stmt)));
+    REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
 
     const auto* expr = reinterpret_cast<const ExpressionStatement*>(stmt);
     test_number_expression<T>(expr->expression, expected_value);
 }
 
-template void test_number_expression<int64_t>(const char*, int64_t);
-template void test_number_expression<uint64_t>(const char*, uint64_t);
-template void test_number_expression<double>(const char*, double);
+template auto test_number_expression<int64_t>(const char*, int64_t) -> void;
+template auto test_number_expression<uint64_t>(const char*, uint64_t) -> void;
+template auto test_number_expression<double>(const char*, double) -> void;
 
-void test_bool_expression(const Expression* expression, bool expected_value) {
+auto test_bool_expression(const Expression* expression, bool expected_value) -> void {
     const auto* boolean = reinterpret_cast<const BoolLiteralExpression*>(expression);
     REQUIRE(boolean->value == expected_value);
 }
 
-void test_string_expression(const Expression* expression, std::string expected_string_literal) {
+auto test_string_expression(const Expression* expression, std::string expected_string_literal)
+    -> void {
     const auto* string = reinterpret_cast<const StringLiteralExpression*>(expression);
     REQUIRE(expected_string_literal == string->slice.ptr);
 }
 
-void test_identifier_expression(const Expression* expression,
+auto test_identifier_expression(const Expression* expression,
                                 std::string       expected_name,
-                                TokenType         expected_type) {
+                                TokenType         expected_type) -> void {
     const auto* ident = reinterpret_cast<const IdentifierExpression*>(expression);
     REQUIRE(expected_name == ident->name.ptr);
     REQUIRE(expected_type == ((Node*)ident)->start_token.type);

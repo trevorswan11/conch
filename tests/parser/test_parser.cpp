@@ -59,16 +59,16 @@ TEST_CASE("Precedence coverage") {
 
 TEST_CASE("Declarations") {
     SECTION("Var statements") {
-        const char*   input = "var x := 5;\n"
-                              "// var x := 5;\n"
-                              "var y := 10;\n"
-                              "var foobar := 838383;";
-        ParserFixture pf{input};
+        const char*         input = "var x := 5;\n"
+                                    "// var x := 5;\n"
+                                    "var y := 10;\n"
+                                    "var foobar := 838383;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
-        const auto*       ast                    = pf.ast();
-        const char* const expected_identifiers[] = {"x", "y", "foobar"};
-        REQUIRE(ast->statements.length == std::size(expected_identifiers));
+        const auto* ast                  = pf.ast();
+        const auto  expected_identifiers = std::array{"x", "y", "foobar"};
+        REQUIRE(ast->statements.length == expected_identifiers.size());
 
         Statement* stmt;
         for (size_t i = 0; i < std::size(expected_identifiers); i++) {
@@ -78,33 +78,33 @@ TEST_CASE("Declarations") {
     }
 
     SECTION("Var statements with errors") {
-        const char*   input = "var x 5;\n"
-                              "var = 10;\n"
-                              "var 838383;\n"
-                              "var z := 6";
-        ParserFixture pf{input};
+        const char*         input = "var x 5;\n"
+                                    "var = 10;\n"
+                                    "var 838383;\n"
+                                    "var z := 6";
+        const ParserFixture pf{input};
 
-        const std::vector<std::string> expected_errors = {
+        const auto expected_errors = std::to_array<std::string>({
             "Expected token COLON, found INT_10 [Ln 1, Col 7]",
             "Expected token IDENT, found ASSIGN [Ln 2, Col 5]",
             "No prefix parse function for ASSIGN found [Ln 2, Col 5]",
             "Expected token IDENT, found INT_10 [Ln 3, Col 5]",
-        };
+        });
 
         pf.check_errors(expected_errors);
         REQUIRE(pf.ast()->statements.length == 0);
     }
 
     SECTION("Var and const statements") {
-        const char*   input = "var x := 5;\n"
-                              "const y := 10;\n"
-                              "var foobar := 838383;";
-        ParserFixture pf{input};
+        const char*         input = "var x := 5;\n"
+                                    "const y := 10;\n"
+                                    "var foobar := 838383;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
-        const auto*       ast                    = pf.ast();
-        const char* const expected_identifiers[] = {"x", "y", "foobar"};
-        const bool        is_const[]             = {false, true, false};
+        const auto* ast                  = pf.ast();
+        const auto  expected_identifiers = std::array{"x", "y", "foobar"};
+        const auto  is_const             = std::array{false, true, false};
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
@@ -115,30 +115,32 @@ TEST_CASE("Declarations") {
     }
 
     SECTION("Complex typed decl statements") {
-        const char*   input = "var x: int = 5;\n"
-                              "var z: uint;\n"
-                              "const y: bool = 10;\n"
-                              "var foobar := 838383;\n"
-                              "var baz: ?LongNum = 838383;\n"
-                              "const boo: Conch = 2;\n";
-        ParserFixture pf{input};
+        const char*         input = "var x: int = 5;\n"
+                                    "var z: uint;\n"
+                                    "const y: bool = 10;\n"
+                                    "var foobar := 838383;\n"
+                                    "var baz: ?LongNum = 838383;\n"
+                                    "const boo: Conch = 2;\n";
+        const ParserFixture pf{input};
         pf.check_errors();
 
-        const std::string       expected_identifiers[] = {"x", "z", "y", "foobar", "baz", "boo"};
-        const bool              is_const[]             = {false, false, true, false, false, true};
-        const bool              is_nullable[]          = {false, false, false, false, true, false};
-        const bool              is_primitive[]         = {true, true, true, false, false, false};
-        const TypeExpressionTag tags[]                 = {TypeExpressionTag::EXPLICIT,
-                                                          TypeExpressionTag::EXPLICIT,
-                                                          TypeExpressionTag::EXPLICIT,
-                                                          TypeExpressionTag::IMPLICIT,
-                                                          TypeExpressionTag::EXPLICIT,
-                                                          TypeExpressionTag::EXPLICIT};
+        const auto expected_identifiers =
+            std::to_array<std::string>({"x", "z", "y", "foobar", "baz", "boo"});
+        const auto is_const     = std::array{false, false, true, false, false, true};
+        const auto is_nullable  = std::array{false, false, false, false, true, false};
+        const auto is_primitive = std::array{true, true, true, false, false, false};
+        const auto tags         = std::array{TypeExpressionTag::EXPLICIT,
+                                     TypeExpressionTag::EXPLICIT,
+                                     TypeExpressionTag::EXPLICIT,
+                                     TypeExpressionTag::IMPLICIT,
+                                     TypeExpressionTag::EXPLICIT,
+                                     TypeExpressionTag::EXPLICIT};
         std::array<ExplicitTypeTag, std::size(tags)> explicit_tags;
         explicit_tags.fill(ExplicitTypeTag::EXPLICIT_IDENT);
 
-        const auto*       ast                   = pf.ast();
-        const std::string expected_type_names[] = {"int", "uint", "bool", {}, "LongNum", "Conch"};
+        const auto* ast = pf.ast();
+        const auto  expected_type_names =
+            std::to_array<std::string>({"int", "uint", "bool", {}, "LongNum", "Conch"});
         REQUIRE(ast->statements.length == std::size(expected_identifiers));
 
         Statement* stmt;
@@ -156,7 +158,7 @@ TEST_CASE("Declarations") {
     }
 
     SECTION("Primitive alias type decls") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "type a = int",
             "type a = uint",
             "type a = float",
@@ -166,7 +168,7 @@ TEST_CASE("Declarations") {
             "type a = void",
         };
 
-        const std::pair<std::string, TokenType> expected_primitives[] = {
+        const auto expected_primitives = std::to_array<std::pair<std::string, TokenType>>({
             {"int", TokenType::INT_TYPE},
             {"uint", TokenType::UINT_TYPE},
             {"float", TokenType::FLOAT_TYPE},
@@ -174,14 +176,14 @@ TEST_CASE("Declarations") {
             {"byte", TokenType::BYTE_TYPE},
             {"bool", TokenType::BOOL_TYPE},
             {"void", TokenType::VOID_TYPE},
-        };
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_primitives));
-        for (size_t i = 0; i < std::size(inputs); i++) {
+        REQUIRE(inputs.size() == expected_primitives.size());
+        for (size_t i = 0; i < inputs.size(); i++) {
             const char* input    = inputs[i];
-            const auto  expected = expected_primitives[i];
+            const auto& expected = expected_primitives[i];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -199,8 +201,8 @@ TEST_CASE("Declarations") {
     }
 
     SECTION("Nullable type decl") {
-        const char*   input = "type N = ?int";
-        ParserFixture pf{input};
+        const char*         input = "type N = ?int";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -223,32 +225,31 @@ TEST_CASE("Declarations") {
 
 TEST_CASE("Jump statements") {
     SECTION("Standard jumps") {
-        const char*   input = "return;\n"
-                              "return 5;\n"
-                              "break;"
-                              "break 10;\n"
-                              "return 993322;";
-        ParserFixture pf{input};
+        const char*         input = "return;\n"
+                                    "return 5;\n"
+                                    "break;"
+                                    "break 10;\n"
+                                    "return 993322;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 5);
 
-        const std::optional<int64_t> values[] = {std::nullopt, 5, std::nullopt, 10, 993322};
+        const auto values =
+            std::to_array<std::optional<int64_t>>({std::nullopt, 5, std::nullopt, 10, 993322});
 
         Statement* stmt;
         for (size_t i = 0; i < ast->statements.length; i++) {
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, i, static_cast<void*>(&stmt))));
             const auto* jump_stmt = reinterpret_cast<const JumpStatement*>(stmt);
-            if (values[i].has_value()) {
-                test_number_expression<int64_t>(jump_stmt->value, values[i].value());
-            }
+            if (values[i]) { test_number_expression<int64_t>(jump_stmt->value, values[i].value()); }
         }
     }
 
     SECTION("Returns w/o sentinel semicolon") {
-        const char*   input = "return 5";
-        ParserFixture pf{input};
+        const char*         input = "return 5";
+        const ParserFixture pf{input};
         pf.check_errors();
         const auto* ast = pf.ast();
 
@@ -260,8 +261,8 @@ TEST_CASE("Jump statements") {
     }
 
     SECTION("Breaks w/o sentinel semicolon") {
-        const char*   input = "break -5";
-        ParserFixture pf{input};
+        const char*         input = "break -5";
+        const ParserFixture pf{input};
         pf.check_errors();
         const auto* ast = pf.ast();
 
@@ -275,8 +276,8 @@ TEST_CASE("Jump statements") {
 
     SECTION("Continue jumps") {
         SECTION("Correctly without value") {
-            const char*   input = "continue";
-            ParserFixture pf{input};
+            const char*         input = "continue";
+            const ParserFixture pf{input};
             pf.check_errors();
             const auto* ast = pf.ast();
 
@@ -288,8 +289,8 @@ TEST_CASE("Jump statements") {
         }
 
         SECTION("Incorrectly with value") {
-            const char*   input = "continue 2";
-            ParserFixture pf{input};
+            const char*         input = "continue 2";
+            const ParserFixture pf{input};
             pf.check_errors();
             const auto* ast = pf.ast();
 
@@ -307,8 +308,8 @@ TEST_CASE("Jump statements") {
 }
 
 TEST_CASE("Identifier Expressions") {
-    const char*   input = "foobar;";
-    ParserFixture pf{input};
+    const char*         input = "foobar;";
+    const ParserFixture pf{input};
     pf.check_errors();
 
     const auto* ast = pf.ast();
@@ -322,8 +323,8 @@ TEST_CASE("Identifier Expressions") {
 }
 
 TEST_CASE("Index expression") {
-    const char*   input = "foo[bar]";
-    ParserFixture pf{input};
+    const char*         input = "foo[bar]";
+    const ParserFixture pf{input};
     pf.check_errors();
 
     const auto* ast = pf.ast();
@@ -347,9 +348,10 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Signed integer overflow") {
-        const char*   input = "0xFFFFFFFFFFFFFFFF";
-        ParserFixture pf{input};
-        pf.check_errors({"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        const char*         input = "0xFFFFFFFFFFFFFFFF";
+        const ParserFixture pf{input};
+        const auto errors = std::to_array<std::string>({"SIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        pf.check_errors(errors);
     }
 
     SECTION("Unsigned integer bases") {
@@ -363,7 +365,7 @@ TEST_CASE("Number-based expressions") {
 
     SECTION("Bytes") {
         const auto test_byte_expression = [](const char* input, uint8_t expected) {
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -383,9 +385,10 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Unsigned integer overflow") {
-        const char*   input = "0x10000000000000000u";
-        ParserFixture pf{input};
-        pf.check_errors({"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        const char*         input = "0x10000000000000000u";
+        const ParserFixture pf{input};
+        const auto errors = std::to_array<std::string>({"UNSIGNED_INTEGER_OVERFLOW [Ln 1, Col 1]"});
+        pf.check_errors(errors);
     }
 
     SECTION("Floating points") {
@@ -397,22 +400,17 @@ TEST_CASE("Number-based expressions") {
 
 TEST_CASE("Basic prefix / infix expressions") {
     SECTION("Simple prefix expressions") {
-        struct TestCase {
-            const char*                             input;
-            TokenType                               op;
-            std::variant<int64_t, uint64_t, double> value;
-        };
+        const auto cases = std::to_array<
+            std::tuple<const char*, TokenType, std::variant<int64_t, uint64_t, double>>>({
+            {"!5", TokenType::BANG, 5LL},
+            {"-15u", TokenType::MINUS, 15ULL},
+            {"!3.4", TokenType::BANG, 3.4},
+            {"~0b101101", TokenType::NOT, 0b101101LL},
+            {"!1.2345e100", TokenType::BANG, 1.2345e100},
+        });
 
-        const TestCase cases[] = {
-            {.input = "!5", .op = TokenType::BANG, .value = 5LL},
-            {.input = "-15u", .op = TokenType::MINUS, .value = 15ULL},
-            {.input = "!3.4", .op = TokenType::BANG, .value = 3.4},
-            {.input = "~0b101101", .op = TokenType::NOT, .value = 0b101101LL},
-            {.input = "!1.2345e100", .op = TokenType::BANG, .value = 1.2345e100},
-        };
-
-        for (const auto& t : cases) {
-            ParserFixture pf(t.input);
+        for (const auto& [input, op, value] : cases) {
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -423,13 +421,13 @@ TEST_CASE("Basic prefix / infix expressions") {
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             const auto* expr = reinterpret_cast<const PrefixExpression*>(expr_stmt->expression);
 
-            REQUIRE(NODE_TOKEN(expr).type == t.op);
-            if (std::holds_alternative<int64_t>(t.value)) {
-                test_number_expression<int64_t>(expr->rhs, std::get<int64_t>(t.value));
-            } else if (std::holds_alternative<uint64_t>(t.value)) {
-                test_number_expression<uint64_t>(expr->rhs, std::get<uint64_t>(t.value));
-            } else if (std::holds_alternative<double>(t.value)) {
-                test_number_expression<double>(expr->rhs, std::get<double>(t.value));
+            REQUIRE(NODE_TOKEN(expr).type == op);
+            if (std::holds_alternative<int64_t>(value)) {
+                test_number_expression<int64_t>(expr->rhs, std::get<int64_t>(value));
+            } else if (std::holds_alternative<uint64_t>(value)) {
+                test_number_expression<uint64_t>(expr->rhs, std::get<uint64_t>(value));
+            } else if (std::holds_alternative<double>(value)) {
+                test_number_expression<double>(expr->rhs, std::get<double>(value));
             } else {
                 REQUIRE(false);
             }
@@ -444,7 +442,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             std::variant<int64_t, uint64_t, double> rvalue;
         };
 
-        const TestCase standard_cases[] = {
+        const auto standard_cases = std::to_array<TestCase>({
             {.input = "5 + 5;", .lvalue = 5LL, .op = TokenType::PLUS, .rvalue = 5LL},
             {.input = "5 - 5;", .lvalue = 5LL, .op = TokenType::MINUS, .rvalue = 5LL},
             {.input = "5.0 * 5.2;", .lvalue = 5.0, .op = TokenType::STAR, .rvalue = 5.2},
@@ -501,9 +499,9 @@ TEST_CASE("Basic prefix / infix expressions") {
              .lvalue = 0b10111ULL,
              .op     = TokenType::ORELSE,
              .rvalue = 4ULL},
-        };
+        });
 
-        const TestCase assignment_cases[] = {
+        const auto assignment_cases = std::to_array<TestCase>({
             {.input  = "0b10111u = 4u;",
              .lvalue = 0b10111ULL,
              .op     = TokenType::ASSIGN,
@@ -552,10 +550,10 @@ TEST_CASE("Basic prefix / infix expressions") {
              .lvalue = 0b10111ULL,
              .op     = TokenType::XOR_ASSIGN,
              .rvalue = 4ULL},
-        };
+        });
 
-        const auto test_infix = []<typename T>(TestCase t) {
-            ParserFixture pf(t.input);
+        const auto test_infix = []<typename T>(const TestCase& t) {
+            const ParserFixture pf{t.input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -566,9 +564,9 @@ TEST_CASE("Basic prefix / infix expressions") {
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
             T*          expr      = reinterpret_cast<T*>(expr_stmt->expression);
 
-            const std::pair<std::variant<int64_t, uint64_t, double>, Expression*> pairs[] = {
-                {t.lvalue, expr->lhs},
-                {t.rvalue, expr->rhs},
+            const auto pairs = std::array{
+                std::pair{t.lvalue, expr->lhs},
+                std::pair{t.rvalue, expr->rhs},
             };
 
             if constexpr (requires { expr->op; }) { REQUIRE(expr->op == t.op); }
@@ -597,7 +595,7 @@ TEST_CASE("Basic prefix / infix expressions") {
     }
 
     SECTION("Namespace expressions") {
-        ParserFixture pf("Outer::inner");
+        const ParserFixture pf{"Outer::inner"};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -615,67 +613,60 @@ TEST_CASE("Basic prefix / infix expressions") {
     }
 
     SECTION("Operator precedence parsing") {
-        struct TestCase {
-            const char* input;
-            std::string expected;
-        };
+        const auto cases = std::to_array<std::pair<const char*, std::string>>({
+            {"-a * b", "((-a) * b)"},
+            {"!-a", "(!(-a))"},
+            {"a + b + c", "((a + b) + c)"},
+            {"a + b - c", "((a + b) - c)"},
+            {"a * b * c", "((a * b) * c)"},
+            {"a * b / c", "((a * b) / c)"},
+            {"a + b / c", "(a + (b / c))"},
+            {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+            {"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
+            {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+            {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+            {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+            {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
+            {"(5 + 5) * 2", "((5 + 5) * 2)"},
+            {"5 * 5 ** 2", "(5 * (5 ** 2))"},
+            {"2 / (5 + 5)", "(2 / (5 + 5))"},
+            {"-(5 + 5)", "(-(5 + 5))"},
+            {"!(true == true)", "(!(true == true))"},
+            {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+            {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+             "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+            {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+        });
 
-        const TestCase cases[] = {
-            {.input = "-a * b", .expected = "((-a) * b)"},
-            {.input = "!-a", .expected = "(!(-a))"},
-            {.input = "a + b + c", .expected = "((a + b) + c)"},
-            {.input = "a + b - c", .expected = "((a + b) - c)"},
-            {.input = "a * b * c", .expected = "((a * b) * c)"},
-            {.input = "a * b / c", .expected = "((a * b) / c)"},
-            {.input = "a + b / c", .expected = "(a + (b / c))"},
-            {.input = "a + b * c + d / e - f", .expected = "(((a + (b * c)) + (d / e)) - f)"},
-            {.input = "3 + 4; -5 * 5", .expected = "(3 + 4)((-5) * 5)"},
-            {.input = "5 > 4 == 3 < 4", .expected = "((5 > 4) == (3 < 4))"},
-            {.input = "5 < 4 != 3 > 4", .expected = "((5 < 4) != (3 > 4))"},
-            {.input    = "3 + 4 * 5 == 3 * 1 + 4 * 5",
-             .expected = "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
-            {.input = "1 + (2 + 3) + 4", .expected = "((1 + (2 + 3)) + 4)"},
-            {.input = "(5 + 5) * 2", .expected = "((5 + 5) * 2)"},
-            {.input = "5 * 5 ** 2", .expected = "(5 * (5 ** 2))"},
-            {.input = "2 / (5 + 5)", .expected = "(2 / (5 + 5))"},
-            {.input = "-(5 + 5)", .expected = "(-(5 + 5))"},
-            {.input = "!(true == true)", .expected = "(!(true == true))"},
-            {.input = "a + add(b * c) + d", .expected = "((a + add((b * c))) + d)"},
-            {.input    = "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
-             .expected = "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-            {.input    = "add(a + b + c * d / f + g)",
-             .expected = "add((((a + b) + ((c * d) / f)) + g))"},
-        };
-
-        for (const auto& t : cases) {
+        for (const auto& [input, expected] : cases) {
             group_expressions = true;
-            ParserFixture pf(t.input);
+            ParserFixture pf{input};
             pf.check_errors();
 
-            SBFixture sb(t.expected.length());
+            SBFixture sb{expected.length()};
             REQUIRE(STATUS_OK(ast_reconstruct(pf.ast_mut(), sb.sb())));
-            REQUIRE(t.expected == sb.to_string());
+            REQUIRE(expected == sb.to_string());
         }
     }
 
     SECTION("Malformed expressions") {
-        const std::pair<const char*, std::string> cases[] = {
-            {"!", "PREFIX_MISSING_OPERAND [Ln 1, Col 1]"},
-            {"3+", "INFIX_MISSING_RHS [Ln 1, Col 2]"},
-            {"3+4-", "INFIX_MISSING_RHS [Ln 1, Col 4]"},
-        };
+        const auto cases = std::to_array<std::pair<const char*, std::array<std::string, 1>>>({
+            {"!", {"PREFIX_MISSING_OPERAND [Ln 1, Col 1]"}},
+            {"3+", {"INFIX_MISSING_RHS [Ln 1, Col 2]"}},
+            {"3+4-", {"INFIX_MISSING_RHS [Ln 1, Col 4]"}},
+        });
 
-        for (const auto& t : cases) {
-            ParserFixture pf(t.first);
-            pf.check_errors({t.second});
+        for (const auto& [input, errors] : cases) {
+            const ParserFixture pf{input};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("Typeof expressions") {
     SECTION("Correct type introspection") {
-        const char*   input = "type a = ?typeof 4u";
-        ParserFixture pf{input};
+        const char*         input = "type a = ?typeof 4u";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -699,49 +690,41 @@ TEST_CASE("Typeof expressions") {
     }
 
     SECTION("Malformed usages") {
-        struct TestCase {
-            const char*              input;
-            std::vector<std::string> errors;
-        };
+        const auto cases = std::to_array<std::pair<const char*, std::vector<std::string>>>({
+            {"typeof 1", {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
+            {"const a: typeof 1 = 3", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {"var v: typeof g", {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
+            {"type a = typeof enum { a, }",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {"type a = typeof fn(): int",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
+              "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
+              "Expected token LBRACE, found END [Ln 1, Col 26]"}},
+            {"type a = typeof struct { a: int, }",
+             {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]", "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+            {"type a = typeof ?enum {a, }",
+             {"No prefix parse function for WHAT found [Ln 1, Col 17]",
+              "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
+        });
 
-        const TestCase cases[] = {
-            {.input  = "typeof 1",
-             .errors = {"No prefix parse function for TYPEOF found [Ln 1, Col 1]"}},
-            {.input = "const a: typeof 1 = 3", .errors = {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-            {.input = "var v: typeof g", .errors = {"ILLEGAL_DECL_CONSTRUCT [Ln 1, Col 1]"}},
-            {.input  = "type a = typeof enum { a, }",
-             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-            {.input  = "type a = typeof fn(): int",
-             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]",
-                        "Expected token LBRACE, found END [Ln 1, Col 26]"}},
-            {.input  = "type a = typeof struct { a: int, }",
-             .errors = {"REDUNDANT_TYPE_INTROSPECTION [Ln 1, Col 17]",
-                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-            {.input  = "type a = typeof ?enum {a, }",
-             .errors = {"No prefix parse function for WHAT found [Ln 1, Col 17]",
-                        "MALFORMED_TYPE_DECL [Ln 1, Col 1]"}},
-        };
-
-        for (const auto& t : cases) {
-            ParserFixture pf(t.input);
-            pf.check_errors(t.errors);
+        for (const auto& [input, errors] : cases) {
+            const ParserFixture pf{input};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("Bool expressions") {
     SECTION("Basic expressions") {
-        const char*   input = "true;\n"
-                              "false;";
-        ParserFixture pf{input};
+        const char*         input = "true;\n"
+                                    "false;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 2);
 
-        const bool expected_values[] = {true, false};
+        const auto expected_values = std::array{true, false};
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
@@ -755,21 +738,22 @@ TEST_CASE("Bool expressions") {
 
 TEST_CASE("String expressions") {
     SECTION("Single-line strings") {
-        const char*   input = R"("This is a string";
+        const char*         input = R"("This is a string";
                               "Hello, 'World'!";
                               "";)";
-        ParserFixture pf{input};
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
 
-        const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!", ""};
-        const std::string expected_literals[] = {
+        const auto expected_strings =
+            std::to_array<std::string>({"This is a string", "Hello, 'World'!", ""});
+        const auto expected_literals = std::to_array<std::string>({
             R"("This is a string")",
             R"("Hello, 'World'!")",
             R"("")",
-        };
+        });
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
@@ -781,26 +765,27 @@ TEST_CASE("String expressions") {
     }
 
     SECTION("Multiline strings") {
-        const char*   input = "\\\\This is a string\n"
-                              ";"
-                              "\\\\Hello, 'World'!\n"
-                              "\\\\\n"
-                              ";"
-                              "\\\\\n"
-                              ";";
-        ParserFixture pf{input};
+        const char*         input = "\\\\This is a string\n"
+                                    ";"
+                                    "\\\\Hello, 'World'!\n"
+                                    "\\\\\n"
+                                    ";"
+                                    "\\\\\n"
+                                    ";";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
         REQUIRE(ast->statements.length == 3);
 
-        const std::string expected_strings[]  = {"This is a string", "Hello, 'World'!\n", ""};
-        const std::string expected_literals[] = {
+        const auto expected_strings =
+            std::to_array<std::string>({"This is a string", "Hello, 'World'!\n", ""});
+        const auto expected_literals = std::to_array<std::string>({
             "This is a string",
             R"(Hello, 'World'!
             \\)",
             "",
-        };
+        });
 
         for (size_t i = 0; i < ast->statements.length; i++) {
             Statement* stmt;
@@ -814,8 +799,8 @@ TEST_CASE("String expressions") {
 
 TEST_CASE("Conditional expressions") {
     SECTION("If without alternate") {
-        const char*   input = "if (x < y) { x }";
-        ParserFixture pf{input};
+        const char*         input = "if (x < y) { x }";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -841,8 +826,8 @@ TEST_CASE("Conditional expressions") {
     }
 
     SECTION("If with alternate") {
-        const char*   input = "if (x < y) { x } else { y }";
-        ParserFixture pf{input};
+        const char*         input = "if (x < y) { x } else { y }";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -874,8 +859,8 @@ TEST_CASE("Conditional expressions") {
     }
 
     SECTION("If/Else with non-block assignment") {
-        const char*   input = "const val := if (x >= y) 1 else 2;";
-        ParserFixture pf{input};
+        const char*         input = "const val := if (x >= y) 1 else 2;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -904,8 +889,8 @@ TEST_CASE("Conditional expressions") {
     }
 
     SECTION("If/Else with return statement") {
-        const char*   input = "if (true) return 1; else return 2;";
-        ParserFixture pf{input};
+        const char*         input = "if (true) return 1; else return 2;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -930,7 +915,7 @@ TEST_CASE("Conditional expressions") {
 
     SECTION("If/Else with nested ifs and terminal else") {
         const char* input = "if (x < y) {return -1;} else if (x > y) {return 1;} else {return 0;}";
-        ParserFixture pf{input};
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1001,8 +986,8 @@ TEST_CASE("Function literals") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
-    const auto test_parameters = [](const ArrayList*           actuals,
-                                    std::vector<TestParameter> expecteds) {
+    const auto test_parameters = [](const ArrayList*               actuals,
+                                    std::span<const TestParameter> expecteds) {
         REQUIRE(actuals->length == expecteds.size());
         for (size_t i = 0; i < actuals->length; i++) {
             Parameter parameter;
@@ -1019,23 +1004,23 @@ TEST_CASE("Function literals") {
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  expected_parameter.type_name);
 
-            if (expected_parameter.default_value.has_value()) {
+            if (expected_parameter.default_value) {
                 test_number_expression<int64_t>(parameter.default_value,
                                                 expected_parameter.default_value.value());
             } else {
                 REQUIRE_FALSE(parameter.default_value);
-                REQUIRE_FALSE(expected_parameter.default_value.has_value());
+                REQUIRE_FALSE(expected_parameter.default_value);
             }
         }
     };
 
     SECTION("Functions as types") {
         SECTION("Correct declaration") {
-            const std::vector<TestParameter> expected_params = {
-                TestParameter{.name = "a", .is_ref = true}, TestParameter{.name = "b"}};
+            const auto expected_params =
+                std::array{TestParameter{.name = "a", .is_ref = true}, TestParameter{.name = "b"}};
 
-            const char*   input = "var add: fn(ref a: int, b: int): int;";
-            ParserFixture pf{input};
+            const char*         input = "var add: fn(ref a: int, b: int): int;";
+            const ParserFixture pf{input};
             pf.check_errors();
             const auto* ast = pf.ast();
 
@@ -1066,28 +1051,35 @@ TEST_CASE("Function literals") {
                                  "int");
         }
 
-        SECTION("Incorrect declaration with first default") {
-            const char*   input = "var add: fn(a: int = 1, b: int): ?int;";
-            ParserFixture pf{input};
-            pf.check_errors({"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"});
-        }
+        SECTION("Error cases") {
+            std::array<std::string, 1> errors;
+            SECTION("Incorrect declaration with first default") {
+                const char*         input = "var add: fn(a: int = 1, b: int): ?int;";
+                const ParserFixture pf{input};
+                errors = {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"};
+                pf.check_errors(errors);
+            }
 
-        SECTION("Incorrect declaration with second default") {
-            const char*   input = "var add: fn(a: int, b: int = 2): int;";
-            ParserFixture pf{input};
-            pf.check_errors({"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"});
-        }
+            SECTION("Incorrect declaration with second default") {
+                const char*         input = "var add: fn(a: int, b: int = 2): int;";
+                const ParserFixture pf{input};
+                errors = {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 8]"};
+                pf.check_errors(errors);
+            }
 
-        SECTION("Incorrect declaration with missing return type") {
-            const char*   input = "var add: fn(a: int, b: int):;";
-            ParserFixture pf{input};
-            pf.check_errors({"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 28]"});
-        }
+            SECTION("Incorrect declaration with missing return type") {
+                const char*         input = "var add: fn(a: int, b: int):;";
+                const ParserFixture pf{input};
+                errors = {"MALFORMED_FUNCTION_LITERAL [Ln 1, Col 28]"};
+                pf.check_errors(errors);
+            }
 
-        SECTION("Incorrect declaration with both default") {
-            const char*   input = "const add: fn(a: int = -345, b: uint = 209u);";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token COLON, found SEMICOLON [Ln 1, Col 45]"});
+            SECTION("Incorrect declaration with both default") {
+                const char*         input = "const add: fn(a: int = -345, b: uint = 209u);";
+                const ParserFixture pf{input};
+                errors = {"Expected token COLON, found SEMICOLON [Ln 1, Col 45]"};
+                pf.check_errors(errors);
+            }
         }
     }
 
@@ -1098,38 +1090,31 @@ TEST_CASE("Function literals") {
             bool        primitive;
         };
 
-        struct TestCase {
-            const char*                input;
-            std::vector<TestParameter> expected_params;
-            TestReturnType             expected_return;
-        };
+        const auto cases =
+            std::to_array<std::tuple<const char*, std::vector<TestParameter>, TestReturnType>>({
+                {"fn(): void {};", {}, {.type_name = "void", .nullable = false, .primitive = true}},
+                {"fn(x: int): Blk {};",
+                 {TestParameter{.name = "x"}},
+                 {.type_name = "Blk", .nullable = false, .primitive = false}},
+                {"fn(x: int, y: int, z: int): int {};",
+                 {TestParameter{.name = "x"},
+                  TestParameter{.name = "y"},
+                  TestParameter{.name = "z"}},
+                 {.type_name = "int", .nullable = false, .primitive = true}},
+                {"fn(x: int, ref y: int = 2, z: int): ?Sock {};",
+                 {TestParameter{.name = "x"},
+                  TestParameter{.name = "y", .is_ref = true, .default_value = 2},
+                  TestParameter{.name = "z"}},
+                 {.type_name = "Sock", .nullable = true, .primitive = false}},
+                {"fn(x: int, y: int, z: int = 3): ?uint {};",
+                 {TestParameter{.name = "x"},
+                  TestParameter{.name = "y"},
+                  TestParameter{.name = "z", .default_value = 3}},
+                 {.type_name = "uint", .nullable = true, .primitive = true}},
+            });
 
-        const TestCase cases[] = {
-            {.input           = "fn(): void {};",
-             .expected_params = {},
-             .expected_return = {.type_name = "void", .nullable = false, .primitive = true}},
-            {.input           = "fn(x: int): Blk {};",
-             .expected_params = {TestParameter{.name = "x"}},
-             .expected_return = {.type_name = "Blk", .nullable = false, .primitive = false}},
-            {.input           = "fn(x: int, y: int, z: int): int {};",
-             .expected_params = {TestParameter{.name = "x"},
-                                 TestParameter{.name = "y"},
-                                 TestParameter{.name = "z"}},
-             .expected_return = {.type_name = "int", .nullable = false, .primitive = true}},
-            {.input           = "fn(x: int, ref y: int = 2, z: int): ?Sock {};",
-             .expected_params = {TestParameter{.name = "x"},
-                                 TestParameter{.name = "y", .is_ref = true, .default_value = 2},
-                                 TestParameter{.name = "z"}},
-             .expected_return = {.type_name = "Sock", .nullable = true, .primitive = false}},
-            {.input           = "fn(x: int, y: int, z: int = 3): ?uint {};",
-             .expected_params = {TestParameter{.name = "x"},
-                                 TestParameter{.name = "y"},
-                                 TestParameter{.name = "z", .default_value = 3}},
-             .expected_return = {.type_name = "uint", .nullable = true, .primitive = true}},
-        };
-
-        for (const auto& t : cases) {
-            ParserFixture pf(t.input);
+        for (const auto& [input, expected_params, expected_return] : cases) {
+            const ParserFixture pf{input};
             pf.check_errors();
             const auto* ast = pf.ast();
 
@@ -1143,30 +1128,31 @@ TEST_CASE("Function literals") {
             REQUIRE(function->body->statements.length == 0);
 
             const auto* parameters = &function->parameters;
-            test_parameters(parameters, t.expected_params);
+            test_parameters(parameters, expected_params);
 
             test_type_expression(reinterpret_cast<const Expression*>(function->return_type),
-                                 t.expected_return.nullable,
-                                 t.expected_return.primitive,
+                                 expected_return.nullable,
+                                 expected_return.primitive,
                                  TypeExpressionTag::EXPLICIT,
                                  ExplicitTypeTag::EXPLICIT_IDENT,
-                                 t.expected_return.type_name);
+                                 expected_return.type_name);
         }
 
         SECTION("Implicit parameter type") {
-            const char*   input = "fn(a := 2): int";
-            ParserFixture pf{input};
-            pf.check_errors({"IMPLICIT_FN_PARAM_TYPE [Ln 1, Col 9]",
-                             "No prefix parse function for RPAREN found [Ln 1, Col 10]",
-                             "No prefix parse function for COLON found [Ln 1, Col 11]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"},
-                            false);
+            const char*         input = "fn(a := 2): int";
+            const ParserFixture pf{input};
+            const auto          errors = std::to_array<std::string>(
+                {"IMPLICIT_FN_PARAM_TYPE [Ln 1, Col 9]",
+                          "No prefix parse function for RPAREN found [Ln 1, Col 10]",
+                          "No prefix parse function for COLON found [Ln 1, Col 11]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"});
+            pf.check_errors(errors);
         }
     }
 
     SECTION("Call expression with identifier function") {
-        const char*   input = "add(1, 2 * 3, ref w, 4 + 5);";
-        ParserFixture pf{input};
+        const char*         input = "add(1, 2 * 3, ref w, 4 + 5);";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1220,18 +1206,18 @@ TEST_CASE("Enum declarations") {
         std::optional<int64_t> expected_value = std::nullopt;
     };
 
-    const auto test_enum_variants = [](const ArrayList*                 variants,
-                                       std::vector<EnumVariantTestCase> expected_variants) {
+    const auto test_enum_variants = [](const ArrayList*                     variants,
+                                       std::span<const EnumVariantTestCase> expected_variants) {
         REQUIRE(variants->length == expected_variants.size());
         for (size_t i = 0; i < variants->length; i++) {
             EnumVariant variant;
             REQUIRE(STATUS_OK(array_list_get(variants, i, &variant)));
             REQUIRE(variant.name);
 
-            EnumVariantTestCase expected = expected_variants[i];
+            const auto& expected = expected_variants[i];
             REQUIRE(expected.expected_name == variant.name->name.ptr);
 
-            if (expected.expected_value.has_value()) {
+            if (expected.expected_value) {
                 test_number_expression<int64_t>(variant.value, expected.expected_value.value());
             } else {
                 REQUIRE_FALSE(variant.value);
@@ -1240,24 +1226,28 @@ TEST_CASE("Enum declarations") {
     };
 
     SECTION("Correctly formed enums") {
-        const char* const inputs[] = {
+        const auto inputs = std::to_array<const char*>({
             "enum { RED, BLUE, GREEN, }",
             "enum { RED, BLUE = 1, GREEN, }",
             "enum { RED = 100, BLUE = 20, GREEN = 3, }",
-        };
+        });
 
-        const std::vector<EnumVariantTestCase> expected_variants_lists[] = {
-            {{"RED"}, {"BLUE"}, {"GREEN"}},
-            {{"RED"}, {"BLUE", 1}, {"GREEN"}},
-            {{"RED", 100}, {"BLUE", 20}, {"GREEN", 3}},
-        };
+        const auto expected_variants_lists = std::to_array<std::vector<EnumVariantTestCase>>({
+            {{.expected_name = "RED"}, {.expected_name = "BLUE"}, {.expected_name = "GREEN"}},
+            {{.expected_name = "RED"},
+             {.expected_name = "BLUE", .expected_value = 1},
+             {.expected_name = "GREEN"}},
+            {{.expected_name = "RED", .expected_value = 100},
+             {.expected_name = "BLUE", .expected_value = 20},
+             {.expected_name = "GREEN", .expected_value = 3}},
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_variants_lists));
-        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+        REQUIRE(inputs.size() == expected_variants_lists.size());
+        for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
             const char* input             = inputs[test_idx];
-            const auto  expected_variants = expected_variants_lists[test_idx];
+            const auto& expected_variants = expected_variants_lists[test_idx];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -1273,11 +1263,13 @@ TEST_CASE("Enum declarations") {
     }
 
     SECTION("Enums as types") {
-        const char*                            input = "var a: enum { RED, BLUE = 100, GREEN, };";
-        const std::vector<EnumVariantTestCase> expected_variants_list = {
-            {"RED"}, {"BLUE", 100}, {"GREEN"}};
+        const char* input = "var a: enum { RED, BLUE = 100, GREEN, };";
+        const auto  expected_variants_list =
+            std::to_array<EnumVariantTestCase>({{.expected_name = "RED"},
+                                                {.expected_name = "BLUE", .expected_value = 100},
+                                                {.expected_name = "GREEN"}});
 
-        ParserFixture pf{input};
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1302,10 +1294,12 @@ TEST_CASE("Enum declarations") {
 
     SECTION("Enums in type decls") {
         const char* input = "type Colors = enum { RED, BLUE = 100, GREEN, };";
-        const std::vector<EnumVariantTestCase> expected_variants_list = {
-            {"RED"}, {"BLUE", 100}, {"GREEN"}};
+        const auto  expected_variants_list =
+            std::to_array<EnumVariantTestCase>({{.expected_name = "RED"},
+                                                {.expected_name = "BLUE", .expected_value = 100},
+                                                {.expected_name = "GREEN"}});
 
-        ParserFixture pf{input};
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1331,38 +1325,40 @@ TEST_CASE("Enum declarations") {
     }
 
     SECTION("Malformed enum expressions") {
+        std::vector<std::string> errors;
         SECTION("Empty enum body") {
-            const char*   input = "enum {}";
-            ParserFixture pf{input};
-            pf.check_errors({"ENUM_MISSING_VARIANTS [Ln 1, Col 1]"});
+            const char*         input = "enum {}";
+            const ParserFixture pf{input};
+            errors = {"ENUM_MISSING_VARIANTS [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing trailing comma") {
-            const char*   input = "enum { a, b, c }";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token COMMA, found RBRACE [Ln 1, Col 16]",
-                             "MISSING_TRAILING_COMMA [Ln 1, Col 14]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
-                            false);
+            const char*         input = "enum { a, b, c }";
+            const ParserFixture pf{input};
+            errors = {"Expected token COMMA, found RBRACE [Ln 1, Col 16]",
+                      "MISSING_TRAILING_COMMA [Ln 1, Col 14]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 16]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing internal comma") {
-            const char*   input = "enum { a, b c, }";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token COMMA, found IDENT [Ln 1, Col 13]",
-                             "MISSING_TRAILING_COMMA [Ln 1, Col 11]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 14]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 16]"},
-                            false);
+            const char*         input = "enum { a, b c, }";
+            const ParserFixture pf{input};
+            errors = {"Expected token COMMA, found IDENT [Ln 1, Col 13]",
+                      "MISSING_TRAILING_COMMA [Ln 1, Col 11]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 14]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 16]"};
+            pf.check_errors(errors);
         }
 
         SECTION("All commas omitted") {
-            const char*   input = "enum { a b c }";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token COMMA, found IDENT [Ln 1, Col 10]",
-                             "MISSING_TRAILING_COMMA [Ln 1, Col 8]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 14]"},
-                            false);
+            const char*         input = "enum { a b c }";
+            const ParserFixture pf{input};
+            errors = {"Expected token COMMA, found IDENT [Ln 1, Col 10]",
+                      "MISSING_TRAILING_COMMA [Ln 1, Col 8]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 14]"};
+            pf.check_errors(errors);
         }
     }
 }
@@ -1376,8 +1372,8 @@ TEST_CASE("Struct declarations") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
-    const auto test_struct_members = [](const ArrayList*                         members,
-                                        const std::vector<StructMemberTestCase>& expected_members) {
+    const auto test_struct_members = [](const ArrayList*                      members,
+                                        std::span<const StructMemberTestCase> expected_members) {
         REQUIRE(members->length == expected_members.size());
         for (size_t i = 0; i < members->length; i++) {
             StructMember member;
@@ -1395,7 +1391,7 @@ TEST_CASE("Struct declarations") {
                                  ExplicitTypeTag::EXPLICIT_IDENT,
                                  expected.type_name);
 
-            if (expected.default_value.has_value()) {
+            if (expected.default_value) {
                 REQUIRE(member.default_value);
                 test_number_expression<int64_t>(member.default_value,
                                                 expected.default_value.value());
@@ -1406,22 +1402,29 @@ TEST_CASE("Struct declarations") {
     };
 
     SECTION("Correctly formed structs") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "struct { a: int, }",
             "struct { a: int, b: uint, c: ?Woah, d: int = 1, }",
         };
 
-        const std::vector<StructMemberTestCase> expected_member_lists[] = {
-            {{"a", "int"}},
-            {{"a", "int"}, {"b", "uint"}, {"c", "Woah", true, false}, {"d", "int", false, true, 1}},
-        };
+        const auto expected_member_lists = std::to_array<std::vector<StructMemberTestCase>>({
+            {{.member_name = "a", .type_name = "int"}},
+            {{.member_name = "a", .type_name = "int"},
+             {.member_name = "b", .type_name = "uint"},
+             {.member_name = "c", .type_name = "Woah", .nullable = true, .primitive = false},
+             {.member_name   = "d",
+              .type_name     = "int",
+              .nullable      = false,
+              .primitive     = true,
+              .default_value = 1}},
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_member_lists));
-        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+        REQUIRE(inputs.size() == expected_member_lists.size());
+        for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
             const char* input            = inputs[test_idx];
-            const auto  expected_members = expected_member_lists[test_idx];
+            const auto& expected_members = expected_member_lists[test_idx];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -1437,11 +1440,12 @@ TEST_CASE("Struct declarations") {
     }
 
     SECTION("Structs as types") {
-        const char*                             input = "var a: struct { a: int, b: ?uint, };";
-        const std::vector<StructMemberTestCase> expected_member_list = {{"a", "int"},
-                                                                        {"b", "uint", true}};
+        const char* input                = "var a: struct { a: int, b: ?uint, };";
+        const auto  expected_member_list = std::to_array<StructMemberTestCase>(
+            {{.member_name = "a", .type_name = "int"},
+              {.member_name = "b", .type_name = "uint", .nullable = true}});
 
-        ParserFixture pf{input};
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1465,63 +1469,66 @@ TEST_CASE("Struct declarations") {
     }
 
     SECTION("Malformed struct expressions") {
+        std::vector<std::string> errors;
         SECTION("Empty struct body") {
-            const char*   input = "struct {}";
-            ParserFixture pf{input};
-            pf.check_errors({"STRUCT_MISSING_MEMBERS [Ln 1, Col 1]"});
+            const char*         input = "struct {}";
+            const ParserFixture pf{input};
+            errors = {"STRUCT_MISSING_MEMBERS [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing trailing comma") {
-            const char*   input = "struct { a: int, b: int }";
-            ParserFixture pf{input};
-            pf.check_errors({"MISSING_TRAILING_COMMA [Ln 1, Col 25]"});
+            const char*         input = "struct { a: int, b: int }";
+            const ParserFixture pf{input};
+            errors = {"MISSING_TRAILING_COMMA [Ln 1, Col 25]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing internal comma") {
-            const char*   input = "struct { a: int, b: int c: int, }";
-            ParserFixture pf{input};
-            pf.check_errors({"MISSING_TRAILING_COMMA [Ln 1, Col 25]",
-                             "No prefix parse function for COLON found [Ln 1, Col 26]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 28]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 31]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 33]"},
-                            false);
+            const char*         input = "struct { a: int, b: int c: int, }";
+            const ParserFixture pf{input};
+            errors = {"MISSING_TRAILING_COMMA [Ln 1, Col 25]",
+                      "No prefix parse function for COLON found [Ln 1, Col 26]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 28]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 31]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 33]"};
+            pf.check_errors(errors);
         }
 
         SECTION("All commas omitted") {
-            const char*   input = "struct { a: int b: int c: int }";
-            ParserFixture pf{input};
-            pf.check_errors({"MISSING_TRAILING_COMMA [Ln 1, Col 17]",
-                             "No prefix parse function for COLON found [Ln 1, Col 18]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
-                             "No prefix parse function for COLON found [Ln 1, Col 25]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 27]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 31]"},
-                            false);
+            const char*         input = "struct { a: int b: int c: int }";
+            const ParserFixture pf{input};
+            errors = {"MISSING_TRAILING_COMMA [Ln 1, Col 17]",
+                      "No prefix parse function for COLON found [Ln 1, Col 18]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
+                      "No prefix parse function for COLON found [Ln 1, Col 25]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 27]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 31]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Erroneous declaration") {
-            const char*   input = "struct { const a: int = 1; }";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token IDENT, found CONST [Ln 1, Col 10]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 28]"},
-                            false);
+            const char*         input = "struct { const a: int = 1; }";
+            const ParserFixture pf{input};
+            errors = {"Expected token IDENT, found CONST [Ln 1, Col 10]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 28]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Implicit member type declaration") {
-            const char*   input = "struct { a := 1, }";
-            ParserFixture pf{input};
-            pf.check_errors({"STRUCT_MEMBER_NOT_EXPLICIT [Ln 1, Col 15]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 16]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 18]"},
-                            false);
+            const char*         input = "struct { a := 1, }";
+            const ParserFixture pf{input};
+            errors = {"STRUCT_MEMBER_NOT_EXPLICIT [Ln 1, Col 15]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 16]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 18]"};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("Nil expressions") {
-    const char*   input = "nil";
-    ParserFixture pf{input};
+    const char*         input = "nil";
+    const ParserFixture pf{input};
     pf.check_errors();
 
     const auto* ast = pf.ast();
@@ -1535,8 +1542,8 @@ TEST_CASE("Nil expressions") {
 
 TEST_CASE("Impl statements") {
     SECTION("Correct block") {
-        const char*   input = "impl Obj { const a := 1; }";
-        ParserFixture pf{input};
+        const char*         input = "impl Obj { const a := 1; }";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -1562,16 +1569,19 @@ TEST_CASE("Impl statements") {
     }
 
     SECTION("Malformed impl blocks") {
+        std::array<std::string, 1> errors;
         SECTION("Missing ident") {
-            const char*   input = "impl { const a := 1; }";
-            ParserFixture pf{input};
-            pf.check_errors({"Expected token IDENT, found LBRACE [Ln 1, Col 6]"});
+            const char*         input = "impl { const a := 1; }";
+            const ParserFixture pf{input};
+            errors = {"Expected token IDENT, found LBRACE [Ln 1, Col 6]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty implementation") {
-            const char*   input = "impl Obj {}";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"});
+            const char*         input = "impl Obj {}";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
     }
 }
@@ -1584,14 +1594,14 @@ TEST_CASE("Import Statements") {
     };
 
     SECTION("Correct imports") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "import std",
             "import array;",
             R"(import "util/test.cch" as test)",
             "import hash as Hash",
         };
 
-        const ImportTestCase expected_imports[] = {
+        const auto expected_imports = std::to_array<ImportTestCase>({
             {.expected_tag = ImportTag::STANDARD, .expected_literal = "std"},
             {.expected_tag = ImportTag::STANDARD, .expected_literal = "array"},
             {.expected_tag     = ImportTag::USER,
@@ -1600,14 +1610,14 @@ TEST_CASE("Import Statements") {
             {.expected_tag     = ImportTag::STANDARD,
              .expected_literal = "hash",
              .expected_alias   = "Hash"},
-        };
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_imports));
-        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+        REQUIRE(inputs.size() == expected_imports.size());
+        for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
             const char* input    = inputs[test_idx];
-            const auto  expected = expected_imports[test_idx];
+            const auto& expected = expected_imports[test_idx];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -1629,25 +1639,30 @@ TEST_CASE("Import Statements") {
             }
 
             if (import_stmt->alias != nullptr) {
-                REQUIRE(expected.expected_alias.has_value());
+                REQUIRE(expected.expected_alias);
                 test_identifier_expression(reinterpret_cast<const Expression*>(import_stmt->alias),
                                            expected.expected_alias.value());
             } else {
-                REQUIRE_FALSE(expected.expected_alias.has_value());
+                REQUIRE_FALSE(expected.expected_alias);
             }
         }
     }
 
-    SECTION("Incorrect token") {
-        const char*   input = "import 1";
-        ParserFixture pf{input};
-        pf.check_errors({"UNEXPECTED_TOKEN [Ln 1, Col 8]"});
-    }
+    SECTION("Malformed import blocks") {
+        std::array<std::string, 1> errors;
+        SECTION("Incorrect token") {
+            const char*         input = "import 1";
+            const ParserFixture pf{input};
+            errors = {"UNEXPECTED_TOKEN [Ln 1, Col 8]"};
+            pf.check_errors(errors);
+        }
 
-    SECTION("User import without alias") {
-        const char*   input = R"(import "some_file.cch")";
-        ParserFixture pf{input};
-        pf.check_errors({"USER_IMPORT_MISSING_ALIAS [Ln 1, Col 1]"});
+        SECTION("User import without alias") {
+            const char*         input = R"(import "some_file.cch")";
+            const ParserFixture pf{input};
+            errors = {"USER_IMPORT_MISSING_ALIAS [Ln 1, Col 1]"};
+            pf.check_errors(errors);
+        }
     }
 }
 
@@ -1664,26 +1679,30 @@ TEST_CASE("Match expressions") {
     };
 
     SECTION("Correct match") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "match In { 1 => return 90u;, }",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, };",
             "match Out { 1 => return 90u;, 2 => return 0b1011u, } else 5",
         };
 
-        const MatchTestCase expected_matches[] = {
-            {.expected_expr_name = "In", .expected_arms = {{1, 90ULL}}},
-            {.expected_expr_name = "Out", .expected_arms = {{1, 90ULL}, {2, 0b1011ULL}}},
+        const auto expected_matches = std::to_array<MatchTestCase>({
+            {.expected_expr_name = "In",
+             .expected_arms      = {{.lhs = 1, .expected_return_value = 90ULL}}},
             {.expected_expr_name = "Out",
-             .expected_arms      = {{1, 90ULL}, {2, 0b1011ULL}},
+             .expected_arms      = {{.lhs = 1, .expected_return_value = 90ULL},
+                                    {.lhs = 2, .expected_return_value = 0b1011ULL}}},
+            {.expected_expr_name = "Out",
+             .expected_arms      = {{.lhs = 1, .expected_return_value = 90ULL},
+                                    {.lhs = 2, .expected_return_value = 0b1011ULL}},
              .otherwise          = 5},
-        };
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_matches));
-        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+        REQUIRE(inputs.size() == expected_matches.size());
+        for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
             const char* input    = inputs[test_idx];
-            const auto  expected = expected_matches[test_idx];
+            const auto& expected = expected_matches[test_idx];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -1710,64 +1729,67 @@ TEST_CASE("Match expressions") {
             }
 
             if (match_expr->catch_all != nullptr) {
-                REQUIRE(expected.otherwise.has_value());
+                REQUIRE(expected.otherwise);
                 const auto* otherwise =
                     reinterpret_cast<const ExpressionStatement*>(match_expr->catch_all);
                 test_number_expression<int64_t>(otherwise->expression, expected.otherwise.value());
             } else {
-                REQUIRE_FALSE(expected.otherwise.has_value());
+                REQUIRE_FALSE(expected.otherwise);
             }
         }
     }
 
     SECTION("Malformed match expressions") {
+        std::vector<std::string> errors;
         SECTION("No arms") {
-            const char*   input = "match Out { }";
-            ParserFixture pf{input};
-            pf.check_errors({"ARMLESS_MATCH_EXPR [Ln 1, Col 1]"}, false);
+            const char*         input = "match Out { }";
+            const ParserFixture pf{input};
+            errors = {"ARMLESS_MATCH_EXPR [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Illegal catch-all") {
-            const char*   input = "match Out { a => 4, } else const b := 4";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_MATCH_CATCH_ALL [Ln 1, Col 28]"}, false);
+            const char*         input = "match Out { a => 4, } else const b := 4";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_MATCH_CATCH_ALL [Ln 1, Col 28]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Standard declarations in arm") {
-            const char*   input = "match true { 1 => const a := 1, }";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                             "No prefix parse function for WALRUS found [Ln 1, Col 27]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 31]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 33]"},
-                            false);
+            const char*         input = "match true { 1 => const a := 1, }";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                      "No prefix parse function for WALRUS found [Ln 1, Col 27]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 31]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 33]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Type declarations in arm") {
-            const char*   input = "match true { 1 => type a = Test, }";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 32]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 34]"},
-                            false);
+            const char*         input = "match true { 1 => type a = Test, }";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 32]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 34]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Impl statements in arm") {
-            const char*   input = "match true { 1 => impl Obj { const a := 1; }, }";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 45]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 47]"},
-                            false);
+            const char*         input = "match true { 1 => impl Obj { const a := 1; }, }";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 45]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 47]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Import declarations in arm") {
-            const char*   input = "match true { 1 => import std, }";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 29]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 31]"},
-                            false);
+            const char*         input = "match true { 1 => import std, }";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_MATCH_ARM [Ln 1, Col 19]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 29]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 31]"};
+            pf.check_errors(errors);
         }
     }
 }
@@ -1779,24 +1801,24 @@ TEST_CASE("Array expressions") {
     };
 
     SECTION("Correct int arrays") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "[1uz]{1,}",
             "[0b11uz]{1, 2, 3, }",
             "[_]{1, 2, }",
         };
 
-        const ArrayTestCase expected_arrays[] = {
+        const auto expected_arrays = std::to_array<ArrayTestCase>({
             {.expected_size = 1, .expected_items = {1}},
             {.expected_size = 0b11, .expected_items = {1, 2, 3}},
             {.expected_size = std::nullopt, .expected_items = {1, 2}},
-        };
+        });
 
-        REQUIRE(std::size(inputs) == std::size(expected_arrays));
-        for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+        REQUIRE(inputs.size() == expected_arrays.size());
+        for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
             const char* input    = inputs[test_idx];
-            const auto  expected = expected_arrays[test_idx];
+            const auto& expected = expected_arrays[test_idx];
 
-            ParserFixture pf{input};
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -1809,7 +1831,7 @@ TEST_CASE("Array expressions") {
                 reinterpret_cast<const ArrayLiteralExpression*>(expr_stmt->expression);
 
             if (array_expr->inferred_size) {
-                REQUIRE_FALSE(expected.expected_size.has_value());
+                REQUIRE_FALSE(expected.expected_size);
             } else {
                 REQUIRE(array_expr->items.length == expected.expected_size.value());
             }
@@ -1833,7 +1855,7 @@ TEST_CASE("Array expressions") {
         };
 
         SECTION("Correct array types") {
-            const char* const inputs[] = {
+            const auto inputs = std::array{
                 "var a: [1uz]int;",
                 "var a: [1uz, 2uz]int;",
                 "var a: ?[1uz, 2uz]int;",
@@ -1841,7 +1863,7 @@ TEST_CASE("Array expressions") {
                 "var a: ?[1uz, 2uz]?int;",
             };
 
-            const ArrayTypeTestCase expected_dims[] = {
+            const auto expected_dims = std::to_array<ArrayTypeTestCase>({
                 {.decl_name      = "a",
                  .expected_dims  = {1},
                  .array_nullable = false,
@@ -1862,14 +1884,14 @@ TEST_CASE("Array expressions") {
                  .expected_dims  = {1, 2},
                  .array_nullable = true,
                  .inner_nullable = true},
-            };
+            });
 
-            REQUIRE(std::size(inputs) == std::size(expected_dims));
-            for (size_t test_idx = 0; test_idx < std::size(inputs); test_idx++) {
+            REQUIRE(inputs.size() == expected_dims.size());
+            for (size_t test_idx = 0; test_idx < inputs.size(); test_idx++) {
                 const char* input    = inputs[test_idx];
-                const auto  expected = expected_dims[test_idx];
+                const auto& expected = expected_dims[test_idx];
 
-                ParserFixture pf{input};
+                const ParserFixture pf{input};
                 pf.check_errors();
 
                 const auto* ast = pf.ast();
@@ -1905,100 +1927,104 @@ TEST_CASE("Array expressions") {
         }
 
         SECTION("Malformed array types") {
+            std::vector<std::string> errors;
             SECTION("Missing size token") {
-                const char*   input = "var a: []int";
-                ParserFixture pf{input};
-                pf.check_errors({"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 5]",
-                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 10]"},
-                                false);
+                const char*         input = "var a: []int";
+                const ParserFixture pf{input};
+                errors = {"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 5]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 10]"};
+                pf.check_errors(errors);
             }
 
             SECTION("Incorrect token type") {
-                const char*   input = R"(var a: ["wrong"]int)";
-                ParserFixture pf{input};
-                pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
-                                 "No prefix parse function for RBRACKET found [Ln 1, Col 16]",
-                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 17]"},
-                                false);
+                const char*         input = R"(var a: ["wrong"]int)";
+                const ParserFixture pf{input};
+                errors = {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
+                          "No prefix parse function for RBRACKET found [Ln 1, Col 16]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 17]"};
+                pf.check_errors(errors);
             }
 
             SECTION("Incorrect token integer type") {
-                const char*   input = "var a: [0b11]int";
-                ParserFixture pf{input};
-                pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
-                                 "No prefix parse function for RBRACKET found [Ln 1, Col 13]",
-                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 14]"},
-                                false);
+                const char*         input = "var a: [0b11]int";
+                const ParserFixture pf{input};
+                errors = {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 9]",
+                          "No prefix parse function for RBRACKET found [Ln 1, Col 13]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 14]"};
+                pf.check_errors(errors);
             }
 
             SECTION("Incorrect token integer type") {
-                const char*   input = "var a: [0uz]int";
-                ParserFixture pf{input};
-                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 9]",
-                                 "No prefix parse function for RBRACKET found [Ln 1, Col 12]",
-                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"},
-                                false);
+                const char*         input = "var a: [0uz]int";
+                const ParserFixture pf{input};
+                errors = {"EMPTY_ARRAY [Ln 1, Col 9]",
+                          "No prefix parse function for RBRACKET found [Ln 1, Col 12]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 13]"};
+                pf.check_errors(errors);
             }
 
             SECTION("Incorrect token integer type") {
-                const char*   input = "var a: [2uz, 0uz]int";
-                ParserFixture pf{input};
-                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 14]",
-                                 "No prefix parse function for RBRACKET found [Ln 1, Col 17]",
-                                 "No prefix parse function for INT_TYPE found [Ln 1, Col 18]"},
-                                false);
+                const char*         input = "var a: [2uz, 0uz]int";
+                const ParserFixture pf{input};
+                errors = {"EMPTY_ARRAY [Ln 1, Col 14]",
+                          "No prefix parse function for RBRACKET found [Ln 1, Col 17]",
+                          "No prefix parse function for INT_TYPE found [Ln 1, Col 18]"};
+                pf.check_errors(errors);
             }
         }
     }
 
     SECTION("Malformed array expressions") {
+        std::vector<std::string> errors;
         SECTION("Missing size token") {
-            const char*   input = "[]{1, 2, 3, }";
-            ParserFixture pf{input};
-            pf.check_errors({"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 5]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 8]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 11]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 13]"},
-                            false);
+            const char*         input = "[]{1, 2, 3, }";
+            const ParserFixture pf{input};
+            errors = {"MISSING_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 5]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 8]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 11]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 13]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Incorrect token type") {
-            const char*   input = R"(["wrong"]{1, 2, 3, })";
-            ParserFixture pf{input};
-            pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
-                             "No prefix parse function for RBRACKET found [Ln 1, Col 9]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 12]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 15]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 18]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 20]"},
-                            false);
+            const char*         input = R"(["wrong"]{1, 2, 3, })";
+            const ParserFixture pf{input};
+            errors = {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                      "No prefix parse function for RBRACKET found [Ln 1, Col 9]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 12]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 15]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 18]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 20]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Incorrect token integer type") {
-            const char*   input = "[0b11]{1, 2, 3, }";
-            ParserFixture pf{input};
-            pf.check_errors({"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
-                             "No prefix parse function for RBRACKET found [Ln 1, Col 6]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 9]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 12]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 15]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
-                            false);
+            const char*         input = "[0b11]{1, 2, 3, }";
+            const ParserFixture pf{input};
+            errors = {"UNEXPECTED_ARRAY_SIZE_TOKEN [Ln 1, Col 2]",
+                      "No prefix parse function for RBRACKET found [Ln 1, Col 6]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 9]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 12]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 15]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 17]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Incorrect token value") {
-            const char*   input = "[23uz]{1, 2, 3, }";
-            ParserFixture pf{input};
-            pf.check_errors({"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]"}, false);
+            const char*         input = "[23uz]{1, 2, 3, }";
+            const ParserFixture pf{input};
+            errors = {"INCORRECT_EXPLICIT_ARRAY_SIZE [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty arrays") {
-            const char* const inputs[] = {"[0uz]{}", "[_]{}"};
+            const auto inputs = std::array{"[0uz]{}", "[_]{}"};
 
+            errors = {"EMPTY_ARRAY [Ln 1, Col 1]"};
             for (const auto& input : inputs) {
-                ParserFixture pf{input};
-                pf.check_errors({"EMPTY_ARRAY [Ln 1, Col 1]"}, false);
+                const ParserFixture pf{input};
+                pf.check_errors(errors);
             }
         }
     }
@@ -2006,8 +2032,8 @@ TEST_CASE("Array expressions") {
 
 TEST_CASE("Discard statements") {
     SECTION("Correct discards") {
-        const char*   input = "_ = 90";
-        ParserFixture pf{input};
+        const char*         input = "_ = 90";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2020,18 +2046,19 @@ TEST_CASE("Discard statements") {
     }
 
     SECTION("Incorrect discards") {
-        const char*   input = "_ = const a := 2";
-        ParserFixture pf{input};
-        pf.check_errors({"No prefix parse function for CONST found [Ln 1, Col 5]",
-                         "No prefix parse function for WALRUS found [Ln 1, Col 13]"},
-                        false);
+        const char*         input = "_ = const a := 2";
+        const ParserFixture pf{input};
+        const auto          errors = std::to_array<std::string>(
+            {"No prefix parse function for CONST found [Ln 1, Col 5]",
+                      "No prefix parse function for WALRUS found [Ln 1, Col 13]"});
+        pf.check_errors(errors);
     }
 }
 
 TEST_CASE("For loops") {
     SECTION("Iterable only") {
-        const char*   input = "for (1) {1}";
-        ParserFixture pf{input};
+        const char*         input = "for (1) {1}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2059,8 +2086,8 @@ TEST_CASE("For loops") {
 
     SECTION("Iterable and capture only") {
         SECTION("Aligned captures") {
-            const char*   input = "for (1) : (name) {1}";
-            ParserFixture pf{input};
+            const char*         input = "for (1) : (name) {1}";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2094,8 +2121,8 @@ TEST_CASE("For loops") {
         }
 
         SECTION("Ignored capture") {
-            const char*   input = "for (1, 2) : (name, _) {1}";
-            ParserFixture pf{input};
+            const char*         input = "for (1, 2) : (name, _) {1}";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2121,8 +2148,8 @@ TEST_CASE("For loops") {
 
     SECTION("Full for loops") {
         SECTION("With else block statement") {
-            const char*   input = "for (1, 2) : (name, word) {1} else {1}";
-            ParserFixture pf{input};
+            const char*         input = "for (1, 2) : (name, word) {1} else {1}";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2169,8 +2196,8 @@ TEST_CASE("For loops") {
         }
 
         SECTION("With expression else") {
-            const char*   input = "for (1, 2) : (name, word) {1} else 1";
-            ParserFixture pf{input};
+            const char*         input = "for (1, 2) : (name, word) {1} else 1";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2189,8 +2216,8 @@ TEST_CASE("For loops") {
     }
 
     SECTION("Capture refs") {
-        const char*   input = "for (1, 2, 3) : (name, ref hey, word) {1}";
-        ParserFixture pf{input};
+        const char*         input = "for (1, 2, 3) : (name, ref hey, word) {1}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2214,36 +2241,41 @@ TEST_CASE("For loops") {
     }
 
     SECTION("Malformed for loops") {
+        std::array<std::string, 1> errors;
         SECTION("Missing iterables") {
-            const char*   input = "for () {}";
-            ParserFixture pf{input};
-            pf.check_errors({"FOR_MISSING_ITERABLES [Ln 1, Col 1]"});
+            const char*         input = "for () {}";
+            const ParserFixture pf{input};
+            errors = {"FOR_MISSING_ITERABLES [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Capture mismatch") {
-            const char*   input = "for (1) : () {}";
-            ParserFixture pf{input};
-            pf.check_errors({"FOR_ITERABLE_CAPTURE_MISMATCH [Ln 1, Col 1]"});
+            const char*         input = "for (1) : () {}";
+            const ParserFixture pf{input};
+            errors = {"FOR_ITERABLE_CAPTURE_MISMATCH [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing body") {
-            const char*   input = "for (1) {}";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_FOR_LOOP [Ln 1, Col 1]"});
+            const char*         input = "for (1) {}";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_FOR_LOOP [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Improper non break clause") {
-            const char*   input = "for (1) : (1) {1} else const a := 2;";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]"}, false);
+            const char*         input = "for (1) : (1) {1} else const a := 2;";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 24]"};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("While loops") {
     SECTION("Condition only") {
-        const char*   input = "while (1) {1}";
-        ParserFixture pf{input};
+        const char*         input = "while (1) {1}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2268,8 +2300,8 @@ TEST_CASE("While loops") {
     }
 
     SECTION("Condition and continuation only") {
-        const char*   input = "while (1) : (1) {1}";
-        ParserFixture pf{input};
+        const char*         input = "while (1) : (1) {1}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2297,8 +2329,8 @@ TEST_CASE("While loops") {
 
     SECTION("Full while loops") {
         SECTION("With block else") {
-            const char*   input = "while (1) : (1) {1} else {1}";
-            ParserFixture pf{input};
+            const char*         input = "while (1) : (1) {1} else {1}";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2332,8 +2364,8 @@ TEST_CASE("While loops") {
         }
 
         SECTION("With expression else") {
-            const char*   input = "while (1) : (1) {1} else 1u";
-            ParserFixture pf{input};
+            const char*         input = "while (1) : (1) {1} else 1u";
+            const ParserFixture pf{input};
             pf.check_errors();
 
             const auto* ast = pf.ast();
@@ -2365,36 +2397,41 @@ TEST_CASE("While loops") {
     }
 
     SECTION("Malformed while loops") {
+        std::array<std::string, 1> errors;
         SECTION("Missing condition") {
-            const char*   input = "while () {}";
-            ParserFixture pf{input};
-            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 8]"});
+            const char*         input = "while () {}";
+            const ParserFixture pf{input};
+            errors = {"WHILE_MISSING_CONDITION [Ln 1, Col 8]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty continuation") {
-            const char*   input = "while (1) : () {}";
-            ParserFixture pf{input};
-            pf.check_errors({"IMPROPER_WHILE_CONTINUATION [Ln 1, Col 9]"});
+            const char*         input = "while (1) : () {}";
+            const ParserFixture pf{input};
+            errors = {"IMPROPER_WHILE_CONTINUATION [Ln 1, Col 9]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing body") {
-            const char*   input = "while (1) {}";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_WHILE_LOOP [Ln 1, Col 1]"});
+            const char*         input = "while (1) {}";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_WHILE_LOOP [Ln 1, Col 1]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Improper non break clause") {
-            const char*   input = "while (1) : (1) {1} else const a := 2;";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 26]"}, false);
+            const char*         input = "while (1) : (1) {1} else const a := 2;";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_LOOP_NON_BREAK [Ln 1, Col 26]"};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("Do while loops") {
     SECTION("Full do while loops") {
-        const char*   input = "do {1} while (1)";
-        ParserFixture pf{input};
+        const char*         input = "do {1} while (1)";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2417,27 +2454,28 @@ TEST_CASE("Do while loops") {
     }
 
     SECTION("Malformed do while loops") {
+        std::vector<std::string> errors;
         SECTION("Missing condition") {
-            const char*   input = "do {1} while ()";
-            ParserFixture pf{input};
-            pf.check_errors({"WHILE_MISSING_CONDITION [Ln 1, Col 15]"});
+            const char*         input = "do {1} while ()";
+            const ParserFixture pf{input};
+            errors = {"WHILE_MISSING_CONDITION [Ln 1, Col 15]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing body") {
-            const char*   input = "do {} while (1)";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_WHILE_LOOP [Ln 1, Col 1]",
-                             "Expected token LBRACE, found END [Ln 1, Col 16]"},
-                            false);
+            const char*         input = "do {} while (1)";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_WHILE_LOOP [Ln 1, Col 1]",
+                      "Expected token LBRACE, found END [Ln 1, Col 16]"};
+            pf.check_errors(errors);
         }
     }
 }
 
-// TODO
 TEST_CASE("Raw loops") {
     SECTION("Correct loops") {
-        const char*   input = "loop {1}";
-        ParserFixture pf{input};
+        const char*         input = "loop {1}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2455,16 +2493,17 @@ TEST_CASE("Raw loops") {
     }
 
     SECTION("Malformed loop without body") {
-        const char*   input = "loop {}";
-        ParserFixture pf{input};
-        pf.check_errors({"EMPTY_LOOP [Ln 1, Col 1]"}, false);
+        const char*         input = "loop {}";
+        const ParserFixture pf{input};
+        const auto          errors = std::to_array<std::string>({"EMPTY_LOOP [Ln 1, Col 1]"});
+        pf.check_errors(errors);
     }
 }
 
 TEST_CASE("Generics") {
     SECTION("Function definition generics") {
-        const char*   input = "fn<T, B>(a: int): int {}";
-        ParserFixture pf{input};
+        const char*         input = "fn<T, B>(a: int): int {}";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2485,8 +2524,8 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Function type generics") {
-        const char*   input = "var a: fn<T>(b: int): Result<int>;";
-        ParserFixture pf{input};
+        const char*         input = "var a: fn<T>(b: int): Result<int>;";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2524,8 +2563,8 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Function generics in type decls") {
-        const char*   input = "type F = fn<T, B>(a: int): int";
-        ParserFixture pf{input};
+        const char*         input = "type F = fn<T, B>(a: int): int";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2556,8 +2595,8 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Struct generics") {
-        const char*   input = "struct<T, E>{a: int, }";
-        ParserFixture pf{input};
+        const char*         input = "struct<T, E>{a: int, }";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2576,8 +2615,8 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Call generics in type decls") {
-        const char*   input = "type S = struct<T, E>{a: int, }";
-        ParserFixture pf{input};
+        const char*         input = "type S = struct<T, E>{a: int, }";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2608,8 +2647,8 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Call generics") {
-        const char*   input = "func(1, 2) with <int>";
-        ParserFixture pf{input};
+        const char*         input = "func(1, 2) with <int>";
+        const ParserFixture pf{input};
         pf.check_errors();
 
         const auto* ast = pf.ast();
@@ -2626,86 +2665,87 @@ TEST_CASE("Generics") {
     }
 
     SECTION("Malformed generics") {
+        std::vector<std::string> errors;
         SECTION("Incorrect generic tokens") {
-            const char*   input = "struct<1>{a: int,}";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
-                             "No prefix parse function for GT found [Ln 1, Col 9]",
-                             "No prefix parse function for COLON found [Ln 1, Col 12]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 14]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 17]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 18]"},
-                            false);
+            const char*         input = "struct<1>{a: int,}";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
+                      "No prefix parse function for GT found [Ln 1, Col 9]",
+                      "No prefix parse function for COLON found [Ln 1, Col 12]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 14]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 17]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 18]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty generic list in structs") {
-            const char*   input = "struct<>{a: int,}";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_GENERIC_LIST [Ln 1, Col 7]",
-                             "No prefix parse function for GT found [Ln 1, Col 8]",
-                             "No prefix parse function for COLON found [Ln 1, Col 11]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 16]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 17]"},
-                            false);
+            const char*         input = "struct<>{a: int,}";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 7]",
+                      "No prefix parse function for GT found [Ln 1, Col 8]",
+                      "No prefix parse function for COLON found [Ln 1, Col 11]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 16]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 17]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Incorrect generic expression") {
-            const char*   input = R"(struct<"2" + 2>{a: int,})";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
-                             "No prefix parse function for PLUS found [Ln 1, Col 12]",
-                             "No prefix parse function for LBRACE found [Ln 1, Col 16]",
-                             "No prefix parse function for COLON found [Ln 1, Col 18]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
-                             "No prefix parse function for COMMA found [Ln 1, Col 23]",
-                             "No prefix parse function for RBRACE found [Ln 1, Col 24]"},
-                            false);
+            const char*         input = R"(struct<"2" + 2>{a: int,})";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_IDENTIFIER [Ln 1, Col 8]",
+                      "No prefix parse function for PLUS found [Ln 1, Col 12]",
+                      "No prefix parse function for LBRACE found [Ln 1, Col 16]",
+                      "No prefix parse function for COLON found [Ln 1, Col 18]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 20]",
+                      "No prefix parse function for COMMA found [Ln 1, Col 23]",
+                      "No prefix parse function for RBRACE found [Ln 1, Col 24]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty generic list in functions") {
-            const char*   input = "var a: fn<>(a: int): int";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_GENERIC_LIST [Ln 1, Col 10]",
-                             "No prefix parse function for GT found [Ln 1, Col 11]",
-                             "Expected token RPAREN, found COLON [Ln 1, Col 14]",
-                             "No prefix parse function for COLON found [Ln 1, Col 14]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 16]",
-                             "No prefix parse function for RPAREN found [Ln 1, Col 19]",
-                             "No prefix parse function for COLON found [Ln 1, Col 20]",
-                             "No prefix parse function for INT_TYPE found [Ln 1, Col 22]"},
-                            false);
+            const char*         input = "var a: fn<>(a: int): int";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 10]",
+                      "No prefix parse function for GT found [Ln 1, Col 11]",
+                      "Expected token RPAREN, found COLON [Ln 1, Col 14]",
+                      "No prefix parse function for COLON found [Ln 1, Col 14]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 16]",
+                      "No prefix parse function for RPAREN found [Ln 1, Col 19]",
+                      "No prefix parse function for COLON found [Ln 1, Col 20]",
+                      "No prefix parse function for INT_TYPE found [Ln 1, Col 22]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Missing with clause") {
-            const char*   input = "func(1, 2) <int>";
-            ParserFixture pf{input};
-            pf.check_errors({"No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
-                             "No prefix parse function for GT found [Ln 1, Col 16]"},
-                            false);
+            const char*         input = "func(1, 2) <int>";
+            const ParserFixture pf{input};
+            errors = {"No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
+                      "No prefix parse function for GT found [Ln 1, Col 16]"};
+            pf.check_errors(errors);
         }
 
         SECTION("Empty generic list in calls") {
-            const char*   input = "func(1, 2) with <>";
-            ParserFixture pf{input};
-            pf.check_errors({"EMPTY_GENERIC_LIST [Ln 1, Col 17]",
-                             "No prefix parse function for GT found [Ln 1, Col 18]"},
-                            false);
+            const char*         input = "func(1, 2) with <>";
+            const ParserFixture pf{input};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 17]",
+                      "No prefix parse function for GT found [Ln 1, Col 18]"};
+            pf.check_errors(errors);
         }
 
         SECTION("With clause with wrong tokens") {
-            const char*   input = R"(func(1, 2) with <int, "2" + 2>)";
-            ParserFixture pf{input};
-            pf.check_errors({"ILLEGAL_IDENTIFIER [Ln 1, Col 23]",
-                             "No prefix parse function for PLUS found [Ln 1, Col 27]",
-                             "INFIX_MISSING_RHS [Ln 1, Col 30]"},
-                            false);
+            const char*         input = R"(func(1, 2) with <int, "2" + 2>)";
+            const ParserFixture pf{input};
+            errors = {"ILLEGAL_IDENTIFIER [Ln 1, Col 23]",
+                      "No prefix parse function for PLUS found [Ln 1, Col 27]",
+                      "INFIX_MISSING_RHS [Ln 1, Col 30]"};
+            pf.check_errors(errors);
         }
     }
 }
 
 TEST_CASE("Null passed to destructors") {
-    void (*const destructors[])(Node*, Allocator*) = {
+    const auto destructors = std::array{
         array_literal_expression_destroy,
         assignment_expression_destroy,
         bool_literal_expression_destroy,

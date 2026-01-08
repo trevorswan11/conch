@@ -40,7 +40,7 @@ TEST_CASE("REPL with acceptable input") {
     FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
-    char      buf[BUF_SIZE];
+    char      buf[BUF_SIZE]; // NOLINT
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
     const Fixture<ArrayList> alf(output, array_list_deinit);
@@ -70,7 +70,7 @@ TEST_CASE("REPL with error input") {
     FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
-    char      buf[BUF_SIZE];
+    char      buf[BUF_SIZE]; // NOLINT
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(char))));
     const Fixture<ArrayList> alf(output, array_list_deinit);
@@ -101,7 +101,7 @@ TEST_CASE("REPL with incorrect buffer") {
     FileIO                io = file_io_init(in, out, err);
     const Fixture<FileIO> fiof(io, file_io_deinit);
 
-    char      buf[BUF_SIZE];
+    char      buf[BUF_SIZE]; // NOLINT
     ArrayList output;
     REQUIRE(STATUS_OK(array_list_init(&output, 1024, sizeof(size_t))));
     const Fixture<ArrayList> alf(output, array_list_deinit);

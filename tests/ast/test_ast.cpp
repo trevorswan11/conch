@@ -1,6 +1,6 @@
 #include "catch_amalgamated.hpp"
 
-#include <cstdlib>
+#include <array>
 #include <string>
 
 #include "fixtures.hpp"
@@ -258,7 +258,7 @@ TEST_CASE("Assignment") {
 }
 
 TEST_CASE("Free functions") {
-    void (*const destructors[])(ArrayList*, Allocator*) = {
+    const auto destructors = std::array{
         clear_error_list,
         free_error_list,
         free_statement_list,

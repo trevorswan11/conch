@@ -9,4 +9,6 @@ TempFile::TempFile(std::string path, const std::string& content) : filepath(std:
     ofs.close();
 }
 
-FILE* TempFile::open(const char* permissions) { return fopen(filepath.c_str(), permissions); }
+auto TempFile::open(const char* permissions) -> FILE* {
+    return fopen(filepath.c_str(), permissions);
+}

@@ -2,6 +2,7 @@
 #include "fixtures.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -16,7 +17,7 @@ TEST_CASE("Init and resize") {
 
     REQUIRE(array_list_init(&a, 10, 0) == Status::ZERO_ITEM_SIZE);
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
     REQUIRE(array_list_capacity(&a) == 10);
     REQUIRE(STATUS_OK(array_list_resize(&a, 12)));
@@ -39,11 +40,11 @@ TEST_CASE("Init and resize") {
 TEST_CASE("Push ops w/o resize") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
     // Push a handful of elements and check
-    const uint8_t expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3};
-    for (const unsigned char& expected : expecteds) {
+    const auto expecteds = std::to_array<std::uint8_t>({4, 5, 7, 2, 6, 10, 22, 3});
+    for (const auto& expected : expecteds) {
         array_list_push_assume_capacity(&a, &expected);
     }
 
@@ -65,8 +66,9 @@ TEST_CASE("Push ops w/o resize") {
 TEST_CASE("Push ops w/ resize") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint8_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
-    const uint8_t            expecteds[] = {4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2};
+    const Fixture<ArrayList> alf{a, array_list_deinit};
+    const auto               expecteds =
+        std::to_array<std::uint8_t>({4, 5, 7, 2, 6, 10, 22, 3, 100, 2, 3, 7, 1, 2, 50, 2});
 
     // Push and check the first few elements
     const size_t chunk = 8;
@@ -81,7 +83,7 @@ TEST_CASE("Push ops w/ resize") {
     }
 
     // Push and check the remaining elements
-    for (size_t i = chunk; i < std::size(expecteds); i++) {
+    for (size_t i = chunk; i < expecteds.size(); i++) {
         REQUIRE(STATUS_OK(array_list_push(&a, &expecteds[i])));
     }
 
@@ -115,12 +117,12 @@ TEST_CASE("Push ops w/ resize") {
     REQUIRE(array_list_length(&a) == 2);
 }
 
-COMPARE_INTEGER_FN(uint32_t);
+COMPARE_INTEGER_FN(uint32_t); // NOLINT
 
 TEST_CASE("Remove ops") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 10, sizeof(uint32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
     uint32_t out;
     REQUIRE(array_list_pop(&a, &out) == Status::EMPTY);
@@ -145,9 +147,9 @@ TEST_CASE("Remove ops") {
     uint32_t target = 10;
     REQUIRE(STATUS_OK(array_list_remove_item(&a, &target, compare_uint32_t)));
 
-    const uint32_t remaining[] = {7, 2, 6, 22, 3};
-    REQUIRE(a.length == std::size(remaining));
-    for (size_t i = 0; i < std::size(remaining); i++) {
+    const auto remaining = std::to_array<uint32_t>({7, 2, 6, 22, 3});
+    REQUIRE(a.length == remaining.size());
+    for (size_t i = 0; i < remaining.size(); i++) {
         uint32_t out_item;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out_item)));
         REQUIRE(out_item == remaining[i]);
@@ -162,18 +164,18 @@ TEST_CASE("Remove ops") {
 TEST_CASE("Stable insertion") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
-    const uint32_t initial[] = {10, 20, 30, 40};
+    const auto initial = std::to_array<uint32_t>({10, 20, 30, 40});
     for (auto v : initial) {
         REQUIRE(STATUS_OK(array_list_push(&a, &v)));
     }
 
     uint32_t new_val = 25;
     REQUIRE(STATUS_OK(array_list_insert_stable(&a, 2, &new_val)));
-    const uint32_t expected_stable[] = {10, 20, 25, 30, 40};
-    REQUIRE(a.length == std::size(expected_stable));
-    for (size_t i = 0; i < std::size(expected_stable); i++) {
+    const auto expected_stable = std::to_array<uint32_t>({10, 20, 25, 30, 40});
+    REQUIRE(a.length == expected_stable.size());
+    for (size_t i = 0; i < expected_stable.size(); i++) {
         uint32_t out;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out)));
         REQUIRE(out == expected_stable[i]);
@@ -181,8 +183,8 @@ TEST_CASE("Stable insertion") {
 
     uint32_t begin_val = 5;
     REQUIRE(STATUS_OK(array_list_insert_stable(&a, 0, &begin_val)));
-    const uint32_t expected_begin[] = {5, 10, 20, 25, 30, 40};
-    for (size_t i = 0; i < std::size(expected_begin); i++) {
+    const auto expected_begin = std::to_array<uint32_t>({5, 10, 20, 25, 30, 40});
+    for (size_t i = 0; i < expected_begin.size(); i++) {
         uint32_t out;
         REQUIRE(STATUS_OK(array_list_get(&a, i, &out)));
         REQUIRE(out == expected_begin[i]);
@@ -192,7 +194,7 @@ TEST_CASE("Stable insertion") {
 
     uint32_t end_val = 99;
     array_list_insert_stable_assume_capacity(&a, a.length, &end_val);
-    REQUIRE(a.length == std::size(expected_begin) + 1);
+    REQUIRE(a.length == expected_begin.size() + 1);
     uint32_t last;
     REQUIRE(STATUS_OK(array_list_get(&a, a.length - 1, &last)));
     REQUIRE(last == 99);
@@ -202,10 +204,10 @@ TEST_CASE("Stable insertion") {
 TEST_CASE("Unstable insertion") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    const Fixture<ArrayList> alfa(a, array_list_deinit);
+    const Fixture<ArrayList> alfa{a, array_list_deinit};
     ArrayList                b;
     REQUIRE(STATUS_OK(array_list_init(&b, 4, sizeof(uint32_t))));
-    const Fixture<ArrayList> alfb(b, array_list_deinit);
+    const Fixture<ArrayList> alfb{b, array_list_deinit};
 
     const std::vector<uint32_t> initial = {10, 20, 30, 40};
     for (auto v : initial) {
@@ -248,12 +250,12 @@ TEST_CASE("Unstable insertion") {
     REQUIRE(last_u == back);
 }
 
-COMPARE_INTEGER_FN(int32_t);
+COMPARE_INTEGER_FN(int32_t); // NOLINT
 
 TEST_CASE("Malformed find") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
     size_t  maybe_idx;
     int32_t maybe_item = 0;
@@ -265,9 +267,9 @@ TEST_CASE("Malformed find") {
 TEST_CASE("Find") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(int32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
-    const int32_t values[] = {10, 20, 30, 40};
+    const auto values = std::to_array<int32_t>({10, 20, 30, 40});
     for (const int& value : values) {
         REQUIRE(STATUS_OK(array_list_push(&a, &value)));
     }
@@ -286,7 +288,7 @@ TEST_CASE("Sorting and binary search") {
     ArrayList    a;
     const size_t total_size = 1000;
     REQUIRE(STATUS_OK(array_list_init(&a, 1.5 * total_size, sizeof(uint32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
+    const Fixture<ArrayList> alf{a, array_list_deinit};
 
     // Pack a vector and array list with random numbers for sorting
     std::vector<uint32_t> random;
@@ -322,14 +324,14 @@ TEST_CASE("Sorting and binary search") {
 TEST_CASE("ArrayList iterator patterns") {
     ArrayList a;
     REQUIRE(STATUS_OK(array_list_init(&a, 4, sizeof(uint32_t))));
-    const Fixture<ArrayList> alf(a, array_list_deinit);
-    const uint32_t           values[] = {10, 20, 30, 40};
+    const Fixture<ArrayList> alf{a, array_list_deinit};
+    const auto               values = std::to_array<uint32_t>({10, 20, 30, 40});
 
     SECTION("Mutable iterator") {
         for (auto v : values) {
             REQUIRE(STATUS_OK(array_list_push(&a, &v)));
         }
-        REQUIRE(a.length == std::size(values));
+        REQUIRE(a.length == values.size());
 
         auto      it = array_list_iterator_init(&a);
         size_t    i  = 0;
