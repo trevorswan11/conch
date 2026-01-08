@@ -33,7 +33,7 @@ void free_struct_member_list(ArrayList* members, Allocator* allocator) {
     assert(members.length > 0);
     assert(members.item_size == sizeof(StructMember));
 
-    StructExpression* struct_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(StructExpression));
+    StructExpression* struct_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*struct_local));
     if (!struct_local) { return ALLOCATION_FAILED; }
 
     *struct_local = (StructExpression){
@@ -98,7 +98,6 @@ struct_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBuild
     assert(parent && errors);
 
     [[maybe_unused]] StructExpression* struct_expr = (StructExpression*)node;
-    assert(struct_expr->members.data && struct_expr->members.length > 0);
 
     return NOT_IMPLEMENTED;
 }

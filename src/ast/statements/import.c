@@ -14,7 +14,7 @@
                                              ImportStatement**     import_stmt,
                                              Allocator*            allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    ImportStatement* import = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ImportStatement));
+    ImportStatement* import = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*import));
     if (!import) { return ALLOCATION_FAILED; }
 
     *import = (ImportStatement){

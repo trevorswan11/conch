@@ -15,6 +15,12 @@ typedef struct SemanticAnalyzer {
     Allocator        allocator;
 } SemanticAnalyzer;
 
+[[nodiscard]] Status generics_analyze(const ArrayList*       generic_exprs,
+                                      const SemanticContext* context,
+                                      ArrayList*             generics,
+                                      Allocator*             allocator);
+void                 analyzed_generics_deinit(ArrayList* generics, Allocator* allocator);
+
 [[nodiscard]] Status seman_init(const AST* ast, SemanticAnalyzer* analyzer, Allocator* allocator);
 [[nodiscard]] Status seman_null_init(SemanticAnalyzer* analyzer, Allocator* allocator);
 void                 seman_deinit(SemanticAnalyzer* analyzer);

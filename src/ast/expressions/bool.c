@@ -13,8 +13,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.type == TRUE || start_token.type == FALSE);
 
-    BoolLiteralExpression* bool_local =
-        ALLOCATOR_PTR_MALLOC(allocator, sizeof(BoolLiteralExpression));
+    BoolLiteralExpression* bool_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*bool_local));
     if (!bool_local) { return ALLOCATION_FAILED; }
 
     *bool_local = (BoolLiteralExpression){

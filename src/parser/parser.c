@@ -18,9 +18,10 @@
 #include "ast/statements/jump.h"
 
 #include "util/containers/string_builder.h"
+#include "util/math.h"
 
 [[nodiscard]] static inline Status init_prefix(HashSet* prefix_set, Allocator* allocator) {
-    const size_t num_prefix = sizeof(PREFIX_FUNCTIONS) / sizeof(PREFIX_FUNCTIONS[0]);
+    const size_t num_prefix = ARRAY_SIZE(PREFIX_FUNCTIONS);
     TRY(hash_set_init_allocator(prefix_set,
                                 num_prefix,
                                 sizeof(PrefixFn),
@@ -38,8 +39,8 @@
 }
 
 [[nodiscard]] static inline Status init_infix(HashSet* infix_set, Allocator* allocator) {
-    const size_t num_infix = sizeof(INFIX_FUNCTIONS) / sizeof(INFIX_FUNCTIONS[0]);
-    const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
+    const size_t num_infix = ARRAY_SIZE(INFIX_FUNCTIONS);
+    const size_t num_pairs = ARRAY_SIZE(PRECEDENCE_PAIRS);
     if (num_infix < num_pairs) { return VIOLATED_INVARIANT; }
 
     TRY(hash_set_init_allocator(infix_set,
@@ -59,7 +60,7 @@
 }
 
 [[nodiscard]] static inline Status init_primitives(HashSet* primitive_set, Allocator* allocator) {
-    const size_t num_primitives = sizeof(ALL_PRIMITIVES) / sizeof(ALL_PRIMITIVES[0]);
+    const size_t num_primitives = ARRAY_SIZE(ALL_PRIMITIVES);
     TRY(hash_set_init_allocator(primitive_set,
                                 num_primitives,
                                 sizeof(TokenType),
@@ -77,7 +78,7 @@
 }
 
 [[nodiscard]] static inline Status init_precedences(HashMap* precedence_map, Allocator* allocator) {
-    const size_t num_pairs = sizeof(PRECEDENCE_PAIRS) / sizeof(PRECEDENCE_PAIRS[0]);
+    const size_t num_pairs = ARRAY_SIZE(PRECEDENCE_PAIRS);
     TRY(hash_map_init_allocator(precedence_map,
                                 num_pairs,
                                 sizeof(TokenType),

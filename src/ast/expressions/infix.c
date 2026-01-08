@@ -17,7 +17,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(lhs && rhs);
 
-    InfixExpression* infix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(InfixExpression));
+    InfixExpression* infix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*infix));
     if (!infix) { return ALLOCATION_FAILED; }
 
     *infix = (InfixExpression){

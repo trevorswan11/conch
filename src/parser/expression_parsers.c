@@ -832,8 +832,10 @@ call_expression_parse(Parser* p, Expression* function, Expression** expression) 
                    free_call_expression_list(&arguments, allocator));
 
             argument = (CallArgument){.is_ref = is_ref_argument, .argument = argument_expr};
-            TRY_DO(array_list_push(&arguments, &argument),
-                   free_call_expression_list(&arguments, allocator));
+            TRY_DO(array_list_push(&arguments, &argument), {
+                NODE_VIRTUAL_FREE(argument_expr, allocator);
+                free_call_expression_list(&arguments, allocator);
+            });
         }
 
         TRY_DO(parser_expect_peek(p, RPAREN), free_call_expression_list(&arguments, allocator));

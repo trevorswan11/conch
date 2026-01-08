@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <numeric>
 #include <vector>
 
 extern "C" {
@@ -359,4 +360,37 @@ TEST_CASE("ArrayList iterator patterns") {
             i += 1;
         }
     }
+}
+
+TEST_CASE("Copying array lists") {
+    using V = uint32_t;
+    ArrayList source;
+    REQUIRE(STATUS_OK(array_list_init(&source, 200, sizeof(V))));
+    const Fixture<ArrayList> source_fix(source, array_list_deinit);
+
+    std::array<V, 100> values;
+    std::iota(values.begin(), values.end(), 0);
+    for (auto v : values) {
+        REQUIRE(STATUS_OK(array_list_push(&source, &v)));
+    }
+
+    const auto test_array = [&](const ArrayList& array) -> void {
+        V out;
+        for (size_t i = 0; i < values.size(); i++) {
+            REQUIRE(STATUS_OK(array_list_get(&array, i, &out)));
+            REQUIRE(values[i] == out);
+        }
+    };
+
+    test_array(source);
+
+    ArrayList dest;
+    REQUIRE(STATUS_OK(array_list_copy_from(&dest, &source)));
+    const Fixture<ArrayList> dest_fix(dest, array_list_deinit);
+
+    REQUIRE(source.item_size == dest.item_size);
+    REQUIRE(dest.length == std::size(values));
+    REQUIRE(dest.capacity == std::size(values));
+
+    test_array(dest);
 }

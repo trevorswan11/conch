@@ -33,7 +33,7 @@ static inline void* arena_malloc(void* arena_ctx, size_t size) {
         size_t next_size = ceil_power_of_two_size(arena->previous_block_size + 1);
         if (next_size < size + 8) { next_size = ceil_power_of_two_size(size + 8); }
 
-        ArenaBlock* new_block = ALLOCATOR_MALLOC(arena->child_allocator, sizeof(ArenaBlock));
+        ArenaBlock* new_block = ALLOCATOR_MALLOC(arena->child_allocator, sizeof(*new_block));
         uint8_t*    data      = ALLOCATOR_MALLOC(arena->child_allocator, next_size);
         if (!new_block || !data) { return nullptr; }
 
@@ -88,10 +88,10 @@ arena_init(Allocator* arena, size_t initial_block_size, Allocator* child_allocat
     ASSERT_ALLOCATOR_PTR(child_allocator);
     const size_t true_block = ceil_power_of_two_size(initial_block_size);
 
-    ArenaBlock* initial_block = ALLOCATOR_PTR_MALLOC(child_allocator, sizeof(ArenaBlock));
+    ArenaBlock* initial_block = ALLOCATOR_PTR_MALLOC(child_allocator, sizeof(*initial_block));
     if (!initial_block) { return ALLOCATION_FAILED; }
 
-    uint8_t* block_data = ALLOCATOR_PTR_MALLOC(child_allocator, true_block * sizeof(uint8_t));
+    uint8_t* block_data = ALLOCATOR_PTR_MALLOC(child_allocator, true_block * sizeof(*block_data));
     if (!block_data) {
         ALLOCATOR_PTR_FREE(child_allocator, initial_block);
         return ALLOCATION_FAILED;
@@ -104,7 +104,7 @@ arena_init(Allocator* arena, size_t initial_block_size, Allocator* child_allocat
         .data     = block_data,
     };
 
-    Arena* arena_ctx = ALLOCATOR_PTR_MALLOC(child_allocator, sizeof(Arena));
+    Arena* arena_ctx = ALLOCATOR_PTR_MALLOC(child_allocator, sizeof(*arena_ctx));
     if (!arena_ctx) {
         ALLOCATOR_PTR_FREE(child_allocator, block_data);
         ALLOCATOR_PTR_FREE(child_allocator, initial_block);

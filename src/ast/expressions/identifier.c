@@ -14,7 +14,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr && start_token.slice.length > 0);
 
-    IdentifierExpression* ident = ALLOCATOR_PTR_MALLOC(allocator, sizeof(IdentifierExpression));
+    IdentifierExpression* ident = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*ident));
     if (!ident) { return ALLOCATION_FAILED; }
 
     *ident = (IdentifierExpression){

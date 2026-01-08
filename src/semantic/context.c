@@ -7,18 +7,18 @@
 [[nodiscard]] Status
 semantic_context_create(SemanticContext* parent, SemanticContext** context, Allocator* allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    SemanticContext* sem_con = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticContext));
-    if (!sem_con) { return ALLOCATION_FAILED; }
+    SemanticContext* sema_con = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*sema_con));
+    if (!sema_con) { return ALLOCATION_FAILED; }
 
     SymbolTable* symbols;
-    TRY_DO(symbol_table_create(&symbols, allocator), ALLOCATOR_PTR_FREE(allocator, sem_con));
+    TRY_DO(symbol_table_create(&symbols, allocator), ALLOCATOR_PTR_FREE(allocator, sema_con));
 
-    *sem_con = (SemanticContext){
+    *sema_con = (SemanticContext){
         .parent       = parent,
         .symbol_table = symbols,
     };
 
-    *context = sem_con;
+    *context = sema_con;
     return SUCCESS;
 }
 
@@ -43,14 +43,14 @@ void semantic_context_destroy(SemanticContext* context, Allocator* allocator) {
     ALLOCATOR_PTR_FREE(allocator, context);
 }
 
-bool semantic_context_find(SemanticContext* context,
-                           bool             check_parents,
-                           MutSlice         symbol,
-                           SemanticType**   type) {
+bool semantic_context_find(const SemanticContext* context,
+                           bool                   check_parents,
+                           MutSlice               symbol,
+                           SemanticType**         type) {
     assert(context);
     if (!check_parents) { return symbol_table_find(context->symbol_table, symbol, type); }
 
-    SemanticContext* current = context;
+    const SemanticContext* current = context;
     while (current != nullptr) {
         if (symbol_table_find(current->symbol_table, symbol, type)) { return true; }
         current = current->parent;
@@ -59,11 +59,11 @@ bool semantic_context_find(SemanticContext* context,
     return false;
 }
 
-bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol) {
+bool semantic_context_has(const SemanticContext* context, bool check_parents, MutSlice symbol) {
     assert(context);
     if (!check_parents) { return symbol_table_has(context->symbol_table, symbol); }
 
-    SemanticContext* current = context;
+    const SemanticContext* current = context;
     while (current != nullptr) {
         if (symbol_table_has(current->symbol_table, symbol)) { return true; }
 

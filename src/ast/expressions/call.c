@@ -30,7 +30,7 @@ void free_call_expression_list(ArrayList* arguments, Allocator* allocator) {
     assert(arguments.item_size == sizeof(CallArgument));
     ASSERT_EXPRESSION(function);
 
-    CallExpression* call = ALLOCATOR_PTR_MALLOC(allocator, sizeof(CallExpression));
+    CallExpression* call = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*call));
     if (!call) { return ALLOCATION_FAILED; }
 
     *call = (CallExpression){

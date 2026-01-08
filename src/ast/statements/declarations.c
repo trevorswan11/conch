@@ -51,7 +51,7 @@
         ASSERT_EXPRESSION(value);
     }
 
-    DeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(DeclStatement));
+    DeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*declaration));
     if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (DeclStatement){
@@ -193,7 +193,7 @@ decl_statement_analyze(Node* node, SemanticContext* parent, ArrayList* errors) {
     assert(start_token.slice.ptr);
     assert(ident && value);
 
-    TypeDeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(TypeDeclStatement));
+    TypeDeclStatement* declaration = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*declaration));
     if (!declaration) { return ALLOCATION_FAILED; }
 
     *declaration = (TypeDeclStatement){

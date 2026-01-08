@@ -7,13 +7,15 @@
 
 #include "semantic/type.h"
 
+#include "util/math.h"
+
 #define PRIMITIVE_CASE(tok_type, tag_type) \
     case tok_type:                         \
         *tag = tag_type;                   \
         return true;
 
 bool semantic_name_to_primitive_type_tag(MutSlice name, SemanticTypeTag* tag) {
-    const size_t num_primitives = sizeof(ALL_PRIMITIVES) / sizeof(ALL_PRIMITIVES[0]);
+    const size_t num_primitives = ARRAY_SIZE(ALL_PRIMITIVES);
     for (size_t i = 0; i < num_primitives; i++) {
         const Slice slice = slice_from_mut(&name);
         if (slice_equals(&slice, &ALL_PRIMITIVES[i].slice)) {
@@ -87,7 +89,7 @@ bool semantic_type_is_integer(SemanticType* type) {
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.length > 1 : true);
     assert(tag == STYPE_ARRAY_MULTI_DIM ? variant.dimensions.item_size == sizeof(size_t) : true);
 
-    SemanticArrayType* sema_array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticArrayType));
+    SemanticArrayType* sema_array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*sema_array));
     if (!sema_array) { return ALLOCATION_FAILED; }
 
     *sema_array = (SemanticArrayType){
@@ -118,9 +120,10 @@ void semantic_array_destroy(void* array_type, Allocator* allocator) {
                                           SemanticEnumType** enum_type,
                                           Allocator*         allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
+    assert(name.ptr);
     assert(variants.header->key_size == sizeof(MutSlice));
 
-    SemanticEnumType* type_variant = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticEnumType));
+    SemanticEnumType* type_variant = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*type_variant));
     if (!type_variant) { return ALLOCATION_FAILED; }
 
     *type_variant = (SemanticEnumType){
@@ -157,9 +160,69 @@ void semantic_enum_destroy(void* enum_type, Allocator* allocator) {
     free_enum_variant_set(&type_variant->variants, allocator);
 }
 
+[[nodiscard]] Status semantic_struct_create(Slice                name,
+                                            ArrayList            generics,
+                                            HashMap              members,
+                                            HashMap              methods,
+                                            SemanticStructType** struct_type,
+                                            Allocator*           allocator) {
+    ASSERT_ALLOCATOR_PTR(allocator);
+    assert(name.ptr);
+    assert(generics.item_size == sizeof(MutSlice));
+
+    SemanticStructType* type_variant = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*type_variant));
+    if (!type_variant) { return ALLOCATION_FAILED; }
+
+    *type_variant = (SemanticStructType){
+        .rc_control = rc_init(semantic_struct_destroy),
+        .type_name  = name,
+        .generics   = generics,
+        .members    = members,
+        .methods    = methods,
+    };
+
+    *struct_type = type_variant;
+    return SUCCESS;
+}
+
+void free_struct_generic_list(ArrayList* variants, Allocator* allocator) {
+    if (!variants) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
+
+    ArrayListConstIterator it = array_list_const_iterator_init(variants);
+    MutSlice               generic_name;
+    while (array_list_const_iterator_has_next(&it, &generic_name)) {
+        ALLOCATOR_PTR_FREE(allocator, generic_name.ptr);
+    }
+
+    array_list_deinit(variants);
+}
+
+void free_struct_members_map(HashMap* members, [[maybe_unused]] Allocator* allocator) {
+    if (!members) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
+    // TODO
+}
+
+void free_struct_function_set(HashMap* methods, [[maybe_unused]] Allocator* allocator) {
+    if (!methods) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
+    // TODO
+}
+
+void semantic_struct_destroy(void* struct_type, Allocator* allocator) {
+    if (!struct_type) { return; }
+    ASSERT_ALLOCATOR_PTR(allocator);
+
+    SemanticStructType* type_variant = (SemanticStructType*)struct_type;
+    free_struct_generic_list(&type_variant->generics, allocator);
+    free_struct_members_map(&type_variant->members, allocator);
+    free_struct_function_set(&type_variant->methods, allocator);
+}
+
 [[nodiscard]] Status semantic_type_create(SemanticType** type, Allocator* allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    SemanticType* empty_type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SemanticType));
+    SemanticType* empty_type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*empty_type));
     if (!empty_type) { return ALLOCATION_FAILED; }
 
     *empty_type = (SemanticType){

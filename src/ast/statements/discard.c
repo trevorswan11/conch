@@ -13,7 +13,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(to_discard);
 
-    DiscardStatement* discard = ALLOCATOR_PTR_MALLOC(allocator, sizeof(DiscardStatement));
+    DiscardStatement* discard = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*discard));
     if (!discard) { return ALLOCATION_FAILED; }
 
     *discard = (DiscardStatement){

@@ -18,7 +18,7 @@
     assert(start_token.type == BANG || start_token.type == NOT || start_token.type == MINUS);
     ASSERT_EXPRESSION(rhs);
 
-    PrefixExpression* prefix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(PrefixExpression));
+    PrefixExpression* prefix = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*prefix));
     if (!prefix) { return ALLOCATION_FAILED; }
 
     *prefix = (PrefixExpression){

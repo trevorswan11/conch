@@ -18,7 +18,7 @@
                                             TypeExpression**    type_expr,
                                             Allocator*          allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    TypeExpression* type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(TypeExpression));
+    TypeExpression* type = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*type));
     if (!type) { return ALLOCATION_FAILED; }
 
     *type = (TypeExpression){

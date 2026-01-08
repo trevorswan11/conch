@@ -16,7 +16,7 @@
     ASSERT_EXPRESSION(condition);
     ASSERT_EXPRESSION(consequence);
 
-    IfExpression* if_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(IfExpression));
+    IfExpression* if_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*if_local));
     if (!if_local) { return ALLOCATION_FAILED; }
 
     *if_local = (IfExpression){

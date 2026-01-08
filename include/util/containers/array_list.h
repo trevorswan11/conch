@@ -73,6 +73,11 @@ array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void
 [[nodiscard]] Status array_list_get_ptr(ArrayList* a, size_t index, void** item);
 [[nodiscard]] Status array_list_set(ArrayList* a, size_t index, const void* item);
 
+// Copies the data from the source array to the destination array.
+//
+// The destination is assumed to not be initialized.
+[[nodiscard]] Status array_list_copy_from(ArrayList* dest, const ArrayList* src);
+
 // Finds the element in the array based on the compare function with the following properties:
 // - If the first element is larger, return a positive integer
 // - If the second element is larger, return a negative integer

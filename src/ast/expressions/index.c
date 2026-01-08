@@ -17,7 +17,7 @@
     ASSERT_EXPRESSION(array);
     ASSERT_EXPRESSION(idx);
 
-    IndexExpression* index = ALLOCATOR_PTR_MALLOC(allocator, sizeof(IndexExpression));
+    IndexExpression* index = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*index));
     if (!index) { return ALLOCATION_FAILED; }
 
     *index = (IndexExpression){

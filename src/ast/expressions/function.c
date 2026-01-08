@@ -68,7 +68,7 @@ reconstruct_parameter_list(ArrayList* parameters, const HashMap* symbol_map, Str
     ASSERT_EXPRESSION(return_type);
     ASSERT_STATEMENT(body);
 
-    FunctionExpression* func = ALLOCATOR_PTR_MALLOC(allocator, sizeof(FunctionExpression));
+    FunctionExpression* func = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*func));
     if (!func) { return ALLOCATION_FAILED; }
 
     *func = (FunctionExpression){

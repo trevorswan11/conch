@@ -11,8 +11,7 @@
                                                       StringLiteralExpression** string_expr,
                                                       Allocator*                allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    StringLiteralExpression* string =
-        ALLOCATOR_PTR_MALLOC(allocator, sizeof(StringLiteralExpression));
+    StringLiteralExpression* string = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*string));
     if (!string) { return ALLOCATION_FAILED; }
 
     MutSlice slice;

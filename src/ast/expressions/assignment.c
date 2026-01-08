@@ -19,7 +19,7 @@
     ASSERT_EXPRESSION(lhs);
     ASSERT_EXPRESSION(rhs);
 
-    AssignmentExpression* assign = ALLOCATOR_PTR_MALLOC(allocator, sizeof(AssignmentExpression));
+    AssignmentExpression* assign = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*assign));
     if (!assign) { return ALLOCATION_FAILED; }
 
     *assign = (AssignmentExpression){

@@ -14,7 +14,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(expression);
 
-    ExpressionStatement* expr = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ExpressionStatement));
+    ExpressionStatement* expr = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*expr));
     if (!expr) { return ALLOCATION_FAILED; }
 
     *expr = (ExpressionStatement){

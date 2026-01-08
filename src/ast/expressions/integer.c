@@ -7,20 +7,20 @@
 
 #include "util/containers/string_builder.h"
 
-#define INTEGER_EXPR_CREATE(T, custom_vtab, out_expr)               \
-    ASSERT_ALLOCATOR_PTR(allocator);                                \
-    assert(start_token.slice.ptr);                                  \
-                                                                    \
-    typedef T I;                                                    \
-    I*        integer = ALLOCATOR_PTR_MALLOC(allocator, sizeof(I)); \
-    if (!integer) { return ALLOCATION_FAILED; }                     \
-                                                                    \
-    *integer = (I){                                                 \
-        .base  = EXPRESSION_INIT(custom_vtab, start_token),         \
-        .value = value,                                             \
-    };                                                              \
-                                                                    \
-    *(out_expr) = integer;                                          \
+#define INTEGER_EXPR_CREATE(T, custom_vtab, out_expr)                      \
+    ASSERT_ALLOCATOR_PTR(allocator);                                       \
+    assert(start_token.slice.ptr);                                         \
+                                                                           \
+    typedef T I;                                                           \
+    I*        integer = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*integer)); \
+    if (!integer) { return ALLOCATION_FAILED; }                            \
+                                                                           \
+    *integer = (I){                                                        \
+        .base  = EXPRESSION_INIT(custom_vtab, start_token),                \
+        .value = value,                                                    \
+    };                                                                     \
+                                                                           \
+    *(out_expr) = integer;                                                 \
     return SUCCESS
 
 void integer_expression_destroy(Node* node, Allocator* allocator) {

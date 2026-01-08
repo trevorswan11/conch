@@ -33,7 +33,7 @@ void free_for_capture_list(ArrayList* captures, Allocator* allocator) {
     assert(iterables.item_size == sizeof(Expression*));
     assert(captures.item_size == sizeof(ForLoopCapture));
 
-    ForLoopExpression* for_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ForLoopExpression));
+    ForLoopExpression* for_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*for_loop));
     if (!for_loop) { return ALLOCATION_FAILED; }
 
     *for_loop = (ForLoopExpression){
@@ -138,7 +138,7 @@ for_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringBui
                                                   Allocator*            allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
 
-    WhileLoopExpression* while_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(WhileLoopExpression));
+    WhileLoopExpression* while_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*while_loop));
     if (!while_loop) { return ALLOCATION_FAILED; }
 
     *while_loop = (WhileLoopExpression){
@@ -220,8 +220,7 @@ while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, StringB
                                                      Allocator*              allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
 
-    DoWhileLoopExpression* do_while_loop =
-        ALLOCATOR_PTR_MALLOC(allocator, sizeof(DoWhileLoopExpression));
+    DoWhileLoopExpression* do_while_loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*do_while_loop));
     if (!do_while_loop) { return ALLOCATION_FAILED; }
 
     *do_while_loop = (DoWhileLoopExpression){
@@ -283,7 +282,7 @@ do_while_loop_expression_reconstruct(Node* node, const HashMap* symbol_map, Stri
                                             Allocator*       allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
 
-    LoopExpression* loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(LoopExpression));
+    LoopExpression* loop = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*loop));
     if (!loop) { return ALLOCATION_FAILED; }
 
     *loop = (LoopExpression){

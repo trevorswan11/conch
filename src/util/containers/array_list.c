@@ -120,7 +120,6 @@ void array_list_push_assume_capacity(ArrayList* a, const void* item) {
     assert(index <= a->length);
 
     if (a->length == a->capacity) { TRY(array_list_resize(a, max_size_t(2, a->capacity * 2, 4))); }
-
     array_list_insert_stable_assume_capacity(a, index, item);
     return SUCCESS;
 }
@@ -222,6 +221,19 @@ array_list_remove_item(ArrayList* a, const void* item, int (*compare)(const void
 
     void* dest = array_list_get_ptr_unsafe(a, index);
     memcpy(dest, item, a->item_size);
+    return SUCCESS;
+}
+
+[[nodiscard]] Status array_list_copy_from(ArrayList* dest, const ArrayList* src) {
+    assert(src && src->data);
+    Allocator allocator = src->allocator;
+
+    ArrayList new_array;
+    TRY(array_list_init_allocator(&new_array, src->length, src->item_size, &allocator));
+    new_array.length = src->length;
+    memcpy(new_array.data, src->data, new_array.length * new_array.item_size);
+
+    *dest = new_array;
     return SUCCESS;
 }
 

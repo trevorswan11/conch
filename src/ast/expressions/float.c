@@ -14,8 +14,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.slice.ptr);
 
-    FloatLiteralExpression* float_local =
-        ALLOCATOR_PTR_MALLOC(allocator, sizeof(FloatLiteralExpression));
+    FloatLiteralExpression* float_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*float_local));
     if (!float_local) { return ALLOCATION_FAILED; }
 
     *float_local = (FloatLiteralExpression){

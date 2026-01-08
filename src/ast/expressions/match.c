@@ -31,7 +31,7 @@ void free_match_arm_list(ArrayList* arms, Allocator* allocator) {
     assert(arms.item_size == sizeof(MatchArm));
     assert(arms.length > 0);
 
-    MatchExpression* match = ALLOCATOR_PTR_MALLOC(allocator, sizeof(MatchExpression));
+    MatchExpression* match = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*match));
     if (!match) { return ALLOCATION_FAILED; }
 
     *match = (MatchExpression){

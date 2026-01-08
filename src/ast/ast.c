@@ -9,6 +9,7 @@
 #include "lexer/operators.h"
 
 #include "util/containers/string_builder.h"
+#include "util/math.h"
 
 bool group_expressions = false;
 
@@ -41,8 +42,8 @@ void free_error_list(ArrayList* errors, Allocator* allocator) {
     TRY(array_list_init_allocator(&statements, 64, sizeof(Statement*), allocator));
 
     HashMap      tt_symbols;
-    const size_t num_keywords  = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
-    const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
+    const size_t num_keywords  = ARRAY_SIZE(ALL_KEYWORDS);
+    const size_t num_operators = ARRAY_SIZE(ALL_OPERATORS);
     const size_t total_symbols = num_keywords + num_operators;
     TRY_DO(hash_map_init_allocator(&tt_symbols,
                                    total_symbols,

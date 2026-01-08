@@ -111,5 +111,5 @@ TEST_CASE("REPL with incorrect buffer") {
     std::ifstream     err_fs(temp_err.path(), std::ios::binary);
     const std::string captured_err((std::istreambuf_iterator<char>(err_fs)),
                                    std::istreambuf_iterator<char>());
-    REQUIRE(captured_err.find("ArrayList must be initialized for bytes") != std::string::npos);
+    REQUIRE(captured_err.find("ArrayList must be initialized for characters") != std::string::npos);
 }

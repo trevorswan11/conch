@@ -6,6 +6,7 @@
 #include "semantic/context.h"
 #include "semantic/type.h"
 
+#include "util/containers/array_list.h"
 #include "util/containers/string_builder.h"
 
 [[nodiscard]] Status array_literal_expression_create(Token                    start_token,
@@ -16,7 +17,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(items.item_size == sizeof(Expression*));
 
-    ArrayLiteralExpression* array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ArrayLiteralExpression));
+    ArrayLiteralExpression* array = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*array));
     if (!array) { return ALLOCATION_FAILED; }
 
     *array = (ArrayLiteralExpression){
@@ -116,15 +117,16 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
     if (inner_type->tag == STYPE_ARRAY) {
         SemanticArrayType* inner_array_type = inner_type->variant.array_type;
         ArrayList          resulting_dimensions;
-        TRY_DO(array_list_init_allocator(&resulting_dimensions, 5, sizeof(size_t), allocator), {
-            RC_RELEASE(inner_type, allocator);
-            RC_RELEASE(resulting_type, allocator);
-        });
 
         switch (inner_array_type->tag) {
         // [_]{ [_]{1, }, ... }
         case STYPE_ARRAY_SINGLE_DIM:
             // The dimensions (2D) have to be [outer count, inner array length]
+            TRY_DO(array_list_init_allocator(&resulting_dimensions, 2, sizeof(size_t), allocator), {
+                RC_RELEASE(inner_type, allocator);
+                RC_RELEASE(resulting_type, allocator);
+            });
+
             array_list_push_assume_capacity(&resulting_dimensions, &num_items);
             array_list_push_assume_capacity(&resulting_dimensions,
                                             &inner_array_type->variant.length);
@@ -132,24 +134,25 @@ array_literal_expression_analyze(Node* node, SemanticContext* parent, ArrayList*
         // [_]{ [2uz, 3uz]{[_]{...} }, ... }
         case STYPE_ARRAY_MULTI_DIM:
             // The dimensions (3D+) have to be [outer count, lengths of multi]
-            array_list_push_assume_capacity(&resulting_dimensions, &num_items);
             const ArrayList* multi_lengths = &inner_array_type->variant.dimensions;
+            TRY_DO(array_list_copy_from(&resulting_dimensions, multi_lengths), {
+                RC_RELEASE(inner_type, allocator);
+                RC_RELEASE(resulting_type, allocator);
+            });
 
-            it = array_list_const_iterator_init(multi_lengths);
-            size_t multi_length;
-            while (array_list_const_iterator_has_next(&it, &multi_length)) {
-                TRY_DO(array_list_push(&resulting_dimensions, &multi_length), {
-                    array_list_deinit(&resulting_dimensions);
-                    RC_RELEASE(inner_type, allocator);
-                    RC_RELEASE(resulting_type, allocator);
-                });
-            }
+            TRY_DO(array_list_ensure_total_capacity(&resulting_dimensions,
+                                                    resulting_dimensions.capacity + 1),
+                   {
+                       array_list_deinit(&resulting_dimensions);
+                       RC_RELEASE(inner_type, allocator);
+                       RC_RELEASE(resulting_type, allocator);
+                   });
+            array_list_insert_stable_assume_capacity(&resulting_dimensions, 0, &num_items);
             break;
         // [_]{ 0uz..6uz, }, ... }
         case STYPE_ARRAY_RANGE:
             // Error out since we cannot determine the length of a range expression at compile time
             PUT_STATUS_PROPAGATE(errors, ILLEGAL_ARRAY_ITEM, start_token, {
-                array_list_deinit(&resulting_dimensions);
                 RC_RELEASE(inner_type, allocator);
                 RC_RELEASE(resulting_type, allocator);
             });

@@ -20,7 +20,7 @@
     ASSERT_STATEMENT(implementation);
     assert(implementation->statements.length > 0);
 
-    ImplStatement* impl = ALLOCATOR_PTR_MALLOC(allocator, sizeof(ImplStatement));
+    ImplStatement* impl = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*impl));
     if (!impl) { return ALLOCATION_FAILED; }
 
     *impl = (ImplStatement){

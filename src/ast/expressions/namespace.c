@@ -18,7 +18,7 @@
     ASSERT_EXPRESSION(inner);
 
     NamespaceExpression* namespace_local =
-        ALLOCATOR_PTR_MALLOC(allocator, sizeof(NamespaceExpression));
+        ALLOCATOR_PTR_MALLOC(allocator, sizeof(*namespace_local));
     if (!namespace_local) { return ALLOCATION_FAILED; }
 
     *namespace_local = (NamespaceExpression){

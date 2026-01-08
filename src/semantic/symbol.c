@@ -7,7 +7,7 @@
 
 [[nodiscard]] Status symbol_table_create(SymbolTable** table, Allocator* allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
-    SymbolTable* st = ALLOCATOR_PTR_MALLOC(allocator, sizeof(SymbolTable));
+    SymbolTable* st = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*st));
     if (!st) { return ALLOCATION_FAILED; }
 
     HashMap symbols;

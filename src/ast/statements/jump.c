@@ -15,7 +15,7 @@
     ASSERT_ALLOCATOR_PTR(allocator);
     assert(start_token.type == RETURN || start_token.type == BREAK || start_token.type == CONTINUE);
 
-    JumpStatement* jump = ALLOCATOR_PTR_MALLOC(allocator, sizeof(JumpStatement));
+    JumpStatement* jump = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*jump));
     if (!jump) { return ALLOCATION_FAILED; }
 
     *jump = (JumpStatement){

@@ -25,6 +25,8 @@
         return max_val;                              \
     }
 
+#define ARRAY_SIZE(arr) *(&arr + 1) - arr
+
 // Rounds up to the next power of two after the provided 32 bit integer.
 //
 // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2

@@ -32,7 +32,7 @@ void free_enum_variant_list(ArrayList* variants, Allocator* allocator) {
     assert(variants.item_size == sizeof(EnumVariant));
     assert(variants.length > 0);
 
-    EnumExpression* enum_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(EnumExpression));
+    EnumExpression* enum_local = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*enum_local));
     if (!enum_local) { return ALLOCATION_FAILED; }
 
     *enum_local = (EnumExpression){

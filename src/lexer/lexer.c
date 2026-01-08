@@ -10,9 +10,10 @@
 
 #include "util/alphanum.h"
 #include "util/hash.h"
+#include "util/math.h"
 
 [[nodiscard]] static inline Status init_keywords(HashMap* keyword_map, Allocator* allocator) {
-    const size_t num_keywords = sizeof(ALL_KEYWORDS) / sizeof(ALL_KEYWORDS[0]);
+    const size_t num_keywords = ARRAY_SIZE(ALL_KEYWORDS);
     TRY(hash_map_init_allocator(keyword_map,
                                 num_keywords,
                                 sizeof(Slice),
@@ -32,7 +33,7 @@
 }
 
 [[nodiscard]] static inline Status init_operators(HashMap* operator_map, Allocator* allocator) {
-    const size_t num_operators = sizeof(ALL_OPERATORS) / sizeof(ALL_OPERATORS[0]);
+    const size_t num_operators = ARRAY_SIZE(ALL_OPERATORS);
     TRY(hash_map_init_allocator(operator_map,
                                 num_operators,
                                 sizeof(Slice),

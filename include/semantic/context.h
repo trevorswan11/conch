@@ -29,10 +29,10 @@ semantic_context_create(SemanticContext* parent, SemanticContext** context, Allo
 // Releases the provided context but does not wipe parents
 void semantic_context_destroy(SemanticContext* context, Allocator* allocator);
 
-bool semantic_context_find(SemanticContext* context,
-                           bool             check_parents,
-                           MutSlice         symbol,
-                           SemanticType**   type);
-bool semantic_context_has(SemanticContext* context, bool check_parents, MutSlice symbol);
+bool semantic_context_find(const SemanticContext* context,
+                           bool                   check_parents,
+                           MutSlice               symbol,
+                           SemanticType**         type);
+bool semantic_context_has(const SemanticContext* context, bool check_parents, MutSlice symbol);
 
 #endif

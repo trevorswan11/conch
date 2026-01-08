@@ -11,7 +11,7 @@
 block_statement_create(Token start_token, BlockStatement** block_stmt, Allocator* allocator) {
     ASSERT_ALLOCATOR_PTR(allocator);
 
-    BlockStatement* block = ALLOCATOR_PTR_MALLOC(allocator, sizeof(BlockStatement));
+    BlockStatement* block = ALLOCATOR_PTR_MALLOC(allocator, sizeof(*block));
     if (!block) { return ALLOCATION_FAILED; }
 
     ArrayList statements;

@@ -2,7 +2,9 @@
 #define SEMA_TYPE_H
 
 #include "util/containers/array_list.h"
+#include "util/containers/hash_map.h"
 #include "util/containers/hash_set.h"
+#include "util/memory.h"
 
 typedef struct SemanticType SemanticType;
 
@@ -38,6 +40,7 @@ typedef enum {
     STYPE_NIL,
     STYPE_ARRAY,
     STYPE_ENUM,
+    STYPE_STRUCT,
 } SemanticTypeTag;
 
 // Converts a semantic name to its semantic tag.
@@ -99,10 +102,31 @@ typedef struct {
 void                 free_enum_variant_set(HashSet* variants, Allocator* allocator);
 void                 semantic_enum_destroy(void* enum_type, Allocator* allocator);
 
+typedef struct {
+    RcControlBlock rc_control;
+
+    Slice     type_name;
+    ArrayList generics;
+    HashMap   members;
+    HashMap   methods;
+} SemanticStructType;
+
+[[nodiscard]] Status semantic_struct_create(Slice                name,
+                                            ArrayList            generics,
+                                            HashMap              members,
+                                            HashMap              methods,
+                                            SemanticStructType** struct_type,
+                                            Allocator*           allocator);
+void                 free_struct_generic_list(ArrayList* variants, Allocator* allocator);
+void                 free_struct_members_map(HashMap* members, Allocator* allocator);
+void                 free_struct_function_set(HashMap* methods, Allocator* allocator);
+void                 semantic_struct_destroy(void* struct_type, Allocator* allocator);
+
 typedef union {
     SematicDatalessType dataless_type;
     SemanticArrayType*  array_type;
     SemanticEnumType*   enum_type;
+    SemanticStructType* struct_type;
 } SemanticTypeUnion;
 
 static const SemanticTypeUnion SEMANTIC_DATALESS_TYPE = {.dataless_type = {0}};
