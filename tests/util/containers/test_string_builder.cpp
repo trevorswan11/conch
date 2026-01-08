@@ -1,9 +1,5 @@
 #include "catch_amalgamated.hpp"
 
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-
 #include "fixtures.hpp"
 
 extern "C" {

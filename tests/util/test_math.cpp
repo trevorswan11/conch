@@ -9,9 +9,11 @@ extern "C" {
 #include "util/math.h"
 }
 
+// NOLINTBEGIN
 MAX_FN(int, int)
 MAX_FN(double, double)
 MAX_FN(size_t, size_t)
+// NOLINTEND
 
 TEST_CASE("max_int") {
     REQUIRE(max_int(1, 5) == 5);

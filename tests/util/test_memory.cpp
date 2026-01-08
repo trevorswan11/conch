@@ -25,7 +25,7 @@ TEST_CASE("Zeroed slices") {
     const AnySlice    any_slice     = zeroed_any_slice();
     const AnyMutSlice any_mut_slice = zeroed_any_mut_slice();
 
-    const auto test_zeroed_any = [](AnySlice any) {
+    const auto test_zeroed_any = [](AnySlice any) -> void {
         REQUIRE_FALSE(any.ptr);
         REQUIRE(any.length == 0);
     };
@@ -54,10 +54,10 @@ TEST_CASE("Slice creation and equality") {
 }
 
 TEST_CASE("Mutable Slice creation and equality") {
-    char text[]   = "hello";
-    char s2_str[] = "hello";
-    char s3_str[] = "hellx";
-    char s4_str[] = "hello world";
+    char text[]   = "hello";       // NOLINT
+    char s2_str[] = "hello";       // NOLINT
+    char s3_str[] = "hellx";       // NOLINT
+    char s4_str[] = "hello world"; // NOLINT
 
     const MutSlice s1   = mut_slice_from_str_s(text, 5);
     const MutSlice s1_z = mut_slice_from_str_z(text);
@@ -103,7 +103,7 @@ TEST_CASE("Align up integer pointer values") {
 }
 
 TEST_CASE("Align pointers correctly") {
-    char  buffer[64];
+    char  buffer[64]; // NOLINT
     void* base = buffer;
 
     const void* aligned_8  = align_ptr(base, 8);
@@ -115,7 +115,7 @@ TEST_CASE("Align pointers correctly") {
 }
 
 TEST_CASE("Pointer offset math works correctly") {
-    char  buf[10];
+    char  buf[10]; // NOLINT
     void* base       = buf;
     void* offset_ptr = ptr_offset(base, 5);
     REQUIRE((uintptr_t)offset_ptr == (uintptr_t)base + 5);
@@ -142,8 +142,8 @@ TEST_CASE("Swap swaps memory content correctly") {
     REQUIRE(approx_eq_double(x, 9.87, 1e-6));
     REQUIRE(approx_eq_double(y, 1.23, 1e-6));
 
-    char str1[] = "abc";
-    char str2[] = "xyz";
+    char str1[] = "abc"; // NOLINT
+    char str2[] = "xyz"; // NOLINT
     swap(str1, str2, sizeof(str1));
     REQUIRE(strcmp(str1, "xyz") == 0);
     REQUIRE(strcmp(str2, "abc") == 0);
@@ -154,7 +154,7 @@ TEST_CASE("String duplication") {
 
     SECTION("Null terminated strings") {
         char*                copy_z = strdup_z(original); // NOLINT
-        const Fixture<char*> strf(copy_z);
+        const Fixture<char*> strf{copy_z};
 
         REQUIRE(copy_z);
         REQUIRE(strcmp(copy_z, original) == 0);
@@ -208,7 +208,7 @@ TEST_CASE("Reference counting") {
         int*           heap;
     };
 
-    const auto int_dtor = [](void* i, Allocator* allocator) {
+    const auto int_dtor = [](void* i, Allocator* allocator) -> void {
         REQUIRE(allocator);
         Int* ii = static_cast<Int*>(i);
         if (ii->heap) {
@@ -217,7 +217,7 @@ TEST_CASE("Reference counting") {
         }
     };
 
-    const auto int_ctor = [&int_dtor](int v, bool heaped) {
+    const auto int_ctor = [&int_dtor](int v, bool heaped) -> Int* {
         Int* i = static_cast<Int*>(malloc(sizeof(Int)));
 
         int* j = nullptr;

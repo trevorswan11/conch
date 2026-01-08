@@ -10,8 +10,8 @@ class TempFile {
     explicit TempFile(std::string path) : filepath(std::move(path)) {}
     ~TempFile() { std::remove(filepath.c_str()); }
 
-    FILE*       open(const char* permissions);
-    std::string path() { return filepath; }
+    auto open(const char* permissions) -> FILE*;
+    auto path() -> std::string { return filepath; }
 
   private:
     std::string filepath;

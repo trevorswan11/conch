@@ -1,5 +1,6 @@
 #include "catch_amalgamated.hpp"
 
+#include <array>
 #include <optional>
 #include <string>
 #include <vector>
@@ -10,10 +11,10 @@ extern "C" {
 #include "util/arena.h"
 }
 
-static void test_analyze(const char*                     input,
+static auto test_analyze(const char*                     input,
                          const std::vector<std::string>& expected_errors,
-                         bool                            print_anyways) {
-    SemanticFixture sf_std{input, &std_allocator};
+                         bool                            print_anyways) -> void {
+    const SemanticFixture sf_std{input, &std_allocator};
     sf_std.check_errors(expected_errors, print_anyways);
 
     // Rerun tests with arena allocator
@@ -21,20 +22,19 @@ static void test_analyze(const char*                     input,
     REQUIRE(STATUS_OK(arena_init(&arena, ARENA_DEFAULT_SIZE, &std_allocator)));
     const Fixture<Allocator> af(arena, arena_deinit);
 
-    const std::optional<ArenaResetMode> reset_modes[] = {
+    const auto reset_modes = std::to_array<std::optional<ArenaResetMode>>({
         std::nullopt,
         ArenaResetMode::DEFAULT,
         ArenaResetMode::RETAIN_CAPACITY,
         ArenaResetMode::ZERO_RETAIN_CAPACITY,
         ArenaResetMode::FULL_RESET,
-        std::nullopt,
-    };
+    });
 
     // Go through the reset modes to test each arena configuration
     for (const auto& mode : reset_modes) {
         // This has to be scoped since the reset can leave dangling pointers
         {
-            SemanticFixture sf_arena{input, &arena};
+            const SemanticFixture sf_arena{input, &arena};
             sf_arena.check_errors(expected_errors, print_anyways);
         }
 
@@ -66,7 +66,7 @@ TEST_CASE("Basic identifiers") {
 
 TEST_CASE("Primitive declarations") {
     SECTION("Implicit") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "const v := 3;",
             "const v := 3u;",
             R"(const v := "3";)",
@@ -81,7 +81,7 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Correct explicit") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "const v: int = 3;",
             "const v: uint = 3u;",
             "const v: size = 5uz;",
@@ -100,7 +100,7 @@ TEST_CASE("Primitive declarations") {
     }
 
     SECTION("Incorrect explicit") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "const v: uint = 3;",
             "const v: int = 3u;",
             "const v: ?size = 3u;",
@@ -121,7 +121,7 @@ TEST_CASE("Primitive declarations") {
 TEST_CASE("Assignment expressions") {
     SECTION("Basic assignments") {
         SECTION("Correct assignment") {
-            const char* const inputs[] = {
+            const auto inputs = std::array{
                 "var v := 3; v = 5",
                 "var v := 3u; v = 6u",
                 "var v := 3uz; v = 6uz",
@@ -150,7 +150,7 @@ TEST_CASE("Assignment expressions") {
     SECTION("Compound assignments") {
         SECTION("Correct assignment") {
             // Adding nil to a nullable value will be a runtime check
-            const char* const inputs[] = {
+            const auto inputs = std::array{
                 "var v: int = 3; v += 7",
                 "var v: uint = 3u; v += 9u",
                 "var v: uint = 3u; v *= 9u",
@@ -187,7 +187,7 @@ TEST_CASE("Assignment expressions") {
 
     SECTION("Nil assignments") {
         SECTION("Correct assignment") {
-            const char* const inputs[] = {
+            const auto inputs = std::array{
                 "var v: ?int = 3; v = nil",
                 "var v: ?uint = 3u; v = nil",
             };
@@ -232,7 +232,7 @@ TEST_CASE("Block statements") {
 
 TEST_CASE("Type aliases") {
     SECTION("Primitive aliases") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "type custom = int; const v: custom = 3;",
             "type custom = uint; const v: custom = 3u;",
             "type custom = size; const v: custom = 3uz;",
@@ -271,7 +271,7 @@ TEST_CASE("Enum types") {
     }
 
     SECTION("Assignment flavors") {
-        const char* const inputs[] = {
+        const auto inputs = std::array{
             "type A = enum { a, }; const b: A = A::a",
             "type A = ?enum { a, }; var b: A = A::a; b = nil",
             "type A = enum { RED, BLUE, GREEN, }; var b: A = A::RED; b = A::BLUE; b = A::GREEN",

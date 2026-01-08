@@ -2,9 +2,10 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <functional>
+#include <span>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 extern "C" {
 #include "ast/ast.h"
@@ -15,34 +16,34 @@ extern "C" {
 #include "util/containers/string_builder.h"
 }
 
-void check_errors(const ArrayList*         actual_errors,
-                  std::vector<std::string> expected_errors,
-                  bool                     print_anyways);
+auto check_errors(const ArrayList*             actual_errors,
+                  std::span<const std::string> expected_errors,
+                  bool                         print_anyways) -> void;
 
 // Behaves like a stack allocated unique pointer
 template <typename T> class Fixture {
   private:
-    using Dtor = void (*)(T*);
+    using Dtor = std::function<void(T*)>;
 
   public:
-    explicit Fixture(std::type_identity_t<T>& t, Dtor dtor) : underlying{t}, dtor{dtor} {}
-    explicit Fixture(std::type_identity_t<T>& t) : underlying{t}, dtor{nullptr} {}
+    explicit Fixture(std::type_identity_t<T>& t, Dtor dtor) : m_Underlying{t}, m_Dtor{dtor} {}
+    explicit Fixture(std::type_identity_t<T>& t) : m_Underlying{t}, m_Dtor{nullptr} {}
 
     ~Fixture() {
         if constexpr (std::is_pointer_v<T>) {
-            free(underlying);
+            free(m_Underlying);
             return;
         }
 
-        assert(dtor);
-        dtor(&underlying);
+        assert(m_Dtor);
+        m_Dtor(&m_Underlying);
     }
 
-    T& raw() { return underlying; }
+    auto raw() -> T& { return m_Underlying; }
 
   private:
-    T&   underlying;
-    Dtor dtor;
+    T&   m_Underlying;
+    Dtor m_Dtor;
 };
 
 class ParserFixture {
@@ -50,64 +51,66 @@ class ParserFixture {
     explicit ParserFixture(const char* input);
 
     ~ParserFixture() {
-        parser_deinit(&p);
-        ast_deinit(&a);
-        lexer_deinit(&l);
+        parser_deinit(&m_Parser);
+        ast_deinit(&m_AST);
+        lexer_deinit(&m_Lexer);
     }
 
-    const Parser* parser() { return &p; }
-    const AST*    ast() { return &a; }
-    AST*          ast_mut() { return &a; }
-    const Lexer*  lexer() { return &l; }
+    [[nodiscard]] auto parser() const -> const Parser* { return &m_Parser; }
+    [[nodiscard]] auto ast() const -> const AST* { return &m_AST; }
+    auto               ast_mut() -> AST* { return &m_AST; }
+    [[nodiscard]] auto lexer() const -> const Lexer* { return &m_Lexer; }
 
-    void check_errors(std::vector<std::string> expected_errors = {});
-    void check_errors(std::vector<std::string> expected_errors, bool print_anyways);
+    auto check_errors(std::span<const std::string> expected_errors = {}) const -> void;
+    auto check_errors(std::span<const std::string> expected_errors, bool print_anyways) const
+        -> void;
 
   private:
-    Parser p;
-    AST    a;
-    Lexer  l;
-    FileIO stdio;
+    Parser m_Parser;
+    AST    m_AST;
+    Lexer  m_Lexer;
+    FileIO m_IO;
 };
 
 class SemanticFixture {
   public:
     explicit SemanticFixture(const char* input, Allocator* allocator);
 
-    ~SemanticFixture() { seman_deinit(&seman); }
+    ~SemanticFixture() { seman_deinit(&m_Sema); }
 
-    const SemanticAnalyzer* analyzer() { return &seman; }
-    const Parser*           parser() { return pf.parser(); }
-    const AST*              ast() { return pf.ast(); }
-    const Lexer*            lexer() { return pf.lexer(); }
+    [[nodiscard]] auto analyzer() const -> const SemanticAnalyzer* { return &m_Sema; }
+    [[nodiscard]] auto parser() const -> const Parser* { return m_PF.parser(); }
+    [[nodiscard]] auto ast() const -> const AST* { return m_PF.ast(); }
+    [[nodiscard]] auto lexer() const -> const Lexer* { return m_PF.lexer(); }
 
-    void check_errors(std::vector<std::string> expected_errors = {});
-    void check_errors(std::vector<std::string> expected_errors, bool print_anyways);
+    auto check_errors(std::span<const std::string> expected_errors = {}) const -> void;
+    auto check_errors(std::span<const std::string> expected_errors, bool print_anyways) const
+        -> void;
 
   private:
-    SemanticAnalyzer seman;
-    ParserFixture    pf;
+    SemanticAnalyzer m_Sema;
+    ParserFixture    m_PF;
 };
 
 class SBFixture {
   public:
     explicit SBFixture(size_t initial_length);
-    ~SBFixture() { free(builder.buffer.data); }
+    ~SBFixture() { free(m_Builder.buffer.data); }
 
-    StringBuilder* sb() { return &builder; }
-    char*          to_string();
+    auto sb() -> StringBuilder* { return &m_Builder; }
+    auto to_string() -> char*;
 
   private:
-    StringBuilder builder;
+    StringBuilder m_Builder;
 };
 
 class CStringFixture {
   public:
     explicit CStringFixture(const char* source);
-    ~CStringFixture() { free(buffer); };
+    ~CStringFixture() { free(m_Buffer); };
 
-    char* raw() { return buffer; }
+    auto raw() -> char* { return m_Buffer; }
 
   private:
-    char* buffer;
+    char* m_Buffer;
 };

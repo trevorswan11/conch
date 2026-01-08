@@ -1,9 +1,9 @@
 #include "catch_amalgamated.hpp"
 
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <utility>
-#include <vector>
 
 extern "C" {
 #include "util/alphanum.h"
@@ -38,28 +38,23 @@ TEST_CASE("Character utils") {
     }
 
     SECTION("Decode") {
-        struct DecodeTestCase {
-            const char* literal;
-            uint8_t     expected;
-        };
-
-        const std::vector<DecodeTestCase> cases = {
-            {"'a'", 'a'},
-            {"'b'", 'b'},
-            {"'\\n'", '\n'},
-            {"'\\t'", '\t'},
-            {"'\\r'", '\r'},
-            {"'\\\\'", '\\'},
-            {"'\\''", '\''},
-            {"'\\\"'", '"'},
-            {"'\\0'", '\0'},
-            {"'\\Z'", 'Z'},
+        const auto cases = std::array{
+            std::pair{"'a'", 'a'},
+            std::pair{"'b'", 'b'},
+            std::pair{"'\\n'", '\n'},
+            std::pair{"'\\t'", '\t'},
+            std::pair{"'\\r'", '\r'},
+            std::pair{"'\\\\'", '\\'},
+            std::pair{"'\\''", '\''},
+            std::pair{"'\\\"'", '"'},
+            std::pair{"'\\0'", '\0'},
+            std::pair{"'\\Z'", 'Z'},
         };
 
         uint8_t result;
-        for (const auto& t : cases) {
-            REQUIRE(STATUS_OK(strntochr(SPLAT_STR(t.literal), &result)));
-            REQUIRE(t.expected == result);
+        for (const auto& [literal, expected] : cases) {
+            REQUIRE(STATUS_OK(strntochr(SPLAT_STR(literal), &result)));
+            REQUIRE(static_cast<uint8_t>(expected) == result);
         }
 
         REQUIRE(strntochr(SPLAT_STR("'ret'"), &result) == Status::MALFORMED_CHARATCER_LITERAL);
