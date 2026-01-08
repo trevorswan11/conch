@@ -5,6 +5,7 @@
 #include "parser/expression_parsers.h"
 #include "parser/statement_parsers.h"
 
+#include "ast/ast.h"
 #include "ast/expressions/identifier.h"
 #include "ast/expressions/type.h"
 #include "ast/statements/block.h"
@@ -162,26 +163,37 @@
     const Token start_token = p->current_token;
 
     TRY(parser_expect_peek(p, IDENT));
-
     Expression* ident_expr;
     TRY(identifier_expression_parse(p, &ident_expr));
     IdentifierExpression* ident = (IdentifierExpression*)ident_expr;
-    TRY_DO(parser_expect_peek(p, LBRACE), NODE_VIRTUAL_FREE(ident, allocator));
+
+    ArrayList generics;
+    TRY_DO(generics_parse(p, &generics), NODE_VIRTUAL_FREE(ident, allocator));
+
+    TRY_DO(parser_expect_peek(p, LBRACE), {
+        free_expression_list(&generics, allocator);
+        NODE_VIRTUAL_FREE(ident, allocator);
+    });
 
     BlockStatement* block;
-    TRY_DO(block_statement_parse(p, &block), NODE_VIRTUAL_FREE(ident, allocator));
+    TRY_DO(block_statement_parse(p, &block), {
+        NODE_VIRTUAL_FREE(ident, allocator);
+        free_expression_list(&generics, allocator);
+    });
 
     if (block->statements.length == 0) {
         PUT_STATUS_PROPAGATE(&p->errors, EMPTY_IMPL_BLOCK, start_token, {
             NODE_VIRTUAL_FREE(ident, allocator);
             NODE_VIRTUAL_FREE(block, allocator);
+            free_expression_list(&generics, allocator);
         });
     }
 
     ImplStatement* impl;
-    TRY_DO(impl_statement_create(start_token, ident, block, &impl, allocator), {
+    TRY_DO(impl_statement_create(start_token, ident, generics, block, &impl, allocator), {
         NODE_VIRTUAL_FREE(ident, allocator);
         NODE_VIRTUAL_FREE(block, allocator);
+        free_expression_list(&generics, allocator);
     });
 
     *stmt = impl;

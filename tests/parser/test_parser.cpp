@@ -1542,7 +1542,7 @@ TEST_CASE("Nil expressions") {
 
 TEST_CASE("Impl statements") {
     SECTION("Correct block") {
-        const char*         input = "impl Obj { const a := 1; }";
+        const char*         input = "impl Obj<T> { const a := 1; }";
         const ParserFixture pf{input};
         pf.check_errors();
 
@@ -1554,6 +1554,11 @@ TEST_CASE("Impl statements") {
         const auto* impl_stmt = reinterpret_cast<const ImplStatement*>(stmt);
 
         test_identifier_expression(reinterpret_cast<const Expression*>(impl_stmt->parent), "Obj");
+
+        REQUIRE(impl_stmt->generics.length == 1);
+        Expression* generic;
+        REQUIRE(STATUS_OK(array_list_get(&impl_stmt->generics, 0, static_cast<void*>(&generic))));
+        test_identifier_expression(generic, "T");
 
         REQUIRE(impl_stmt->implementation->statements.length == 1);
         REQUIRE(STATUS_OK(
@@ -1582,6 +1587,12 @@ TEST_CASE("Impl statements") {
             const ParserFixture pf{input};
             errors = {"EMPTY_IMPL_BLOCK [Ln 1, Col 1]"};
             pf.check_errors(errors);
+        }
+
+        SECTION("Empty generics") {
+            const char*   input = "impl Obj<> { const a := 1; }";
+            ParserFixture pf{input};
+            pf.check_errors({"EMPTY_GENERIC_LIST [Ln 1, Col 10]"});
         }
     }
 }
@@ -2679,14 +2690,13 @@ TEST_CASE("Generics") {
         }
 
         SECTION("Empty generic list in structs") {
-            const char*         input = "struct<>{a: int,}";
+            const char*   input = "struct<>{a: int,}";
             const ParserFixture pf{input};
-            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 7]",
-                      "No prefix parse function for GT found [Ln 1, Col 8]",
-                      "No prefix parse function for COLON found [Ln 1, Col 11]",
-                      "No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
-                      "No prefix parse function for COMMA found [Ln 1, Col 16]",
-                      "No prefix parse function for RBRACE found [Ln 1, Col 17]"};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 8]",
+                             "No prefix parse function for COLON found [Ln 1, Col 11]",
+                             "No prefix parse function for INT_TYPE found [Ln 1, Col 13]",
+                             "No prefix parse function for COMMA found [Ln 1, Col 16]",
+                             "No prefix parse function for RBRACE found [Ln 1, Col 17]"};
             pf.check_errors(errors);
         }
 
@@ -2704,16 +2714,15 @@ TEST_CASE("Generics") {
         }
 
         SECTION("Empty generic list in functions") {
-            const char*         input = "var a: fn<>(a: int): int";
+            const char*   input = "var a: fn<>(a: int): int";
             const ParserFixture pf{input};
-            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 10]",
-                      "No prefix parse function for GT found [Ln 1, Col 11]",
-                      "Expected token RPAREN, found COLON [Ln 1, Col 14]",
-                      "No prefix parse function for COLON found [Ln 1, Col 14]",
-                      "No prefix parse function for INT_TYPE found [Ln 1, Col 16]",
-                      "No prefix parse function for RPAREN found [Ln 1, Col 19]",
-                      "No prefix parse function for COLON found [Ln 1, Col 20]",
-                      "No prefix parse function for INT_TYPE found [Ln 1, Col 22]"};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 11]",
+                             "Expected token RPAREN, found COLON [Ln 1, Col 14]",
+                             "No prefix parse function for COLON found [Ln 1, Col 14]",
+                             "No prefix parse function for INT_TYPE found [Ln 1, Col 16]",
+                             "No prefix parse function for RPAREN found [Ln 1, Col 19]",
+                             "No prefix parse function for COLON found [Ln 1, Col 20]",
+                             "No prefix parse function for INT_TYPE found [Ln 1, Col 22]"};
             pf.check_errors(errors);
         }
 
@@ -2726,10 +2735,9 @@ TEST_CASE("Generics") {
         }
 
         SECTION("Empty generic list in calls") {
-            const char*         input = "func(1, 2) with <>";
+            const char*   input = "func(1, 2) with <>";
             const ParserFixture pf{input};
-            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 17]",
-                      "No prefix parse function for GT found [Ln 1, Col 18]"};
+            errors = {"EMPTY_GENERIC_LIST [Ln 1, Col 18]"};
             pf.check_errors(errors);
         }
 

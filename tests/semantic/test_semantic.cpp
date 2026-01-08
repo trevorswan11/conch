@@ -22,7 +22,6 @@ static auto test_analyze(const char*                     input,
     REQUIRE(STATUS_OK(arena_init(&arena, ARENA_DEFAULT_SIZE, &std_allocator)));
     const Fixture<Allocator> af(arena, arena_deinit);
 
-    // The first value is repeated to complete the cycle
     const auto reset_modes = std::to_array<std::optional<ArenaResetMode>>({
         std::nullopt,
         ArenaResetMode::DEFAULT,

@@ -145,6 +145,7 @@ void arena_deinit(Allocator* arena) {
     }
 
     ALLOCATOR_PTR_FREE(allocator, arena_ctx);
+    arena->ctx = nullptr;
 }
 
 void arena_reset(Allocator* arena, ArenaResetMode reset_mode) {
@@ -156,12 +157,15 @@ void arena_reset(Allocator* arena, ArenaResetMode reset_mode) {
     switch (reset_mode) {
     case DEFAULT:
     case RETAIN_CAPACITY:
+        while (block != nullptr) {
+            block->offset = 0;
+            block         = block->next;
+        }
+        break;
     case ZERO_RETAIN_CAPACITY:
         while (block != nullptr) {
             block->offset = 0;
-            if (arena_ctx->reset_mode == ZERO_RETAIN_CAPACITY) {
-                memset(block->data, 0, block->capacity);
-            }
+            memset(block->data, 0, block->capacity);
             block = block->next;
         }
         break;
