@@ -92,8 +92,8 @@ template auto test_number_expression<uint64_t>(const Expression*, uint64_t) -> v
 template auto test_number_expression<double>(const Expression*, double) -> void;
 
 template <typename T> auto test_number_expression(const char* input, T expected_value) -> void {
-    ParserFixture pf{input};
-    const auto*   ast = pf.ast();
+    const ParserFixture pf{input};
+    const auto*         ast = pf.ast();
 
     pf.check_errors({}, true);
     REQUIRE(ast->statements.length == 1);

@@ -364,7 +364,7 @@ TEST_CASE("Number-based expressions") {
     }
 
     SECTION("Bytes") {
-        const auto test_byte_expression = [](const char* input, uint8_t expected) {
+        const auto test_byte_expression = [](const char* input, uint8_t expected) -> void {
             const ParserFixture pf{input};
             pf.check_errors();
 
@@ -552,7 +552,7 @@ TEST_CASE("Basic prefix / infix expressions") {
              .rvalue = 4ULL},
         });
 
-        const auto test_infix = []<typename T>(const TestCase& t) {
+        const auto test_infix = []<typename T>(const TestCase& t) -> void {
             const ParserFixture pf{t.input};
             pf.check_errors();
 
@@ -562,7 +562,7 @@ TEST_CASE("Basic prefix / infix expressions") {
             Statement* stmt;
             REQUIRE(STATUS_OK(array_list_get(&ast->statements, 0, static_cast<void*>(&stmt))));
             const auto* expr_stmt = reinterpret_cast<const ExpressionStatement*>(stmt);
-            T*          expr      = reinterpret_cast<T*>(expr_stmt->expression);
+            const T*    expr      = reinterpret_cast<T*>(expr_stmt->expression);
 
             const auto pairs = std::array{
                 std::pair{t.lvalue, expr->lhs},
@@ -987,7 +987,7 @@ TEST_CASE("Function literals") {
     };
 
     const auto test_parameters = [](const ArrayList*               actuals,
-                                    std::span<const TestParameter> expecteds) {
+                                    std::span<const TestParameter> expecteds) -> void {
         REQUIRE(actuals->length == expecteds.size());
         for (size_t i = 0; i < actuals->length; i++) {
             Parameter parameter;
@@ -1206,8 +1206,9 @@ TEST_CASE("Enum declarations") {
         std::optional<int64_t> expected_value = std::nullopt;
     };
 
-    const auto test_enum_variants = [](const ArrayList*                     variants,
-                                       std::span<const EnumVariantTestCase> expected_variants) {
+    const auto test_enum_variants =
+        [](const ArrayList*                     variants,
+           std::span<const EnumVariantTestCase> expected_variants) -> void {
         REQUIRE(variants->length == expected_variants.size());
         for (size_t i = 0; i < variants->length; i++) {
             EnumVariant variant;
@@ -1372,8 +1373,9 @@ TEST_CASE("Struct declarations") {
         std::optional<int64_t> default_value = std::nullopt;
     };
 
-    const auto test_struct_members = [](const ArrayList*                      members,
-                                        std::span<const StructMemberTestCase> expected_members) {
+    const auto test_struct_members =
+        [](const ArrayList*                      members,
+           std::span<const StructMemberTestCase> expected_members) -> void {
         REQUIRE(members->length == expected_members.size());
         for (size_t i = 0; i < members->length; i++) {
             StructMember member;

@@ -25,7 +25,7 @@ TEST_CASE("Zeroed slices") {
     const AnySlice    any_slice     = zeroed_any_slice();
     const AnyMutSlice any_mut_slice = zeroed_any_mut_slice();
 
-    const auto test_zeroed_any = [](AnySlice any) {
+    const auto test_zeroed_any = [](AnySlice any) -> void {
         REQUIRE_FALSE(any.ptr);
         REQUIRE(any.length == 0);
     };
@@ -208,7 +208,7 @@ TEST_CASE("Reference counting") {
         int*           heap;
     };
 
-    const auto int_dtor = [](void* i, Allocator* allocator) {
+    const auto int_dtor = [](void* i, Allocator* allocator) -> void {
         REQUIRE(allocator);
         Int* ii = static_cast<Int*>(i);
         if (ii->heap) {
@@ -217,7 +217,7 @@ TEST_CASE("Reference counting") {
         }
     };
 
-    const auto int_ctor = [&int_dtor](int v, bool heaped) {
+    const auto int_ctor = [&int_dtor](int v, bool heaped) -> Int* {
         Int* i = static_cast<Int*>(malloc(sizeof(Int)));
 
         int* j = nullptr;
