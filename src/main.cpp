@@ -1,1 +1,6 @@
-auto main() -> int { return 0; }
+#include <print>
+
+auto main() -> int {
+    std::println("Hello, World!");
+    return 0;
+}

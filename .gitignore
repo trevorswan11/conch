@@ -55,6 +55,11 @@ dkms.conf
 # debug information files
 *.dwo
 
+# zig
+zig-out/
+.zig-cache
+cdb-frags/
+
 out/
 build/
 Makefile
