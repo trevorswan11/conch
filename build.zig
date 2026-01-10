@@ -232,9 +232,7 @@ fn getCXXFiles(
             }
         } else continue :collector;
 
-        if (!std.mem.endsWith(u8, entry.basename, ".cpp")) continue;
         if (options.dropped_files) |drop| for (drop) |drop_file| {
-            if (std.mem.eql(u8, drop_file, entry.path)) continue :collector;
             if (std.mem.eql(u8, drop_file, entry.basename)) continue :collector;
         };
 
