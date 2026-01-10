@@ -1,13 +1,24 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const cdb_frags = "cdb-frags";
+const cdb_frags_base_dirname = "cdb-frags";
+const cdb_filename = "compile_commands.json";
+var cdb_parent: []const u8 = undefined;
+var cdb_frags_path: []const u8 = undefined;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cdb_frags_path = try std.fs.path.join(b.allocator, &.{ b.install_prefix, cdb_frags });
+    const root = try std.fs.cwd().realpathAlloc(b.allocator, ".");
+    cdb_parent = try std.fs.path.join(b.allocator, &.{ root, b.cache_root.path orelse ".zig-cache" });
+
+    cdb_frags_path = try std.fs.path.join(b.allocator, &.{ cdb_parent, cdb_frags_base_dirname });
+    std.fs.cwd().access(cdb_frags_path, .{}) catch {
+        try std.fs.cwd().makePath(cdb_frags_path);
+    };
+    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
+
     const base_flags = [_][]const u8{
         "-std=c++23",
         "-gen-cdb-fragment-path",
@@ -22,17 +33,15 @@ pub fn build(b: *std.Build) !void {
             "-g", "-DDEBUG",
         },
         .ReleaseSafe => [_][]const u8{
-            "-DRELEASE", "-DSAFE"
+            "-DRELEASE",
+            "-DSAFE",
         },
         .ReleaseFast, .ReleaseSmall => [_][]const u8{
-            "-DNDEBUG", "-DDIST"
+            "-DNDEBUG",
+            "-DDIST",
         },
     };
     const standard_flags = base_flags ++ extra_flags;
-    
-    std.fs.cwd().access(cdb_frags_path, .{}) catch {
-        try std.fs.cwd().makePath(cdb_frags_path);
-    };
 
     // Library for exe and tests
     const lib_mod = b.addModule("libconch", .{
@@ -51,35 +60,39 @@ pub fn build(b: *std.Build) !void {
         .root_module = lib_mod,
     });
     b.installArtifact(libconch);
+    try cdb_steps.append(b.allocator, &libconch.step);
 
     // Exe
-    const exe_mod = b.createModule(.{
+    const main = try std.fs.path.join(b.allocator, &.{ "src", "main.cpp" });
+    const conch_mod = b.createModule(.{
         .link_libcpp = true,
         .target = target,
         .optimize = optimize,
     });
-    exe_mod.addIncludePath(b.path("include"));
-    exe_mod.addCSourceFile(.{
-        .file = b.path("src/main.cpp"),
+    conch_mod.addIncludePath(b.path("include"));
+    conch_mod.addCSourceFile(.{
+        .file = b.path(main),
         .flags = &standard_flags,
         .language = .cpp,
     });
-    exe_mod.linkLibrary(libconch);
-    const exe = b.addExecutable(.{
+    conch_mod.linkLibrary(libconch);
+    const conch = b.addExecutable(.{
         .name = "conch",
-        .root_module = exe_mod,
+        .root_module = conch_mod,
     });
-    b.installArtifact(exe);
+    b.installArtifact(conch);
+    try cdb_steps.append(b.allocator, &conch.step);
 
     // Catch2
+    const catch2_dir = try std.fs.path.join(b.allocator, &.{ "tests", "test_framework" });
     const catch_mod = b.addModule("libcatch2", .{
         .link_libcpp = true,
         .target = target,
         .optimize = optimize,
     });
-    catch_mod.addIncludePath(b.path("tests/test_framework"));
+    catch_mod.addIncludePath(b.path(catch2_dir));
     catch_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "tests/test_framework", .{}),
+        .files = try getCXXFiles(b, catch2_dir, .{}),
         .flags = &standard_flags,
         .language = .cpp,
     });
@@ -88,8 +101,10 @@ pub fn build(b: *std.Build) !void {
         .root_module = catch_mod,
     });
     b.installArtifact(libcatch2);
+    try cdb_steps.append(b.allocator, &libcatch2.step);
 
     // Tests
+    const helper_dir = try std.fs.path.join(b.allocator, &.{ "tests", "helpers" });
     const test_mod = b.createModule(.{
         .link_libcpp = true,
         .target = target,
@@ -97,11 +112,11 @@ pub fn build(b: *std.Build) !void {
     });
 
     test_mod.addIncludePath(b.path("include"));
-    test_mod.addIncludePath(b.path("tests/test_framework"));
-    test_mod.addIncludePath(b.path("tests/helpers"));
+    test_mod.addIncludePath(b.path(catch2_dir));
+    test_mod.addIncludePath(b.path(helper_dir));
 
     test_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "tests", .{ .dropped_files = &.{"test_framework/catch_amalgamated.cpp"} }),
+        .files = try getCXXFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
         .flags = &standard_flags,
         .language = .cpp,
     });
@@ -112,6 +127,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = test_mod,
     });
     b.installArtifact(conch_tests);
+    try cdb_steps.append(b.allocator, &conch_tests.step);
 
     const run_tests = b.addRunArtifact(conch_tests);
     run_tests.step.dependOn(b.getInstallStep());
@@ -126,31 +142,23 @@ pub fn build(b: *std.Build) !void {
         else => {},
     }
 
-    // CDB
-    const cdb_step = b.step("cdb", "Compile CDB fragments into compile_commands.json");
-    cdb_step.makeFn = collectCDB;
-    cdb_step.dependOn(&libconch.step);
-    cdb_step.dependOn(&exe.step);
-    cdb_step.dependOn(&libcatch2.step);
-    cdb_step.dependOn(&conch_tests.step);
-    b.getInstallStep().dependOn(cdb_step);
-
     // Tooling
     const tooling_sources = try std.mem.concat(b.allocator, []const u8, &.{
         try getCXXFiles(b, "src", .{}),
         try getCXXFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
         try getCXXFiles(b, "tests", .{
             .dropped_files = &.{
-                "test_framework/catch_amalgamated.cpp",
-                "test_framework/catch_amalgamated.hpp",
+                "catch_amalgamated.cpp",
+                "catch_amalgamated.hpp",
             },
             .allowed_extensions = &.{ ".hpp", ".cpp" },
         }),
     });
 
     // Fmt
+    var fmt: *std.Build.Step.Run = undefined;
     if (commandExists(b, "clang-format", "--version")) {
-        const fmt = b.addSystemCommand(&.{ "clang-format", "-i" });
+        fmt = b.addSystemCommand(&.{ "clang-format", "-i" });
         fmt.addArgs(tooling_sources);
         const fmt_step = b.step("fmt", "Format all project files");
         fmt_step.dependOn(&fmt.step);
@@ -159,15 +167,35 @@ pub fn build(b: *std.Build) !void {
         fmt_check.addArgs(tooling_sources);
         const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
         fmt_check_step.dependOn(&fmt_check.step);
+        try cdb_steps.append(b.allocator, &fmt.step);
     }
 
     // Tidy
-    if (commandExists(b, "run-clang-tidy", "-h")) {
-        const tidy = b.addSystemCommand(&.{ "run-clang-tidy", "-p", b.install_prefix, "" });
-        tidy.addArgs(tooling_sources);
-        const tidy_step = b.step("tidy", "Format all project files");
-        tidy_step.dependOn(&tidy.step);
+    var tidy: *std.Build.Step.Run = undefined;
+    var has_tidy = false;
+    if (builtin.os.tag == .macos and commandExists(b, "run-clang-tidy", "-h")) {
+        tidy = b.addSystemCommand(&.{ "run-clang-tidy", "-p", cdb_parent });
+        has_tidy = true;
+    } else if (commandExists(b, "clang-tidy", "--version")) {
+        tidy = b.addSystemCommand(&.{ "clang-tidy", "-p", cdb_parent });
+        has_tidy = true;
     }
+
+    if (has_tidy) {
+        tidy.addArgs(tooling_sources);
+        const tidy_step = b.step("tidy", "Run static analysis on all project files");
+        tidy_step.dependOn(&tidy.step);
+
+        try cdb_steps.append(b.allocator, &tidy.step);
+    }
+
+    // CDB
+    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
+    cdb_step.makeFn = collectCDB;
+    for (cdb_steps.items) |step| {
+        cdb_step.dependOn(step);
+    }
+    b.getInstallStep().dependOn(cdb_step);
 }
 
 const CollectorOptions = struct {
@@ -217,16 +245,7 @@ const FragInfo = struct {
 fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const allocator = step.owner.allocator;
     var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
-    defer {
-        var deinit_it = newest_frags.iterator();
-        while (deinit_it.next()) |kv| {
-            allocator.free(kv.key_ptr.*);
-            allocator.free(kv.value_ptr.name);
-        }
-        newest_frags.deinit();
-    }
 
-    const cdb_frags_path = try std.fs.path.join(allocator, &.{ step.owner.install_prefix, cdb_frags });
     var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
     defer dir.close();
     var iter = dir.iterate();
@@ -250,7 +269,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var it = newest_frags.valueIterator();
     var first = true;
-    const cdb_path = try std.fs.path.join(allocator, &.{ step.owner.install_prefix, "compile_commands.json" });
+    const cdb_path = try std.fs.path.join(allocator, &.{ cdb_parent, cdb_filename });
     const cdb = try std.fs.cwd().createFile(cdb_path, .{});
     defer cdb.close();
 

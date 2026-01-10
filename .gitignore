@@ -58,7 +58,6 @@ dkms.conf
 # zig
 zig-out/
 .zig-cache
-cdb-frags/
 
 out/
 build/

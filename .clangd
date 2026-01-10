@@ -1,2 +1,2 @@
 CompileFlags:
-  CompilationDatabase: "zig-out"
+  CompilationDatabase: ".zig-cache"
