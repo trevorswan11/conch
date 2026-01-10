@@ -14,12 +14,11 @@ pub fn build(b: *std.Build) !void {
     cdb_parent = try std.fs.path.join(b.allocator, &.{ root, b.cache_root.path orelse ".zig-cache" });
 
     cdb_frags_path = try std.fs.path.join(b.allocator, &.{ cdb_parent, cdb_frags_base_dirname });
-    std.fs.cwd().access(cdb_frags_path, .{}) catch {
-        try std.fs.cwd().makePath(cdb_frags_path);
-    };
+    try std.fs.cwd().makePath(cdb_frags_path);
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
 
-    const base_flags = [_][]const u8{
+    var compiler_flags: std.ArrayList([]const u8) = .empty;
+    try compiler_flags.appendSlice(b.allocator, &.{
         "-std=c++23",
         "-gen-cdb-fragment-path",
         cdb_frags_path,
@@ -27,119 +26,116 @@ pub fn build(b: *std.Build) !void {
         "-Wextra",
         "-Werror",
         "-Wpedantic",
-    };
-    const extra_flags = switch (optimize) {
-        .Debug => [_][]const u8{
-            "-g", "-DDEBUG",
-        },
-        .ReleaseSafe => [_][]const u8{
-            "-DRELEASE",
-            "-DSAFE",
-        },
-        .ReleaseFast, .ReleaseSmall => [_][]const u8{
-            "-DNDEBUG",
-            "-DDIST",
-        },
-    };
-    const standard_flags = base_flags ++ extra_flags;
+    });
 
-    // Library for exe and tests
-    const lib_mod = b.addModule("libconch", .{
-        .link_libcpp = true,
+    switch (optimize) {
+        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
+        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
+        .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, &.{ "-DNDEBUG", "-DDIST" }),
+    }
+
+    // Asan
+    var use_asan = switch (builtin.os.tag) {
+        .macos => true,
+        .linux => true,
+        else => false,
+    } and b.option(bool, "asan", "Enable address and undefined behavior sanitizers (mac/linux only)") orelse false;
+
+    var gen_cov = switch (builtin.os.tag) {
+        .macos => true,
+        .linux => true,
+        else => false,
+    } and !use_asan and b.option(bool, "cov", "Generate coverage report (mac/linux only)") orelse false;
+
+    use_asan = if (use_asan) asan: {
+        switch (builtin.os.tag) {
+            .macos => {
+                const has_leaks = commandExists(b, "leaks", "--help");
+                if (!has_leaks) {
+                    std.log.err(
+                        \\Skipping asan flags as supporting commands are not installed:
+                        \\  Required: leaks ({})
+                    , .{has_leaks});
+                    break :asan false;
+                }
+
+                try compiler_flags.appendSlice(b.allocator, &.{
+                    "-fsanitize=undefined", "-fno-sanitize-recover=all", "-DASAN", "-g",
+                });
+            },
+            .linux => try compiler_flags.appendSlice(b.allocator, &.{
+                "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-DASAN", "-g",
+            }),
+            else => unreachable,
+        }
+
+        break :asan true;
+    } else false;
+
+    gen_cov = if (gen_cov) cov: {
+        std.debug.assert(!use_asan);
+        const has_prof = commandExists(b, "llvm-profdata", "--version");
+        const has_cov = commandExists(b, "llvm-cov", "--version");
+        if (!has_prof or !has_cov) {
+            std.log.err(
+                \\Skipping coverage generation as supporting commands are not installed:
+                \\  Required: llvm-profdata ({})
+                \\  Required: llvm-cov ({})
+            , .{ has_prof, has_cov });
+            break :cov false;
+        }
+
+        try compiler_flags.appendSlice(b.allocator, &.{
+            "-fprofile-instr-generate", "-fcoverage-mapping", "-DCOV", "-g",
+        });
+        break :cov true;
+    } else gen_cov;
+
+    const tests = try addArtifacts(b, .{
         .target = target,
         .optimize = optimize,
+        .flags = compiler_flags.items,
+        .cdb_steps = &cdb_steps,
     });
-    lib_mod.addIncludePath(b.path("include"));
-    lib_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
-        .flags = &standard_flags,
-        .language = .cpp,
-    });
-    const libconch = b.addLibrary(.{
-        .name = "conch",
-        .root_module = lib_mod,
-    });
-    b.installArtifact(libconch);
-    try cdb_steps.append(b.allocator, &libconch.step);
-
-    // Exe
-    const main = try std.fs.path.join(b.allocator, &.{ "src", "main.cpp" });
-    const conch_mod = b.createModule(.{
-        .link_libcpp = true,
-        .target = target,
-        .optimize = optimize,
-    });
-    conch_mod.addIncludePath(b.path("include"));
-    conch_mod.addCSourceFile(.{
-        .file = b.path(main),
-        .flags = &standard_flags,
-        .language = .cpp,
-    });
-    conch_mod.linkLibrary(libconch);
-    const conch = b.addExecutable(.{
-        .name = "conch",
-        .root_module = conch_mod,
-    });
-    b.installArtifact(conch);
-    try cdb_steps.append(b.allocator, &conch.step);
-
-    // Catch2
-    const catch2_dir = try std.fs.path.join(b.allocator, &.{ "tests", "test_framework" });
-    const catch_mod = b.addModule("libcatch2", .{
-        .link_libcpp = true,
-        .target = target,
-        .optimize = optimize,
-    });
-    catch_mod.addIncludePath(b.path(catch2_dir));
-    catch_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, catch2_dir, .{}),
-        .flags = &standard_flags,
-        .language = .cpp,
-    });
-    const libcatch2 = b.addLibrary(.{
-        .name = "catch2",
-        .root_module = catch_mod,
-    });
-    b.installArtifact(libcatch2);
-    try cdb_steps.append(b.allocator, &libcatch2.step);
-
-    // Tests
-    const helper_dir = try std.fs.path.join(b.allocator, &.{ "tests", "helpers" });
-    const test_mod = b.createModule(.{
-        .link_libcpp = true,
-        .target = target,
-        .optimize = optimize,
-    });
-
-    test_mod.addIncludePath(b.path("include"));
-    test_mod.addIncludePath(b.path(catch2_dir));
-    test_mod.addIncludePath(b.path(helper_dir));
-
-    test_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
-        .flags = &standard_flags,
-        .language = .cpp,
-    });
-    test_mod.linkLibrary(libconch);
-    test_mod.linkLibrary(libcatch2);
-    const conch_tests = b.addExecutable(.{
-        .name = "conch_tests",
-        .root_module = test_mod,
-    });
-    b.installArtifact(conch_tests);
-    try cdb_steps.append(b.allocator, &conch_tests.step);
-
-    const run_tests = b.addRunArtifact(conch_tests);
+    const run_tests = b.addRunArtifact(tests);
     run_tests.step.dependOn(b.getInstallStep());
 
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests.step);
+    test_step.dependOn(&tests.step);
 
-    // Asan
-    switch (builtin.os.tag) {
-        .macos => {},
-        .linux => {},
-        else => {},
+    if (use_asan) {
+        // mac uses the leaks tool while linux just mirrors the test step
+        switch (builtin.os.tag) {
+            .macos => {
+                const asan = b.addSystemCommand(&.{ "leaks", "--atExit", "--" });
+                asan.addFileArg(tests.getEmittedBin());
+
+                const asan_step = b.step("asan", "Run unit tests with address sanitizer");
+                asan_step.dependOn(&tests.step);
+                asan_step.dependOn(&asan.step);
+            },
+            .linux => {
+                const asan_step = b.step("asan", "Run unit tests with address sanitizer (Same as 'test' target)");
+                asan_step.dependOn(&tests.step);
+            },
+            else => unreachable,
+        }
+    } else if (gen_cov) {
+        std.debug.assert(builtin.os.tag != .windows);
+        const cov_dir = try std.fs.path.join(b.allocator, &.{ b.install_prefix, "cov" });
+        try std.fs.cwd().makePath(cov_dir);
+
+        // Profiling
+        const cov = b.addSystemCommand(&.{try std.fmt.allocPrint(
+            b.allocator,
+            "LLVM_PROFILE_FILE={s}/default.profraw",
+            .{cov_dir},
+        )});
+        cov.addFileArg(tests.getEmittedBin());
+
+        const cov_step = b.step("cov", "Create LLVM raw profile data");
+        cov_step.dependOn(&tests.step);
+        cov_step.dependOn(&cov.step);
     }
 
     // Tooling
@@ -170,6 +166,14 @@ pub fn build(b: *std.Build) !void {
         try cdb_steps.append(b.allocator, &fmt.step);
     }
 
+    // CDB
+    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
+    cdb_step.makeFn = collectCDB;
+    for (cdb_steps.items) |step| {
+        cdb_step.dependOn(step);
+    }
+    b.getInstallStep().dependOn(cdb_step);
+
     // Tidy
     var tidy: *std.Build.Step.Run = undefined;
     var has_tidy = false;
@@ -185,28 +189,123 @@ pub fn build(b: *std.Build) !void {
         tidy.addArgs(tooling_sources);
         const tidy_step = b.step("tidy", "Run static analysis on all project files");
         tidy_step.dependOn(&tidy.step);
-
-        try cdb_steps.append(b.allocator, &tidy.step);
+        tidy_step.dependOn(cdb_step);
     }
-
-    // CDB
-    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
-    cdb_step.makeFn = collectCDB;
-    for (cdb_steps.items) |step| {
-        cdb_step.dependOn(step);
-    }
-    b.getInstallStep().dependOn(cdb_step);
 }
 
-const CollectorOptions = struct {
-    allowed_extensions: []const []const u8 = &.{".cpp"},
-    dropped_files: ?[]const [:0]const u8 = null,
-};
+// Adds and configures all artifacts minus the test runner which is returned
+fn addArtifacts(b: *std.Build, opts: struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    flags: []const []const u8,
+    cdb_steps: *std.ArrayList(*std.Build.Step),
+}) !*std.Build.Step.Compile {
+    // Library for exe and tests
+    const lib_mod = b.addModule("libconch", .{
+        .link_libcpp = true,
+        .target = opts.target,
+        .optimize = opts.optimize,
+    });
+    lib_mod.addIncludePath(b.path("include"));
+    lib_mod.addCSourceFiles(.{
+        .files = try getCXXFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
+        .flags = opts.flags,
+        .language = .cpp,
+    });
+    const libconch = b.addLibrary(.{
+        .name = "conch",
+        .root_module = lib_mod,
+    });
+    b.installArtifact(libconch);
+    try opts.cdb_steps.append(b.allocator, &libconch.step);
+
+    // Exe
+    const main = try std.fs.path.join(b.allocator, &.{ "src", "main.cpp" });
+    const conch_mod = b.createModule(.{
+        .link_libcpp = true,
+        .target = opts.target,
+        .optimize = opts.optimize,
+    });
+    conch_mod.addIncludePath(b.path("include"));
+    conch_mod.addCSourceFile(.{
+        .file = b.path(main),
+        .flags = opts.flags,
+        .language = .cpp,
+    });
+    conch_mod.linkLibrary(libconch);
+    const conch = b.addExecutable(.{
+        .name = "conch",
+        .root_module = conch_mod,
+    });
+    b.installArtifact(conch);
+    try opts.cdb_steps.append(b.allocator, &conch.step);
+
+    const run_cmd = b.addRunArtifact(conch);
+    run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    const run_step = b.step("run", "Run conch with provided command line arguments");
+    run_step.dependOn(&run_cmd.step);
+
+    // Catch2
+    const catch2_dir = try std.fs.path.join(b.allocator, &.{ "tests", "test_framework" });
+    const catch_mod = b.addModule("libcatch2", .{
+        .link_libcpp = true,
+        .target = opts.target,
+        .optimize = opts.optimize,
+    });
+    catch_mod.addIncludePath(b.path(catch2_dir));
+    catch_mod.addCSourceFiles(.{
+        .files = try getCXXFiles(b, catch2_dir, .{}),
+        .flags = opts.flags,
+        .language = .cpp,
+    });
+    const libcatch2 = b.addLibrary(.{
+        .name = "catch2",
+        .root_module = catch_mod,
+    });
+    b.installArtifact(libcatch2);
+    try opts.cdb_steps.append(b.allocator, &libcatch2.step);
+
+    // Tests
+    const helper_dir = try std.fs.path.join(b.allocator, &.{ "tests", "helpers" });
+    const test_mod = b.createModule(.{
+        .link_libcpp = true,
+        .target = opts.target,
+        .optimize = opts.optimize,
+    });
+
+    test_mod.addIncludePath(b.path("include"));
+    test_mod.addIncludePath(b.path(catch2_dir));
+    test_mod.addIncludePath(b.path(helper_dir));
+
+    test_mod.addCSourceFiles(.{
+        .files = try getCXXFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
+        .flags = opts.flags,
+        .language = .cpp,
+    });
+    test_mod.linkLibrary(libconch);
+    test_mod.linkLibrary(libcatch2);
+    const conch_tests = b.addExecutable(.{
+        .name = "conch_tests",
+        .root_module = test_mod,
+    });
+    b.installArtifact(conch_tests);
+    try opts.cdb_steps.append(b.allocator, &conch_tests.step);
+
+    return conch_tests;
+}
 
 fn getCXXFiles(
     b: *std.Build,
     directory: []const u8,
-    options: CollectorOptions,
+    options: struct {
+        allowed_extensions: []const []const u8 = &.{".cpp"},
+        dropped_files: ?[]const [:0]const u8 = null,
+    },
 ) ![][]const u8 {
     const cwd = std.fs.cwd();
     var dir = try cwd.openDir(directory, .{ .iterate = true });
