@@ -38,15 +38,167 @@ pub fn build(b: *std.Build) !void {
     try addArtifacts(b, .{
         .target = target,
         .optimize = optimize,
-        .flags = compiler_flags.items,
+        .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
     });
+    try addTooling(b, .{ .cdb_steps = cdb_steps });
+}
 
-    // Tooling
+fn addArtifacts(b: *std.Build, config: struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    cxx_flags: []const []const u8,
+    cdb_steps: *std.ArrayList(*std.Build.Step),
+}) !void {
+    const libconch = createLibrary(b, .{
+        .name = "conch",
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_path = b.path("include"),
+        .cxx_files = try collectFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
+        .flags = config.cxx_flags,
+    });
+    try config.cdb_steps.append(b.allocator, &libconch.step);
+
+    const cxx_main = b.pathJoin(&.{ "src", "main.cpp" });
+    const conch = createExecutable(b, .{
+        .name = "conch",
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_paths = &.{b.path("include")},
+        .cxx_files = &.{cxx_main},
+        .cxx_flags = config.cxx_flags,
+        .link_libraries = &.{libconch},
+        .run_cmd_name = "run",
+        .run_cmd_desc = "Run conch with provided command line arguments",
+        .with_args = true,
+    });
+    try config.cdb_steps.append(b.allocator, &conch.step);
+
+    const catch2_dir = b.pathJoin(&.{ "tests", "test_framework" });
+    const libcatch2 = createLibrary(b, .{
+        .name = "catch2",
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_path = b.path(catch2_dir),
+        .cxx_files = try collectFiles(b, catch2_dir, .{}),
+        .flags = config.cxx_flags,
+    });
+    try config.cdb_steps.append(b.allocator, &libcatch2.step);
+
+    const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
+    const conch_tests = createExecutable(b, .{
+        .name = "conch_tests",
+        .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
+        .cxx_files = try collectFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
+        .cxx_flags = config.cxx_flags,
+        .link_libraries = &.{ libconch, libcatch2 },
+        .run_cmd_name = "test",
+        .run_cmd_desc = "Run unit tests",
+        .with_args = false,
+    });
+    try config.cdb_steps.append(b.allocator, &conch_tests.step);
+}
+
+fn createLibrary(b: *std.Build, config: struct {
+    name: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    include_path: std.Build.LazyPath,
+    cxx_files: []const []const u8,
+    flags: []const []const u8,
+}) *std.Build.Step.Compile {
+    const mod = b.createModule(.{
+        .target = config.target,
+        .optimize = config.optimize,
+        .link_libcpp = true,
+    });
+    mod.addIncludePath(config.include_path);
+    mod.addCSourceFiles(.{
+        .files = config.cxx_files,
+        .flags = config.flags,
+        .language = .cpp,
+    });
+
+    const lib = b.addLibrary(.{
+        .name = config.name,
+        .root_module = mod,
+    });
+    b.installArtifact(lib);
+    return lib;
+}
+
+fn createExecutable(b: *std.Build, config: struct {
+    name: []const u8,
+    zig_main: ?std.Build.LazyPath = null,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    include_paths: []const std.Build.LazyPath,
+    cxx_files: []const []const u8,
+    cxx_flags: []const []const u8,
+    link_libraries: []const *std.Build.Step.Compile,
+    run_cmd_name: []const u8,
+    run_cmd_desc: []const u8,
+    with_args: bool,
+}) *std.Build.Step.Compile {
+    const mod = b.createModule(.{
+        .root_source_file = config.zig_main,
+        .target = config.target,
+        .optimize = config.optimize,
+        .link_libcpp = true,
+    });
+
+    for (config.include_paths) |include| {
+        mod.addIncludePath(include);
+    }
+
+    for (config.link_libraries) |library| {
+        mod.linkLibrary(library);
+    }
+
+    mod.addCSourceFiles(.{
+        .files = config.cxx_files,
+        .flags = config.cxx_flags,
+        .language = .cpp,
+    });
+
+    const exe = b.addExecutable(.{
+        .name = config.name,
+        .root_module = mod,
+    });
+    b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+
+    if (config.with_args) if (b.args) |args| {
+        run_cmd.addArgs(args);
+    };
+
+    const run_step = b.step(config.run_cmd_name, config.run_cmd_desc);
+    run_step.dependOn(&run_cmd.step);
+
+    return exe;
+}
+
+fn addTooling(b: *std.Build, config: struct {
+    cdb_steps: std.ArrayList(*std.Build.Step),
+}) !void {
+    // Compile commands
+    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
+    cdb_step.makeFn = collectCDB;
+    for (config.cdb_steps.items) |step| {
+        cdb_step.dependOn(step);
+    }
+    b.getInstallStep().dependOn(cdb_step);
+
     const tooling_sources = try std.mem.concat(b.allocator, []const u8, &.{
-        try getCXXFiles(b, "src", .{}),
-        try getCXXFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
-        try getCXXFiles(b, "tests", .{
+        try collectFiles(b, "src", .{}),
+        try collectFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
+        try collectFiles(b, "tests", .{
             .dropped_files = &.{
                 "catch_amalgamated.cpp",
                 "catch_amalgamated.hpp",
@@ -56,9 +208,8 @@ pub fn build(b: *std.Build) !void {
     });
 
     // Fmt
-    var fmt: *std.Build.Step.Run = undefined;
     if (commandExists(b, "clang-format", "--version")) {
-        fmt = b.addSystemCommand(&.{ "clang-format", "-i" });
+        const fmt = b.addSystemCommand(&.{ "clang-format", "-i" });
         fmt.addArgs(tooling_sources);
         const fmt_step = b.step("fmt", "Format all project files");
         fmt_step.dependOn(&fmt.step);
@@ -67,16 +218,7 @@ pub fn build(b: *std.Build) !void {
         fmt_check.addArgs(tooling_sources);
         const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
         fmt_check_step.dependOn(&fmt_check.step);
-        try cdb_steps.append(b.allocator, &fmt.step);
     }
-
-    // CDB
-    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
-    cdb_step.makeFn = collectCDB;
-    for (cdb_steps.items) |step| {
-        cdb_step.dependOn(step);
-    }
-    b.getInstallStep().dependOn(cdb_step);
 
     // Tidy
     var tidy: *std.Build.Step.Run = undefined;
@@ -97,125 +239,14 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-fn addArtifacts(b: *std.Build, opts: struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    flags: []const []const u8,
-    cdb_steps: *std.ArrayList(*std.Build.Step),
-}) !void {
-    // Library for exe and tests
-    const lib_mod = b.addModule("libconch", .{
-        .link_libcpp = true,
-        .target = opts.target,
-        .optimize = opts.optimize,
-    });
-    lib_mod.addIncludePath(b.path("include"));
-    lib_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
-        .flags = opts.flags,
-        .language = .cpp,
-    });
-    const libconch = b.addLibrary(.{
-        .name = "conch",
-        .root_module = lib_mod,
-    });
-    b.installArtifact(libconch);
-    try opts.cdb_steps.append(b.allocator, &libconch.step);
-
-    // Exe
-    const main = b.pathJoin(&.{ "src", "main.cpp" });
-    const conch_mod = b.createModule(.{
-        .link_libcpp = true,
-        .target = opts.target,
-        .optimize = opts.optimize,
-    });
-    conch_mod.addIncludePath(b.path("include"));
-    conch_mod.addCSourceFile(.{
-        .file = b.path(main),
-        .flags = opts.flags,
-        .language = .cpp,
-    });
-    conch_mod.linkLibrary(libconch);
-    const conch = b.addExecutable(.{
-        .name = "conch",
-        .root_module = conch_mod,
-    });
-    b.installArtifact(conch);
-    try opts.cdb_steps.append(b.allocator, &conch.step);
-
-    const run_cmd = b.addRunArtifact(conch);
-    run_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Run conch with provided command line arguments");
-    run_step.dependOn(&run_cmd.step);
-
-    // Catch2
-    const catch2_dir = b.pathJoin(&.{ "tests", "test_framework" });
-    const catch_mod = b.addModule("libcatch2", .{
-        .link_libcpp = true,
-        .target = opts.target,
-        .optimize = opts.optimize,
-    });
-    catch_mod.addIncludePath(b.path(catch2_dir));
-    catch_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, catch2_dir, .{}),
-        .flags = opts.flags,
-        .language = .cpp,
-    });
-    const libcatch2 = b.addLibrary(.{
-        .name = "catch2",
-        .root_module = catch_mod,
-    });
-    b.installArtifact(libcatch2);
-    try opts.cdb_steps.append(b.allocator, &libcatch2.step);
-
-    // Tests
-    const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
-    const test_mod = b.createModule(.{
-        .root_source_file = b.path("tests/runner.zig"),
-        .link_libcpp = true,
-        .target = opts.target,
-        .optimize = opts.optimize,
-    });
-
-    test_mod.addIncludePath(b.path("include"));
-    test_mod.addIncludePath(b.path(catch2_dir));
-    test_mod.addIncludePath(b.path(helper_dir));
-
-    test_mod.addCSourceFiles(.{
-        .files = try getCXXFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
-        .flags = opts.flags,
-        .language = .cpp,
-    });
-
-    test_mod.linkLibrary(libconch);
-    test_mod.linkLibrary(libcatch2);
-    const conch_tests = b.addExecutable(.{
-        .name = "conch_tests",
-        .root_module = test_mod,
-    });
-    b.installArtifact(conch_tests);
-    try opts.cdb_steps.append(b.allocator, &conch_tests.step);
-
-    const run_tests = b.addRunArtifact(conch_tests);
-    run_tests.step.dependOn(b.getInstallStep());
-
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests.step);
-}
-
-fn getCXXFiles(
+fn collectFiles(
     b: *std.Build,
     directory: []const u8,
     options: struct {
         allowed_extensions: []const []const u8 = &.{".cpp"},
         dropped_files: ?[]const [:0]const u8 = null,
     },
-) ![][]const u8 {
+) ![]const []const u8 {
     const cwd = std.fs.cwd();
     var dir = try cwd.openDir(directory, .{ .iterate = true });
     defer dir.close();
@@ -227,9 +258,7 @@ fn getCXXFiles(
     collector: while (try walker.next()) |entry| {
         if (entry.kind != .file) continue;
         for (options.allowed_extensions) |ext| {
-            if (std.mem.endsWith(u8, entry.basename, ext)) {
-                break;
-            }
+            if (std.mem.endsWith(u8, entry.basename, ext)) break;
         } else continue :collector;
 
         if (options.dropped_files) |drop| for (drop) |drop_file| {
@@ -261,7 +290,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     while (try iter.next()) |entry| {
         if (entry.kind != .file) continue;
         const stat = try dir.statFile(entry.name);
-        const first_dot = std.mem.indexOf(u8, entry.name, ".").?;
+        const first_dot = std.mem.indexOf(u8, entry.name, ".") orelse return error.InvalidSourceFile;
         const base_name = entry.name[0 .. first_dot + 4];
 
         const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));

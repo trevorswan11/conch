@@ -1,6 +1,8 @@
 #include <print>
 
 auto main() -> int {
-    std::println("Hello, World!");
+    try {
+        std::println("Hello, World!");
+    } catch (...) { return 1; }
     return 0;
 }

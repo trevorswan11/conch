@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
-A programming language written in C.
+A programming language written in C++.
 </p>
 
 # Motivation
 This project is a revamp of [zlx](https://github.com/trevorswan11/zlx). Due to some upcoming coursework in compiler design, I wanted to take on this type of project with two main goals:
-- Become proficient in the C programming language _without_ the help of AI or external libraries (other than Catch2 for testing)
+- Become proficient in the C++ programming language _without_ the help of AI or external libraries (other than Catch2 for testing)
 - Fully understand programming concepts relating to the internals of an interpreter, bytecode VM, and compiler
 
 ZLX was a fun project and got me into Low-Level programming, but its design choices limited its extensibility. I hope to use this project to grow as a developer and as a problem solver, expanding my knowledge of core programming concepts and data structures. 
@@ -29,7 +29,7 @@ zig build --release=fast
 This builds the `ReleaseFast` configuration, enabling maximum optimization and disabling assertions and debug symbols. 
 
 # Correctness & Availability
-[Catch2](https://github.com/catchorg/Catch2) is used with [C++20](https://en.cppreference.com/w/cpp/20.html) to run automated CI tests on Windows (msys2), macOS (LLVM Clang), and Linux (GCC & Clang). This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness in the C code. 
+[Catch2](https://github.com/catchorg/Catch2) is used with [C++23](https://en.cppreference.com/w/cpp/23.html) and Zig 0.15.2 to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness through Zig's build system and custom allocators. 
 
 As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available.
 
