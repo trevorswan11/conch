@@ -11,9 +11,9 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const root = try std.fs.cwd().realpathAlloc(b.allocator, ".");
-    cdb_parent = try std.fs.path.join(b.allocator, &.{ root, b.cache_root.path orelse ".zig-cache" });
+    cdb_parent = b.pathJoin(&.{ root, b.cache_root.path orelse ".zig-cache" });
 
-    cdb_frags_path = try std.fs.path.join(b.allocator, &.{ cdb_parent, cdb_frags_base_dirname });
+    cdb_frags_path = b.pathJoin(&.{ cdb_parent, cdb_frags_base_dirname });
     try std.fs.cwd().makePath(cdb_frags_path);
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
 
@@ -26,6 +26,7 @@ pub fn build(b: *std.Build) !void {
         "-Wextra",
         "-Werror",
         "-Wpedantic",
+        "-DCATCH_AMALGAMATED_CUSTOM_MAIN",
     });
 
     switch (optimize) {
@@ -34,109 +35,12 @@ pub fn build(b: *std.Build) !void {
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, &.{ "-DNDEBUG", "-DDIST" }),
     }
 
-    // Asan
-    var use_asan = switch (builtin.os.tag) {
-        .macos => true,
-        .linux => true,
-        else => false,
-    } and b.option(bool, "asan", "Enable address and undefined behavior sanitizers (mac/linux only)") orelse false;
-
-    var gen_cov = switch (builtin.os.tag) {
-        .macos => true,
-        .linux => true,
-        else => false,
-    } and !use_asan and b.option(bool, "cov", "Generate coverage report (mac/linux only)") orelse false;
-
-    use_asan = if (use_asan) asan: {
-        switch (builtin.os.tag) {
-            .macos => {
-                const has_leaks = commandExists(b, "leaks", "--help");
-                if (!has_leaks) {
-                    std.log.err(
-                        \\Skipping asan flags as supporting commands are not installed:
-                        \\  Required: leaks ({})
-                    , .{has_leaks});
-                    break :asan false;
-                }
-
-                try compiler_flags.appendSlice(b.allocator, &.{
-                    "-fsanitize=undefined", "-fno-sanitize-recover=all", "-DASAN", "-g",
-                });
-            },
-            .linux => try compiler_flags.appendSlice(b.allocator, &.{
-                "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-DASAN", "-g",
-            }),
-            else => unreachable,
-        }
-
-        break :asan true;
-    } else false;
-
-    gen_cov = if (gen_cov) cov: {
-        std.debug.assert(!use_asan);
-        const has_prof = commandExists(b, "llvm-profdata", "--version");
-        const has_cov = commandExists(b, "llvm-cov", "--version");
-        if (!has_prof or !has_cov) {
-            std.log.err(
-                \\Skipping coverage generation as supporting commands are not installed:
-                \\  Required: llvm-profdata ({})
-                \\  Required: llvm-cov ({})
-            , .{ has_prof, has_cov });
-            break :cov false;
-        }
-
-        try compiler_flags.appendSlice(b.allocator, &.{
-            "-fprofile-instr-generate", "-fcoverage-mapping", "-DCOV", "-g",
-        });
-        break :cov true;
-    } else gen_cov;
-
-    const tests = try addArtifacts(b, .{
+    try addArtifacts(b, .{
         .target = target,
         .optimize = optimize,
         .flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
     });
-    const run_tests = b.addRunArtifact(tests);
-    run_tests.step.dependOn(b.getInstallStep());
-
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&tests.step);
-
-    if (use_asan) {
-        // mac uses the leaks tool while linux just mirrors the test step
-        switch (builtin.os.tag) {
-            .macos => {
-                const asan = b.addSystemCommand(&.{ "leaks", "--atExit", "--" });
-                asan.addFileArg(tests.getEmittedBin());
-
-                const asan_step = b.step("asan", "Run unit tests with address sanitizer");
-                asan_step.dependOn(&tests.step);
-                asan_step.dependOn(&asan.step);
-            },
-            .linux => {
-                const asan_step = b.step("asan", "Run unit tests with address sanitizer (Same as 'test' target)");
-                asan_step.dependOn(&tests.step);
-            },
-            else => unreachable,
-        }
-    } else if (gen_cov) {
-        std.debug.assert(builtin.os.tag != .windows);
-        const cov_dir = try std.fs.path.join(b.allocator, &.{ b.install_prefix, "cov" });
-        try std.fs.cwd().makePath(cov_dir);
-
-        // Profiling
-        const cov = b.addSystemCommand(&.{try std.fmt.allocPrint(
-            b.allocator,
-            "LLVM_PROFILE_FILE={s}/default.profraw",
-            .{cov_dir},
-        )});
-        cov.addFileArg(tests.getEmittedBin());
-
-        const cov_step = b.step("cov", "Create LLVM raw profile data");
-        cov_step.dependOn(&tests.step);
-        cov_step.dependOn(&cov.step);
-    }
 
     // Tooling
     const tooling_sources = try std.mem.concat(b.allocator, []const u8, &.{
@@ -193,13 +97,12 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-// Adds and configures all artifacts minus the test runner which is returned
 fn addArtifacts(b: *std.Build, opts: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     flags: []const []const u8,
     cdb_steps: *std.ArrayList(*std.Build.Step),
-}) !*std.Build.Step.Compile {
+}) !void {
     // Library for exe and tests
     const lib_mod = b.addModule("libconch", .{
         .link_libcpp = true,
@@ -220,7 +123,7 @@ fn addArtifacts(b: *std.Build, opts: struct {
     try opts.cdb_steps.append(b.allocator, &libconch.step);
 
     // Exe
-    const main = try std.fs.path.join(b.allocator, &.{ "src", "main.cpp" });
+    const main = b.pathJoin(&.{ "src", "main.cpp" });
     const conch_mod = b.createModule(.{
         .link_libcpp = true,
         .target = opts.target,
@@ -251,7 +154,7 @@ fn addArtifacts(b: *std.Build, opts: struct {
     run_step.dependOn(&run_cmd.step);
 
     // Catch2
-    const catch2_dir = try std.fs.path.join(b.allocator, &.{ "tests", "test_framework" });
+    const catch2_dir = b.pathJoin(&.{ "tests", "test_framework" });
     const catch_mod = b.addModule("libcatch2", .{
         .link_libcpp = true,
         .target = opts.target,
@@ -271,8 +174,9 @@ fn addArtifacts(b: *std.Build, opts: struct {
     try opts.cdb_steps.append(b.allocator, &libcatch2.step);
 
     // Tests
-    const helper_dir = try std.fs.path.join(b.allocator, &.{ "tests", "helpers" });
+    const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
     const test_mod = b.createModule(.{
+        .root_source_file = b.path("tests/runner.zig"),
         .link_libcpp = true,
         .target = opts.target,
         .optimize = opts.optimize,
@@ -287,6 +191,7 @@ fn addArtifacts(b: *std.Build, opts: struct {
         .flags = opts.flags,
         .language = .cpp,
     });
+
     test_mod.linkLibrary(libconch);
     test_mod.linkLibrary(libcatch2);
     const conch_tests = b.addExecutable(.{
@@ -296,7 +201,11 @@ fn addArtifacts(b: *std.Build, opts: struct {
     b.installArtifact(conch_tests);
     try opts.cdb_steps.append(b.allocator, &conch_tests.step);
 
-    return conch_tests;
+    const run_tests = b.addRunArtifact(conch_tests);
+    run_tests.step.dependOn(b.getInstallStep());
+
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_tests.step);
 }
 
 fn getCXXFiles(
@@ -329,7 +238,7 @@ fn getCXXFiles(
             if (std.mem.eql(u8, drop_file, entry.basename)) continue :collector;
         };
 
-        const full_path = try std.fs.path.join(b.allocator, &.{ directory, entry.path });
+        const full_path = b.pathJoin(&.{ directory, entry.path });
         try paths.append(b.allocator, full_path);
     }
 
@@ -342,7 +251,8 @@ const FragInfo = struct {
 };
 
 fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
-    const allocator = step.owner.allocator;
+    const b = step.owner;
+    const allocator = b.allocator;
     var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
 
     var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
@@ -368,7 +278,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var it = newest_frags.valueIterator();
     var first = true;
-    const cdb_path = try std.fs.path.join(allocator, &.{ cdb_parent, cdb_filename });
+    const cdb_path = b.pathJoin(&.{ cdb_parent, cdb_filename });
     const cdb = try std.fs.cwd().createFile(cdb_path, .{});
     defer cdb.close();
 
@@ -377,7 +287,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
         if (!first) _ = try cdb.write(",\n");
         first = false;
 
-        const fpath = try std.fs.path.join(allocator, &.{ cdb_frags_path, info.name });
+        const fpath = b.pathJoin(&.{ cdb_frags_path, info.name });
         const contents = try std.fs.cwd().readFileAlloc(allocator, fpath, std.math.maxInt(usize));
         const trimmed = std.mem.trimEnd(u8, contents, ",\n\r\t");
         _ = try cdb.write(trimmed);
