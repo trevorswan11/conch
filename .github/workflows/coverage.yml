@@ -9,16 +9,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tests/**'
-      - 'CMakeLists.txt'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/coverage.yml'
-      - 'src/**'
-      - 'include/**'
-      - 'tests/**'
-      - 'CMakeLists.txt'
+      - '.github/CMakeLists.txt'
 
 jobs:
   coverage:
@@ -28,18 +19,20 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
 
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang clang-format cmake make lcov llvm llvm-dev
+          sudo apt install -y clang cmake ninja lcov llvm llvm-dev
 
       - name: Run coverage report generator
         run: |
-          mkdir build
-          cd build
-          CC=clang CXX=clang++ cmake ..
-          cmake --build . --parallel --target coverage-badge
+          cd .github && mkdir build && cd build
+          CC=clang CXX=clang++ cmake -G Ninja ..
+          cmake --build .
+          cd .. && mv build/coverage ../coverage
 
       - name: Commit coverage report & badge
         env:
@@ -49,9 +42,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout --orphan coverage || git checkout coverage
           git reset --hard
-          cp -r build/cov/coverage_report/* .
-          cp build/cov/coverage_summary.txt .
-          cp build/cov/coverage.svg .
+          cp -r coverage/coverage_report/* .
+          cp coverage/coverage_summary.txt .
+          cp coverage/coverage.svg .
           rm -rf build
           git add .
           git commit -m "Update coverage report"

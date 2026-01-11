@@ -16,7 +16,7 @@ if (NOT LLVM_PROFDATA OR NOT LLVM_COV)
     message(ERROR "Failed to locate llvm-profdata and llvm-cov binaries.\n")
 endif()
 
-set(COV_DIR ${CMAKE_BINARY_DIR}/cov)
+set(COV_DIR ${CMAKE_BINARY_DIR}/coverage)
 set(COV_FLAGS 
     "-g"
     "-DCOV"
@@ -44,32 +44,30 @@ list(FILTER LIB_SOURCES EXCLUDE REGEX "main\\.cpp$")
 set(TEST_DIR "${PROJECT_ROOT}/tests")
 file(GLOB_RECURSE TEST_SOURCES "${TEST_DIR}/*.cpp")
 list(FILTER TEST_SOURCES EXCLUDE REGEX "test_framework/*")
+list(FILTER TEST_SOURCES EXCLUDE REGEX "runner\\.cpp")
 
 # Target generation
 add_library(conch_core STATIC ${LIB_SOURCES})
-target_include_directories(conch_core PUBLIC include)
+target_include_directories(conch_core PUBLIC ${PROJECT_ROOT}/include)
 target_compile_options(conch_core PRIVATE ${COV_FLAGS})
 target_link_options(conch_core PRIVATE ${COV_FLAGS})
-set_target_properties(conch_core PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COV_DIR})
 
-add_library(catch2 STATIC tests/test_framework/catch_amalgamated.cpp)
-target_include_directories(catch2 PUBLIC tests/test_framework)
+add_library(catch2 STATIC ${PROJECT_ROOT}/tests/test_framework/catch_amalgamated.cpp)
+target_include_directories(catch2 PUBLIC ${PROJECT_ROOT}/tests/test_framework)
 target_compile_options(catch2 PRIVATE ${WARNING_IGNORE})
-set_target_properties(catch2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${COV_DIR})
 
 add_executable(conch_tests ${TEST_SOURCES})
 target_link_libraries(conch_tests PRIVATE catch2 conch_core)
-target_include_directories(conch_tests PRIVATE include tests/helpers)
+target_include_directories(conch_tests PRIVATE ${PROJECT_ROOT}/include ${PROJECT_ROOT}/tests/helpers)
 target_compile_options(conch_tests PRIVATE ${WARNING_IGNORE})
 
 target_compile_options(conch_tests PRIVATE ${COV_FLAGS})
 target_link_options(conch_tests PRIVATE ${COV_FLAGS})
-set_target_properties(conch_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${COV_DIR})
 
 add_custom_target(coverage
     COMMAND LLVM_PROFILE_FILE=${COV_DIR}/default.profraw
         $<TARGET_FILE:conch_tests>
-    DEPENDS conch_tests_cov
+    DEPENDS conch_tests
     USES_TERMINAL
 )
 
@@ -90,4 +88,8 @@ add_custom_target(coverage-badge
         ${COV_DIR}
         ${PROJECT_ROOT}
     DEPENDS coverage-report
+)
+
+add_custom_target(run-all ALL
+    DEPENDS coverage-badge
 )
