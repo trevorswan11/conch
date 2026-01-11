@@ -208,29 +208,3 @@ if (CLOC)
     add_custom_target(cloc COMMAND ${CLOC} ${SRC_DIR} ${INCLUDE_DIR})
     add_custom_target(cloc-all COMMAND ${CLOC} ${TOOLING_SOURCES})
 endif()
-
-# Formatting
-find_program(CLANG_FORMAT clang-format)
-if(CLANG_FORMAT)
-    add_custom_target(fmt COMMAND ${CLANG_FORMAT} -i ${TOOLING_SOURCES})
-    add_custom_target(fmt-check COMMAND
-        ${CLANG_FORMAT}
-        --dry-run
-        --Werror
-        ${TOOLING_SOURCES})
-endif()
-
-# Static analysis
-find_program(RUN_CLANG_TIDY run-clang-tidy)
-find_program(CLANG_TIDY clang-tidy)
-if(RUN_CLANG_TIDY)
-    add_custom_target(tidy COMMAND
-        ${RUN_CLANG_TIDY}
-        -p ${CMAKE_BINARY_DIR}
-        ${TOOLING_SOURCES})
-elseif(CLANG_TIDY)
-    add_custom_target(tidy COMMAND
-        ${CLANG_TIDY}
-        -p ${CMAKE_BINARY_DIR}
-        ${TOOLING_SOURCES})
-endif()
