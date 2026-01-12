@@ -237,6 +237,21 @@ fn addTooling(b: *std.Build, config: struct {
         tidy_step.dependOn(&tidy.step);
         tidy_step.dependOn(cdb_step);
     }
+
+    // Cloc
+    if (commandExists(b, "cloc", "--version")) {
+        const cloc = b.addSystemCommand(&.{"cloc"});
+        cloc.addArg(b.pathJoin(&.{"src"}));
+        cloc.addArg(b.pathJoin(&.{"include"}));
+        const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
+        cloc_step.dependOn(&cloc.step);
+
+        const cloc_all = b.addSystemCommand(&.{"cloc"});
+        cloc_all.addArgs(tooling_sources);
+        cloc_all.addArg(b.pathJoin(&.{"build.zig"}));
+        const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
+        cloc_all_step.dependOn(&cloc_all.step);
+    }
 }
 
 fn collectFiles(
@@ -284,10 +299,10 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
     defer dir.close();
-    var iter = dir.iterate();
+    var dir_iter = dir.iterate();
 
     // Clang generates hashed updates, so grab the most recent for the CDB
-    while (try iter.next()) |entry| {
+    while (try dir_iter.next()) |entry| {
         if (entry.kind != .file) continue;
         const stat = try dir.statFile(entry.name);
         const first_dot = std.mem.indexOf(u8, entry.name, ".") orelse return error.InvalidSourceFile;
@@ -303,14 +318,14 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
         }
     }
 
-    var it = newest_frags.valueIterator();
+    var frag_iter = newest_frags.valueIterator();
     var first = true;
     const cdb_path = b.pathJoin(&.{ cdb_parent, cdb_filename });
     const cdb = try std.fs.cwd().createFile(cdb_path, .{});
     defer cdb.close();
 
     _ = try cdb.write("[");
-    while (it.next()) |info| {
+    while (frag_iter.next()) |info| {
         if (!first) _ = try cdb.write(",\n");
         first = false;
 
