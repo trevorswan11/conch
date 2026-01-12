@@ -5,16 +5,8 @@ project(conch_cov)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(WIN32 OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    message(ERROR "Coverage reports only available on *nix systems with clang\n")
-endif()
-
 find_program(LLVM_PROFDATA llvm-profdata)
 find_program(LLVM_COV llvm-cov)
-
-if (NOT LLVM_PROFDATA OR NOT LLVM_COV)
-    message(ERROR "Failed to locate llvm-profdata and llvm-cov binaries.\n")
-endif()
 
 set(COV_DIR ${CMAKE_BINARY_DIR}/coverage)
 set(COV_FLAGS 

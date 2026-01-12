@@ -208,49 +208,93 @@ fn addTooling(b: *std.Build, config: struct {
     });
 
     // Fmt
-    if (commandExists(b, "clang-format", "--version")) {
-        const fmt = b.addSystemCommand(&.{ "clang-format", "-i" });
+    if (findProgram(b, "clang-format")) |clang_fmt| {
+        const fmt = b.addSystemCommand(&.{clang_fmt});
+        fmt.addArg("-i");
         fmt.addArgs(tooling_sources);
         const fmt_step = b.step("fmt", "Format all project files");
         fmt_step.dependOn(&fmt.step);
 
-        const fmt_check = b.addSystemCommand(&.{ "clang-format", "--dry-run", "--Werror" });
+        const fmt_check = b.addSystemCommand(&.{clang_fmt});
+        fmt_check.addArgs(&.{ "--dry-run", "--Werror" });
         fmt_check.addArgs(tooling_sources);
         const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
         fmt_check_step.dependOn(&fmt_check.step);
     }
 
-    // Tidy
-    var tidy: *std.Build.Step.Run = undefined;
-    var has_tidy = false;
-    if (builtin.os.tag == .macos and commandExists(b, "run-clang-tidy", "-h")) {
-        tidy = b.addSystemCommand(&.{ "run-clang-tidy", "-p", cdb_parent });
-        has_tidy = true;
-    } else if (commandExists(b, "clang-tidy", "--version")) {
-        tidy = b.addSystemCommand(&.{ "clang-tidy", "-p", cdb_parent });
-        has_tidy = true;
-    }
-
-    if (has_tidy) {
-        tidy.addArgs(tooling_sources);
-        const tidy_step = b.step("tidy", "Run static analysis on all project files");
-        tidy_step.dependOn(&tidy.step);
-        tidy_step.dependOn(cdb_step);
-    }
-
     // Cloc
-    if (commandExists(b, "cloc", "--version")) {
-        const cloc = b.addSystemCommand(&.{"cloc"});
-        cloc.addArg(b.pathJoin(&.{"src"}));
-        cloc.addArg(b.pathJoin(&.{"include"}));
+    if (findProgram(b, "cloc")) |cloc_command| {
+        const cloc = b.addSystemCommand(&.{cloc_command});
+        cloc.addFileArg(b.path("src"));
+        cloc.addFileArg(b.path("include"));
         const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
         cloc_step.dependOn(&cloc.step);
 
         const cloc_all = b.addSystemCommand(&.{"cloc"});
         cloc_all.addArgs(tooling_sources);
-        cloc_all.addArg(b.pathJoin(&.{"build.zig"}));
+        cloc_all.addFileArg(b.path("build.zig"));
         const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
         cloc_all_step.dependOn(&cloc_all.step);
+    }
+
+    // Coverage
+    const ok_os = builtin.os.tag == .macos or builtin.os.tag == .linux;
+    const cmake = findProgram(b, "cmake");
+    const ninja = findProgram(b, "ninja");
+    const clang = findProgram(b, "clang");
+    const clang_xx = findProgram(b, "clang++");
+    const llvm_profdata = findProgram(b, "llvm-profdata");
+    const llvm_cov = findProgram(b, "llvm-cov");
+    const all_deps: []const ?[]const u8 = &.{ cmake, ninja, clang, clang_xx, llvm_profdata, llvm_cov };
+
+    const has_deps = blk: {
+        for (all_deps) |dep| {
+            if (dep == null) {
+                break :blk false;
+            }
+        } else break :blk true;
+    };
+
+    const cov_step = b.step("cov", "Generate coverage report");
+    if (ok_os and has_deps) {
+        const build_path = b.pathJoin(&.{ ".github", "build" });
+        const lazy_build_path = b.path(build_path);
+        const remove_build_path = b.addRemoveDirTree(lazy_build_path);
+        const make_build_path = b.addSystemCommand(&.{ "mkdir", build_path });
+        make_build_path.step.dependOn(&remove_build_path.step);
+
+        const configure_cov = b.addSystemCommand(&.{cmake.?});
+        configure_cov.addArgs(&.{ "-G", "Ninja", ".." });
+        configure_cov.setCwd(lazy_build_path);
+        configure_cov.setEnvironmentVariable("CC", clang.?);
+        configure_cov.setEnvironmentVariable("CXX", clang_xx.?);
+        configure_cov.step.dependOn(&make_build_path.step);
+
+        const cov = b.addSystemCommand(&.{cmake.?});
+        cov.addArg("--build");
+        cov.addFileArg(lazy_build_path);
+
+        cov_step.dependOn(&cov.step);
+        cov_step.dependOn(cdb_step);
+    } else if (ok_os) {
+        try cov_step.addError(
+            \\Coverage report generation requires the following system dependencies:
+            \\  CMake:         {s}
+            \\  Ninja:         {s}
+            \\  Clang:         {s}
+            \\  Clang++:       {s}
+            \\  llvm-profdata: {s}
+            \\  llvm-cov:      {s}
+        , .{
+            cmake orelse "null",
+            ninja orelse "null",
+            clang orelse "null",
+            clang_xx orelse "null",
+            llvm_profdata orelse "null",
+            llvm_cov orelse "null",
+        });
+    } else {
+        try cov_step.addError("Coverage reporting only available on unix-like systems", .{});
     }
 }
 
@@ -337,11 +381,6 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     _ = try cdb.write("]");
 }
 
-fn commandExists(b: *std.Build, cmd: []const u8, probe: []const u8) bool {
-    const result = std.process.Child.run(.{
-        .allocator = b.allocator,
-        .argv = &.{ cmd, probe },
-    }) catch return false;
-
-    return result.term == .Exited and result.term.Exited == 0;
+fn findProgram(b: *std.Build, cmd: []const u8) ?[]const u8 {
+    return b.findProgram(&.{cmd}, &.{}) catch null;
 }

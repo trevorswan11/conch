@@ -1,55 +1,48 @@
 name: Formatting
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/**'
-    paths:
-      - '.github/workflows/format.yml'
-      - 'src/**'
-      - 'include/**'
-      - 'tests/**'
-      - 'CMakeLists.txt'
-  pull_request:
-    branches:
-      - main
-      - 'feature/**'
-    paths:
-      - '.github/workflows/format.yml'
-      - 'src/**'
-      - 'include/**'
-      - 'tests/**'
-      - 'CMakeLists.txt'
+    push:
+        branches:
+            - main
+            - "feature/**"
+        paths:
+            - ".github/workflows/format.yml"
+            - "src/**"
+            - "include/**"
+            - "tests/**"
+            - "CMakeLists.txt"
+    pull_request:
+        branches:
+            - main
+            - "feature/**"
+        paths:
+            - ".github/workflows/format.yml"
+            - "src/**"
+            - "include/**"
+            - "tests/**"
+            - "CMakeLists.txt"
 
 jobs:
-  fmt:
-    permissions:
-      contents: read
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    fmt:
+        permissions:
+            contents: read
+        runs-on: macos-latest
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
 
-      - name: Install dependencies
-        run: |
-          brew update
-          brew install llvm clang-format cmake make
-          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: 1
+            - uses: mlugg/setup-zig@v2
+              with:
+                  version: 0.15.2
 
-      - name: Check formatting
-        run: |
-          mkdir build
-          cd build
-          cmake ..
-          cmake --build . --target fmt-check
-          
-      - name: Static Analysis
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake ..
-          cmake --build . --target tidy
+            - name: Install dependencies
+              run: |
+                  brew update
+                  brew install clang-format
+              env:
+                  HOMEBREW_NO_AUTO_UPDATE: 1
+
+            - name: Check formatting
+              run: zig build fmt-check
