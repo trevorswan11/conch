@@ -2,14 +2,28 @@ const std = @import("std");
 
 extern fn launch(argc: i32, argv: [*]const [:0]const u8) i32;
 
-var gpa: std.heap.GeneralPurposeAllocator(.{
-    .thread_safe = true,
-}) = .init;
-
-const proc_allocator = gpa.allocator();
-
 const Instrumentor = struct {
     const internal_allocator = std.heap.c_allocator;
+
+    const AllocHeader = extern struct {
+        size: usize,
+        offset: usize,
+        requested: usize,
+        magic: usize = header_magic,
+
+        pub fn valid(self: *const AllocHeader) bool {
+            return self.offset < self.size and self.magic == header_magic;
+        }
+    };
+
+    const header_magic = 0xdeadbeef;
+    const header_size = @sizeOf(AllocHeader);
+
+    gpa: std.heap.GeneralPurposeAllocator(.{
+        .thread_safe = true,
+    }),
+
+    process_args: ?[][:0]u8 = null,
 
     total_nodes: std.atomic.Value(u64),
     total_alloc: std.atomic.Value(u64),
@@ -25,10 +39,13 @@ const Instrumentor = struct {
 
     pub fn init() Instrumentor {
         return .{
+            .gpa = .init,
+
             .total_nodes = .init(0),
             .total_alloc = .init(0),
             .node_counter = .init(0),
             .byte_counter = .init(0),
+
             .live_lock = .{},
             .live_allocations = .init(internal_allocator),
         };
@@ -36,6 +53,18 @@ const Instrumentor = struct {
 
     pub fn deinit(self: *Instrumentor) void {
         self.live_allocations.deinit();
+        if (self.process_args) |args| {
+            std.process.argsFree(internal_allocator, args);
+        }
+    }
+
+    pub fn manageProcessArgs(self: *Instrumentor) ![]const [:0]u8 {
+        self.process_args = try std.process.argsAlloc(Instrumentor.internal_allocator);
+        return self.process_args.?;
+    }
+
+    pub fn allocator(self: *Instrumentor) std.mem.Allocator {
+        return self.gpa.allocator();
     }
 
     pub fn putKey(self: *Instrumentor, key: usize) ?usize {
@@ -51,6 +80,10 @@ const Instrumentor = struct {
         self.live_lock.lock();
         defer self.live_lock.unlock();
         return self.live_allocations.remove(key);
+    }
+
+    pub fn tryDumpLeaks(self: *Instrumentor) bool {
+        return self.gpa.detectLeaks();
     }
 
     pub fn report(self: *Instrumentor) void {
@@ -84,39 +117,30 @@ pub fn main() !void {
     instrumentor_once.call();
     defer instrumentor.deinit();
 
-    const proc = blk: {
-        const args = try std.process.argsAlloc(Instrumentor.internal_allocator);
-        defer std.process.argsFree(Instrumentor.internal_allocator, args);
-        break :blk launch(@intCast(args.len), args.ptr);
-    };
+    const args = try instrumentor.manageProcessArgs();
+    const proc = launch(@intCast(args.len), args.ptr);
 
-    const result: u8 = @intCast(@intFromBool(gpa.detectLeaks()) | proc);
+    const result: u8 = @intCast(@intFromBool(instrumentor.tryDumpLeaks()) | proc);
     instrumentor.report();
     std.process.exit(result);
 }
 
-const Header = extern struct {
-    size: usize,
-    offset: usize,
-    requested: usize,
-};
-
 export fn alloc(size: usize) callconv(.c) ?*anyopaque {
     instrumentor_once.call();
     const alignment = comptime @max(16, @alignOf(std.c.max_align_t));
-    const total = size + alignment + @sizeOf(Header);
+    const total = size + alignment + Instrumentor.header_size;
 
     _ = instrumentor.total_nodes.fetchAdd(1, .acq_rel);
     _ = instrumentor.total_alloc.fetchAdd(@intCast(total), .acq_rel);
     _ = instrumentor.node_counter.fetchAdd(1, .acq_rel);
 
-    const mem = proc_allocator.alloc(u8, total) catch return null;
+    const mem = instrumentor.allocator().alloc(u8, total) catch return null;
     const base_ptr = mem.ptr;
 
     const aligned_ptr = blk: {
         const ptr = std.mem.alignForward(
             usize,
-            @intFromPtr(base_ptr) + @sizeOf(Header),
+            @intFromPtr(base_ptr) + Instrumentor.header_size,
             alignment,
         );
 
@@ -124,8 +148,8 @@ export fn alloc(size: usize) callconv(.c) ?*anyopaque {
     };
 
     const header = @as(
-        *Header,
-        @ptrFromInt(aligned_ptr - @sizeOf(Header)),
+        *Instrumentor.AllocHeader,
+        @ptrFromInt(aligned_ptr - Instrumentor.header_size),
     );
     header.* = .{
         .size = total,
@@ -145,11 +169,11 @@ export fn dealloc(ptr: ?*anyopaque) callconv(.c) void {
 
     const header = blk: {
         const header = @as(
-            *const Header,
-            @ptrFromInt(@intFromPtr(p) - @sizeOf(Header)),
+            *const Instrumentor.AllocHeader,
+            @ptrFromInt(@intFromPtr(p) - Instrumentor.header_size),
         );
 
-        if (header.offset > header.size) {
+        if (!header.valid()) {
             @panic("Heap corruption detected: allocated block has malformed header");
         }
         break :blk header;
@@ -160,5 +184,5 @@ export fn dealloc(ptr: ?*anyopaque) callconv(.c) void {
 
     const base_ptr = @intFromPtr(p) - header.offset;
     const slice = @as([*]u8, @ptrFromInt(base_ptr))[0..header.size];
-    proc_allocator.free(slice);
+    instrumentor.allocator().free(slice);
 }
