@@ -82,6 +82,4 @@ add_custom_target(coverage-badge
     DEPENDS coverage-report
 )
 
-add_custom_target(run-all ALL
-    DEPENDS coverage-badge
-)
+add_custom_target(run-all ALL DEPENDS coverage-badge)

@@ -222,6 +222,24 @@ fn addTooling(b: *std.Build, config: struct {
         fmt_check_step.dependOn(&fmt_check.step);
     }
 
+    // Tidy
+    const clang_tidy = blk: {
+        if (builtin.os.tag == .macos) {
+            const run_ct = findProgram(b, "run-clang-tidy");
+            if (run_ct) |_| break :blk run_ct;
+        }
+        break :blk findProgram(b, "clang-tidy");
+    };
+
+    if (clang_tidy) |ct| {
+        const tidy = b.addSystemCommand(&.{ct});
+        tidy.addArgs(&.{ "-p", cdb_parent });
+        tidy.addArgs(tooling_sources);
+        const tidy_step = b.step("tidy", "Run static analysis on all project files");
+        tidy_step.dependOn(&tidy.step);
+        tidy_step.dependOn(cdb_step);
+    }
+
     // Cloc
     if (findProgram(b, "cloc")) |cloc_command| {
         const cloc = b.addSystemCommand(&.{cloc_command});
