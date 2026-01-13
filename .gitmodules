@@ -1,3 +1,0 @@
-[submodule "vendor/cppcheck"]
-	path = vendor/cppcheck
-	url = https://github.com/danmar/cppcheck
