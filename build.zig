@@ -303,17 +303,22 @@ fn addTooling(b: *std.Build, config: struct {
 
     // Fmt
     if (findProgram(b, "clang-format")) |clang_fmt| {
+        const build_fmt = b.addFmt(.{ .paths = &.{"build.zig"} });
+        const build_fmt_check = b.addFmt(.{ .paths = &.{"build.zig"}, .check = true });
+
         const fmt = b.addSystemCommand(&.{clang_fmt});
         fmt.addArg("-i");
         fmt.addArgs(tooling_sources);
         const fmt_step = b.step("fmt", "Format all project files");
         fmt_step.dependOn(&fmt.step);
+        fmt_step.dependOn(&build_fmt.step);
 
         const fmt_check = b.addSystemCommand(&.{clang_fmt});
         fmt_check.addArgs(&.{ "--dry-run", "--Werror" });
         fmt_check.addArgs(tooling_sources);
         const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
         fmt_check_step.dependOn(&fmt_check.step);
+        fmt_check_step.dependOn(&build_fmt_check.step);
     }
 
     // Static analysis
@@ -357,73 +362,6 @@ fn addTooling(b: *std.Build, config: struct {
         cloc_all.addFileArg(b.path("build.zig"));
         const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
         cloc_all_step.dependOn(&cloc_all.step);
-    }
-
-    // Coverage
-    const ok_os = builtin.os.tag == .macos or builtin.os.tag == .linux;
-    const cmake = findProgram(b, "cmake");
-    const ninja = findProgram(b, "ninja");
-    const clang = findProgram(b, "clang");
-    const clang_xx = findProgram(b, "clang++");
-    const llvm_profdata = findProgram(b, "llvm-profdata");
-    const llvm_cov = findProgram(b, "llvm-cov");
-    const all_deps: []const ?[]const u8 = &.{ cmake, ninja, clang, clang_xx, llvm_profdata, llvm_cov };
-
-    const has_deps = blk: {
-        for (all_deps) |dep| {
-            if (dep == null) {
-                break :blk false;
-            }
-        } else break :blk true;
-    };
-
-    const cov_step = b.step("cov", "Generate coverage report");
-    if (ok_os and has_deps) {
-        const build_path = b.pathJoin(&.{ ".github", "build" });
-        const make_build_path = b.addSystemCommand(&.{ "mkdir", build_path });
-        const lazy_build_path = b.path(build_path);
-
-        if (blk: {
-            std.fs.cwd().access(build_path, .{}) catch break :blk false;
-            break :blk true;
-        }) {
-            const remove_build_path = b.addRemoveDirTree(lazy_build_path);
-            make_build_path.step.dependOn(&remove_build_path.step);
-        }
-
-        const configure_cov = b.addSystemCommand(&.{cmake.?});
-        configure_cov.addArgs(&.{ "-G", "Ninja", ".." });
-        configure_cov.setCwd(lazy_build_path);
-        configure_cov.setEnvironmentVariable("CC", clang.?);
-        configure_cov.setEnvironmentVariable("CXX", clang_xx.?);
-        configure_cov.step.dependOn(&make_build_path.step);
-
-        const cov = b.addSystemCommand(&.{cmake.?});
-        cov.addArgs(&.{"--build", "."});
-        cov.setCwd(lazy_build_path);
-        cov.step.dependOn(&configure_cov.step);
-
-        cov_step.dependOn(&cov.step);
-        cov_step.dependOn(cdb_step);
-    } else if (ok_os) {
-        try cov_step.addError(
-            \\Coverage report generation requires the following system dependencies:
-            \\  CMake:         {s}
-            \\  Ninja:         {s}
-            \\  Clang:         {s}
-            \\  Clang++:       {s}
-            \\  llvm-profdata: {s}
-            \\  llvm-cov:      {s}
-        , .{
-            cmake orelse "null",
-            ninja orelse "null",
-            clang orelse "null",
-            clang_xx orelse "null",
-            llvm_profdata orelse "null",
-            llvm_cov orelse "null",
-        });
-    } else {
-        try cov_step.addError("Coverage reporting only available on unix-like systems", .{});
     }
 
     const clean_step = b.step("clean", "Clean up emitted artifacts");
