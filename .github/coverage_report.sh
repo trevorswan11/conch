@@ -7,7 +7,7 @@ PROJECT_ROOT="$5"
 
 $LLVM_PROFDATA merge -sparse $COV_DIR/default.profraw -o $COV_DIR/default.profdata
 
-IGNORES="$PROJECT_ROOT/tests/.*|status\.h|status\.c|hash\.h"
+IGNORES="$PROJECT_ROOT/tests/.*|status\.h|status\.c|hash\.h|vendor/.*"
 
 $LLVM_COV show $CONCH_BINARY \
     -instr-profile=$COV_DIR/default.profdata \

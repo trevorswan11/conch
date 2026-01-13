@@ -3,19 +3,22 @@ const builtin = @import("builtin");
 
 const cdb_frags_base_dirname = "cdb-frags";
 const cdb_filename = "compile_commands.json";
-var cdb_parent: []const u8 = undefined;
+const cppcheck_base_dirname = "cppcheck";
+var zig_cache: []const u8 = undefined;
 var cdb_frags_path: []const u8 = undefined;
+var cppcheck_cache_path: []const u8 = undefined;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const root = try std.fs.cwd().realpathAlloc(b.allocator, ".");
-    cdb_parent = b.pathJoin(&.{ root, b.cache_root.path orelse ".zig-cache" });
+    zig_cache = b.pathJoin(&.{ root, b.cache_root.path orelse ".zig-cache" });
 
-    cdb_frags_path = b.pathJoin(&.{ cdb_parent, cdb_frags_base_dirname });
+    cdb_frags_path = b.pathJoin(&.{ zig_cache, cdb_frags_base_dirname });
     try std.fs.cwd().makePath(cdb_frags_path);
-    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
+    cppcheck_cache_path = b.pathJoin(&.{ zig_cache, cppcheck_base_dirname });
+    try std.fs.cwd().makePath(cppcheck_cache_path);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
@@ -35,13 +38,14 @@ pub fn build(b: *std.Build) !void {
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, &.{ "-DNDEBUG", "-DDIST" }),
     }
 
-    try addArtifacts(b, .{
+    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
+    const artifacts = try addArtifacts(b, .{
         .target = target,
         .optimize = optimize,
         .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
     });
-    try addTooling(b, .{ .cdb_steps = cdb_steps });
+    try addTooling(b, .{ .cdb_steps = cdb_steps, .cppcheck = artifacts.cppcheck });
 }
 
 fn addArtifacts(b: *std.Build, config: struct {
@@ -49,7 +53,13 @@ fn addArtifacts(b: *std.Build, config: struct {
     optimize: std.builtin.OptimizeMode,
     cxx_flags: []const []const u8,
     cdb_steps: *std.ArrayList(*std.Build.Step),
-}) !void {
+}) !struct {
+    libconch: *std.Build.Step.Compile,
+    conch: *std.Build.Step.Compile,
+    libcatch2: *std.Build.Step.Compile,
+    conch_tests: *std.Build.Step.Compile,
+    cppcheck: *std.Build.Step.Compile,
+} {
     const libconch = createLibrary(b, .{
         .name = "conch",
         .target = config.target,
@@ -69,13 +79,17 @@ fn addArtifacts(b: *std.Build, config: struct {
         .cxx_files = &.{cxx_main},
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{libconch},
-        .run_cmd_name = "run",
-        .run_cmd_desc = "Run conch with provided command line arguments",
-        .with_args = true,
+        .behavior = .{
+            .runnable = .{
+                .cmd_name = "run",
+                .cmd_desc = "Run conch with provided command line arguments",
+                .with_args = true,
+            },
+        },
     });
     try config.cdb_steps.append(b.allocator, &conch.step);
 
-    const catch2_dir = b.pathJoin(&.{ "tests", "test_framework" });
+    const catch2_dir = b.pathJoin(&.{ "vendor", "catch2" });
     const libcatch2 = createLibrary(b, .{
         .name = "catch2",
         .target = config.target,
@@ -93,14 +107,83 @@ fn addArtifacts(b: *std.Build, config: struct {
         .target = config.target,
         .optimize = config.optimize,
         .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
-        .cxx_files = try collectFiles(b, "tests", .{ .dropped_files = &.{"catch_amalgamated.cpp"} }),
+        .cxx_files = try collectFiles(b, "tests", .{}),
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{ libconch, libcatch2 },
-        .run_cmd_name = "test",
-        .run_cmd_desc = "Run unit tests",
-        .with_args = false,
+        .behavior = .{
+            .runnable = .{
+                .cmd_name = "test",
+                .cmd_desc = "Run unit tests",
+                .with_args = false,
+            },
+        },
     });
     try config.cdb_steps.append(b.allocator, &conch_tests.step);
+
+    const cppcheck = try compileCppcheck(b, config.target);
+    try config.cdb_steps.append(b.allocator, &cppcheck.step);
+
+    return .{
+        .libconch = libconch,
+        .conch = conch,
+        .libcatch2 = libcatch2,
+        .conch_tests = conch_tests,
+        .cppcheck = cppcheck,
+    };
+}
+
+/// Compiles cppcheck from source using the flags given by
+/// https://github.com/danmar/cppcheck#g-for-experts
+fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
+    const cppcheck_root = b.pathJoin(&.{ "vendor", "cppcheck" });
+    const cppcheck_incldues: []const std.Build.LazyPath = &.{
+        b.path(b.pathJoin(&.{ cppcheck_root, "externals" })),
+        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "simplecpp" })),
+        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "tinyxml2" })),
+        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "picojson" })),
+        b.path(b.pathJoin(&.{ cppcheck_root, "lib" })),
+        b.path(b.pathJoin(&.{ cppcheck_root, "frontend" })),
+    };
+
+    var cppcheck_sources: std.ArrayList([]const u8) = .empty;
+    try cppcheck_sources.appendSlice(b.allocator, &.{
+        b.pathJoin(&.{ cppcheck_root, "externals", "simplecpp", "simplecpp.cpp" }),
+        b.pathJoin(&.{ cppcheck_root, "externals", "tinyxml2", "tinyxml2.cpp" }),
+    });
+
+    const cppcheck_glob_srcs: []const []const []const u8 = &.{
+        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "frontend" }), .{}),
+        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "cli" }), .{}),
+        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "lib" }), .{}),
+    };
+
+    for (cppcheck_glob_srcs) |glob| {
+        try cppcheck_sources.appendSlice(b.allocator, glob);
+    }
+
+    const files_dir_define = try std.fmt.allocPrint(
+        b.allocator,
+        "-DFILESDIR=\"{s}\"",
+        .{b.pathJoin(&.{ b.install_prefix, "bin" })},
+    );
+
+    const cfg_copy = b.addInstallDirectory(.{
+        .install_dir = .prefix,
+        .source_dir = b.path(b.pathJoin(&.{ "vendor", "cppcheck", "cfg" })),
+        .install_subdir = b.pathJoin(&.{ "bin", "cfg" }),
+    });
+
+    const cppcheck = createExecutable(b, .{
+        .name = "cppcheck",
+        .target = target,
+        .optimize = .ReleaseFast,
+        .include_paths = cppcheck_incldues,
+        .cxx_files = cppcheck_sources.items,
+        .cxx_flags = &.{files_dir_define},
+    });
+
+    cppcheck.step.dependOn(&cfg_copy.step);
+    return cppcheck;
 }
 
 fn createLibrary(b: *std.Build, config: struct {
@@ -134,15 +217,20 @@ fn createLibrary(b: *std.Build, config: struct {
 fn createExecutable(b: *std.Build, config: struct {
     name: []const u8,
     zig_main: ?std.Build.LazyPath = null,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    target: ?std.Build.ResolvedTarget,
+    optimize: ?std.builtin.OptimizeMode,
     include_paths: []const std.Build.LazyPath,
     cxx_files: []const []const u8,
     cxx_flags: []const []const u8,
-    link_libraries: []const *std.Build.Step.Compile,
-    run_cmd_name: []const u8,
-    run_cmd_desc: []const u8,
-    with_args: bool,
+    link_libraries: []const *std.Build.Step.Compile = &.{},
+    behavior: union(enum) {
+        runnable: struct {
+            cmd_name: []const u8,
+            cmd_desc: []const u8,
+            with_args: bool,
+        },
+        standalone: void,
+    } = .{ .standalone = {} },
 }) *std.Build.Step.Compile {
     const mod = b.createModule(.{
         .root_source_file = config.zig_main,
@@ -171,21 +259,27 @@ fn createExecutable(b: *std.Build, config: struct {
     });
     b.installArtifact(exe);
 
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
+    switch (config.behavior) {
+        .runnable => |run| {
+            const run_cmd = b.addRunArtifact(exe);
+            run_cmd.step.dependOn(b.getInstallStep());
 
-    if (config.with_args) if (b.args) |args| {
-        run_cmd.addArgs(args);
-    };
+            if (run.with_args) if (b.args) |args| {
+                run_cmd.addArgs(args);
+            };
 
-    const run_step = b.step(config.run_cmd_name, config.run_cmd_desc);
-    run_step.dependOn(&run_cmd.step);
+            const run_step = b.step(run.cmd_name, run.cmd_desc);
+            run_step.dependOn(&run_cmd.step);
+        },
+        .standalone => {},
+    }
 
     return exe;
 }
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_steps: std.ArrayList(*std.Build.Step),
+    cppcheck: *std.Build.Step.Compile,
 }) !void {
     // Compile commands
     const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
@@ -222,23 +316,33 @@ fn addTooling(b: *std.Build, config: struct {
         fmt_check_step.dependOn(&fmt_check.step);
     }
 
-    // Tidy
-    const clang_tidy = blk: {
-        if (builtin.os.tag == .macos) {
-            const run_ct = findProgram(b, "run-clang-tidy");
-            if (run_ct) |_| break :blk run_ct;
-        }
-        break :blk findProgram(b, "clang-tidy");
+    // Static analysis
+    const cppcheck = b.addRunArtifact(config.cppcheck);
+    if (b.args) |args| {
+        cppcheck.addArgs(args);
+    }
+
+    cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
+    cppcheck.addPrefixedDirectoryArg(
+        "--cppcheck-build-dir=",
+        b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
+    );
+    cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
+    cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
+
+    const suppressions: []const []const u8 = comptime &.{
+        "unmatchedSuppression",
+        "missingIncludeSystem",
+        "unusedFunction",
     };
 
-    if (clang_tidy) |ct| {
-        const tidy = b.addSystemCommand(&.{ct});
-        tidy.addArgs(&.{ "-p", cdb_parent });
-        tidy.addArgs(tooling_sources);
-        const tidy_step = b.step("tidy", "Run static analysis on all project files");
-        tidy_step.dependOn(&tidy.step);
-        tidy_step.dependOn(cdb_step);
+    inline for (suppressions) |suppression| {
+        cppcheck.addArg("--suppress=" ++ suppression);
     }
+
+    const check_step = b.step("check", "Run static analysis on all project files");
+    check_step.dependOn(&cppcheck.step);
+    check_step.dependOn(cdb_step);
 
     // Cloc
     if (findProgram(b, "cloc")) |cloc_command| {
@@ -276,10 +380,16 @@ fn addTooling(b: *std.Build, config: struct {
     const cov_step = b.step("cov", "Generate coverage report");
     if (ok_os and has_deps) {
         const build_path = b.pathJoin(&.{ ".github", "build" });
-        const lazy_build_path = b.path(build_path);
-        const remove_build_path = b.addRemoveDirTree(lazy_build_path);
         const make_build_path = b.addSystemCommand(&.{ "mkdir", build_path });
-        make_build_path.step.dependOn(&remove_build_path.step);
+        const lazy_build_path = b.path(build_path);
+
+        if (blk: {
+            std.fs.cwd().access(build_path, .{}) catch break :blk false;
+            break :blk true;
+        }) {
+            const remove_build_path = b.addRemoveDirTree(lazy_build_path);
+            make_build_path.step.dependOn(&remove_build_path.step);
+        }
 
         const configure_cov = b.addSystemCommand(&.{cmake.?});
         configure_cov.addArgs(&.{ "-G", "Ninja", ".." });
@@ -289,8 +399,9 @@ fn addTooling(b: *std.Build, config: struct {
         configure_cov.step.dependOn(&make_build_path.step);
 
         const cov = b.addSystemCommand(&.{cmake.?});
-        cov.addArg("--build");
-        cov.addFileArg(lazy_build_path);
+        cov.addArgs(&.{"--build", "."});
+        cov.setCwd(lazy_build_path);
+        cov.step.dependOn(&configure_cov.step);
 
         cov_step.dependOn(&cov.step);
         cov_step.dependOn(cdb_step);
@@ -314,6 +425,10 @@ fn addTooling(b: *std.Build, config: struct {
     } else {
         try cov_step.addError("Coverage reporting only available on unix-like systems", .{});
     }
+
+    const clean_step = b.step("clean", "Clean up emitted artifacts");
+    clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
+    clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
 }
 
 fn collectFiles(
@@ -382,7 +497,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var frag_iter = newest_frags.valueIterator();
     var first = true;
-    const cdb_path = b.pathJoin(&.{ cdb_parent, cdb_filename });
+    const cdb_path = b.pathJoin(&.{ zig_cache, cdb_filename });
     const cdb = try std.fs.cwd().createFile(cdb_path, .{});
     defer cdb.close();
 
