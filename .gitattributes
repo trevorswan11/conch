@@ -1,5 +1,4 @@
-tests/test_framework/** linguist-vendored
-.github/** linguist-vendored
+vendor/** linguist-vendored
 
 * text eol=lf
 
