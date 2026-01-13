@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const version = "v0.0.1";
+
 const cdb_frags_base_dirname = "cdb-frags";
 const cdb_filename = "compile_commands.json";
 const cppcheck_base_dirname = "cppcheck";
@@ -8,6 +10,19 @@ var zig_cache: []const u8 = undefined;
 var cdb_frags_path: []const u8 = undefined;
 var cppcheck_cache_path: []const u8 = undefined;
 
+const ExecutableBehavior = union(enum) {
+    runnable: struct {
+        cmd_name: []const u8,
+        cmd_desc: []const u8,
+        with_args: bool,
+    },
+    standalone: void,
+};
+
+/// This is called through Zig and uses an arena allocator.
+///
+/// No memory allocated in this script is freed individually.
+/// The lack of free/destroy/deinit calls is deliberate!
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -23,20 +38,35 @@ pub fn build(b: *std.Build) !void {
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
         "-std=c++23",
-        "-gen-cdb-fragment-path",
-        cdb_frags_path,
         "-Wall",
         "-Wextra",
         "-Werror",
         "-Wpedantic",
-        "-DCATCH_AMALGAMATED_CUSTOM_MAIN",
     });
 
+    var package_flags = try compiler_flags.clone(b.allocator);
+    const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
+    try package_flags.appendSlice(b.allocator, dist_flags);
+
+    try compiler_flags.appendSlice(b.allocator, &.{ "-gen-cdb-fragment-path", cdb_frags_path });
     switch (optimize) {
         .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
         .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
-        .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, &.{ "-DNDEBUG", "-DDIST" }),
+        .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
     }
+    try compiler_flags.append(b.allocator, "-DCATCH_AMALGAMATED_CUSTOM_MAIN");
+
+    const skip_tests = b.option(
+        bool,
+        "skip-tests",
+        "Skip compilation of tests and disable test running",
+    ) orelse false;
+
+    const skip_cppcheck = b.option(
+        bool,
+        "skip-cppcheck",
+        "Skip compilation of cppcheck and disable static analysis tooling",
+    ) orelse false;
 
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{
@@ -44,21 +74,38 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
+        .skip_tests = skip_tests,
+        .skip_cppcheck = skip_cppcheck,
     });
     try addTooling(b, .{ .cdb_steps = cdb_steps, .cppcheck = artifacts.cppcheck });
+
+    const compile_only = b.option(
+        bool,
+        "compile-only",
+        "Skip copying legal documents to and compressing packaged directories",
+    ) orelse false;
+    try addPackaging(b, .{
+        .cxx_flags = package_flags.items,
+        .compile_only = compile_only,
+        .version = version,
+    });
 }
 
 fn addArtifacts(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cxx_flags: []const []const u8,
-    cdb_steps: *std.ArrayList(*std.Build.Step),
+    cdb_steps: ?*std.ArrayList(*std.Build.Step),
+    skip_tests: bool,
+    skip_cppcheck: bool,
+    behavior: ?ExecutableBehavior = null,
+    auto_install: bool = true,
 }) !struct {
     libconch: *std.Build.Step.Compile,
     conch: *std.Build.Step.Compile,
-    libcatch2: *std.Build.Step.Compile,
-    conch_tests: *std.Build.Step.Compile,
-    cppcheck: *std.Build.Step.Compile,
+    libcatch2: ?*std.Build.Step.Compile,
+    conch_tests: ?*std.Build.Step.Compile,
+    cppcheck: ?*std.Build.Step.Compile,
 } {
     const libconch = createLibrary(b, .{
         .name = "conch",
@@ -68,7 +115,8 @@ fn addArtifacts(b: *std.Build, config: struct {
         .cxx_files = try collectFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
         .flags = config.cxx_flags,
     });
-    try config.cdb_steps.append(b.allocator, &libconch.step);
+    if (config.auto_install) b.installArtifact(libconch);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libconch.step);
 
     const cxx_main = b.pathJoin(&.{ "src", "main.cpp" });
     const conch = createExecutable(b, .{
@@ -79,7 +127,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         .cxx_files = &.{cxx_main},
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{libconch},
-        .behavior = .{
+        .behavior = config.behavior orelse .{
             .runnable = .{
                 .cmd_name = "run",
                 .cmd_desc = "Run conch with provided command line arguments",
@@ -87,41 +135,52 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
         },
     });
-    try config.cdb_steps.append(b.allocator, &conch.step);
+    if (config.auto_install) b.installArtifact(conch);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch.step);
 
-    const catch2_dir = b.pathJoin(&.{ "vendor", "catch2" });
-    const libcatch2 = createLibrary(b, .{
-        .name = "catch2",
-        .target = config.target,
-        .optimize = config.optimize,
-        .include_path = b.path(catch2_dir),
-        .cxx_files = try collectFiles(b, catch2_dir, .{}),
-        .flags = config.cxx_flags,
-    });
-    try config.cdb_steps.append(b.allocator, &libcatch2.step);
+    var libcatch2: ?*std.Build.Step.Compile = null;
+    var conch_tests: ?*std.Build.Step.Compile = null;
+    if (!config.skip_tests) {
+        const catch2_dir = b.pathJoin(&.{ "vendor", "catch2" });
+        libcatch2 = createLibrary(b, .{
+            .name = "catch2",
+            .target = config.target,
+            .optimize = config.optimize,
+            .include_path = b.path(catch2_dir),
+            .cxx_files = try collectFiles(b, catch2_dir, .{}),
+            .flags = config.cxx_flags,
+        });
+        if (config.auto_install) b.installArtifact(libcatch2.?);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
-    const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
-    const conch_tests = createExecutable(b, .{
-        .name = "conch_tests",
-        .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
-        .target = config.target,
-        .optimize = config.optimize,
-        .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
-        .cxx_files = try collectFiles(b, "tests", .{}),
-        .cxx_flags = config.cxx_flags,
-        .link_libraries = &.{ libconch, libcatch2 },
-        .behavior = .{
-            .runnable = .{
-                .cmd_name = "test",
-                .cmd_desc = "Run unit tests",
-                .with_args = false,
+        const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
+        conch_tests = createExecutable(b, .{
+            .name = "conch_tests",
+            .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
+            .target = config.target,
+            .optimize = config.optimize,
+            .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
+            .cxx_files = try collectFiles(b, "tests", .{}),
+            .cxx_flags = config.cxx_flags,
+            .link_libraries = &.{ libconch, libcatch2.? },
+            .behavior = config.behavior orelse .{
+                .runnable = .{
+                    .cmd_name = "test",
+                    .cmd_desc = "Run unit tests",
+                    .with_args = false,
+                },
             },
-        },
-    });
-    try config.cdb_steps.append(b.allocator, &conch_tests.step);
+        });
 
-    const cppcheck = try compileCppcheck(b, config.target);
-    try config.cdb_steps.append(b.allocator, &cppcheck.step);
+        if (config.auto_install) b.installArtifact(conch_tests.?);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch_tests.?.step);
+    }
+
+    const cppcheck = if (config.skip_cppcheck) null else blk: {
+        const cppcheck = try compileCppcheck(b, config.target);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &cppcheck.step);
+        break :blk cppcheck;
+    };
 
     return .{
         .libconch = libconch,
@@ -210,7 +269,6 @@ fn createLibrary(b: *std.Build, config: struct {
         .name = config.name,
         .root_module = mod,
     });
-    b.installArtifact(lib);
     return lib;
 }
 
@@ -223,14 +281,7 @@ fn createExecutable(b: *std.Build, config: struct {
     cxx_files: []const []const u8,
     cxx_flags: []const []const u8,
     link_libraries: []const *std.Build.Step.Compile = &.{},
-    behavior: union(enum) {
-        runnable: struct {
-            cmd_name: []const u8,
-            cmd_desc: []const u8,
-            with_args: bool,
-        },
-        standalone: void,
-    } = .{ .standalone = {} },
+    behavior: ExecutableBehavior = .standalone,
 }) *std.Build.Step.Compile {
     const mod = b.createModule(.{
         .root_source_file = config.zig_main,
@@ -257,7 +308,6 @@ fn createExecutable(b: *std.Build, config: struct {
         .name = config.name,
         .root_module = mod,
     });
-    b.installArtifact(exe);
 
     switch (config.behavior) {
         .runnable => |run| {
@@ -279,7 +329,7 @@ fn createExecutable(b: *std.Build, config: struct {
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_steps: std.ArrayList(*std.Build.Step),
-    cppcheck: *std.Build.Step.Compile,
+    cppcheck: ?*std.Build.Step.Compile,
 }) !void {
     // Compile commands
     const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
@@ -322,32 +372,34 @@ fn addTooling(b: *std.Build, config: struct {
     }
 
     // Static analysis
-    const cppcheck = b.addRunArtifact(config.cppcheck);
-    if (b.args) |args| {
-        cppcheck.addArgs(args);
+    if (config.cppcheck) |cppcheck_artifact| {
+        const cppcheck = b.addRunArtifact(cppcheck_artifact);
+        if (b.args) |args| {
+            cppcheck.addArgs(args);
+        }
+
+        cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
+        cppcheck.addPrefixedDirectoryArg(
+            "--cppcheck-build-dir=",
+            b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
+        );
+        cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
+        cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
+
+        const suppressions: []const []const u8 = comptime &.{
+            "unmatchedSuppression",
+            "missingIncludeSystem",
+            "unusedFunction",
+        };
+
+        inline for (suppressions) |suppression| {
+            cppcheck.addArg("--suppress=" ++ suppression);
+        }
+
+        const check_step = b.step("check", "Run static analysis on all project files");
+        check_step.dependOn(&cppcheck.step);
+        check_step.dependOn(cdb_step);
     }
-
-    cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
-    cppcheck.addPrefixedDirectoryArg(
-        "--cppcheck-build-dir=",
-        b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
-    );
-    cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
-    cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
-
-    const suppressions: []const []const u8 = comptime &.{
-        "unmatchedSuppression",
-        "missingIncludeSystem",
-        "unusedFunction",
-    };
-
-    inline for (suppressions) |suppression| {
-        cppcheck.addArg("--suppress=" ++ suppression);
-    }
-
-    const check_step = b.step("check", "Run static analysis on all project files");
-    check_step.dependOn(&cppcheck.step);
-    check_step.dependOn(cdb_step);
 
     // Cloc
     if (findProgram(b, "cloc")) |cloc_command| {
@@ -367,6 +419,169 @@ fn addTooling(b: *std.Build, config: struct {
     const clean_step = b.step("clean", "Clean up emitted artifacts");
     clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
     clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
+}
+
+const target_queries = [_]std.Target.Query{
+    .{ .cpu_arch = .x86_64, .os_tag = .macos },
+    .{ .cpu_arch = .aarch64, .os_tag = .macos },
+
+    .{ .cpu_arch = .x86, .os_tag = .linux },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux },
+    .{ .cpu_arch = .powerpc, .os_tag = .linux },
+    .{ .cpu_arch = .powerpc64, .os_tag = .linux },
+    .{ .cpu_arch = .powerpc64le, .os_tag = .linux },
+    .{ .cpu_arch = .riscv32, .os_tag = .linux },
+    .{ .cpu_arch = .riscv64, .os_tag = .linux },
+    .{ .cpu_arch = .loongarch64, .os_tag = .linux },
+
+    .{ .cpu_arch = .x86_64, .os_tag = .freebsd },
+    .{ .cpu_arch = .aarch64, .os_tag = .freebsd },
+    .{ .cpu_arch = .powerpc, .os_tag = .freebsd },
+    .{ .cpu_arch = .powerpc64, .os_tag = .freebsd },
+    .{ .cpu_arch = .powerpc64le, .os_tag = .freebsd },
+    .{ .cpu_arch = .riscv64, .os_tag = .freebsd },
+
+    .{ .cpu_arch = .x86, .os_tag = .netbsd },
+    .{ .cpu_arch = .x86_64, .os_tag = .netbsd },
+    .{ .cpu_arch = .aarch64, .os_tag = .netbsd },
+
+    .{ .cpu_arch = .x86, .os_tag = .windows },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
+    .{ .cpu_arch = .aarch64, .os_tag = .windows },
+};
+
+fn addPackaging(b: *std.Build, config: struct {
+    compile_only: bool,
+    cxx_flags: []const []const u8,
+    version: []const u8,
+}) !void {
+    const tar = findProgram(b, "tar") orelse return error.TarNotFound;
+    const zip = findProgram(b, "zip") orelse return error.ZipNotFound;
+
+    const package_step = b.step("package", "Build the artifacts for packaging");
+    const compression_dir_absolute = b.pathJoin(&.{ b.install_prefix, "package", "compressed" });
+    try std.fs.cwd().makePath(compression_dir_absolute);
+
+    const raw_dir_absolute = b.pathJoin(&.{ b.install_prefix, "package", "raw" });
+    const raw_dir_rel = b.pathJoin(&.{ "package", "raw" });
+
+    inline for (target_queries) |query| {
+        const resolved_target = b.resolveTargetQuery(query);
+        const artifacts = try addArtifacts(b, .{
+            .target = resolved_target,
+            .optimize = .ReleaseFast,
+            .cxx_flags = config.cxx_flags,
+            .cdb_steps = null,
+            .skip_tests = true,
+            .skip_cppcheck = true,
+            .behavior = .standalone,
+            .auto_install = false,
+        });
+
+        std.debug.assert(artifacts.libcatch2 == null);
+        std.debug.assert(artifacts.conch_tests == null);
+        std.debug.assert(artifacts.cppcheck == null);
+
+        try configurePackArtifacts(b, .{
+            .artifacts = &.{ artifacts.libconch, artifacts.conch },
+            .target = resolved_target,
+            .version = config.version,
+        });
+
+        const package_artifact_dirname = try query.zigTriple(b.allocator);
+        const package_artifact_dir_path_rel = b.pathJoin(&.{ raw_dir_rel, package_artifact_dirname });
+        const package_options: std.Build.Step.InstallArtifact.Options = .{
+            .dest_dir = .{
+                .override = .{ .custom = package_artifact_dir_path_rel },
+            },
+        };
+
+        const platform = b.addInstallArtifact(
+            artifacts.conch,
+            package_options,
+        );
+        package_step.dependOn(&platform.step);
+
+        if (!config.compile_only) {
+            const legal_paths: []const []const []const u8 = &.{
+                &.{"LICENSE"},
+                &.{"README.md"},
+                &.{ ".github", "CHANGELOG.md" },
+            };
+
+            for (legal_paths) |path| {
+                const install_file_step = b.addInstallFile(
+                    b.path(b.pathJoin(path)),
+                    b.pathJoin(&.{ package_artifact_dir_path_rel, path[path.len - 1] }),
+                );
+                package_step.dependOn(&install_file_step.step);
+            }
+
+            // Zip is only needed on windows
+            if (query.os_tag.? == .windows) {
+                const zip_filename = try std.fmt.allocPrint(
+                    b.allocator,
+                    "conch-{s}-{s}.zip",
+                    .{ package_artifact_dirname, config.version },
+                );
+
+                const zipper = b.addSystemCommand(&.{ zip, "-r" });
+                zipper.addArg(try std.fs.path.join(
+                    b.allocator,
+                    &.{ compression_dir_absolute, zip_filename },
+                ));
+                zipper.addArg(try std.fs.path.join(
+                    b.allocator,
+                    &.{ raw_dir_absolute, package_artifact_dirname },
+                ));
+                zipper.step.dependOn(package_step);
+            }
+
+            // All platforms get an archive because I'm nice
+            const tar_filename = try std.fmt.allocPrint(
+                b.allocator,
+                "conch-{s}-{s}.tar.gz",
+                .{ package_artifact_dirname, config.version },
+            );
+
+            const archiver = b.addSystemCommand(&.{ tar, "-czf" });
+            archiver.addArg(try std.fs.path.join(
+                b.allocator,
+                &.{ compression_dir_absolute, tar_filename },
+            ));
+            archiver.addArg(try std.fs.path.join(
+                b.allocator,
+                &.{ raw_dir_absolute, package_artifact_dirname },
+            ));
+            archiver.step.dependOn(package_step);
+        }
+    }
+}
+
+fn configurePackArtifacts(b: *std.Build, config: struct {
+    artifacts: []const *std.Build.Step.Compile,
+    target: std.Build.ResolvedTarget,
+    version: []const u8,
+}) !void {
+    for (config.artifacts) |artifact| {
+        artifact.root_module.strip = true;
+        artifact.out_filename = blk: {
+            if (config.target.result.os.tag == .windows) {
+                break :blk try std.fmt.allocPrint(
+                    b.allocator,
+                    "{s}-{s}.exe",
+                    .{ artifact.name, config.version },
+                );
+            } else {
+                break :blk try std.fmt.allocPrint(
+                    b.allocator,
+                    "{s}-{s}",
+                    .{ artifact.name, config.version },
+                );
+            }
+        };
+    }
 }
 
 fn collectFiles(

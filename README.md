@@ -19,9 +19,13 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 System dependencies:
 1. Zig 0.15.2
 
+Other dependencies:
+1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for tests. It is automatically configured in the project's build script and links statically to the test builds.
+2. A striped version of [cppcheck](https://cppcheck.sourceforge.io/)'s source code is provided and is compiled from source. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
+
 Once these are installed, building conch is as easy as running:
 ```sh
-git clone --recursive https://github.com/trevorswan11/conch
+git clone https://github.com/trevorswan11/conch
 cd conch
 zig build --release=fast
 ```
@@ -31,7 +35,7 @@ This builds the `ReleaseFast` configuration, enabling maximum optimization and d
 # Correctness & Availability
 [Catch2](https://github.com/catchorg/Catch2) is used with [C++23](https://en.cppreference.com/w/cpp/23.html) and Zig 0.15.2 to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness through Zig's build system and custom allocators. 
 
-As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available.
+As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available. While releases package 
 
 # Resources
 This project would not be possible without the extensive work Thorsten Ball put into his two-book series, "Writing an Interpreter and Compiler in Go". The explanations presented in these books drove this project's development at a high level and greatly enhanced my learning. If you want to check out the books for yourself and support Thorsten, check him out [here](https://store.thorstenball.com/).
