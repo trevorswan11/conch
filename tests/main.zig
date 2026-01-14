@@ -1,6 +1,6 @@
 const std = @import("std");
 
-extern fn launch(argc: i32, argv: [*]const [:0]const u8) i32;
+extern fn launch(argv: [*c]u8) i32;
 
 const Instrumentor = struct {
     const internal_allocator = std.heap.c_allocator;
@@ -58,7 +58,7 @@ const Instrumentor = struct {
         }
     }
 
-    pub fn manageProcessArgs(self: *Instrumentor) ![]const [:0]u8 {
+    pub fn manageProcessArgs(self: *Instrumentor) ![][:0]u8 {
         self.process_args = try std.process.argsAlloc(Instrumentor.internal_allocator);
         return self.process_args.?;
     }
@@ -118,7 +118,8 @@ pub fn main() !void {
     defer instrumentor.deinit();
 
     const args = try instrumentor.manageProcessArgs();
-    const proc = launch(@intCast(args.len), args.ptr);
+    const process_name = args[0];
+    const proc = launch(@ptrCast(process_name.ptr));
 
     const result: u8 = @intCast(@intFromBool(instrumentor.tryDumpLeaks()) | proc);
     instrumentor.report();

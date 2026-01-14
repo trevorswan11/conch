@@ -1,4 +1,5 @@
 vendor/** linguist-vendored
+old/** linguist-vendored
 
 * text eol=lf
 

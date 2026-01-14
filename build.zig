@@ -6,6 +6,7 @@ const version = "v0.0.1";
 const cdb_frags_base_dirname = "cdb-frags";
 const cdb_filename = "compile_commands.json";
 const cppcheck_base_dirname = "cppcheck";
+
 var zig_cache: []const u8 = undefined;
 var cdb_frags_path: []const u8 = undefined;
 var cppcheck_cache_path: []const u8 = undefined;
@@ -56,6 +57,41 @@ pub fn build(b: *std.Build) !void {
     }
     try compiler_flags.append(b.allocator, "-DCATCH_AMALGAMATED_CUSTOM_MAIN");
 
+    const flag_opts = addFlagOptions(b);
+
+    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
+    const artifacts = try addArtifacts(b, .{
+        .target = target,
+        .optimize = optimize,
+        .cxx_flags = compiler_flags.items,
+        .cdb_steps = &cdb_steps,
+        .skip_tests = flag_opts.skip_tests,
+        .skip_cppcheck = flag_opts.skip_cppcheck,
+    });
+    try addTooling(b, .{
+        .cdb_steps = cdb_steps,
+        .conch_tests = artifacts.conch_tests,
+        .cppcheck = artifacts.cppcheck,
+    });
+
+    try addPackaging(b, .{
+        .cxx_flags = package_flags.items,
+        .compile_only = flag_opts.compile_only,
+        .version = version,
+    });
+}
+
+fn addFlagOptions(b: *std.Build) struct {
+    compile_only: bool,
+    skip_tests: bool,
+    skip_cppcheck: bool,
+} {
+    const compile_only = b.option(
+        bool,
+        "compile-only",
+        "Skip copying legal documents to and compressing packaged directories",
+    ) orelse false;
+
     const skip_tests = b.option(
         bool,
         "skip-tests",
@@ -68,27 +104,11 @@ pub fn build(b: *std.Build) !void {
         "Skip compilation of cppcheck and disable static analysis tooling",
     ) orelse false;
 
-    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
-    const artifacts = try addArtifacts(b, .{
-        .target = target,
-        .optimize = optimize,
-        .cxx_flags = compiler_flags.items,
-        .cdb_steps = &cdb_steps,
+    return .{
+        .compile_only = compile_only,
         .skip_tests = skip_tests,
         .skip_cppcheck = skip_cppcheck,
-    });
-    try addTooling(b, .{ .cdb_steps = cdb_steps, .cppcheck = artifacts.cppcheck });
-
-    const compile_only = b.option(
-        bool,
-        "compile-only",
-        "Skip copying legal documents to and compressing packaged directories",
-    ) orelse false;
-    try addPackaging(b, .{
-        .cxx_flags = package_flags.items,
-        .compile_only = compile_only,
-        .version = version,
-    });
+    };
 }
 
 fn addArtifacts(b: *std.Build, config: struct {
@@ -329,6 +349,7 @@ fn createExecutable(b: *std.Build, config: struct {
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_steps: std.ArrayList(*std.Build.Step),
+    conch_tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
 }) !void {
     // Compile commands
@@ -351,74 +372,189 @@ fn addTooling(b: *std.Build, config: struct {
         }),
     });
 
-    // Fmt
     if (findProgram(b, "clang-format")) |clang_fmt| {
-        const build_fmt = b.addFmt(.{ .paths = &.{"build.zig"} });
-        const build_fmt_check = b.addFmt(.{ .paths = &.{"build.zig"}, .check = true });
-
-        const fmt = b.addSystemCommand(&.{clang_fmt});
-        fmt.addArg("-i");
-        fmt.addArgs(tooling_sources);
-        const fmt_step = b.step("fmt", "Format all project files");
-        fmt_step.dependOn(&fmt.step);
-        fmt_step.dependOn(&build_fmt.step);
-
-        const fmt_check = b.addSystemCommand(&.{clang_fmt});
-        fmt_check.addArgs(&.{ "--dry-run", "--Werror" });
-        fmt_check.addArgs(tooling_sources);
-        const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
-        fmt_check_step.dependOn(&fmt_check.step);
-        fmt_check_step.dependOn(&build_fmt_check.step);
+        try addFmtStep(b, .{
+            .tooling_sources = tooling_sources,
+            .clang_format = clang_fmt,
+        });
     }
 
-    // Static analysis
-    if (config.cppcheck) |cppcheck_artifact| {
-        const cppcheck = b.addRunArtifact(cppcheck_artifact);
-        if (b.args) |args| {
-            cppcheck.addArgs(args);
-        }
-
-        cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
-        cppcheck.addPrefixedDirectoryArg(
-            "--cppcheck-build-dir=",
-            b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
-        );
-        cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
-        cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
-
-        const suppressions: []const []const u8 = comptime &.{
-            "unmatchedSuppression",
-            "missingIncludeSystem",
-            "unusedFunction",
-        };
-
-        inline for (suppressions) |suppression| {
-            cppcheck.addArg("--suppress=" ++ suppression);
-        }
-
-        const check_step = b.step("check", "Run static analysis on all project files");
-        check_step.dependOn(&cppcheck.step);
+    if (config.cppcheck) |cppcheck| {
+        const check_step = try addStaticAnalysisStep(b, .{
+            .tooling_sources = tooling_sources,
+            .cppcheck = cppcheck,
+        });
         check_step.dependOn(cdb_step);
     }
 
-    // Cloc
-    if (findProgram(b, "cloc")) |cloc_command| {
-        const cloc = b.addSystemCommand(&.{cloc_command});
-        cloc.addFileArg(b.path("src"));
-        cloc.addFileArg(b.path("include"));
-        const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
-        cloc_step.dependOn(&cloc.step);
+    if (findProgram(b, "cloc")) |cloc| {
+        try addClocStep(b, .{
+            .tooling_sources = tooling_sources,
+            .cloc = cloc,
+        });
+    }
 
-        const cloc_all = b.addSystemCommand(&.{"cloc"});
-        cloc_all.addArgs(tooling_sources);
-        cloc_all.addFileArg(b.path("build.zig"));
-        const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
-        cloc_all_step.dependOn(&cloc_all.step);
+    if (config.conch_tests) |conch_tests| {
+        try addCoverageStep(b, conch_tests);
     }
 
     const clean_step = b.step("clean", "Clean up emitted artifacts");
     clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
     clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
+}
+
+fn addFmtStep(b: *std.Build, config: struct {
+    tooling_sources: []const []const u8,
+    clang_format: []const u8,
+}) !void {
+    const build_fmt = b.addFmt(.{ .paths = &.{"build.zig"} });
+    const build_fmt_check = b.addFmt(.{ .paths = &.{"build.zig"}, .check = true });
+
+    const fmt = b.addSystemCommand(&.{config.clang_format});
+    fmt.addArg("-i");
+    fmt.addArgs(config.tooling_sources);
+    const fmt_step = b.step("fmt", "Format all project files");
+    fmt_step.dependOn(&fmt.step);
+    fmt_step.dependOn(&build_fmt.step);
+
+    const fmt_check = b.addSystemCommand(&.{config.clang_format});
+    fmt_check.addArgs(&.{ "--dry-run", "--Werror" });
+    fmt_check.addArgs(config.tooling_sources);
+    const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
+    fmt_check_step.dependOn(&fmt_check.step);
+    fmt_check_step.dependOn(&build_fmt_check.step);
+}
+
+fn addStaticAnalysisStep(b: *std.Build, config: struct {
+    tooling_sources: []const []const u8,
+    cppcheck: *std.Build.Step.Compile,
+}) !*std.Build.Step {
+    const cppcheck = b.addRunArtifact(config.cppcheck);
+    if (b.args) |args| {
+        cppcheck.addArgs(args);
+    }
+
+    cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
+    cppcheck.addPrefixedDirectoryArg(
+        "--cppcheck-build-dir=",
+        b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
+    );
+    cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
+    cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
+
+    const suppressions: []const []const u8 = comptime &.{
+        "unmatchedSuppression",
+        "missingIncludeSystem",
+        "unusedFunction",
+    };
+
+    inline for (suppressions) |suppression| {
+        cppcheck.addArg("--suppress=" ++ suppression);
+    }
+
+    const check_step = b.step("check", "Run static analysis on all project files");
+    check_step.dependOn(&cppcheck.step);
+    return check_step;
+}
+
+fn addClocStep(b: *std.Build, config: struct {
+    tooling_sources: []const []const u8,
+    cloc: []const u8,
+}) !void {
+    const cloc = b.addSystemCommand(&.{config.cloc});
+    cloc.addFileArg(b.path("src"));
+    cloc.addFileArg(b.path("include"));
+    const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
+    cloc_step.dependOn(&cloc.step);
+
+    const cloc_all = b.addSystemCommand(&.{config.cloc});
+    cloc_all.addArgs(config.tooling_sources);
+    cloc_all.addFileArg(b.path("build.zig"));
+    const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
+    cloc_all_step.dependOn(&cloc_all.step);
+}
+
+fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
+    const error_msg =
+        \\Code coverage reporting requires kcov, a free FreeBSD/Linux/MacOS tool:
+        \\  https://github.com/SimonKagstrom/kcov
+        \\
+        \\It is also availble via homebrew with 'brew install kcov'
+    ;
+
+    const kcov_step = b.step("cov", "Use kcov to generate code coverage report");
+    switch (builtin.os.tag) {
+        .freebsd, .linux, .macos => {},
+        else => return kcov_step.addError(error_msg, .{}),
+    }
+
+    if (findProgram(b, "kcov")) |kcov| {
+        const kcov_command = b.addSystemCommand(&.{kcov});
+        const include_pattern_flag = try std.fmt.allocPrint(
+            b.allocator,
+            "--include-pattern={s}",
+            .{try std.mem.join(b.allocator, ",", &.{
+                b.pathJoin(&.{ b.build_root.path orelse ".", "src" }),
+                b.pathJoin(&.{ b.build_root.path orelse ".", "include" }),
+            })},
+        );
+
+        const coverage_dir = b.pathJoin(&.{ b.install_prefix, "coverage" });
+        _ = kcov_command.addArg(include_pattern_flag);
+        _ = kcov_command.addArg(coverage_dir);
+        kcov_command.addFileArg(tests.getEmittedBin());
+        kcov_step.dependOn(&kcov_command.step);
+
+        const parse_step = try b.allocator.create(std.Build.Step);
+        parse_step.* = .init(.{
+            .id = .custom,
+            .name = "coverage-parse",
+            .owner = b,
+            .makeFn = coverageParse,
+        });
+        parse_step.dependOn(&kcov_command.step);
+        kcov_step.dependOn(parse_step);
+    } else {
+        try kcov_step.addError(error_msg, .{});
+    }
+}
+
+fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+    const b = step.owner;
+    const allocator = b.allocator;
+
+    const coverage_dir_abs = b.pathJoin(&.{ b.install_prefix, "coverage" });
+    const path = b.pathJoin(&.{ coverage_dir_abs, "conch_tests", "coverage.json" });
+    const content = try std.fs.cwd().readFileAlloc(allocator, path, std.math.maxInt(usize));
+    const parsed = try std.json.parseFromSlice(
+        struct { percent_covered: []const u8 },
+        allocator,
+        content,
+        .{ .ignore_unknown_fields = true },
+    );
+    const precise_percentage = parsed.value.percent_covered;
+    const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
+    const percentage = if (last_dot) |end| precise_percentage[0..end] else precise_percentage;
+
+    var client: std.http.Client = .{ .allocator = allocator };
+    defer client.deinit();
+
+    const badge_path = b.pathJoin(&.{ coverage_dir_abs, "coverage.svg" });
+    const url_str = try std.fmt.allocPrint(
+        allocator,
+        "https://img.shields.io/badge/Coverage-{s}%25-pink",
+        .{percentage},
+    );
+
+    const curl_bin = findProgram(b, "curl") orelse return error.CurlNotFound;
+    var child: std.process.Child = .init(&.{ curl_bin, "-o", badge_path, url_str }, allocator);
+    child.stderr_behavior = .Ignore;
+
+    const term = try child.spawnAndWait();
+    switch (term) {
+        .Exited => |code| if (code != 0) return error.CurlFailed,
+        else => return error.CurlTerminatedAbnormally,
+    }
 }
 
 const target_queries = [_]std.Target.Query{
@@ -527,14 +663,8 @@ fn addPackaging(b: *std.Build, config: struct {
                 );
 
                 const zipper = b.addSystemCommand(&.{ zip, "-r" });
-                zipper.addArg(try std.fs.path.join(
-                    b.allocator,
-                    &.{ compression_dir_absolute, zip_filename },
-                ));
-                zipper.addArg(try std.fs.path.join(
-                    b.allocator,
-                    &.{ raw_dir_absolute, package_artifact_dirname },
-                ));
+                zipper.addArg(b.pathJoin(&.{ compression_dir_absolute, zip_filename }));
+                zipper.addArg(b.pathJoin(&.{ raw_dir_absolute, package_artifact_dirname }));
                 zipper.step.dependOn(package_step);
             }
 
@@ -546,14 +676,8 @@ fn addPackaging(b: *std.Build, config: struct {
             );
 
             const archiver = b.addSystemCommand(&.{ tar, "-czf" });
-            archiver.addArg(try std.fs.path.join(
-                b.allocator,
-                &.{ compression_dir_absolute, tar_filename },
-            ));
-            archiver.addArg(try std.fs.path.join(
-                b.allocator,
-                &.{ raw_dir_absolute, package_artifact_dirname },
-            ));
+            archiver.addArg(b.pathJoin(&.{ compression_dir_absolute, tar_filename }));
+            archiver.addArg(b.pathJoin(&.{ raw_dir_absolute, package_artifact_dirname }));
             archiver.step.dependOn(package_step);
         }
     }
