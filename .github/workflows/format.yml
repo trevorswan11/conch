@@ -27,6 +27,7 @@ jobs:
         permissions:
             contents: read
         runs-on: macos-latest
+
         steps:
             - name: Checkout repo
               uses: actions/checkout@v4
