@@ -7,10 +7,6 @@ const cdb_frags_base_dirname = "cdb-frags";
 const cdb_filename = "compile_commands.json";
 const cppcheck_base_dirname = "cppcheck";
 
-var zig_cache: []const u8 = undefined;
-var cdb_frags_path: []const u8 = undefined;
-var cppcheck_cache_path: []const u8 = undefined;
-
 const ExecutableBehavior = union(enum) {
     runnable: struct {
         cmd_name: []const u8,
@@ -28,13 +24,9 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const root = try std.fs.cwd().realpathAlloc(b.allocator, ".");
-    zig_cache = b.pathJoin(&.{ root, b.cache_root.path orelse ".zig-cache" });
-
-    cdb_frags_path = b.pathJoin(&.{ zig_cache, cdb_frags_base_dirname });
+    const cdb_frags_path = try getCDBFragsPath(b);
     try std.fs.cwd().makePath(cdb_frags_path);
-    cppcheck_cache_path = b.pathJoin(&.{ zig_cache, cppcheck_base_dirname });
-    try std.fs.cwd().makePath(cppcheck_cache_path);
+    try std.fs.cwd().makePath(try b.cache_root.join(b.allocator, &.{cppcheck_base_dirname}));
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
@@ -79,6 +71,10 @@ pub fn build(b: *std.Build) !void {
         .compile_only = flag_opts.compile_only,
         .version = version,
     });
+}
+
+fn getCDBFragsPath(b: *std.Build) ![]const u8 {
+    return b.cache_root.join(b.allocator, &.{cdb_frags_base_dirname});
 }
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -757,6 +753,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const allocator = b.allocator;
     var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
 
+    const cdb_frags_path = try getCDBFragsPath(b);
     var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
     defer dir.close();
     var dir_iter = dir.iterate();
@@ -780,7 +777,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var frag_iter = newest_frags.valueIterator();
     var first = true;
-    const cdb_path = b.pathJoin(&.{ zig_cache, cdb_filename });
+    const cdb_path = try b.cache_root.join(b.allocator, &.{cdb_filename});
     const cdb = try std.fs.cwd().createFile(cdb_path, .{});
     defer cdb.close();
 
