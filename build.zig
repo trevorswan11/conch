@@ -184,11 +184,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch_tests.?.step);
     }
 
-    const cppcheck = if (config.skip_cppcheck) null else blk: {
-        const cppcheck = try compileCppcheck(b, config.target);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &cppcheck.step);
-        break :blk cppcheck;
-    };
+    const cppcheck = if (config.skip_cppcheck) null else try compileCppcheck(b, config.target);
 
     return .{
         .libconch = libconch,
