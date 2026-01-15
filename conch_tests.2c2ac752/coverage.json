@@ -1,0 +1,12 @@
+{
+  "files": [
+    {"file": "/home/runner/work/conch/conch/src/lexer/lexer.cpp", "percent_covered": "100.00", "covered_lines": "1", "total_lines": "1"}
+  ],
+  "percent_covered": "100.00",
+  "covered_lines": 1,
+  "total_lines": 1,
+  "percent_low": 25,
+  "percent_high": 75,
+  "command": "conch_tests",
+  "date": "2026-01-15 23:02:42"
+}

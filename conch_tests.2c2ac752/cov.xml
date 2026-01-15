@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<!DOCTYPE coverage SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-04.dtd'>
+<coverage line-rate="1.000" lines-covered="1" lines-valid="1" branch-rate="1.0" branches-covered="1.0" branches-rate="1.0" complexity="1.0" version="1.9" timestamp="1768518162">
+	<sources>
+		<source>/home/runner/work/conch/conch/src/lexer/lexer.cpp/</source>
+	</sources>
+	<packages>
+		<package name="conch_tests" line-rate="1.000" lines-covered="1" lines-valid="1" branch-rate="1.0" complexity="1.0">
+			<classes>
+				<class name="lexer_cpp__0" filename="/home/runner/work/conch/conch/src/lexer/lexer.cpp" branch-rate="1.0" complexity="1.0" line-rate="1.000">
+					<lines>
+						<line number="3" hits="2"/>
+					</lines>
+				</class>
+			</classes>
+		</package>
+	</packages>
+</coverage>
