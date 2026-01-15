@@ -5,7 +5,6 @@ const version = "v0.0.1";
 
 const cdb_frags_base_dirname = "cdb-frags";
 const cdb_filename = "compile_commands.json";
-const cppcheck_base_dirname = "cppcheck";
 
 const ExecutableBehavior = union(enum) {
     runnable: struct {
@@ -24,9 +23,8 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cdb_frags_path = try getCDBFragsPath(b);
+    const cdb_frags_path = getCacheRelativePath(b, &.{cdb_frags_base_dirname});
     try std.fs.cwd().makePath(cdb_frags_path);
-    try std.fs.cwd().makePath(try b.cache_root.join(b.allocator, &.{cppcheck_base_dirname}));
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
@@ -60,6 +58,7 @@ pub fn build(b: *std.Build) !void {
         .skip_tests = flag_opts.skip_tests,
         .skip_cppcheck = flag_opts.skip_cppcheck,
     });
+
     try addTooling(b, .{
         .cdb_steps = cdb_steps,
         .conch_tests = artifacts.conch_tests,
@@ -71,10 +70,6 @@ pub fn build(b: *std.Build) !void {
         .compile_only = flag_opts.compile_only,
         .version = version,
     });
-}
-
-fn getCDBFragsPath(b: *std.Build) ![]const u8 {
-    return b.cache_root.join(b.allocator, &.{cdb_frags_base_dirname});
 }
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -210,49 +205,57 @@ fn addArtifacts(b: *std.Build, config: struct {
 /// Compiles cppcheck from source using the flags given by
 /// https://github.com/danmar/cppcheck#g-for-experts
 fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
-    const cppcheck_root = b.pathJoin(&.{ "vendor", "cppcheck" });
-    const cppcheck_incldues: []const std.Build.LazyPath = &.{
-        b.path(b.pathJoin(&.{ cppcheck_root, "externals" })),
-        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "simplecpp" })),
-        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "tinyxml2" })),
-        b.path(b.pathJoin(&.{ cppcheck_root, "externals", "picojson" })),
-        b.path(b.pathJoin(&.{ cppcheck_root, "lib" })),
-        b.path(b.pathJoin(&.{ cppcheck_root, "frontend" })),
+    const cppcheck_includes: []const std.Build.LazyPath = &.{
+        b.path(getCppcheckRelativePath(b, &.{"externals"})),
+        b.path(getCppcheckRelativePath(b, &.{ "externals", "simplecpp" })),
+        b.path(getCppcheckRelativePath(b, &.{ "externals", "tinyxml2" })),
+        b.path(getCppcheckRelativePath(b, &.{ "externals", "picojson" })),
+        b.path(getCppcheckRelativePath(b, &.{"lib"})),
+        b.path(getCppcheckRelativePath(b, &.{"frontend"})),
     };
 
     var cppcheck_sources: std.ArrayList([]const u8) = .empty;
     try cppcheck_sources.appendSlice(b.allocator, &.{
-        b.pathJoin(&.{ cppcheck_root, "externals", "simplecpp", "simplecpp.cpp" }),
-        b.pathJoin(&.{ cppcheck_root, "externals", "tinyxml2", "tinyxml2.cpp" }),
+        getCppcheckRelativePath(b, &.{ "externals", "simplecpp", "simplecpp.cpp" }),
+        getCppcheckRelativePath(b, &.{ "externals", "tinyxml2", "tinyxml2.cpp" }),
     });
 
     const cppcheck_glob_srcs: []const []const []const u8 = &.{
-        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "frontend" }), .{}),
-        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "cli" }), .{}),
-        try collectFiles(b, b.pathJoin(&.{ cppcheck_root, "lib" }), .{}),
+        try collectFiles(b, getCppcheckRelativePath(b, &.{"frontend"}), .{}),
+        try collectFiles(b, getCppcheckRelativePath(b, &.{"cli"}), .{}),
+        try collectFiles(b, getCppcheckRelativePath(b, &.{"lib"}), .{}),
     };
 
     for (cppcheck_glob_srcs) |glob| {
         try cppcheck_sources.appendSlice(b.allocator, glob);
     }
 
+    // The path needs to be fixed on windows due to cppcheck internals
+    const bin_path = blk: {
+        const raw_bin_path = getPrefixRelativePath(b, &.{"bin"});
+        if (builtin.os.tag == .windows) {
+            break :blk try std.mem.replaceOwned(u8, b.allocator, raw_bin_path, "\\", "/");
+        }
+        break :blk raw_bin_path;
+    };
+
     const files_dir_define = try std.fmt.allocPrint(
         b.allocator,
         "-DFILESDIR=\"{s}\"",
-        .{b.pathJoin(&.{ b.install_prefix, "bin" })},
+        .{bin_path},
     );
 
     const cfg_copy = b.addInstallDirectory(.{
-        .install_dir = .prefix,
-        .source_dir = b.path(b.pathJoin(&.{ "vendor", "cppcheck", "cfg" })),
-        .install_subdir = b.pathJoin(&.{ "bin", "cfg" }),
+        .install_dir = .bin,
+        .source_dir = b.path(getCppcheckRelativePath(b, &.{"cfg"})),
+        .install_subdir = "cfg",
     });
 
     const cppcheck = createExecutable(b, .{
         .name = "cppcheck",
         .target = target,
         .optimize = .ReleaseFast,
-        .include_paths = cppcheck_incldues,
+        .include_paths = cppcheck_includes,
         .cxx_files = cppcheck_sources.items,
         .cxx_flags = &.{files_dir_define},
     });
@@ -348,7 +351,6 @@ fn addTooling(b: *std.Build, config: struct {
     conch_tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
 }) !void {
-    // Compile commands
     const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
     cdb_step.makeFn = collectCDB;
     for (config.cdb_steps.items) |step| {
@@ -393,18 +395,15 @@ fn addTooling(b: *std.Build, config: struct {
     if (config.conch_tests) |conch_tests| {
         try addCoverageStep(b, conch_tests);
     }
-
-    const clean_step = b.step("clean", "Clean up emitted artifacts");
-    clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
-    clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
 }
 
 fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const build_fmt = b.addFmt(.{ .paths = &.{"build.zig"} });
-    const build_fmt_check = b.addFmt(.{ .paths = &.{"build.zig"}, .check = true });
+    const zig_paths: []const []const u8 = &.{ "build.zig", b.pathJoin(&.{ "tests", "main.zig" }) };
+    const build_fmt = b.addFmt(.{ .paths = zig_paths });
+    const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
     const fmt = b.addSystemCommand(&.{config.clang_format});
     fmt.addArg("-i");
@@ -425,15 +424,17 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     cppcheck: *std.Build.Step.Compile,
 }) !*std.Build.Step {
+    const check_step = b.step("check", "Run static analysis on all project files");
     const cppcheck = b.addRunArtifact(config.cppcheck);
     if (b.args) |args| {
         cppcheck.addArgs(args);
     }
 
-    cppcheck.addPrefixedFileArg("--project=", b.path(b.pathJoin(&.{ ".zig-cache", cdb_filename })));
-    cppcheck.addPrefixedDirectoryArg(
+    const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
+    cppcheck.addPrefixedFileArg("--project=", b.path(getCacheRelativePath(b, &.{cdb_filename})));
+    const cppcheck_cache = cppcheck.addPrefixedOutputDirectoryArg(
         "--cppcheck-build-dir=",
-        b.path(b.pathJoin(&.{ ".zig-cache", cppcheck_base_dirname })),
+        installed_cppcheck_cache_path,
     );
     cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
     cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
@@ -448,7 +449,14 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
         cppcheck.addArg("--suppress=" ++ suppression);
     }
 
-    const check_step = b.step("check", "Run static analysis on all project files");
+    const cppcheck_cache_install = b.addInstallDirectory(.{
+        .source_dir = cppcheck_cache,
+        .install_dir = .{ .custom = ".." },
+        .install_subdir = installed_cppcheck_cache_path,
+    });
+
+    cppcheck_cache_install.step.dependOn(&config.cppcheck.step);
+    check_step.dependOn(&cppcheck_cache_install.step);
     check_step.dependOn(&cppcheck.step);
     return check_step;
 }
@@ -486,18 +494,17 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
 
     if (findProgram(b, "kcov")) |kcov| {
         const kcov_command = b.addSystemCommand(&.{kcov});
-        const include_pattern_flag = try std.fmt.allocPrint(
+        const include_patterns = try std.mem.join(b.allocator, ",", &.{
+            try b.build_root.join(b.allocator, &.{"src"}),
+            try b.build_root.join(b.allocator, &.{"include"}),
+        });
+
+        kcov_command.addArg(try std.fmt.allocPrint(
             b.allocator,
             "--include-pattern={s}",
-            .{try std.mem.join(b.allocator, ",", &.{
-                b.pathJoin(&.{ b.build_root.path orelse ".", "src" }),
-                b.pathJoin(&.{ b.build_root.path orelse ".", "include" }),
-            })},
-        );
-
-        const coverage_dir = b.pathJoin(&.{ b.install_prefix, "coverage" });
-        _ = kcov_command.addArg(include_pattern_flag);
-        _ = kcov_command.addArg(coverage_dir);
+            .{include_patterns},
+        ));
+        kcov_command.addArg(getPrefixRelativePath(b, &.{"coverage"}));
         kcov_command.addFileArg(tests.getEmittedBin());
         kcov_step.dependOn(&kcov_command.step);
 
@@ -519,9 +526,11 @@ fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const b = step.owner;
     const allocator = b.allocator;
 
-    const coverage_dir_abs = b.pathJoin(&.{ b.install_prefix, "coverage" });
-    const path = b.pathJoin(&.{ coverage_dir_abs, "conch_tests", "coverage.json" });
-    const content = try std.fs.cwd().readFileAlloc(allocator, path, std.math.maxInt(usize));
+    const content = try std.fs.cwd().readFileAlloc(
+        allocator,
+        getPrefixRelativePath(b, &.{ "coverage", "conch_tests", "coverage.json" }),
+        std.math.maxInt(usize),
+    );
     const parsed = try std.json.parseFromSlice(
         struct { percent_covered: []const u8 },
         allocator,
@@ -535,7 +544,7 @@ fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     var client: std.http.Client = .{ .allocator = allocator };
     defer client.deinit();
 
-    const badge_path = b.pathJoin(&.{ coverage_dir_abs, "coverage.svg" });
+    const badge_path = getPrefixRelativePath(&.{ "coverage", "coverage.svg" });
     const url_str = try std.fmt.allocPrint(
         allocator,
         "https://img.shields.io/badge/Coverage-{s}%25-pink",
@@ -592,13 +601,8 @@ fn addPackageStep(b: *std.Build, config: struct {
     const zip = findProgram(b, "zip") orelse return error.ZipNotFound;
 
     const package_step = b.step("package", "Build the artifacts for packaging");
-    const compression_dir_absolute = b.pathJoin(&.{ b.install_prefix, "package", "compressed" });
-    try std.fs.cwd().makePath(compression_dir_absolute);
 
-    const raw_dir_absolute = b.pathJoin(&.{ b.install_prefix, "package", "raw" });
-    const raw_dir_rel = b.pathJoin(&.{ "package", "raw" });
-
-    inline for (target_queries) |query| {
+    for (target_queries) |query| {
         const resolved_target = b.resolveTargetQuery(query);
         const artifacts = try addArtifacts(b, .{
             .target = resolved_target,
@@ -622,7 +626,7 @@ fn addPackageStep(b: *std.Build, config: struct {
         });
 
         const package_artifact_dirname = try query.zigTriple(b.allocator);
-        const package_artifact_dir_path_rel = b.pathJoin(&.{ raw_dir_rel, package_artifact_dirname });
+        const package_artifact_dir_path_rel = b.pathJoin(&.{ "package", "raw", package_artifact_dirname });
         const package_options: std.Build.Step.InstallArtifact.Options = .{
             .dest_dir = .{
                 .override = .{ .custom = package_artifact_dir_path_rel },
@@ -659,12 +663,20 @@ fn addPackageStep(b: *std.Build, config: struct {
                 );
 
                 const zipper = b.addSystemCommand(&.{ zip, "-r" });
-                zipper.addArg(b.pathJoin(&.{ compression_dir_absolute, zip_filename }));
-                zipper.addArg(b.pathJoin(&.{ raw_dir_absolute, package_artifact_dirname }));
+                const output_zip = zipper.addOutputFileArg(zip_filename);
+                zipper.addArg(".");
+                zipper.setCwd(b.path(getPrefixRelativePath(b, &.{ "package", "raw", package_artifact_dirname })));
                 _ = zipper.captureStdErr();
 
                 zipper.step.dependOn(&platform.step);
                 package_step.dependOn(&zipper.step);
+
+                const copy_zip = b.addInstallFileWithDir(
+                    output_zip,
+                    .{ .custom = b.pathJoin(&.{ "package", "compressed" }) },
+                    zip_filename,
+                );
+                package_step.dependOn(&copy_zip.step);
             }
 
             // All platforms get an archive because I'm nice
@@ -675,12 +687,21 @@ fn addPackageStep(b: *std.Build, config: struct {
             );
 
             const archiver = b.addSystemCommand(&.{ tar, "-czf" });
-            archiver.addArg(b.pathJoin(&.{ compression_dir_absolute, tar_filename }));
-            archiver.addArg(b.pathJoin(&.{ raw_dir_absolute, package_artifact_dirname }));
+            const output_tar = archiver.addOutputFileArg(tar_filename);
+            archiver.addArg("-C");
+            archiver.addArg(getPrefixRelativePath(b, &.{ "package", "raw", package_artifact_dirname }));
+            archiver.addArg(".");
             _ = archiver.captureStdErr();
 
             archiver.step.dependOn(&platform.step);
             package_step.dependOn(&archiver.step);
+
+            const copy_tar = b.addInstallFileWithDir(
+                output_tar,
+                .{ .custom = b.pathJoin(&.{ "package", "compressed" }) },
+                tar_filename,
+            );
+            package_step.dependOn(&copy_tar.step);
         }
     }
 }
@@ -753,7 +774,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const allocator = b.allocator;
     var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
 
-    const cdb_frags_path = try getCDBFragsPath(b);
+    const cdb_frags_path = getCacheRelativePath(b, &.{cdb_frags_base_dirname});
     var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
     defer dir.close();
     var dir_iter = dir.iterate();
@@ -777,8 +798,7 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
 
     var frag_iter = newest_frags.valueIterator();
     var first = true;
-    const cdb_path = try b.cache_root.join(b.allocator, &.{cdb_filename});
-    const cdb = try std.fs.cwd().createFile(cdb_path, .{});
+    const cdb = try std.fs.cwd().createFile(getCacheRelativePath(b, &.{cdb_filename}), .{});
     defer cdb.close();
 
     _ = try cdb.write("[");
@@ -794,6 +814,33 @@ fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     _ = try cdb.write("]");
 }
 
+/// Resolves the relative path with its root at the cache directory
+fn getCacheRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
+    return b.cache_root.join(b.allocator, paths) catch @panic("OOM");
+}
+
+fn getRelativeFromRoot(b: *std.Build, root: []const u8, paths: []const []const u8) []const u8 {
+    const total_path = std.mem.concat(
+        b.allocator,
+        []const u8,
+        &.{ &.{root}, paths },
+    ) catch @panic("OOM");
+    return b.pathJoin(total_path);
+}
+
+/// Resolves the relative path with its root at the vendored cppcheck directory
+fn getCppcheckRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
+    const cppcheck_root = b.pathJoin(&.{ "vendor", "cppcheck" });
+    return getRelativeFromRoot(b, cppcheck_root, paths);
+}
+
+/// Resolves the relative path with its root at the installation directory
+fn getPrefixRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
+    const prefix_root = std.fs.path.basename(b.install_prefix);
+    return getRelativeFromRoot(b, prefix_root, paths);
+}
+
+/// Searches the system PATH for the cmd, returning the binary path if found
 fn findProgram(b: *std.Build, cmd: []const u8) ?[]const u8 {
     return b.findProgram(&.{cmd}, &.{}) catch null;
 }
