@@ -37,16 +37,11 @@ jobs:
 
             - name: Install kcov
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y build-essential curl git libdw-dev
-
                   if [ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
                       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                   fi
 
-                  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-                  echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> $GITHUB_ENV
+                  /home/linuxbrew/.linuxbrew/bin/brew shellenv >> $GITHUB_ENV
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
                   brew update
