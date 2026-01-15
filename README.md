@@ -21,7 +21,7 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 
 # Getting Started
 ## System dependencies:
-1. Zig 0.15.2
+1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and lazy installation.
 
 ## Other dependencies:
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for tests. It is automatically configured in the project's build script and links statically to the test builds.
@@ -46,7 +46,7 @@ This builds the `ReleaseFast` configuration, enabling maximum optimization and d
 These dependencies are purely optional for users building the project from source. They can be installed either by building form source, downloading their corresponding GitHub release, or through your preferred package manager.
 
 # Correctness & Availability
-[Catch2](https://github.com/catchorg/Catch2) is used with [C++23](https://en.cppreference.com/w/cpp/23.html) and Zig 0.15.2 to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness through Zig's build system and custom allocators. 
+[Catch2](https://github.com/catchorg/Catch2) is used with a custom [Zig](https://ziglang.org/) allocator to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the best-in-class testing suite provided by catch2 while making use of the undefined behavior and leak sanitizers provided by Zig and its build system.
 
 As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available. While releases have prebuilt binaries for a myriad of systems, I cannot verify that they all work as intended out of the box. In the event, that a release is shipped with a faulty binary, please open an issue!
 
