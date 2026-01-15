@@ -8,6 +8,10 @@
 A programming language written in C++.
 </p>
 
+<p align="center">
+<strong>Currently experiencing a rewrite from C to C++.</strong>
+</p>
+
 # Motivation
 This project is a revamp of [zlx](https://github.com/trevorswan11/zlx). Due to some upcoming coursework in compiler design, I wanted to take on this type of project with two main goals:
 - Become proficient in the C++ programming language _without_ the help of AI or external libraries (other than Catch2 and cppcheck for testing)
@@ -16,10 +20,10 @@ This project is a revamp of [zlx](https://github.com/trevorswan11/zlx). Due to s
 ZLX was a fun project and got me into Low-Level programming, but its design choices limited its extensibility. I hope to use this project to grow as a developer and as a problem solver, expanding my knowledge of core programming concepts and data structures. 
 
 # Getting Started
-System dependencies:
+## System dependencies:
 1. Zig 0.15.2
 
-Other dependencies:
+## Other dependencies:
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for tests. It is automatically configured in the project's build script and links statically to the test builds.
 2. A striped version of [cppcheck](https://cppcheck.sourceforge.io/)'s source code is provided and is compiled from source. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
 
@@ -27,10 +31,19 @@ Once these are installed, building conch is as easy as running:
 ```sh
 git clone https://github.com/trevorswan11/conch
 cd conch
-zig build --release=fast
+zig build --release
 ```
 
-This builds the `ReleaseFast` configuration, enabling maximum optimization and disabling assertions and debug symbols. 
+This builds the `ReleaseFast` configuration, enabling maximum optimization and disabling assertions and debug symbols.
+
+## Tooling Dependencies
+1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter is used on all development platforms.
+2. [kcov](https://github.com/SimonKagstrom/kcov) is used for code coverage reporting, but is only supported on FreeBSD, Linux, and MacOS
+3. [curl](https://curl.se/) is a dependency of the code coverage reporting step, creating the GitHub badge containing the coverage percentage.
+4. [cloc](https://github.com/AlDanial/cloc) is used for LOC counting which is purely just for fun!
+5. zip and tar are both used for packaging releases, but these likely shipped with your OS and do not need to be manually installed.
+
+These dependencies are purely optional for users building the project from source. They can be installed either by building form source, downloading their corresponding GitHub release, or through your preferred package manager.
 
 # Correctness & Availability
 [Catch2](https://github.com/catchorg/Catch2) is used with [C++23](https://en.cppreference.com/w/cpp/23.html) and Zig 0.15.2 to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness through Zig's build system and custom allocators. 
