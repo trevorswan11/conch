@@ -393,7 +393,6 @@ const CdbGenerator = struct {
 
             const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
             if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
-                if (gop.found_existing) allocator.free(gop.value_ptr.name);
                 gop.value_ptr.* = .{
                     .name = try allocator.dupe(u8, entry.name),
                     .mtime = stat.mtime,
@@ -498,9 +497,6 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
 }) !*std.Build.Step {
     const check_step = b.step("check", "Run static analysis on all project files");
     const cppcheck = b.addRunArtifact(config.cppcheck);
-    if (b.args) |args| {
-        cppcheck.addArgs(args);
-    }
 
     const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
     cppcheck.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
@@ -511,7 +507,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
     cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
 
-    const suppressions: []const []const u8 = comptime &.{
+    const suppressions: []const []const u8 = &.{
         "checkersReport",
         "unmatchedSuppression",
         "missingIncludeSystem",
@@ -577,7 +573,9 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
             "--include-pattern={s}",
             .{include_patterns},
         ));
-        kcov_command.addArg(getPrefixRelativePath(b, &.{CoverageParser.coverage_install_dirname}));
+
+        const coverage_dirname = CoverageParser.coverage_install_dirname;
+        kcov_command.addArg(getPrefixRelativePath(b, &.{coverage_dirname}));
         kcov_command.addArtifactArg(tests);
         kcov_step.dependOn(&kcov_command.step);
         kcov_step.dependOn(b.getInstallStep());
@@ -585,6 +583,13 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
         const coverage_parser: *CoverageParser = .init(b, tests);
         coverage_parser.step.dependOn(&kcov_command.step);
         kcov_step.dependOn(&coverage_parser.step);
+
+        const cov_ignore = b.addInstallFileWithDir(
+            b.path(".gitignore"),
+            .{ .custom = coverage_dirname },
+            ".gitignore",
+        );
+        kcov_step.dependOn(&cov_ignore.step);
     } else {
         try kcov_step.addError(error_msg, .{});
     }
@@ -735,15 +740,13 @@ fn addPackageStep(b: *std.Build, config: struct {
         );
 
         const package_artifact_dir_path = b.pathJoin(uncompressed_package_dir ++ .{package_artifact_dirname});
-        const package_options: std.Build.Step.InstallArtifact.Options = .{
-            .dest_dir = .{
-                .override = .{ .custom = package_artifact_dir_path },
-            },
-        };
-
         const platform = b.addInstallArtifact(
             artifacts.conch,
-            package_options,
+            .{
+                .dest_dir = .{
+                    .override = .{ .custom = package_artifact_dir_path },
+                },
+            },
         );
         package_step.dependOn(&platform.step);
 
@@ -766,9 +769,10 @@ fn addPackageStep(b: *std.Build, config: struct {
 
             var file_installs: std.ArrayList(*std.Build.Step) = .empty;
             for (legal_paths) |path| {
-                const install_file_step = b.addInstallFile(
+                const install_file_step = b.addInstallFileWithDir(
                     b.path(b.pathJoin(path)),
-                    b.pathJoin(&.{ package_artifact_dir_path, path[path.len - 1] }),
+                    .{ .custom = package_artifact_dir_path },
+                    path[path.len - 1],
                 );
                 package_step.dependOn(&install_file_step.step);
                 try file_installs.append(b.allocator, &install_file_step.step);

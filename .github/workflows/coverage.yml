@@ -52,7 +52,6 @@ jobs:
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   zig build cov
                   mv zig-out/coverage .
-                  zig build clean -Dclean-cache
 
             - name: Commit coverage report & badge
               env:
