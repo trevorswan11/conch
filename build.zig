@@ -354,7 +354,7 @@ const CdbGenerator = struct {
     pub fn init(b: *std.Build) *CdbGenerator {
         const self = b.allocator.create(CdbGenerator) catch @panic("OOM");
         self.* = .{
-            .step = std.Build.Step.init(.{
+            .step = .init(.{
                 .id = .custom,
                 .name = "generate-cdb",
                 .owner = b,
@@ -577,60 +577,93 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
             "--include-pattern={s}",
             .{include_patterns},
         ));
-        kcov_command.addArg(getPrefixRelativePath(b, &.{"coverage"}));
-        kcov_command.addFileArg(tests.getEmittedBin());
+        kcov_command.addArg(getPrefixRelativePath(b, &.{CoverageParser.coverage_install_dirname}));
+        kcov_command.addArtifactArg(tests);
         kcov_step.dependOn(&kcov_command.step);
+        kcov_step.dependOn(b.getInstallStep());
 
-        const parse_step = try b.allocator.create(std.Build.Step);
-        parse_step.* = .init(.{
-            .id = .custom,
-            .name = "coverage-parse",
-            .owner = b,
-            .makeFn = coverageParse,
-        });
-        parse_step.dependOn(&kcov_command.step);
-        kcov_step.dependOn(parse_step);
+        const coverage_parser: *CoverageParser = .init(b, tests);
+        coverage_parser.step.dependOn(&kcov_command.step);
+        kcov_step.dependOn(&coverage_parser.step);
     } else {
         try kcov_step.addError(error_msg, .{});
     }
 }
 
-fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
-    const b = step.owner;
-    const allocator = b.allocator;
+const CoverageParser = struct {
+    const coverage_install_dirname = "coverage";
+    const cov_json_filename = "coverage.json";
+    const cov_svg_filename = "coverage.svg";
 
-    const content = try b.build_root.handle.readFileAlloc(
-        allocator,
-        getPrefixRelativePath(b, &.{ "coverage", "conch_tests", "coverage.json" }),
-        std.math.maxInt(usize),
-    );
-    const parsed = try std.json.parseFromSlice(
-        struct { percent_covered: []const u8 },
-        allocator,
-        content,
-        .{ .ignore_unknown_fields = true },
-    );
-    const precise_percentage = parsed.value.percent_covered;
-    const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
-    const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
+    const CoverageInfo = struct {
+        percent_covered: []const u8,
+    };
+    const ParsedCovInfo = std.json.Parsed(CoverageInfo);
 
-    const badge_path = getPrefixRelativePath(b, &.{ "coverage", "coverage.svg" });
-    const url_str = try std.fmt.allocPrint(
-        allocator,
-        "https://img.shields.io/badge/Coverage-{s}%25-pink",
-        .{percentage},
-    );
+    step: std.Build.Step,
+    test_artifact: *std.Build.Step.Compile,
 
-    const curl_bin = findProgram(b, "curl") orelse return error.CurlNotFound;
-    var child: std.process.Child = .init(&.{ curl_bin, "-o", badge_path, url_str }, allocator);
-    child.stderr_behavior = .Ignore;
-
-    const term = try child.spawnAndWait();
-    switch (term) {
-        .Exited => |code| if (code != 0) return error.CurlFailed,
-        else => return error.CurlTerminatedAbnormally,
+    pub fn init(b: *std.Build, test_artifact: *std.Build.Step.Compile) *CoverageParser {
+        const self = b.allocator.create(CoverageParser) catch @panic("OOM");
+        self.* = .{
+            .step = .init(.{
+                .id = .custom,
+                .name = "coverage-parse",
+                .owner = b,
+                .makeFn = coverageParse,
+            }),
+            .test_artifact = test_artifact,
+        };
+        return self;
     }
-}
+
+    fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+        const self: *CoverageParser = @fieldParentPtr("step", step);
+
+        const b = step.owner;
+        const allocator = b.allocator;
+
+        const installed_cov_json_path = getPrefixRelativePath(b, &.{
+            coverage_install_dirname,
+            self.test_artifact.name,
+            cov_json_filename,
+        });
+
+        const content = try b.build_root.handle.readFileAlloc(
+            allocator,
+            installed_cov_json_path,
+            std.math.maxInt(usize),
+        );
+
+        const parsed: ParsedCovInfo = try std.json.parseFromSlice(
+            CoverageInfo,
+            allocator,
+            content,
+            .{ .ignore_unknown_fields = true },
+        );
+
+        const precise_percentage = parsed.value.percent_covered;
+        const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
+        const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
+
+        const badge_path = getPrefixRelativePath(b, &.{ coverage_install_dirname, cov_svg_filename });
+        const url_str = try std.fmt.allocPrint(
+            allocator,
+            "https://img.shields.io/badge/Coverage-{s}%25-pink",
+            .{percentage},
+        );
+
+        const curl_bin = findProgram(b, "curl") orelse return error.CurlNotFound;
+        var child: std.process.Child = .init(&.{ curl_bin, "-o", badge_path, url_str }, allocator);
+        child.stderr_behavior = .Ignore;
+
+        const term = try child.spawnAndWait();
+        switch (term) {
+            .Exited => |code| if (code != 0) return error.CurlFailed,
+            else => return error.CurlTerminatedAbnormally,
+        }
+    }
+};
 
 const target_queries = [_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .macos },
