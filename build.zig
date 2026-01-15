@@ -3,28 +3,14 @@ const builtin = @import("builtin");
 
 const version = "v0.0.1";
 
-const cdb_frags_base_dirname = "cdb-frags";
-const cdb_filename = "compile_commands.json";
-
-const ExecutableBehavior = union(enum) {
-    runnable: struct {
-        cmd_name: []const u8,
-        cmd_desc: []const u8,
-        with_args: bool,
-    },
-    standalone: void,
-};
-
-/// This is called through Zig and uses an arena allocator.
-///
-/// No memory allocated in this script is freed individually.
-/// The lack of free/destroy/deinit calls is deliberate!
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{
+        .preferred_optimize_mode = .ReleaseFast,
+    });
 
-    const cdb_frags_path = getCacheRelativePath(b, &.{cdb_frags_base_dirname});
-    try std.fs.cwd().makePath(cdb_frags_path);
+    const cdb_gen: *CdbGenerator = .init(b);
+    const flag_opts = addFlagOptions(b);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
@@ -39,15 +25,16 @@ pub fn build(b: *std.Build) !void {
     const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
     try package_flags.appendSlice(b.allocator, dist_flags);
 
-    try compiler_flags.appendSlice(b.allocator, &.{ "-gen-cdb-fragment-path", cdb_frags_path });
+    try compiler_flags.appendSlice(b.allocator, &.{
+        "-gen-cdb-fragment-path",
+        getCacheRelativePath(b, &.{CdbGenerator.cdb_frags_dirname}),
+    });
     switch (optimize) {
         .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
         .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
     }
     try compiler_flags.append(b.allocator, "-DCATCH_AMALGAMATED_CUSTOM_MAIN");
-
-    const flag_opts = addFlagOptions(b);
 
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{
@@ -58,9 +45,10 @@ pub fn build(b: *std.Build) !void {
         .skip_tests = flag_opts.skip_tests,
         .skip_cppcheck = flag_opts.skip_cppcheck,
     });
+    for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
     try addTooling(b, .{
-        .cdb_steps = cdb_steps,
+        .cdb_gen = cdb_gen,
         .conch_tests = artifacts.conch_tests,
         .cppcheck = artifacts.cppcheck,
     });
@@ -101,6 +89,15 @@ fn addFlagOptions(b: *std.Build) struct {
         .skip_cppcheck = skip_cppcheck,
     };
 }
+
+const ExecutableBehavior = union(enum) {
+    runnable: struct {
+        cmd_name: []const u8,
+        cmd_desc: []const u8,
+        with_args: bool,
+    },
+    standalone: void,
+};
 
 fn addArtifacts(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
@@ -231,27 +228,21 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
     }
 
     // The path needs to be fixed on windows due to cppcheck internals
-    const bin_path = blk: {
-        const raw_bin_path = getPrefixRelativePath(b, &.{"bin"});
+    const cfg_path = blk: {
+        const raw_cfg_path = getCppcheckRelativePath(b, &.{});
         if (builtin.os.tag == .windows) {
-            break :blk try std.mem.replaceOwned(u8, b.allocator, raw_bin_path, "\\", "/");
+            break :blk try std.mem.replaceOwned(u8, b.allocator, raw_cfg_path, "\\", "/");
         }
-        break :blk raw_bin_path;
+        break :blk raw_cfg_path;
     };
 
     const files_dir_define = try std.fmt.allocPrint(
         b.allocator,
         "-DFILESDIR=\"{s}\"",
-        .{bin_path},
+        .{cfg_path},
     );
 
-    const cfg_copy = b.addInstallDirectory(.{
-        .install_dir = .bin,
-        .source_dir = b.path(getCppcheckRelativePath(b, &.{"cfg"})),
-        .install_subdir = "cfg",
-    });
-
-    const cppcheck = createExecutable(b, .{
+    return createExecutable(b, .{
         .name = "cppcheck",
         .target = target,
         .optimize = .ReleaseFast,
@@ -259,9 +250,6 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .cxx_files = cppcheck_sources.items,
         .cxx_flags = &.{files_dir_define},
     });
-
-    cppcheck.step.dependOn(&cfg_copy.step);
-    return cppcheck;
 }
 
 fn createLibrary(b: *std.Build, config: struct {
@@ -346,29 +334,99 @@ fn createExecutable(b: *std.Build, config: struct {
     return exe;
 }
 
+const CdbGenerator = struct {
+    const cdb_filename = "compile_commands.json";
+    const cdb_frags_dirname = "cdb-frags";
+
+    const FragInfo = struct {
+        name: []const u8,
+        mtime: i128,
+    };
+
+    b: *std.Build,
+    step: std.Build.Step,
+    output_file: std.Build.GeneratedFile,
+
+    pub fn init(b: *std.Build) *CdbGenerator {
+        const self = b.allocator.create(CdbGenerator) catch @panic("OOM");
+        self.* = .{
+            .step = std.Build.Step.init(.{
+                .id = .custom,
+                .name = "generate-cdb",
+                .owner = b,
+                .makeFn = generateCdb,
+            }),
+            .b = b,
+            .output_file = .{ .step = &self.step },
+        };
+        return self;
+    }
+
+    pub fn getCdbPath(self: *const CdbGenerator) std.Build.LazyPath {
+        return .{ .generated = .{ .file = &self.output_file } };
+    }
+
+    fn generateCdb(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+        const self: *CdbGenerator = @fieldParentPtr("step", step);
+
+        const b = self.b;
+        const allocator = b.allocator;
+        const cache_root = b.cache_root.handle;
+
+        self.output_file.path = getCacheRelativePath(b, &.{cdb_filename});
+        try cache_root.makePath(cdb_frags_dirname);
+        var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
+
+        var dir = try cache_root.openDir(cdb_frags_dirname, .{ .iterate = true });
+        defer dir.close();
+        var dir_iter = dir.iterate();
+
+        // Hashed updates are generated by the compiler, so grab the most recent for the cdb
+        while (try dir_iter.next()) |entry| {
+            if (entry.kind != .file) continue;
+            const stat = try dir.statFile(entry.name);
+            const first_dot = std.mem.indexOf(u8, entry.name, ".") orelse return error.InvalidSourceFile;
+            const base_name = entry.name[0 .. first_dot + 4];
+
+            const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
+            if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
+                if (gop.found_existing) allocator.free(gop.value_ptr.name);
+                gop.value_ptr.* = .{
+                    .name = try allocator.dupe(u8, entry.name),
+                    .mtime = stat.mtime,
+                };
+            }
+        }
+
+        var frag_iter = newest_frags.valueIterator();
+        var first = true;
+        const cdb = try cache_root.createFile(cdb_filename, .{});
+        defer cdb.close();
+
+        _ = try cdb.write("[");
+        while (frag_iter.next()) |info| {
+            if (!first) _ = try cdb.write(",\n");
+            first = false;
+
+            const fpath = b.pathJoin(&.{ cdb_frags_dirname, info.name });
+            const contents = try cache_root.readFileAlloc(allocator, fpath, std.math.maxInt(usize));
+            const trimmed = std.mem.trimEnd(u8, contents, ",\n\r\t");
+            _ = try cdb.write(trimmed);
+        }
+        _ = try cdb.write("]");
+    }
+};
+
 fn addTooling(b: *std.Build, config: struct {
-    cdb_steps: std.ArrayList(*std.Build.Step),
+    cdb_gen: *CdbGenerator,
     conch_tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
 }) !void {
-    const cdb_step = b.step("cdb", "Compile CDB fragments into " ++ cdb_filename);
-    cdb_step.makeFn = collectCDB;
-    for (config.cdb_steps.items) |step| {
-        cdb_step.dependOn(step);
-    }
-    b.getInstallStep().dependOn(cdb_step);
+    const tooling_sources = try collectToolingFiles(b);
 
-    const tooling_sources = try std.mem.concat(b.allocator, []const u8, &.{
-        try collectFiles(b, "src", .{}),
-        try collectFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
-        try collectFiles(b, "tests", .{
-            .dropped_files = &.{
-                "catch_amalgamated.cpp",
-                "catch_amalgamated.hpp",
-            },
-            .allowed_extensions = &.{ ".hpp", ".cpp" },
-        }),
-    });
+    const cdb_step = b.step("cdb", "Generate " ++ CdbGenerator.cdb_filename);
+    cdb_step.dependOn(&config.cdb_gen.step);
+    b.getInstallStep().dependOn(&config.cdb_gen.step);
 
     if (findProgram(b, "clang-format")) |clang_format| {
         try addFmtStep(b, .{
@@ -381,8 +439,9 @@ fn addTooling(b: *std.Build, config: struct {
         const check_step = try addStaticAnalysisStep(b, .{
             .tooling_sources = tooling_sources,
             .cppcheck = cppcheck,
+            .cdb_gen = config.cdb_gen,
         });
-        check_step.dependOn(cdb_step);
+        check_step.dependOn(&config.cdb_gen.step);
     }
 
     if (findProgram(b, "cloc")) |cloc| {
@@ -396,11 +455,9 @@ fn addTooling(b: *std.Build, config: struct {
         try addCoverageStep(b, conch_tests);
     }
 
-    const clean = b.step("clean", "Uninstall all emitted artifacts and clear entire build cache");
-    const remove_artifacts = b.addRemoveDirTree(b.path(getPrefixRelativePath(b, &.{})));
-    clean.dependOn(&remove_artifacts.step);
-    const remove_cache = b.addRemoveDirTree(b.path(getCacheRelativePath(b, &.{})));
-    clean.dependOn(&remove_cache.step);
+    const clean_step = b.step("clean", "Remove all emitted artifacts");
+    const remove_install = b.addRemoveDirTree(b.path(getPrefixRelativePath(b, &.{})));
+    clean_step.dependOn(&remove_install.step);
 }
 
 fn addFmtStep(b: *std.Build, config: struct {
@@ -429,6 +486,7 @@ fn addFmtStep(b: *std.Build, config: struct {
 fn addStaticAnalysisStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     cppcheck: *std.Build.Step.Compile,
+    cdb_gen: *CdbGenerator,
 }) !*std.Build.Step {
     const check_step = b.step("check", "Run static analysis on all project files");
     const cppcheck = b.addRunArtifact(config.cppcheck);
@@ -437,7 +495,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     }
 
     const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
-    cppcheck.addPrefixedFileArg("--project=", b.path(getCacheRelativePath(b, &.{cdb_filename})));
+    cppcheck.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
     const cppcheck_cache = cppcheck.addPrefixedOutputDirectoryArg(
         "--cppcheck-build-dir=",
         installed_cppcheck_cache_path,
@@ -446,6 +504,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
 
     const suppressions: []const []const u8 = comptime &.{
+        "checkersReport",
         "unmatchedSuppression",
         "missingIncludeSystem",
         "unusedFunction",
@@ -532,7 +591,7 @@ fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const b = step.owner;
     const allocator = b.allocator;
 
-    const content = try std.fs.cwd().readFileAlloc(
+    const content = try b.build_root.handle.readFileAlloc(
         allocator,
         getPrefixRelativePath(b, &.{ "coverage", "conch_tests", "coverage.json" }),
         std.math.maxInt(usize),
@@ -757,8 +816,7 @@ fn collectFiles(
         dropped_files: ?[]const [:0]const u8 = null,
     },
 ) ![]const []const u8 {
-    const cwd = std.fs.cwd();
-    var dir = try cwd.openDir(directory, .{ .iterate = true });
+    var dir = try b.build_root.handle.openDir(directory, .{ .iterate = true });
     defer dir.close();
 
     var walker = try dir.walk(b.allocator);
@@ -782,54 +840,18 @@ fn collectFiles(
     return paths.toOwnedSlice(b.allocator);
 }
 
-const FragInfo = struct {
-    name: []const u8,
-    mtime: i128,
-};
-
-fn collectCDB(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
-    const b = step.owner;
-    const allocator = b.allocator;
-    var newest_frags: std.StringHashMap(FragInfo) = .init(allocator);
-
-    const cdb_frags_path = getCacheRelativePath(b, &.{cdb_frags_base_dirname});
-    var dir = try std.fs.cwd().openDir(cdb_frags_path, .{ .iterate = true });
-    defer dir.close();
-    var dir_iter = dir.iterate();
-
-    // Hashed updates are generated by the compiler, so grab the most recent for the CDB
-    while (try dir_iter.next()) |entry| {
-        if (entry.kind != .file) continue;
-        const stat = try dir.statFile(entry.name);
-        const first_dot = std.mem.indexOf(u8, entry.name, ".") orelse return error.InvalidSourceFile;
-        const base_name = entry.name[0 .. first_dot + 4];
-
-        const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
-        if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
-            if (gop.found_existing) allocator.free(gop.value_ptr.name);
-            gop.value_ptr.* = .{
-                .name = try allocator.dupe(u8, entry.name),
-                .mtime = stat.mtime,
-            };
-        }
-    }
-
-    var frag_iter = newest_frags.valueIterator();
-    var first = true;
-    const cdb = try std.fs.cwd().createFile(getCacheRelativePath(b, &.{cdb_filename}), .{});
-    defer cdb.close();
-
-    _ = try cdb.write("[");
-    while (frag_iter.next()) |info| {
-        if (!first) _ = try cdb.write(",\n");
-        first = false;
-
-        const fpath = b.pathJoin(&.{ cdb_frags_path, info.name });
-        const contents = try std.fs.cwd().readFileAlloc(allocator, fpath, std.math.maxInt(usize));
-        const trimmed = std.mem.trimEnd(u8, contents, ",\n\r\t");
-        _ = try cdb.write(trimmed);
-    }
-    _ = try cdb.write("]");
+fn collectToolingFiles(b: *std.Build) ![]const []const u8 {
+    return std.mem.concat(b.allocator, []const u8, &.{
+        try collectFiles(b, "src", .{}),
+        try collectFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
+        try collectFiles(b, "tests", .{
+            .dropped_files = &.{
+                "catch_amalgamated.cpp",
+                "catch_amalgamated.hpp",
+            },
+            .allowed_extensions = &.{ ".hpp", ".cpp" },
+        }),
+    });
 }
 
 /// Resolves the relative path with its root at the cache directory
