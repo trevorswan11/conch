@@ -53,7 +53,6 @@ jobs:
                   zig build cov
                   mv zig-out/coverage .
                   zig build clean -Dclean-cache
-                  rm conch_tests
 
             - name: Commit coverage report & badge
               env:
