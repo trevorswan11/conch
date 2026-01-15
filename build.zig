@@ -51,6 +51,7 @@ pub fn build(b: *std.Build) !void {
         .cdb_gen = cdb_gen,
         .conch_tests = artifacts.conch_tests,
         .cppcheck = artifacts.cppcheck,
+        .clean_cache = flag_opts.clean_cache,
     });
 
     try addPackageStep(b, .{
@@ -64,6 +65,7 @@ fn addFlagOptions(b: *std.Build) struct {
     compile_only: bool,
     skip_tests: bool,
     skip_cppcheck: bool,
+    clean_cache: bool,
 } {
     const compile_only = b.option(
         bool,
@@ -83,10 +85,17 @@ fn addFlagOptions(b: *std.Build) struct {
         "Skip compilation of cppcheck and disable static analysis tooling",
     ) orelse false;
 
+    const clean_cache = (builtin.os.tag != .windows) and (b.option(
+        bool,
+        "clean-cache",
+        "Clean the build cache with the clean step",
+    ) orelse false);
+
     return .{
         .compile_only = compile_only,
         .skip_tests = skip_tests,
         .skip_cppcheck = skip_cppcheck,
+        .clean_cache = clean_cache,
     };
 }
 
@@ -153,7 +162,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         libcatch2 = createLibrary(b, .{
             .name = "catch2",
             .target = config.target,
-            .optimize = config.optimize,
+            .optimize = .ReleaseSafe,
             .include_path = b.path(catch2_dir),
             .cxx_files = try collectFiles(b, catch2_dir, .{}),
             .flags = config.cxx_flags,
@@ -241,7 +250,7 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
     return createExecutable(b, .{
         .name = "cppcheck",
         .target = target,
-        .optimize = .ReleaseFast,
+        .optimize = .ReleaseSafe,
         .include_paths = cppcheck_includes,
         .cxx_files = cppcheck_sources.items,
         .cxx_flags = &.{files_dir_define},
@@ -339,7 +348,6 @@ const CdbGenerator = struct {
         mtime: i128,
     };
 
-    b: *std.Build,
     step: std.Build.Step,
     output_file: std.Build.GeneratedFile,
 
@@ -352,7 +360,6 @@ const CdbGenerator = struct {
                 .owner = b,
                 .makeFn = generateCdb,
             }),
-            .b = b,
             .output_file = .{ .step = &self.step },
         };
         return self;
@@ -365,7 +372,7 @@ const CdbGenerator = struct {
     fn generateCdb(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
         const self: *CdbGenerator = @fieldParentPtr("step", step);
 
-        const b = self.b;
+        const b = step.owner;
         const allocator = b.allocator;
         const cache_root = b.cache_root.handle;
 
@@ -417,6 +424,7 @@ fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CdbGenerator,
     conch_tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
+    clean_cache: bool,
 }) !void {
     const tooling_sources = try collectToolingFiles(b);
 
@@ -454,6 +462,10 @@ fn addTooling(b: *std.Build, config: struct {
     const clean_step = b.step("clean", "Remove all emitted artifacts");
     const remove_install = b.addRemoveDirTree(b.path(getPrefixRelativePath(b, &.{})));
     clean_step.dependOn(&remove_install.step);
+    if (config.clean_cache) {
+        const remove_cache = b.addRemoveDirTree(b.path(getCacheRelativePath(b, &.{})));
+        clean_step.dependOn(&remove_cache.step);
+    }
 }
 
 fn addFmtStep(b: *std.Build, config: struct {

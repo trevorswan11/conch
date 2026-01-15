@@ -51,3 +51,6 @@ jobs:
 
             - name: Check formatting
               run: zig build fmt-check
+
+            - name: Run static analysis
+              run: zig build check
