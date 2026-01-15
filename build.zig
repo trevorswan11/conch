@@ -253,7 +253,7 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .optimize = .ReleaseSafe,
         .include_paths = cppcheck_includes,
         .cxx_files = cppcheck_sources.items,
-        .cxx_flags = &.{files_dir_define},
+        .cxx_flags = &.{ files_dir_define, "-Uunix" },
     });
 }
 
