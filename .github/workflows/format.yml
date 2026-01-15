@@ -10,7 +10,7 @@ on:
             - "src/**"
             - "include/**"
             - "tests/**"
-            - "CMakeLists.txt"
+            - "build.zig"
     pull_request:
         branches:
             - main
@@ -20,7 +20,7 @@ on:
             - "src/**"
             - "include/**"
             - "tests/**"
-            - "CMakeLists.txt"
+            - "build.zig"
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}

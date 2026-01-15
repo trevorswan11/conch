@@ -9,7 +9,7 @@ on:
             - "src/**"
             - "include/**"
             - "tests/**"
-            - ".github/CMakeLists.txt"
+            - "build.zig"
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
