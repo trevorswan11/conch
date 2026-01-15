@@ -17,7 +17,7 @@ This project is a revamp of [zlx](https://github.com/trevorswan11/zlx). Due to s
 - Become proficient in the C++ programming language _without_ the help of AI or external libraries (other than Catch2 and cppcheck for testing)
 - Fully understand programming concepts relating to the internals of an interpreter, bytecode VM, and compiler
 
-ZLX was a fun project and got me into Low-Level programming, but its design choices limited its extensibility. I hope to use this project to grow as a developer and as a problem solver, expanding my knowledge of core programming concepts and data structures. 
+ZLX was a fun project and got me into Low-Level programming, but its design choices limited its extensibility. I hope to use this project to grow as a developer and as a problem solver, expanding my knowledge of core programming concepts and data structures.
 
 # Getting Started
 ## System dependencies:
