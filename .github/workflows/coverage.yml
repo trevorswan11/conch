@@ -2,8 +2,7 @@ name: Coverage
 
 on:
     push:
-        branches:
-            - main
+        branches: [main]
         paths:
             - ".github/workflows/coverage.yml"
             - "src/**"
@@ -19,7 +18,7 @@ jobs:
     coverage:
         permissions:
             contents: write
-        runs-on: macos-latest
+        runs-on: ubuntu-latest
 
         steps:
             - name: Checkout repo
@@ -27,16 +26,31 @@ jobs:
               with:
                   fetch-depth: 1
 
+            - uses: actions/cache@v4
+              with:
+                  path: /home/linuxbrew/.linuxbrew
+                  key: brew-${{ runner.os }}
+
             - uses: mlugg/setup-zig@v2
               with:
                   version: 0.15.2
 
-            - name: Install dependencies
+            - name: Install kcov
               run: |
+                  sudo apt-get update
+                  sudo apt-get install -y build-essential curl git libdw-dev
+
+                  if [ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+                      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                  fi
+
+                  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+                  echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> $GITHUB_ENV
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
                   brew update
                   brew install kcov
-              env:
-                  HOMEBREW_NO_AUTO_UPDATE: 1
 
             - name: Run coverage report generator
               run: |
@@ -49,9 +63,15 @@ jobs:
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git checkout --orphan coverage || git checkout coverage
-                  git reset --hard
+                  if git show-ref --quiet refs/heads/coverage; then
+                      git checkout coverage
+                  else
+                      git checkout --orphan coverage
+                      git reset --hard
+                  fi
+
                   mv coverage/* .
+
                   git add .
                   git commit -m "Update coverage report"
                   git push -f origin coverage

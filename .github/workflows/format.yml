@@ -2,9 +2,7 @@ name: Formatting
 
 on:
     push:
-        branches:
-            - main
-            - "feature/**"
+        branches: [main]
         paths:
             - ".github/workflows/format.yml"
             - "src/**"
@@ -12,9 +10,7 @@ on:
             - "tests/**"
             - "build.zig"
     pull_request:
-        branches:
-            - main
-            - "feature/**"
+        branches: [main]
         paths:
             - ".github/workflows/format.yml"
             - "src/**"
