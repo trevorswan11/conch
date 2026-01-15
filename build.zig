@@ -395,6 +395,12 @@ fn addTooling(b: *std.Build, config: struct {
     if (config.conch_tests) |conch_tests| {
         try addCoverageStep(b, conch_tests);
     }
+
+    const clean = b.step("clean", "Uninstall all emitted artifacts and clear entire build cache");
+    const remove_artifacts = b.addRemoveDirTree(b.path(getPrefixRelativePath(b, &.{})));
+    clean.dependOn(&remove_artifacts.step);
+    const remove_cache = b.addRemoveDirTree(b.path(getCacheRelativePath(b, &.{})));
+    clean.dependOn(&remove_cache.step);
 }
 
 fn addFmtStep(b: *std.Build, config: struct {
@@ -539,12 +545,9 @@ fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     );
     const precise_percentage = parsed.value.percent_covered;
     const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
-    const percentage = if (last_dot) |end| precise_percentage[0..end] else precise_percentage;
+    const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
 
-    var client: std.http.Client = .{ .allocator = allocator };
-    defer client.deinit();
-
-    const badge_path = getPrefixRelativePath(&.{ "coverage", "coverage.svg" });
+    const badge_path = getPrefixRelativePath(b, &.{ "coverage", "coverage.svg" });
     const url_str = try std.fmt.allocPrint(
         allocator,
         "https://img.shields.io/badge/Coverage-{s}%25-pink",
@@ -601,6 +604,8 @@ fn addPackageStep(b: *std.Build, config: struct {
     const zip = findProgram(b, "zip") orelse return error.ZipNotFound;
 
     const package_step = b.step("package", "Build the artifacts for packaging");
+    const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
+    const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
 
     for (target_queries) |query| {
         const resolved_target = b.resolveTargetQuery(query);
@@ -625,11 +630,16 @@ fn addPackageStep(b: *std.Build, config: struct {
             .version = config.version,
         });
 
-        const package_artifact_dirname = try query.zigTriple(b.allocator);
-        const package_artifact_dir_path_rel = b.pathJoin(&.{ "package", "raw", package_artifact_dirname });
+        const package_artifact_dirname = try std.fmt.allocPrint(
+            b.allocator,
+            "conch-{s}-{s}",
+            .{ try query.zigTriple(b.allocator), config.version },
+        );
+
+        const package_artifact_dir_path = b.pathJoin(uncompressed_package_dir ++ .{package_artifact_dirname});
         const package_options: std.Build.Step.InstallArtifact.Options = .{
             .dest_dir = .{
-                .override = .{ .custom = package_artifact_dir_path_rel },
+                .override = .{ .custom = package_artifact_dir_path },
             },
         };
 
@@ -646,34 +656,39 @@ fn addPackageStep(b: *std.Build, config: struct {
                 &.{ ".github", "CHANGELOG.md" },
             };
 
+            var file_installs: std.ArrayList(*std.Build.Step) = .empty;
             for (legal_paths) |path| {
                 const install_file_step = b.addInstallFile(
                     b.path(b.pathJoin(path)),
-                    b.pathJoin(&.{ package_artifact_dir_path_rel, path[path.len - 1] }),
+                    b.pathJoin(&.{ package_artifact_dir_path, path[path.len - 1] }),
                 );
                 package_step.dependOn(&install_file_step.step);
+                try file_installs.append(b.allocator, &install_file_step.step);
             }
 
             // Zip is only needed on windows
             if (query.os_tag.? == .windows) {
                 const zip_filename = try std.fmt.allocPrint(
                     b.allocator,
-                    "conch-{s}-{s}.zip",
-                    .{ package_artifact_dirname, config.version },
+                    "{s}.zip",
+                    .{package_artifact_dirname},
                 );
 
                 const zipper = b.addSystemCommand(&.{ zip, "-r" });
                 const output_zip = zipper.addOutputFileArg(zip_filename);
-                zipper.addArg(".");
-                zipper.setCwd(b.path(getPrefixRelativePath(b, &.{ "package", "raw", package_artifact_dirname })));
+                zipper.addArg(package_artifact_dirname);
+                zipper.setCwd(b.path(getPrefixRelativePath(b, uncompressed_package_dir)));
                 _ = zipper.captureStdErr();
 
                 zipper.step.dependOn(&platform.step);
                 package_step.dependOn(&zipper.step);
+                for (file_installs.items) |step| {
+                    zipper.step.dependOn(step);
+                }
 
                 const copy_zip = b.addInstallFileWithDir(
                     output_zip,
-                    .{ .custom = b.pathJoin(&.{ "package", "compressed" }) },
+                    .{ .custom = b.pathJoin(compressed_package_dir) },
                     zip_filename,
                 );
                 package_step.dependOn(&copy_zip.step);
@@ -682,23 +697,26 @@ fn addPackageStep(b: *std.Build, config: struct {
             // All platforms get an archive because I'm nice
             const tar_filename = try std.fmt.allocPrint(
                 b.allocator,
-                "conch-{s}-{s}.tar.gz",
-                .{ package_artifact_dirname, config.version },
+                "{s}.tar.gz",
+                .{package_artifact_dirname},
             );
 
             const archiver = b.addSystemCommand(&.{ tar, "-czf" });
             const output_tar = archiver.addOutputFileArg(tar_filename);
             archiver.addArg("-C");
-            archiver.addArg(getPrefixRelativePath(b, &.{ "package", "raw", package_artifact_dirname }));
-            archiver.addArg(".");
+            archiver.addArg(getPrefixRelativePath(b, uncompressed_package_dir));
+            archiver.addArg(package_artifact_dirname);
             _ = archiver.captureStdErr();
 
             archiver.step.dependOn(&platform.step);
             package_step.dependOn(&archiver.step);
+            for (file_installs.items) |step| {
+                archiver.step.dependOn(step);
+            }
 
             const copy_tar = b.addInstallFileWithDir(
                 output_tar,
-                .{ .custom = b.pathJoin(&.{ "package", "compressed" }) },
+                .{ .custom = b.pathJoin(compressed_package_dir) },
                 tar_filename,
             );
             package_step.dependOn(&copy_tar.step);
