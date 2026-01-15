@@ -1,58 +1,57 @@
 name: Coverage
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/coverage.yml'
-      - 'src/**'
-      - 'include/**'
-      - 'tests/**'
-      - 'CMakeLists.txt'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/coverage.yml'
-      - 'src/**'
-      - 'include/**'
-      - 'tests/**'
-      - 'CMakeLists.txt'
+    push:
+        branches:
+            - main
+        paths:
+            - ".github/workflows/coverage.yml"
+            - "src/**"
+            - "include/**"
+            - "tests/**"
+            - ".github/CMakeLists.txt"
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  coverage:
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    coverage:
+        permissions:
+            contents: write
+        runs-on: macos-latest
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y clang clang-format cmake make lcov llvm llvm-dev
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
 
-      - name: Run coverage report generator
-        run: |
-          mkdir build
-          cd build
-          CC=clang CXX=clang++ cmake ..
-          cmake --build . --parallel --target coverage-badge
+            - uses: mlugg/setup-zig@v2
+              with:
+                  version: 0.15.2
 
-      - name: Commit coverage report & badge
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan coverage || git checkout coverage
-          git reset --hard
-          cp -r build/cov/coverage_report/* .
-          cp build/cov/coverage_summary.txt .
-          cp build/cov/coverage.svg .
-          rm -rf build
-          git add .
-          git commit -m "Update coverage report"
-          git push -f origin coverage
+            - name: Install dependencies
+              run: |
+                  brew update
+                  brew install kcov
+              env:
+                  HOMEBREW_NO_AUTO_UPDATE: 1
+
+            - name: Run coverage report generator
+              run: |
+                  zig build cov
+                  mv zig-out/coverage .
+
+            - name: Commit coverage report & badge
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git checkout --orphan coverage || git checkout coverage
+                  git reset --hard
+                  mv coverage/* .
+                  git add .
+                  git commit -m "Update coverage report"
+                  git push -f origin coverage

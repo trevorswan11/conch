@@ -21,3 +21,4 @@ PointerAlignment: Left
 AlwaysBreakAfterReturnType: None
 InsertNewlineAtEOF: true
 AlignConsecutiveBitFields: true
+IndentExternBlock: Indent

@@ -1,42 +1,54 @@
 <h1 align="center">🐚conch🐚</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/C-23-blue?logo=&logoColor=white" alt="C17" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage_summary.txt"><img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" /></a>
+<img src="https://img.shields.io/badge/C%2B%2B-23-blue?logo=c%2B%2B&logoColor=white" alt="C++23" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="https://github.com/trevorswan11/conch/blob/coverage/coverage_summary.txt"><img src="https://raw.githubusercontent.com/trevorswan11/conch/coverage/coverage.svg" alt="Coverage" /></a>
 </p>
 
 <p align="center">
-A programming language written in C.
+A programming language written in C++.
+</p>
+
+<p align="center">
+<strong>Currently experiencing a rewrite from C to C++.</strong>
 </p>
 
 # Motivation
 This project is a revamp of [zlx](https://github.com/trevorswan11/zlx). Due to some upcoming coursework in compiler design, I wanted to take on this type of project with two main goals:
-- Become proficient in the C programming language _without_ the help of AI or external libraries (other than Catch2 for testing)
+- Become proficient in the C++ programming language _without_ the help of AI or external libraries (other than Catch2 and cppcheck for testing)
 - Fully understand programming concepts relating to the internals of an interpreter, bytecode VM, and compiler
 
 ZLX was a fun project and got me into Low-Level programming, but its design choices limited its extensibility. I hope to use this project to grow as a developer and as a problem solver, expanding my knowledge of core programming concepts and data structures. 
 
 # Getting Started
-System dependencies:
-1. CMake (3.20 or later)
-2. Any mainstream C compiler (LLVM Clang is recommended for maximum compatibility)
-3. Clang-format
+## System dependencies:
+1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and lazy installation.
+
+## Other dependencies:
+1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for tests. It is automatically configured in the project's build script and links statically to the test builds.
+2. A striped version of [cppcheck](https://cppcheck.sourceforge.io/)'s source code is provided and is compiled from source. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
 
 Once these are installed, building conch is as easy as running:
 ```sh
 git clone https://github.com/trevorswan11/conch
 cd conch
-mkdir build
-cd build
-cmake ..
-cmake --build . --target dist
+zig build --release
 ```
 
-This builds the `dist` configuration, enabling maximum optimization and disabling assertions and debug symbols. 
+This builds the `ReleaseFast` configuration, enabling maximum optimization and disabling assertions and debug symbols.
+
+## Tooling Dependencies
+1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter is used on all development platforms.
+2. [kcov](https://github.com/SimonKagstrom/kcov) is used for code coverage reporting, but is only supported on FreeBSD, Linux, and MacOS
+3. [curl](https://curl.se/) is a dependency of the code coverage reporting step, creating the GitHub badge containing the coverage percentage.
+4. [cloc](https://github.com/AlDanial/cloc) is used for LOC counting which is purely just for fun!
+5. zip and tar are both used for packaging releases, but these likely shipped with your OS and do not need to be manually installed.
+
+These dependencies are purely optional for users building the project from source. They can be installed either by building form source, downloading their corresponding GitHub release, or through your preferred package manager.
 
 # Correctness & Availability
-[Catch2](https://github.com/catchorg/Catch2) is used with [C++20](https://en.cppreference.com/w/cpp/20.html) to run automated CI tests on Windows (msys2), macOS (LLVM Clang), and Linux (GCC & Clang). This choice allows me to take advantage of the rich C++ ecosystem and standard library while prioritizing correctness in the C code. 
+[Catch2](https://github.com/catchorg/Catch2) is used with a custom [Zig](https://ziglang.org/) allocator to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the best-in-class testing suite provided by catch2 while making use of the undefined behavior and leak sanitizers provided by Zig and its build system.
 
-As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available.
+As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available. While releases have prebuilt binaries for a myriad of systems, I cannot verify that they all work as intended out of the box. In the event, that a release is shipped with a faulty binary, please open an issue!
 
 # Resources
 This project would not be possible without the extensive work Thorsten Ball put into his two-book series, "Writing an Interpreter and Compiler in Go". The explanations presented in these books drove this project's development at a high level and greatly enhanced my learning. If you want to check out the books for yourself and support Thorsten, check him out [here](https://store.thorstenball.com/).
