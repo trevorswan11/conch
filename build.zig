@@ -659,10 +659,8 @@ fn addPackageStep(b: *std.Build, config: struct {
     cxx_flags: []const []const u8,
     version: []const u8,
 }) !void {
-    const tar = findProgram(b, "tar") orelse return error.TarNotFound;
-    const zip = findProgram(b, "zip") orelse return error.ZipNotFound;
-
     const package_step = b.step("package", "Build the artifacts for packaging");
+
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
 
@@ -709,6 +707,16 @@ fn addPackageStep(b: *std.Build, config: struct {
         package_step.dependOn(&platform.step);
 
         if (!config.compile_only) {
+            const tar = findProgram(b, "tar");
+            const zip = findProgram(b, "zip");
+            if (zip == null or tar == null) {
+                return package_step.addError(
+                    \\Packaging cannot run without zip and tar commands
+                    \\  zip: {s}
+                    \\  tar: {s}
+                , .{ zip orelse "null", tar orelse "null" });
+            }
+
             const legal_paths: []const []const []const u8 = &.{
                 &.{"LICENSE"},
                 &.{"README.md"},
@@ -733,7 +741,7 @@ fn addPackageStep(b: *std.Build, config: struct {
                     .{package_artifact_dirname},
                 );
 
-                const zipper = b.addSystemCommand(&.{ zip, "-r" });
+                const zipper = b.addSystemCommand(&.{ zip.?, "-r" });
                 const output_zip = zipper.addOutputFileArg(zip_filename);
                 zipper.addArg(package_artifact_dirname);
                 zipper.setCwd(b.path(getPrefixRelativePath(b, uncompressed_package_dir)));
@@ -760,7 +768,7 @@ fn addPackageStep(b: *std.Build, config: struct {
                 .{package_artifact_dirname},
             );
 
-            const archiver = b.addSystemCommand(&.{ tar, "-czf" });
+            const archiver = b.addSystemCommand(&.{ tar.?, "-czf" });
             const output_tar = archiver.addOutputFileArg(tar_filename);
             archiver.addArg("-C");
             archiver.addArg(getPrefixRelativePath(b, uncompressed_package_dir));
