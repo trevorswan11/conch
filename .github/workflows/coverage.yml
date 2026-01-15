@@ -49,6 +49,7 @@ jobs:
 
             - name: Run coverage report generator
               run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   zig build cov
                   mv zig-out/coverage .
 
