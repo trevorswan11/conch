@@ -575,8 +575,12 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
         ));
 
         const coverage_dirname = CoverageParser.coverage_install_dirname;
-        kcov_command.addArg(getPrefixRelativePath(b, &.{coverage_dirname}));
+        const coverage_dir = getPrefixRelativePath(b, &.{coverage_dirname});
+        const cov_clean = b.addRemoveDirTree(b.path(coverage_dir));
+
+        kcov_command.addArg(coverage_dir);
         kcov_command.addArtifactArg(tests);
+        kcov_step.dependOn(&cov_clean.step);
         kcov_step.dependOn(&kcov_command.step);
         kcov_step.dependOn(b.getInstallStep());
 
