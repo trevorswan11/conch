@@ -2,4 +2,4 @@
 
 #include "lexer/lexer.hpp"
 
-TEST_CASE("Foo") { REQUIRE(Lexer::Foo() == 1); }
+TEST_CASE("Foo") { REQUIRE(Foo() == 1); }
