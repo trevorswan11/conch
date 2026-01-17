@@ -9,8 +9,8 @@ pub fn build(b: *std.Build) !void {
         .preferred_optimize_mode = .ReleaseFast,
     });
 
-    const cdb_gen: *CdbGenerator = .init(b);
     const flag_opts = addFlagOptions(b);
+    const cdb_gen: *CdbGenerator = .init(b);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
     try compiler_flags.appendSlice(b.allocator, &.{
@@ -343,6 +343,11 @@ const CdbGenerator = struct {
     const cdb_filename = "compile_commands.json";
     const cdb_frags_dirname = "cdb-frags";
 
+    const CdbFileInfo = struct {
+        file: []const u8,
+    };
+    const ParsedCdbFileInfo = std.json.Parsed(CdbFileInfo);
+
     const FragInfo = struct {
         name: []const u8,
         mtime: i128,
@@ -390,6 +395,17 @@ const CdbGenerator = struct {
             const stat = try dir.statFile(entry.name);
             const first_dot = std.mem.indexOf(u8, entry.name, ".") orelse return error.InvalidSourceFile;
             const base_name = entry.name[0 .. first_dot + 4];
+
+            const entry_contents = try dir.readFileAlloc(allocator, entry.name, std.math.maxInt(usize));
+            const trimmed = std.mem.trimEnd(u8, entry_contents, ",\n\r\t");
+            const parsed: ParsedCdbFileInfo = try std.json.parseFromSlice(
+                CdbFileInfo,
+                allocator,
+                trimmed,
+                .{ .ignore_unknown_fields = true },
+            );
+            const ref_path = parsed.value.file;
+            std.fs.accessAbsolute(ref_path, .{}) catch continue;
 
             const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
             if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
@@ -504,6 +520,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
         "--cppcheck-build-dir=",
         installed_cppcheck_cache_path,
     );
+    cppcheck.addArg("--check-level=exhaustive");
     cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
     cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
 
@@ -671,6 +688,7 @@ const CoverageParser = struct {
             .Exited => |code| if (code != 0) return error.CurlFailed,
             else => return error.CurlTerminatedAbnormally,
         }
+        std.log.info("Test Coverage: {s}%", .{percentage});
     }
 };
 

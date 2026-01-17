@@ -1,9 +1,13 @@
 #pragma once
 
 #include <array>
+#include <flat_map>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+template <typename Pair>
+using flat_map = std::flat_map<typename Pair::first_type, typename Pair::second_type>;
 
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
@@ -15,11 +19,7 @@ template <auto V> consteval auto enum_name() noexcept -> std::string_view {
         static_assert(before != std::string_view::npos,
                       "Enums must be marked 'enum class' or be namespaced");
 
-        constexpr auto after = func.find_last_of(']');
-        static_assert(after != std::string_view::npos,
-                      "The compiler likely changed how pretty function works");
-
-        constexpr auto name = func.substr(before + 1, after - (before + 1));
+        constexpr auto name = func.substr(before + 1, func.size() - before - 2);
         static_assert(name.size() > 0);
         return name;
     }.template operator()<decltype(V), V>();

@@ -1,3 +1,3 @@
 #include "lexer/lexer.hpp"
-
-auto Foo() -> int { return 1; }
+#include "lexer/keywords.hpp"
+#include "lexer/operators.hpp"

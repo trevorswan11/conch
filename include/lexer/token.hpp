@@ -1,15 +1,8 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string_view>
-
-enum class Base {
-    UNKNOWN     = 0,
-    BINARY      = 2,
-    OCTAL       = 8,
-    DECIMAL     = 10,
-    HEXADECIMAL = 16,
-};
 
 enum class TokenError {
     NON_STRING_TOKEN,
@@ -139,7 +132,22 @@ enum class TokenType {
     ILLEGAL,
 };
 
-auto integerTokenBase(TokenType type) -> Base;
+namespace token_type {
+enum class Base {
+    UNKNOWN     = 0,
+    BINARY      = 2,
+    OCTAL       = 8,
+    DECIMAL     = 10,
+    HEXADECIMAL = 16,
+};
+
+auto intoIntBase(TokenType type) -> Base;
+auto miscFromChar(char c) -> std::optional<TokenType>;
+auto isSignedInt(TokenType t) -> bool;
+auto isUnsignedInt(TokenType t) -> bool;
+auto isSizeInt(TokenType t) -> bool;
+auto isInt(TokenType t) -> bool;
+} // namespace token_type
 
 struct Token {
     TokenType        type;
@@ -147,5 +155,5 @@ struct Token {
     size_t           line;
     size_t           column;
 
-    auto promote() const -> std::expected<std::string, TokenError>;
+    [[nodiscard]] auto promote() const -> std::expected<std::string, TokenError>;
 };
