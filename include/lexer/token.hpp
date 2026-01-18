@@ -132,7 +132,6 @@ enum class TokenType {
     ILLEGAL,
 };
 
-namespace token_type {
 enum class Base {
     UNKNOWN     = 0,
     BINARY      = 2,
@@ -141,6 +140,7 @@ enum class Base {
     HEXADECIMAL = 16,
 };
 
+namespace token_type {
 auto intoIntBase(TokenType type) -> Base;
 auto miscFromChar(char c) -> std::optional<TokenType>;
 auto isSignedInt(TokenType t) -> bool;

@@ -9,7 +9,7 @@
 #include "lexer/token.hpp"
 
 using Keyword    = std::pair<std::string_view, TokenType>;
-using KeywordMap = flat_map<Keyword>;
+using KeywordMap = flat_map_from_pair<Keyword>;
 
 namespace keywords {
 inline constexpr Keyword FN{"fn", TokenType::FUNCTION};

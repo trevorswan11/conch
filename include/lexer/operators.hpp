@@ -10,7 +10,7 @@
 #include "lexer/token.hpp"
 
 using Operator    = std::pair<std::string_view, TokenType>;
-using OperatorMap = flat_map<Operator>;
+using OperatorMap = flat_map_from_pair<Operator>;
 
 namespace operators {
 inline constexpr Operator ASSIGN{"=", TokenType::ASSIGN};

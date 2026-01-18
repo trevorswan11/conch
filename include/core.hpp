@@ -7,7 +7,7 @@
 #include <utility>
 
 template <typename Pair>
-using flat_map = std::flat_map<typename Pair::first_type, typename Pair::second_type>;
+using flat_map_from_pair = std::flat_map<typename Pair::first_type, typename Pair::second_type>;
 
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
@@ -31,7 +31,7 @@ auto enum_name(E value) noexcept -> std::string_view {
     static_assert(std::is_enum_v<E>);
     using U = std::underlying_type_t<E>;
 
-    static constexpr auto names = [] {
+    static constexpr auto names = []() {
         std::array<std::string_view, Max - Min> arr{};
         arr.fill("UNKNOWN");
 
