@@ -1,8 +1,29 @@
+#include <cctype>
 #include <expected>
 #include <string>
 #include <utility>
 
 #include "lexer/token.hpp"
+
+auto base_idx(Base base) noexcept -> int {
+    switch (base) {
+    case Base::UNKNOWN: return -1;
+    case Base::BINARY: return 0;
+    case Base::OCTAL: return 1;
+    case Base::DECIMAL: return 2;
+    case Base::HEXADECIMAL: return 3;
+    }
+}
+
+auto digit_in_base(byte c, Base base) noexcept -> bool {
+    switch (base) {
+    case Base::BINARY: return c == '0' || c == '1';
+    case Base::OCTAL: return c >= '0' && c <= '7';
+    case Base::DECIMAL: return std::isdigit(c);
+    case Base::HEXADECIMAL: return std::isxdigit(c);
+    default: std::unreachable();
+    }
+}
 
 namespace token_type {
 auto intoIntBase(TokenType type) -> Base {
@@ -23,7 +44,7 @@ auto intoIntBase(TokenType type) -> Base {
     }
 }
 
-auto miscFromChar(char c) -> std::optional<TokenType> {
+auto miscFromChar(byte c) -> std::optional<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;

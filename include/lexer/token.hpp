@@ -4,6 +4,8 @@
 #include <optional>
 #include <string_view>
 
+#include "core.hpp"
+
 enum class TokenError {
     NON_STRING_TOKEN,
     UNEXPECTED_CHAR,
@@ -140,9 +142,12 @@ enum class Base {
     HEXADECIMAL = 16,
 };
 
+auto base_idx(Base base) noexcept -> int;
+auto digit_in_base(byte c, Base base) noexcept -> bool;
+
 namespace token_type {
 auto intoIntBase(TokenType type) -> Base;
-auto miscFromChar(char c) -> std::optional<TokenType>;
+auto miscFromChar(byte c) -> std::optional<TokenType>;
 auto isSignedInt(TokenType t) -> bool;
 auto isUnsignedInt(TokenType t) -> bool;
 auto isSizeInt(TokenType t) -> bool;

@@ -2,12 +2,16 @@
 
 #include <array>
 #include <flat_map>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
 template <typename Pair>
 using flat_map_from_pair = std::flat_map<typename Pair::first_type, typename Pair::second_type>;
+
+using byte = std::string_view::value_type;
+static_assert(std::is_same_v<std::string::value_type, byte>);
 
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
