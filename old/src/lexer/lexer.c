@@ -260,7 +260,7 @@ static inline bool is_valid_digit(char c, bool is_hex, bool is_bin, bool is_oct)
     if (is_oct) { return c >= '0' && c <= '7'; }
 
     return is_digit(c);
-}
+} 
 
 #define SET_INT_TYPE(suffix)      \
     if (has_unsigned_suffix) {    \
@@ -489,7 +489,7 @@ Token lexer_read_character_literal(Lexer* l) {
     return token_init(CHARACTER, &l->input[start], l->position - start, start_line, start_col);
 }
 
-// Reads a multiline string from the token, assuming the '//' operator has been consumed
+// Reads a comment from the token, assuming the '//' operator has been consumed
 Token lexer_read_comment(Lexer* l) {
     const size_t start      = l->position;
     const size_t start_line = l->line_no;
