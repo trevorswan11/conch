@@ -613,6 +613,7 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
             .{ .custom = coverage_dirname },
             ".gitignore",
         );
+        cov_ignore.step.dependOn(&kcov_command.step);
         kcov_step.dependOn(&cov_ignore.step);
     } else {
         try kcov_step.addError(error_msg, .{});
