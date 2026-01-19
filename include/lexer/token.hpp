@@ -1,7 +1,9 @@
 #pragma once
 
 #include <expected>
+#include <format>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "core.hpp"
@@ -146,12 +148,12 @@ auto base_idx(Base base) noexcept -> int;
 auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
-auto intoIntBase(TokenType type) -> Base;
-auto miscFromChar(byte c) -> std::optional<TokenType>;
-auto isSignedInt(TokenType t) -> bool;
-auto isUnsignedInt(TokenType t) -> bool;
-auto isSizeInt(TokenType t) -> bool;
-auto isInt(TokenType t) -> bool;
+auto intoIntBase(TokenType type) noexcept -> Base;
+auto miscFromChar(byte c) noexcept -> std::optional<TokenType>;
+auto isSignedInt(TokenType t) noexcept -> bool;
+auto isUnsignedInt(TokenType t) noexcept -> bool;
+auto isSizeInt(TokenType t) noexcept -> bool;
+auto isInt(TokenType t) noexcept -> bool;
 } // namespace token_type
 
 struct Token {
@@ -161,4 +163,18 @@ struct Token {
     size_t           column;
 
     [[nodiscard]] auto promote() const -> std::expected<std::string, TokenError>;
+
+    bool operator==(const Token& other) const noexcept {
+        return type == other.type && slice == other.slice && line == other.line &&
+               column == other.column;
+    }
+};
+
+template <> struct std::formatter<Token> : std::formatter<std::string> {
+    static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
+
+    template <typename F> auto format(const Token& t, F& ctx) const {
+        return std::formatter<std::string>::format(
+            std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line, t.column), ctx);
+    }
 };

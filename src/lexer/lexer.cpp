@@ -3,6 +3,8 @@
 #include <string_view>
 #include <utility>
 
+#include "core.hpp"
+
 #include "lexer/keywords.hpp"
 #include "lexer/lexer.hpp"
 #include "lexer/operators.hpp"
@@ -10,7 +12,7 @@
 
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
-auto Lexer::advance() -> Token {
+auto Lexer::advance() noexcept -> Token {
     skipWhitespace();
 
     const auto start_line = line_no_;
@@ -65,7 +67,6 @@ auto Lexer::advance() -> Token {
 
 auto Lexer::consume() -> std::vector<Token> {
     reset(input_);
-    readInputCharacter();
 
     std::vector<Token> tokens;
     do {
@@ -81,15 +82,14 @@ auto Lexer::skipWhitespace() noexcept -> void {
     }
 }
 
-auto Lexer::luIdent(std::string_view ident) -> TokenType {
+auto Lexer::luIdent(std::string_view ident) noexcept -> TokenType {
     return get_keyword(ident)
-        .transform([](const auto& keyword) -> TokenType { return keyword.second; })
+        .transform([](const auto& keyword) noexcept -> TokenType { return keyword.second; })
         .value_or(TokenType::IDENT);
 }
 
 auto Lexer::readInputCharacter(uint8_t repeats) noexcept -> void {
-    do {
-        repeats = repeats == 0 ? 0 : repeats - 1;
+    for (uint8_t i = 0; i <= repeats; ++i) {
         if (peek_pos_ >= input_.size()) {
             current_byte_ = '\0';
         } else {
@@ -105,10 +105,10 @@ auto Lexer::readInputCharacter(uint8_t repeats) noexcept -> void {
 
         pos_ = peek_pos_;
         peek_pos_ += 1;
-    } while (repeats > 0);
+    }
 }
 
-auto Lexer::readOperator() const -> std::optional<Token> {
+auto Lexer::readOperator() const noexcept -> std::optional<Token> {
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
 
@@ -143,7 +143,7 @@ auto Lexer::readOperator() const -> std::optional<Token> {
     };
 }
 
-auto Lexer::readIdent() -> std::string_view {
+auto Lexer::readIdent() noexcept -> std::string_view {
     const auto start = pos_;
 
     auto passed_first = false;
@@ -162,7 +162,7 @@ enum class NumberSuffix {
     SIZE     = 2,
 };
 
-auto Lexer::readNumber() -> Token {
+auto Lexer::readNumber() noexcept -> Token {
     const auto start           = pos_;
     const auto start_line      = line_no_;
     const auto start_col       = col_no_;
@@ -324,7 +324,7 @@ auto Lexer::readEscape() noexcept -> byte {
     }
 }
 
-auto Lexer::readString() -> Token {
+auto Lexer::readString() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
@@ -354,7 +354,7 @@ auto Lexer::readString() -> Token {
 }
 
 // Reads a multiline string from the token, assuming the '\\' operator has been consumed
-auto Lexer::readMultilineString() -> Token {
+auto Lexer::readMultilineString() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
@@ -405,7 +405,7 @@ auto Lexer::readMultilineString() -> Token {
 // Reads a byte literal returning an illegal token for malformed literals.
 //
 // Assumes that the surrounding single quotes have not been consumed.
-auto Lexer::readByteLiteral() -> Token {
+auto Lexer::readByteLiteral() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
@@ -458,7 +458,7 @@ auto Lexer::readByteLiteral() -> Token {
 }
 
 // Reads a comment from the token, assuming the '//' operator has been consumed
-auto Lexer::readComment() -> Token {
+auto Lexer::readComment() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
