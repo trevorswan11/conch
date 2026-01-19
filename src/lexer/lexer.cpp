@@ -38,8 +38,8 @@ auto Lexer::advance() -> Token {
 
     const auto maybe_misc_token_type = token_type::miscFromChar(current_byte_);
     if (maybe_misc_token_type) {
-        token.type  = *maybe_misc_token_type;
         token.slice = input_.substr(pos_, 1);
+        token.type  = *maybe_misc_token_type;
     } else if (std::isalpha(current_byte_)) {
         token.slice = readIdent();
         token.type  = luIdent(token.slice);
@@ -82,8 +82,9 @@ auto Lexer::skipWhitespace() noexcept -> void {
 }
 
 auto Lexer::luIdent(std::string_view ident) -> TokenType {
-    const auto it = ALL_KEYWORDS.find(ident);
-    return it == ALL_KEYWORDS.end() ? TokenType::IDENT : it->second;
+    return get_keyword(ident)
+        .transform([](const auto& keyword) -> TokenType { return keyword.second; })
+        .value_or(TokenType::IDENT);
 }
 
 auto Lexer::readInputCharacter(uint8_t repeats) noexcept -> void {
@@ -124,10 +125,10 @@ auto Lexer::readOperator() const -> std::optional<Token> {
     auto   matched_type = TokenType::ILLEGAL;
 
     // Try extending from length 1 up to the max operator size
-    for (size_t len = 1; len <= operators::MAX_OPERATOR_LEN && pos_ + len <= input_.size(); len++) {
-        const auto it = ALL_OPERATORS.find(input_.substr(pos_, len));
-        if (it != ALL_OPERATORS.end()) {
-            matched_type = it->second;
+    for (size_t len = 1; len <= MAX_OPERATOR_LEN && pos_ + len <= input_.size(); len++) {
+        const auto op = get_operator(input_.substr(pos_, len));
+        if (op) {
+            matched_type = op->second;
             max_len      = len;
         }
     }

@@ -1,21 +1,17 @@
 #pragma once
 
 #include <array>
-#include <flat_map>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
-
-template <typename Pair>
-using flat_map_from_pair = std::flat_map<typename Pair::first_type, typename Pair::second_type>;
 
 using byte = std::string_view::value_type;
 static_assert(std::is_same_v<std::string::value_type, byte>);
 
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
-    return []<typename E, E EV>() {
+    return []<typename E, E EV>() -> std::string_view {
         static_assert(std::is_enum_v<E>);
         constexpr std::string_view func{__PRETTY_FUNCTION__};
 
@@ -34,9 +30,10 @@ template <typename E, int Min = 0, int Max = 256>
 auto enum_name(E value) noexcept -> std::string_view {
     static_assert(std::is_enum_v<E>);
     using U = std::underlying_type_t<E>;
+    using A = std::array<std::string_view, Max - Min>;
 
-    static constexpr auto names = []() {
-        std::array<std::string_view, Max - Min> arr{};
+    static constexpr auto names = []() -> A {
+        A arr{};
         arr.fill("UNKNOWN");
 
         [&arr]<U... Is>(std::integer_sequence<U, Is...>) {

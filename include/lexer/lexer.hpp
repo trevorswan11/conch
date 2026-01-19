@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string_view>
-#include <vector>
 #include <cstdint>
 #include <optional>
+#include <string_view>
+#include <vector>
 
 #include "lexer/token.hpp"
 
@@ -12,16 +12,14 @@
 class Lexer {
   public:
     Lexer() noexcept = default;
-    explicit Lexer(std::string_view input) noexcept : input_{input} {
-        readInputCharacter();
-    }
+    explicit Lexer(std::string_view input) noexcept : input_{input} { readInputCharacter(); }
 
     auto reset(std::string_view input = {}) noexcept -> void;
     auto advance() -> Token;
     auto consume() -> std::vector<Token>;
 
   private:
-    auto skipWhitespace() noexcept -> void;
+    auto        skipWhitespace() noexcept -> void;
     static auto luIdent(std::string_view ident) -> TokenType;
 
     auto readInputCharacter(uint8_t repeats = 0) noexcept -> void;

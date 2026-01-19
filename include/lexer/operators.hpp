@@ -2,63 +2,62 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <string_view>
 #include <utility>
 
-#include "core.hpp"
-
 #include "lexer/token.hpp"
 
-using Operator    = std::pair<std::string_view, TokenType>;
-using OperatorMap = flat_map_from_pair<Operator>;
+using Operator = std::pair<std::string_view, TokenType>;
 
 namespace operators {
-inline constexpr Operator ASSIGN{"=", TokenType::ASSIGN};
-inline constexpr Operator WALRUS{":=", TokenType::WALRUS};
-inline constexpr Operator PLUS{"+", TokenType::PLUS};
-inline constexpr Operator PLUS_ASSIGN{"+=", TokenType::PLUS_ASSIGN};
-inline constexpr Operator MINUS{"-", TokenType::MINUS};
-inline constexpr Operator MINUS_ASSIGN{"-=", TokenType::MINUS_ASSIGN};
-inline constexpr Operator STAR{"*", TokenType::STAR};
-inline constexpr Operator STAR_ASSIGN{"*=", TokenType::STAR_ASSIGN};
-inline constexpr Operator STAR_STAR{"**", TokenType::STAR_STAR};
-inline constexpr Operator SLASH{"/", TokenType::SLASH};
-inline constexpr Operator SLASH_ASSIGN{"/=", TokenType::SLASH_ASSIGN};
-inline constexpr Operator PERCENT{"%", TokenType::PERCENT};
-inline constexpr Operator PERCENT_ASSIGN{"%=", TokenType::PERCENT_ASSIGN};
-inline constexpr Operator BANG{"!", TokenType::BANG};
-inline constexpr Operator WHAT{"?", TokenType::WHAT};
+constexpr Operator ASSIGN{"=", TokenType::ASSIGN};
+constexpr Operator WALRUS{":=", TokenType::WALRUS};
+constexpr Operator PLUS{"+", TokenType::PLUS};
+constexpr Operator PLUS_ASSIGN{"+=", TokenType::PLUS_ASSIGN};
+constexpr Operator MINUS{"-", TokenType::MINUS};
+constexpr Operator MINUS_ASSIGN{"-=", TokenType::MINUS_ASSIGN};
+constexpr Operator STAR{"*", TokenType::STAR};
+constexpr Operator STAR_ASSIGN{"*=", TokenType::STAR_ASSIGN};
+constexpr Operator STAR_STAR{"**", TokenType::STAR_STAR};
+constexpr Operator SLASH{"/", TokenType::SLASH};
+constexpr Operator SLASH_ASSIGN{"/=", TokenType::SLASH_ASSIGN};
+constexpr Operator PERCENT{"%", TokenType::PERCENT};
+constexpr Operator PERCENT_ASSIGN{"%=", TokenType::PERCENT_ASSIGN};
+constexpr Operator BANG{"!", TokenType::BANG};
+constexpr Operator WHAT{"?", TokenType::WHAT};
 
-inline constexpr Operator AND{"&", TokenType::AND};
-inline constexpr Operator AND_ASSIGN{"&=", TokenType::AND_ASSIGN};
-inline constexpr Operator OR{"|", TokenType::OR};
-inline constexpr Operator OR_ASSIGN{"|=", TokenType::OR_ASSIGN};
-inline constexpr Operator SHL{"<<", TokenType::SHL};
-inline constexpr Operator SHL_ASSIGN{"<<=", TokenType::SHL_ASSIGN};
-inline constexpr Operator SHR{">>", TokenType::SHR};
-inline constexpr Operator SHR_ASSIGN{">>=", TokenType::SHR_ASSIGN};
-inline constexpr Operator NOT{"~", TokenType::NOT};
-inline constexpr Operator NOT_ASSIGN{"~=", TokenType::NOT_ASSIGN};
-inline constexpr Operator XOR{"^", TokenType::XOR};
-inline constexpr Operator XOR_ASSIGN{"^=", TokenType::XOR_ASSIGN};
+constexpr Operator AND{"&", TokenType::AND};
+constexpr Operator AND_ASSIGN{"&=", TokenType::AND_ASSIGN};
+constexpr Operator OR{"|", TokenType::OR};
+constexpr Operator OR_ASSIGN{"|=", TokenType::OR_ASSIGN};
+constexpr Operator SHL{"<<", TokenType::SHL};
+constexpr Operator SHL_ASSIGN{"<<=", TokenType::SHL_ASSIGN};
+constexpr Operator SHR{">>", TokenType::SHR};
+constexpr Operator SHR_ASSIGN{">>=", TokenType::SHR_ASSIGN};
+constexpr Operator NOT{"~", TokenType::NOT};
+constexpr Operator NOT_ASSIGN{"~=", TokenType::NOT_ASSIGN};
+constexpr Operator XOR{"^", TokenType::XOR};
+constexpr Operator XOR_ASSIGN{"^=", TokenType::XOR_ASSIGN};
 
-inline constexpr Operator LT{"<", TokenType::LT};
-inline constexpr Operator LTEQ{"<=", TokenType::LTEQ};
-inline constexpr Operator GT{">", TokenType::GT};
-inline constexpr Operator GTEQ{">=", TokenType::GTEQ};
-inline constexpr Operator EQ{"==", TokenType::EQ};
-inline constexpr Operator NEQ{"!=", TokenType::NEQ};
+constexpr Operator LT{"<", TokenType::LT};
+constexpr Operator LTEQ{"<=", TokenType::LTEQ};
+constexpr Operator GT{">", TokenType::GT};
+constexpr Operator GTEQ{">=", TokenType::GTEQ};
+constexpr Operator EQ{"==", TokenType::EQ};
+constexpr Operator NEQ{"!=", TokenType::NEQ};
 
-inline constexpr Operator COLON_COLON{"::", TokenType::COLON_COLON};
-inline constexpr Operator DOT{".", TokenType::DOT};
-inline constexpr Operator DOT_DOT{"..", TokenType::DOT_DOT};
-inline constexpr Operator DOT_DOT_EQ{"..=", TokenType::DOT_DOT_EQ};
-inline constexpr Operator FAT_ARROW{"=>", TokenType::FAT_ARROW};
-inline constexpr Operator COMMENT{"//", TokenType::COMMENT};
-inline constexpr Operator MULTILINE_STRING{"\\\\", TokenType::MULTILINE_STRING};
-inline constexpr Operator REF{"ref", TokenType::REF};
+constexpr Operator COLON_COLON{"::", TokenType::COLON_COLON};
+constexpr Operator DOT{".", TokenType::DOT};
+constexpr Operator DOT_DOT{"..", TokenType::DOT_DOT};
+constexpr Operator DOT_DOT_EQ{"..=", TokenType::DOT_DOT_EQ};
+constexpr Operator FAT_ARROW{"=>", TokenType::FAT_ARROW};
+constexpr Operator COMMENT{"//", TokenType::COMMENT};
+constexpr Operator MULTILINE_STRING{"\\\\", TokenType::MULTILINE_STRING};
+constexpr Operator REF{"ref", TokenType::REF};
+} // namespace operators
 
-inline constexpr auto RAW_OPERATORS = std::array{
+constexpr auto ALL_OPERATORS = std::array{
     operators::ASSIGN,
     operators::WALRUS,
     operators::PLUS,
@@ -102,12 +101,13 @@ inline constexpr auto RAW_OPERATORS = std::array{
     operators::REF,
 };
 
-inline constexpr auto MAX_OPERATOR_LEN = []() {
-    return std::ranges::max_element(RAW_OPERATORS,
+constexpr auto MAX_OPERATOR_LEN = []() -> size_t {
+    return std::ranges::max_element(ALL_OPERATORS,
                                     [](auto a, auto b) { return a.first.size() < b.first.size(); })
         ->first.size();
 }();
-} // namespace operators
 
-inline const OperatorMap ALL_OPERATORS{operators::RAW_OPERATORS.begin(),
-                                       operators::RAW_OPERATORS.end()};
+constexpr auto get_operator(std::string_view sv) -> std::optional<Operator> {
+    const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
+    return it == ALL_OPERATORS.end() ? std::nullopt : std::optional{*it};
+}

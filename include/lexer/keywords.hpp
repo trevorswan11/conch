@@ -1,56 +1,56 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <optional>
 #include <string_view>
 #include <utility>
 
-#include "core.hpp"
-
 #include "lexer/token.hpp"
 
-using Keyword    = std::pair<std::string_view, TokenType>;
-using KeywordMap = flat_map_from_pair<Keyword>;
+using Keyword = std::pair<std::string_view, TokenType>;
 
 namespace keywords {
-inline constexpr Keyword FN{"fn", TokenType::FUNCTION};
-inline constexpr Keyword VAR{"var", TokenType::VAR};
-inline constexpr Keyword CONST{"const", TokenType::CONST};
-inline constexpr Keyword STRUCT{"struct", TokenType::STRUCT};
-inline constexpr Keyword ENUM{"enum", TokenType::ENUM};
-inline constexpr Keyword TRUE{"true", TokenType::TRUE};
-inline constexpr Keyword FALSE{"false", TokenType::FALSE};
-inline constexpr Keyword BOOLEAN_AND{"and", TokenType::BOOLEAN_AND};
-inline constexpr Keyword BOOLEAN_OR{"or", TokenType::BOOLEAN_OR};
-inline constexpr Keyword IS{"is", TokenType::IS};
-inline constexpr Keyword IN{"in", TokenType::IN};
-inline constexpr Keyword IF{"if", TokenType::IF};
-inline constexpr Keyword ELSE{"else", TokenType::ELSE};
-inline constexpr Keyword ORELSE{"orelse", TokenType::ORELSE};
-inline constexpr Keyword DO{"do", TokenType::DO};
-inline constexpr Keyword MATCH{"match", TokenType::MATCH};
-inline constexpr Keyword RETURN{"return", TokenType::RETURN};
-inline constexpr Keyword LOOP{"loop", TokenType::LOOP};
-inline constexpr Keyword FOR{"for", TokenType::FOR};
-inline constexpr Keyword WHILE{"while", TokenType::WHILE};
-inline constexpr Keyword CONTINUE{"continue", TokenType::CONTINUE};
-inline constexpr Keyword BREAK{"break", TokenType::BREAK};
-inline constexpr Keyword NIL{"nil", TokenType::NIL};
-inline constexpr Keyword TYPEOF{"typeof", TokenType::TYPEOF};
-inline constexpr Keyword IMPL{"impl", TokenType::IMPL};
-inline constexpr Keyword IMPORT{"import", TokenType::IMPORT};
-inline constexpr Keyword INT{"int", TokenType::INT_TYPE};
-inline constexpr Keyword UINT{"uint", TokenType::UINT_TYPE};
-inline constexpr Keyword SIZE{"size", TokenType::SIZE_TYPE};
-inline constexpr Keyword FLOAT{"float", TokenType::FLOAT_TYPE};
-inline constexpr Keyword BYTE{"byte", TokenType::BYTE_TYPE};
-inline constexpr Keyword STRING{"string", TokenType::STRING_TYPE};
-inline constexpr Keyword BOOL{"bool", TokenType::BOOL_TYPE};
-inline constexpr Keyword VOID{"void", TokenType::VOID_TYPE};
-inline constexpr Keyword TYPE{"type", TokenType::TYPE};
-inline constexpr Keyword WITH{"with", TokenType::WITH};
-inline constexpr Keyword AS{"as", TokenType::AS};
+constexpr Keyword FN{"fn", TokenType::FUNCTION};
+constexpr Keyword VAR{"var", TokenType::VAR};
+constexpr Keyword CONST{"const", TokenType::CONST};
+constexpr Keyword STRUCT{"struct", TokenType::STRUCT};
+constexpr Keyword ENUM{"enum", TokenType::ENUM};
+constexpr Keyword TRUE{"true", TokenType::TRUE};
+constexpr Keyword FALSE{"false", TokenType::FALSE};
+constexpr Keyword BOOLEAN_AND{"and", TokenType::BOOLEAN_AND};
+constexpr Keyword BOOLEAN_OR{"or", TokenType::BOOLEAN_OR};
+constexpr Keyword IS{"is", TokenType::IS};
+constexpr Keyword IN{"in", TokenType::IN};
+constexpr Keyword IF{"if", TokenType::IF};
+constexpr Keyword ELSE{"else", TokenType::ELSE};
+constexpr Keyword ORELSE{"orelse", TokenType::ORELSE};
+constexpr Keyword DO{"do", TokenType::DO};
+constexpr Keyword MATCH{"match", TokenType::MATCH};
+constexpr Keyword RETURN{"return", TokenType::RETURN};
+constexpr Keyword LOOP{"loop", TokenType::LOOP};
+constexpr Keyword FOR{"for", TokenType::FOR};
+constexpr Keyword WHILE{"while", TokenType::WHILE};
+constexpr Keyword CONTINUE{"continue", TokenType::CONTINUE};
+constexpr Keyword BREAK{"break", TokenType::BREAK};
+constexpr Keyword NIL{"nil", TokenType::NIL};
+constexpr Keyword TYPEOF{"typeof", TokenType::TYPEOF};
+constexpr Keyword IMPL{"impl", TokenType::IMPL};
+constexpr Keyword IMPORT{"import", TokenType::IMPORT};
+constexpr Keyword INT{"int", TokenType::INT_TYPE};
+constexpr Keyword UINT{"uint", TokenType::UINT_TYPE};
+constexpr Keyword SIZE{"size", TokenType::SIZE_TYPE};
+constexpr Keyword FLOAT{"float", TokenType::FLOAT_TYPE};
+constexpr Keyword BYTE{"byte", TokenType::BYTE_TYPE};
+constexpr Keyword STRING{"string", TokenType::STRING_TYPE};
+constexpr Keyword BOOL{"bool", TokenType::BOOL_TYPE};
+constexpr Keyword VOID{"void", TokenType::VOID_TYPE};
+constexpr Keyword TYPE{"type", TokenType::TYPE};
+constexpr Keyword WITH{"with", TokenType::WITH};
+constexpr Keyword AS{"as", TokenType::AS};
+} // namespace keywords
 
-inline constexpr auto RAW_KEYWORDS = std::array{
+constexpr auto ALL_KEYWORDS = std::array{
     keywords::FN,         keywords::VAR,    keywords::CONST, keywords::STRUCT,
     keywords::ENUM,       keywords::TRUE,   keywords::FALSE, keywords::BOOLEAN_AND,
     keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,    keywords::IF,
@@ -62,6 +62,8 @@ inline constexpr auto RAW_KEYWORDS = std::array{
     keywords::BOOL,       keywords::VOID,   keywords::TYPE,  keywords::WITH,
     keywords::AS,
 };
-} // namespace keywords
 
-inline const KeywordMap ALL_KEYWORDS{keywords::RAW_KEYWORDS.begin(), keywords::RAW_KEYWORDS.end()};
+constexpr auto get_keyword(std::string_view sv) -> std::optional<Keyword> {
+    const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
+    return it == ALL_KEYWORDS.end() ? std::nullopt : std::optional{*it};
+}
