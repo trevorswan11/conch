@@ -553,12 +553,14 @@ fn addClocStep(b: *std.Build, config: struct {
     cloc: []const u8,
 }) !void {
     const cloc = b.addSystemCommand(&.{config.cloc});
+    cloc.addArgs(&.{ "--timeout", "0" });
     cloc.addFileArg(b.path("src"));
     cloc.addFileArg(b.path("include"));
     const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
     cloc_step.dependOn(&cloc.step);
 
     const cloc_all = b.addSystemCommand(&.{config.cloc});
+    cloc_all.addArgs(&.{ "--timeout", "0" });
     cloc_all.addArgs(config.tooling_sources);
     cloc_all.addFileArg(b.path("build.zig"));
     const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
