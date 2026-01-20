@@ -16,3 +16,7 @@ class Node {
     Node(const Token& tok) : start_token_{tok} {}
     Token start_token_;
 };
+
+class Expression : public Node {};
+
+class Statement : public Node {};

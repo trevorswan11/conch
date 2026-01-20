@@ -2,32 +2,39 @@
 #include <format>
 
 #include "parser/parser.hpp"
+#include "parser/precedence.hpp"
 
 #include "lexer/token.hpp"
-#include "nodes/statements/statement.hpp"
-#include "parser/precedence.hpp"
+
+#include "nodes/node.hpp"
 
 auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{input}; }
 
-auto Parser::consume() -> std::variant<std::vector<std::unique_ptr<Node>>> {
+auto Parser::consume() -> std::pair<AST, std::span<const ParserDiagnostic>> {
     reset(input_);
-    std::vector<std::unique_ptr<Node>> ast;
-    
+    AST ast;
+
     while (!currentTokenIs(TokenType::END)) {
         if (!currentTokenIs(TokenType::COMMENT)) {
-            
+            auto stmt = parseStatement();
+            if (stmt) {
+                ast.emplace_back(std::move(*stmt));
+            } else {
+                diagnostics_.emplace_back(stmt.error());
+            }
         }
         advance();
     }
+
+    return {std::move(ast), diagnostics_};
 }
 
-auto Parser::pushDiagnostic(TokenType expected, const Token& actual) -> void {
-    diagnostics_.emplace_back(Diagnostic{
-        .message =
-            std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
-        .line   = actual.line,
-        .column = actual.column,
-    });
+auto Parser::tokenMismatchError(TokenType expected, const Token& actual) -> void {
+    diagnostics_.emplace_back(
+        std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
+        ParserError::UNEXPECTED_TOKEN,
+        actual.line,
+        actual.column);
 }
 
 auto Parser::expectCurrent(TokenType expected) -> Expected<std::monostate, ParserError> {
@@ -70,6 +77,7 @@ auto Parser::advance(uint8_t n) noexcept -> const Token& {
     return current_token_;
 }
 
-[[nodiscard]] auto Parser::parseStatement() -> std::unique_ptr<Statement> {
+[[nodiscard]] auto Parser::parseStatement()
+    -> Expected<std::unique_ptr<Statement>, ParserDiagnostic> {
     return nullptr;
 }

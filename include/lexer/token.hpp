@@ -161,7 +161,7 @@ struct Token {
     size_t           line;
     size_t           column;
 
-    [[nodiscard]] auto promote() const -> Expected<std::string, TokenError>;
+    [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
     auto               primitive() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {

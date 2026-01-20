@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <cctype>
-#include <expected>
 #include <string>
 #include <utility>
 
+#include "core.hpp"
 #include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
@@ -79,14 +79,16 @@ auto isInt(TokenType t) noexcept -> bool {
 }
 } // namespace token_type
 
-auto Token::promote() const -> Expected<std::string, TokenError> {
+auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
     if (type != TokenType::STRING && type != TokenType::MULTILINE_STRING) {
-        return Unexpected{TokenError::NON_STRING_TOKEN};
+        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, line, column}};
     }
 
     // Here we can just trim off the start and finish of the string
     if (type == TokenType::STRING) {
-        if (slice.size() < 2) { return Unexpected{TokenError::UNEXPECTED_CHAR}; }
+        if (slice.size() < 2) {
+            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, line, column}};
+        }
         return std::string{slice.begin() + 1, slice.end() - 1};
     }
 
