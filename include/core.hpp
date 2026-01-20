@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <expected>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -8,6 +9,9 @@
 
 using byte = std::string_view::value_type;
 static_assert(std::is_same_v<std::string::value_type, byte>);
+
+template <typename T, typename E> using Expected = std::__1::expected<T, E>;
+template <typename E> using Unexpected           = std::__1::unexpected<E>;
 
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
@@ -46,3 +50,9 @@ auto enum_name(E value) noexcept -> std::string_view {
     const U idx = static_cast<U>(value);
     return (idx < Min || idx >= Max) ? "UNKNOWN" : names[idx - Min];
 }
+
+struct Diagnostic {
+    std::string message;
+    size_t      line;
+    size_t      column;
+};

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <expected>
 #include <format>
 #include <optional>
 #include <string>
@@ -162,9 +161,10 @@ struct Token {
     size_t           line;
     size_t           column;
 
-    [[nodiscard]] auto promote() const -> std::expected<std::string, TokenError>;
+    [[nodiscard]] auto promote() const -> Expected<std::string, TokenError>;
+    auto               primitive() const noexcept -> bool;
 
-    bool operator==(const Token& other) const noexcept {
+    auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && line == other.line &&
                column == other.column;
     }

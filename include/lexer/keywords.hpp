@@ -63,7 +63,18 @@ constexpr auto ALL_KEYWORDS = std::array{
     keywords::AS,
 };
 
-constexpr auto get_keyword(std::string_view sv) -> std::optional<Keyword> {
+constexpr auto get_keyword(std::string_view sv) noexcept -> std::optional<Keyword> {
     const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
     return it == ALL_KEYWORDS.end() ? std::nullopt : std::optional{*it};
 }
+
+constexpr auto ALL_PRIMITIVES = std::array{
+    keywords::INT.second,
+    keywords::UINT.second,
+    keywords::SIZE.second,
+    keywords::FLOAT.second,
+    keywords::BYTE.second,
+    keywords::STRING.second,
+    keywords::BOOL.second,
+    keywords::VOID.second,
+};

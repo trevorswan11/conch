@@ -88,8 +88,8 @@ auto Lexer::luIdent(std::string_view ident) noexcept -> TokenType {
         .value_or(TokenType::IDENT);
 }
 
-auto Lexer::readInputCharacter(uint8_t repeats) noexcept -> void {
-    for (uint8_t i = 0; i <= repeats; ++i) {
+auto Lexer::readInputCharacter(uint8_t n) noexcept -> void {
+    for (uint8_t i = 0; i < n; ++i) {
         if (peek_pos_ >= input_.size()) {
             current_byte_ = '\0';
         } else {
@@ -175,13 +175,13 @@ auto Lexer::readNumber() noexcept -> Token {
         const auto next = input_[peek_pos_];
         if (next == 'x' || next == 'X') {
             base = Base::HEXADECIMAL;
-            readInputCharacter(1);
+            readInputCharacter(2);
         } else if (next == 'b' || next == 'B') {
             base = Base::BINARY;
-            readInputCharacter(1);
+            readInputCharacter(2);
         } else if (next == 'o' || next == 'O') {
             base = Base::OCTAL;
-            readInputCharacter(1);
+            readInputCharacter(2);
         }
     }
 
@@ -391,7 +391,7 @@ auto Lexer::readMultilineString() noexcept -> Token {
         }
 
         // consume the next "\\" line continuation
-        readInputCharacter(1);
+        readInputCharacter(2);
     }
 
     return {

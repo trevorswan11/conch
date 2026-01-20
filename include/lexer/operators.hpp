@@ -101,13 +101,11 @@ constexpr auto ALL_OPERATORS = std::array{
     operators::REF,
 };
 
-constexpr auto MAX_OPERATOR_LEN = []() -> size_t {
-    return std::ranges::max_element(ALL_OPERATORS,
-                                    [](auto a, auto b) { return a.first.size() < b.first.size(); })
-        ->first.size();
-}();
+constexpr auto MAX_OPERATOR_LEN = std::ranges::max_element(ALL_OPERATORS, [](auto a, auto b) {
+                                      return a.first.size() < b.first.size();
+                                  })->first.size();
 
-constexpr auto get_operator(std::string_view sv) -> std::optional<Operator> {
+constexpr auto get_operator(std::string_view sv) noexcept -> std::optional<Operator> {
     const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
     return it == ALL_OPERATORS.end() ? std::nullopt : std::optional{*it};
 }

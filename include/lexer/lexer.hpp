@@ -22,7 +22,7 @@ class Lexer {
     auto        skipWhitespace() noexcept -> void;
     static auto luIdent(std::string_view ident) noexcept -> TokenType;
 
-    auto readInputCharacter(uint8_t repeats = 0) noexcept -> void;
+    auto readInputCharacter(uint8_t n = 1) noexcept -> void;
     auto readOperator() const noexcept -> std::optional<Token>;
     auto readIdent() noexcept -> std::string_view;
     auto readNumber() noexcept -> Token;
