@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sstream>
+#include <string>
 
 #include "lexer/token.hpp"
 
@@ -9,7 +9,7 @@ class Node {
     Node()          = delete;
     virtual ~Node() = 0;
 
-    virtual auto reconstruct(std::ostringstream& oss) -> void = 0;
+    virtual auto stringify() const -> std::string = 0;
     // virtual auto analyze() -> void                            = 0;
 
   protected:
