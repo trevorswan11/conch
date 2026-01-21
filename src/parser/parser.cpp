@@ -1,4 +1,3 @@
-#include <expected>
 #include <format>
 
 #include "parser/parser.hpp"
@@ -6,7 +5,7 @@
 
 #include "lexer/token.hpp"
 
-#include "nodes/node.hpp"
+#include "ast/node.hpp"
 
 auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{input}; }
 
@@ -78,6 +77,6 @@ auto Parser::advance(uint8_t n) noexcept -> const Token& {
 }
 
 [[nodiscard]] auto Parser::parseStatement()
-    -> Expected<std::unique_ptr<Statement>, ParserDiagnostic> {
+    -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic> {
     return nullptr;
 }

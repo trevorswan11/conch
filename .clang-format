@@ -22,3 +22,6 @@ AlwaysBreakAfterReturnType: None
 InsertNewlineAtEOF: true
 AlignConsecutiveBitFields: true
 IndentExternBlock: Indent
+WrapNamespaceBodyWithEmptyLines: Always
+FixNamespaceComments: true
+ShortNamespaceLines: 0

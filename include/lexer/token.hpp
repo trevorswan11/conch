@@ -147,12 +147,14 @@ auto base_idx(Base base) noexcept -> int;
 auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
+
 auto intoIntBase(TokenType type) noexcept -> Base;
 auto miscFromChar(byte c) noexcept -> std::optional<TokenType>;
 auto isSignedInt(TokenType t) noexcept -> bool;
 auto isUnsignedInt(TokenType t) noexcept -> bool;
 auto isSizeInt(TokenType t) noexcept -> bool;
 auto isInt(TokenType t) noexcept -> bool;
+
 } // namespace token_type
 
 struct Token {

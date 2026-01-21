@@ -13,14 +13,18 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
+namespace ast {
+
 class Node;
 class Statement;
+
+} // namespace ast
 
 enum class ParserError {
     UNEXPECTED_TOKEN,
 };
 
-using AST              = std::vector<std::unique_ptr<Node>>;
+using AST              = std::vector<std::unique_ptr<ast::Node>>;
 using ParserDiagnostic = Diagnostic<ParserError>;
 
 class Parser {
@@ -48,7 +52,7 @@ class Parser {
 
     auto tokenMismatchError(TokenType expected, const Token& actual) -> void;
 
-    [[nodiscard]] auto parseStatement() -> Expected<std::unique_ptr<Statement>, ParserDiagnostic>;
+    [[nodiscard]] auto parseStatement() -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic>;
 
   private:
     std::string_view input_;

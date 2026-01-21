@@ -11,6 +11,7 @@
 using Operator = std::pair<std::string_view, TokenType>;
 
 namespace operators {
+
 constexpr Operator ASSIGN{"=", TokenType::ASSIGN};
 constexpr Operator WALRUS{":=", TokenType::WALRUS};
 constexpr Operator PLUS{"+", TokenType::PLUS};
@@ -55,6 +56,7 @@ constexpr Operator FAT_ARROW{"=>", TokenType::FAT_ARROW};
 constexpr Operator COMMENT{"//", TokenType::COMMENT};
 constexpr Operator MULTILINE_STRING{"\\\\", TokenType::MULTILINE_STRING};
 constexpr Operator REF{"ref", TokenType::REF};
+
 } // namespace operators
 
 constexpr auto ALL_OPERATORS = std::array{

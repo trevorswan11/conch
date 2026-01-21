@@ -28,6 +28,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 }
 
 namespace token_type {
+
 auto intoIntBase(TokenType type) noexcept -> Base {
     switch (type) {
     case TokenType::INT_2:
@@ -77,6 +78,7 @@ auto isSizeInt(TokenType t) noexcept -> bool {
 auto isInt(TokenType t) noexcept -> bool {
     return isSignedInt(t) || isUnsignedInt(t) || isSizeInt(t);
 }
+
 } // namespace token_type
 
 auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
