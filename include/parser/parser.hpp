@@ -52,7 +52,8 @@ class Parser {
 
     auto tokenMismatchError(TokenType expected, const Token& actual) -> void;
 
-    [[nodiscard]] auto parseStatement() -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic>;
+    [[nodiscard]] auto parseStatement()
+        -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic>;
 
   private:
     std::string_view input_;

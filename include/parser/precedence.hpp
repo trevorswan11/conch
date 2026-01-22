@@ -17,7 +17,7 @@ enum class Precedence {
     PREFIX,
     RANGE,
     ASSIGNMENT,
-    NAMESPACE,
+    SCOPE_RESOLUTION,
     CALL_IDX,
 };
 
@@ -61,7 +61,8 @@ constexpr auto ALL_BINDINGS = std::to_array<Binding>({
     {TokenType::SHR_ASSIGN, Precedence::ASSIGNMENT},
     {TokenType::NOT_ASSIGN, Precedence::ASSIGNMENT},
     {TokenType::XOR_ASSIGN, Precedence::ASSIGNMENT},
-    {TokenType::COLON_COLON, Precedence::NAMESPACE},
+    {TokenType::DOT, Precedence::SCOPE_RESOLUTION},
+    {TokenType::COLON_COLON, Precedence::SCOPE_RESOLUTION},
     {TokenType::ORELSE, Precedence::ASSIGNMENT},
 });
 

@@ -15,35 +15,27 @@ namespace ast {
 
 class IdentifierExpression;
 class TypeExpression;
-class StructExpression;
-class EnumExpression;
-class ArrayExpression;
+class FunctionExpression;
 
 using ExplicitIdentType    = std::unique_ptr<IdentifierExpression>;
 using ExplicitReferredType = std::unique_ptr<Expression>;
-using ExplicitStructType   = std::unique_ptr<StructExpression>;
-using ExplicitEnumType     = std::unique_ptr<EnumExpression>;
-
-struct ExplicitFunctionType {
-    // std::vector<Parameter> parameters;
-    std::unique_ptr<TypeExpression> return_type;
-};
+using ExplicitFunctionType = std::unique_ptr<FunctionExpression>;
 
 struct ExplicitArrayType {
     std::vector<size_t>             dimensions;
     std::unique_ptr<TypeExpression> inner_type;
 };
 
+enum class ExplicitTypeConstraint {
+    PRIMITIVE,
+    GENERIC_TYPE,
+};
+
 struct ExplicitType {
-    std::variant<ExplicitIdentType,
-                 ExplicitReferredType,
-                 ExplicitStructType,
-                 ExplicitEnumType,
-                 ExplicitFunctionType,
-                 ExplicitArrayType>
-         type;
-    bool nullable;
-    bool primitive;
+    std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>
+                                          type;
+    bool                                  nullable;
+    std::optional<ExplicitTypeConstraint> constraint{};
 };
 
 class TypeExpression : public Expression {

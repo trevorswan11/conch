@@ -100,8 +100,7 @@ class NilExpression : public PrimitiveExpression<std::monostate> {
 
     auto accept(Visitor& v) -> void override;
 
-    static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
+    static auto parse(Parser& parser) -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
 };
 
 } // namespace ast
