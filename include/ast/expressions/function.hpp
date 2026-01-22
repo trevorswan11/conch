@@ -28,8 +28,9 @@ class FunctionExpression : public Expression {
                                 std::vector<FunctionParameter>                 parameters,
                                 std::unique_ptr<TypeExpression>                return_typ,
                                 std::optional<std::unique_ptr<BlockStatement>> body) noexcept;
+    ~FunctionExpression();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<FunctionExpression>, ParserDiagnostic>;

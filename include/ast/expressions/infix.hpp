@@ -19,11 +19,12 @@ class InfixExpression : public Expression {
                              std::unique_ptr<Expression> rhs) noexcept
         : Expression{start_token}, lhs_{std::move(lhs)}, op_{op}, rhs_{std::move(rhs)} {}
 
-    auto op() const noexcept -> TokenType { return op_; }
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<InfixExpression>, ParserDiagnostic>;
+
+    auto op() const noexcept -> TokenType { return op_; }
 
   private:
     std::unique_ptr<Expression> lhs_;

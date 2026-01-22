@@ -26,7 +26,7 @@ class MatchExpression : public Expression {
         : Expression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
           catch_all_{std::move(catch_all)} {};
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<MatchExpression>, ParserDiagnostic>;

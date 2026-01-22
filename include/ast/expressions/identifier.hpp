@@ -17,7 +17,7 @@ class IdentifierExpression : public Expression {
     explicit IdentifierExpression(const Token& start_token, std::string name) noexcept
         : Expression{start_token}, name_{std::move(name)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic>;

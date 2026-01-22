@@ -18,7 +18,7 @@ class ArrayExpression : public Expression {
                              std::unique_ptr<Expression> items) noexcept
         : Expression{start_token}, inferred_size_{inferred_size}, items_{std::move(items)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ArrayExpression>, ParserDiagnostic>;

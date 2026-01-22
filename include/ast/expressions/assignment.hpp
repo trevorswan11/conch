@@ -15,7 +15,7 @@ class AssignmentExpression : public InfixExpression {
   public:
     using InfixExpression::InfixExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<AssignmentExpression>, ParserDiagnostic>;

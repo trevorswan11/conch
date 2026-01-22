@@ -27,8 +27,9 @@ class DeclStatement : public Statement {
                            std::unique_ptr<TypeExpression>            type,
                            std::optional<std::unique_ptr<Expression>> value,
                            DeclarationMetadata                        metadata) noexcept;
+    ~DeclStatement();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser) -> Expected<std::unique_ptr<DeclStatement>, ParserDiagnostic>;
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <variant>
 
 #include "core.hpp"
@@ -26,7 +27,7 @@ template <typename T> class PrimitiveExpression : public Expression {
 class StringExpression : public PrimitiveExpression<std::string> {
     using PrimitiveExpression<std::string>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<StringExpression>, ParserDiagnostic>;
@@ -35,7 +36,7 @@ class StringExpression : public PrimitiveExpression<std::string> {
 class SignedIntegerExpression : public PrimitiveExpression<int64_t> {
     using PrimitiveExpression<int64_t>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<SignedIntegerExpression>, ParserDiagnostic>;
@@ -44,7 +45,7 @@ class SignedIntegerExpression : public PrimitiveExpression<int64_t> {
 class UnsignedIntegerExpression : public PrimitiveExpression<uint64_t> {
     using PrimitiveExpression<uint64_t>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<UnsignedIntegerExpression>, ParserDiagnostic>;
@@ -53,7 +54,7 @@ class UnsignedIntegerExpression : public PrimitiveExpression<uint64_t> {
 class SizeIntegerExpression : public PrimitiveExpression<size_t> {
     using PrimitiveExpression<size_t>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<SizeIntegerExpression>, ParserDiagnostic>;
@@ -62,7 +63,7 @@ class SizeIntegerExpression : public PrimitiveExpression<size_t> {
 class ByteExpression : public PrimitiveExpression<uint8_t> {
     using PrimitiveExpression<uint8_t>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ByteExpression>, ParserDiagnostic>;
@@ -71,7 +72,7 @@ class ByteExpression : public PrimitiveExpression<uint8_t> {
 class BoolExpression : public PrimitiveExpression<bool> {
     using PrimitiveExpression<bool>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<BoolExpression>, ParserDiagnostic>;
@@ -80,7 +81,7 @@ class BoolExpression : public PrimitiveExpression<bool> {
 class FloatExpression : public PrimitiveExpression<double> {
     using PrimitiveExpression<double>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<FloatExpression>, ParserDiagnostic>;
@@ -89,7 +90,7 @@ class FloatExpression : public PrimitiveExpression<double> {
 class VoidExpression : public PrimitiveExpression<std::monostate> {
     using PrimitiveExpression<std::monostate>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<VoidExpression>, ParserDiagnostic>;
@@ -98,7 +99,7 @@ class VoidExpression : public PrimitiveExpression<std::monostate> {
 class NilExpression : public PrimitiveExpression<std::monostate> {
     using PrimitiveExpression<std::monostate>::PrimitiveExpression;
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser) -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
 };

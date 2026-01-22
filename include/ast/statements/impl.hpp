@@ -18,8 +18,9 @@ class ImplStatement : public Statement {
     explicit ImplStatement(const Token&                          start_token,
                            std::unique_ptr<IdentifierExpression> parent,
                            std::unique_ptr<BlockStatement>       implementation) noexcept;
+    ~ImplStatement();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser) -> Expected<std::unique_ptr<ImplStatement>, ParserDiagnostic>;
 

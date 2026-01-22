@@ -17,7 +17,7 @@ class ExpressionStatement : public Statement {
                                  std::unique_ptr<Expression> expression) noexcept
         : Statement{start_token}, expression_{std::move(expression)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ExpressionStatement>, ParserDiagnostic>;

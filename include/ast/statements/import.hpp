@@ -21,8 +21,9 @@ class ImportStatement : public Statement {
                              std::variant<std::unique_ptr<IdentifierExpression>,
                                           std::unique_ptr<StringExpression>>      import,
                              std::optional<std::unique_ptr<IdentifierExpression>> alias) noexcept;
+    ~ImportStatement();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ImportStatement>, ParserDiagnostic>;

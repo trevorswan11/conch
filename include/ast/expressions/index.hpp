@@ -18,7 +18,7 @@ class IndexExpression : public Expression {
                              std::unique_ptr<Expression> idx) noexcept
         : Expression{start_token}, array_{std::move(array)}, idx_{std::move(idx)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<IndexExpression>, ParserDiagnostic>;

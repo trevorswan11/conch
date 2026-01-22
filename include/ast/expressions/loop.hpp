@@ -28,8 +28,9 @@ class ForLoopExpression : public Expression {
         std::vector<std::optional<std::unique_ptr<CapturedIterable>>> captures,
         std::unique_ptr<Statement>                                    block,
         std::unique_ptr<Statement>                                    non_break) noexcept;
+    ~ForLoopExpression();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ForLoopExpression>, ParserDiagnostic>;
@@ -48,8 +49,9 @@ class WhileLoopExpression : public Expression {
                                  std::unique_ptr<Expression>     continuation,
                                  std::unique_ptr<BlockStatement> block,
                                  std::unique_ptr<Statement>      non_break) noexcept;
+    ~WhileLoopExpression();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<WhileLoopExpression>, ParserDiagnostic>;
@@ -66,8 +68,9 @@ class DoWhileLoopExpression : public Expression {
     explicit DoWhileLoopExpression(const Token&                    start_token,
                                    std::unique_ptr<BlockStatement> block,
                                    std::unique_ptr<Expression>     condition) noexcept;
+    ~DoWhileLoopExpression();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<DoWhileLoopExpression>, ParserDiagnostic>;
@@ -81,8 +84,9 @@ class InfiniteLoopExpression : public Expression {
   public:
     explicit InfiniteLoopExpression(const Token&                    start_token,
                                     std::unique_ptr<BlockStatement> block) noexcept;
+    ~InfiniteLoopExpression();
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<InfiniteLoopExpression>, ParserDiagnostic>;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "core.hpp"
@@ -24,7 +25,7 @@ class CallExpression : public Expression {
         : Expression{start_token}, function_{std::move(function)},
           arguments_{std::move(arguments)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<CallExpression>, ParserDiagnostic>;

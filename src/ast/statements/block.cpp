@@ -4,6 +4,6 @@
 
 namespace ast {
 
-auto BlockStatement::accept(Visitor& v) -> void { v.visit(*this); }
+auto BlockStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
 } // namespace ast

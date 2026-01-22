@@ -17,7 +17,7 @@ class DiscardStatement : public Statement {
                               std::unique_ptr<Expression> to_discard) noexcept
         : Statement{start_token}, to_discard_{std::move(to_discard)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<DiscardStatement>, ParserDiagnostic>;

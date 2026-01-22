@@ -11,7 +11,7 @@ class Node {
     Node()          = delete;
     virtual ~Node() = default;
 
-    virtual auto accept(Visitor& v) -> void = 0;
+    virtual auto accept(Visitor& v) const -> void = 0;
 
   protected:
     Node(const Token& tok) noexcept : start_token_{tok} {}
@@ -20,12 +20,12 @@ class Node {
 
 class Expression : public Node {
   protected:
-    Expression(const Token& tok) noexcept : Node{tok} {}
+    using Node::Node;
 };
 
 class Statement : public Node {
   protected:
-    Statement(const Token& tok) noexcept : Node{tok} {}
+    using Node::Node;
 };
 
 } // namespace ast

@@ -96,3 +96,7 @@ template <typename E> struct std::formatter<Diagnostic<E>> : std::formatter<std:
             std::format("{}", d.message_.empty() ? enum_name(d.error_) : d.message_), ctx);
     }
 };
+
+template <typename... Args> auto unreachable([[maybe_unused]] Args... args) noexcept -> void {
+    std::unreachable();
+}

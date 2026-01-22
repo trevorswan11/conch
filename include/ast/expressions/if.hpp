@@ -20,7 +20,7 @@ class IfExpression : public Expression {
         : Expression{start_token}, condition_{std::move(condition)},
           consequence_{std::move(consequence)}, alternate_{std::move(alternate)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser) -> Expected<std::unique_ptr<IfExpression>, ParserDiagnostic>;
 

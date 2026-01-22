@@ -18,7 +18,7 @@ class BlockStatement : public Statement {
                             std::vector<std::unique_ptr<Statement>> statements) noexcept
         : Statement{start_token}, statements_{std::move(statements)} {}
 
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<BlockStatement>, ParserDiagnostic>;

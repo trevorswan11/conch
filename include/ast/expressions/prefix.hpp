@@ -16,11 +16,12 @@ class PrefixExpression : public Expression {
     explicit PrefixExpression(const Token& op, std::unique_ptr<Expression> rhs) noexcept
         : Expression{op}, rhs_{std::move(rhs)} {}
 
-    auto op() const noexcept -> TokenType { return start_token_.type; }
-    auto accept(Visitor& v) -> void override;
+    auto accept(Visitor& v) const -> void override;
 
     static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<PrefixExpression>, ParserDiagnostic>;
+
+    auto op() const noexcept -> TokenType { return start_token_.type; }
 
   private:
     std::unique_ptr<Expression> rhs_;
