@@ -18,10 +18,11 @@ class PrefixExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<PrefixExpression>, ParserDiagnostic>;
 
-    auto op() const noexcept -> TokenType { return start_token_.type; }
+    auto               op() const noexcept -> TokenType { return start_token_.type; }
+    [[nodiscard]] auto rhs() const noexcept -> const Expression& { return *rhs_; }
 
   private:
     std::unique_ptr<Expression> rhs_;

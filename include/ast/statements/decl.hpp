@@ -14,7 +14,7 @@ namespace ast {
 class IdentifierExpression;
 class TypeExpression;
 
-enum class DeclarationMetadata {
+enum class DeclarationMetadata : u8 {
     MUTABLE_VALUE,
     CONSTANT_VALUE,
     TYPE_ALIAS,
@@ -27,17 +27,26 @@ class DeclStatement : public Statement {
                            std::unique_ptr<TypeExpression>            type,
                            std::optional<std::unique_ptr<Expression>> value,
                            DeclarationMetadata                        metadata) noexcept;
-    ~DeclStatement();
+    ~DeclStatement() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser) -> Expected<std::unique_ptr<DeclStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<std::unique_ptr<DeclStatement>, ParserDiagnostic>;
+
+    [[nodiscard]] auto ident() const noexcept -> const IdentifierExpression& { return *ident_; }
+    [[nodiscard]] auto type() const noexcept -> const TypeExpression& { return *type_; }
+    [[nodiscard]] auto value() const noexcept -> std::optional<const Expression*> {
+        if (value_) { return value_->get(); }
+        return std::nullopt;
+    }
+    [[nodiscard]] auto metadata() const noexcept -> const DeclarationMetadata& { return metadata_; }
 
   private:
     std::unique_ptr<IdentifierExpression>      ident_;
     std::unique_ptr<TypeExpression>            type_;
     std::optional<std::unique_ptr<Expression>> value_;
-    DeclarationMetadata                        metadata_;
+    [[maybe_unused]] DeclarationMetadata       metadata_;
 };
 
 } // namespace ast

@@ -17,12 +17,15 @@ class ScopeResolutionExpression : public Expression {
     explicit ScopeResolutionExpression(const Token&                          start_token,
                                        std::unique_ptr<Expression>           outer,
                                        std::unique_ptr<IdentifierExpression> inner) noexcept;
-    ~ScopeResolutionExpression();
+    ~ScopeResolutionExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ScopeResolutionExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto outer() const noexcept -> const Expression& { return *outer_; }
+    [[nodiscard]] auto inner() const noexcept -> const IdentifierExpression& { return *inner_; }
 
   private:
     std::unique_ptr<Expression>           outer_;

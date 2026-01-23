@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 
 #include "core.hpp"
 
@@ -14,7 +15,17 @@ namespace ast {
 class IdentifierExpression;
 
 struct EnumVariant {
-    std::unique_ptr<IdentifierExpression>      name;
+    explicit EnumVariant(std::unique_ptr<IdentifierExpression> e) noexcept;
+    explicit EnumVariant(std::unique_ptr<IdentifierExpression>      e,
+                         std::optional<std::unique_ptr<Expression>> v) noexcept;
+    ~EnumVariant();
+
+    EnumVariant(const EnumVariant&)                        = delete;
+    auto operator=(const EnumVariant&) -> EnumVariant&     = delete;
+    EnumVariant(EnumVariant&&) noexcept                    = default;
+    auto operator=(EnumVariant&&) noexcept -> EnumVariant& = default;
+
+    std::unique_ptr<IdentifierExpression>      enumeration;
     std::optional<std::unique_ptr<Expression>> value;
 };
 
@@ -23,12 +34,17 @@ class EnumExpression : public Expression {
     explicit EnumExpression(const Token&                          start_token,
                             std::unique_ptr<IdentifierExpression> name,
                             std::vector<EnumVariant>              variants) noexcept;
-    ~EnumExpression();
+    ~EnumExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<EnumExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto name() const noexcept -> const IdentifierExpression& { return *name_; }
+    [[nodiscard]] auto variants() const noexcept -> std::span<const EnumVariant> {
+        return variants_;
+    }
 
   private:
     std::unique_ptr<IdentifierExpression> name_;

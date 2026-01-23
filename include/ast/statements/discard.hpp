@@ -19,8 +19,10 @@ class DiscardStatement : public Statement {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<DiscardStatement>, ParserDiagnostic>;
+
+    [[nodiscard]] auto to_discard() const noexcept -> const Expression& { return *to_discard_; }
 
   private:
     std::unique_ptr<Expression> to_discard_;

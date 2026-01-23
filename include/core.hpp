@@ -1,13 +1,30 @@
 #pragma once
 
 #include <array>
+#include <cassert>
+#include <cstdint>
 #include <expected>
 #include <format>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+using u8    = uint8_t;
+using i8    = uint8_t;
+using u16   = uint16_t;
+using i16   = uint16_t;
+using u32   = uint32_t;
+using i32   = uint32_t;
+using u64   = uint64_t;
+using i64   = uint64_t;
+using usize = size_t;
+using isize = std::make_signed<usize>;
+
+using f32 = float;
+using f64 = double;
 
 using byte = std::string_view::value_type;
 static_assert(std::is_same_v<std::string::value_type, byte>);
@@ -32,8 +49,8 @@ template <auto V> consteval auto enum_name() noexcept -> std::string_view {
 
 // Returns the name of an enum as a string at runtime.
 template <typename E, int Min = 0, int Max = 256>
+    requires(std::is_scoped_enum_v<E>)
 auto enum_name(E value) noexcept -> std::string_view {
-    static_assert(std::is_enum_v<E>);
     using U = std::underlying_type_t<E>;
     using A = std::array<std::string_view, Max - Min>;
 
@@ -58,8 +75,8 @@ class Diagnostic {
   public:
     Diagnostic() = delete;
     explicit Diagnostic(E err) : error_{err} {}
-    explicit Diagnostic(E err, size_t ln, size_t col) : error_{err}, line_{ln}, column_{col} {}
-    explicit Diagnostic(std::string msg, E err, size_t ln, size_t col)
+    explicit Diagnostic(E err, usize ln, usize col) : error_{err}, line_{ln}, column_{col} {}
+    explicit Diagnostic(std::string msg, E err, usize ln, usize col)
         : message_{std::move(msg)}, error_{err}, line_{ln}, column_{col} {}
 
     auto message() const noexcept -> const std::string& { return message_; }
@@ -71,10 +88,10 @@ class Diagnostic {
     }
 
   private:
-    std::string           message_{};
-    E                     error_;
-    std::optional<size_t> line_{};
-    std::optional<size_t> column_{};
+    std::string          message_{};
+    E                    error_;
+    std::optional<usize> line_{};
+    std::optional<usize> column_{};
 
     friend struct std::formatter<Diagnostic>;
 };
@@ -97,6 +114,21 @@ template <typename E> struct std::formatter<Diagnostic<E>> : std::formatter<std:
     }
 };
 
-template <typename... Args> auto unreachable([[maybe_unused]] Args... args) noexcept -> void {
-    std::unreachable();
+template <typename... Args>
+auto todo_impl(std::optional<std::string_view> message) noexcept -> void {
+    if (message) { std::cerr << "TODO: " << *message << "\n"; }
+    assert(false);
 }
+
+template <typename... Args> auto todo([[maybe_unused]] Args&&... args) noexcept -> void {
+    todo_impl(std::nullopt);
+}
+
+template <typename... Args>
+auto todo(std::string_view message, [[maybe_unused]] Args&&... args) noexcept -> void {
+    todo_impl(message);
+}
+
+#define TODO(...)      \
+    todo(__VA_ARGS__); \
+    std::unreachable();

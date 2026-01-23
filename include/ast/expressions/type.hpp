@@ -22,36 +22,57 @@ using ExplicitReferredType = std::unique_ptr<Expression>;
 using ExplicitFunctionType = std::unique_ptr<FunctionExpression>;
 
 struct ExplicitArrayType {
+    explicit ExplicitArrayType(std::vector<usize> d, std::unique_ptr<TypeExpression> i) noexcept;
     ~ExplicitArrayType();
 
-    std::vector<size_t>             dimensions;
+    ExplicitArrayType(const ExplicitArrayType&)                        = delete;
+    auto operator=(const ExplicitArrayType&) -> ExplicitArrayType&     = delete;
+    ExplicitArrayType(ExplicitArrayType&&) noexcept                    = default;
+    auto operator=(ExplicitArrayType&&) noexcept -> ExplicitArrayType& = default;
+
+    std::vector<usize>              dimensions;
     std::unique_ptr<TypeExpression> inner_type;
 };
 
-enum class ExplicitTypeConstraint {
+enum class ExplicitTypeConstraint : u8 {
     PRIMITIVE,
     GENERIC_TYPE,
 };
 
+using ExplicitTypeVariant =
+    std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>;
+
 struct ExplicitType {
+    explicit ExplicitType(ExplicitTypeVariant t, bool n) noexcept;
+    explicit ExplicitType(ExplicitTypeVariant                   t,
+                          bool                                  n,
+                          std::optional<ExplicitTypeConstraint> c) noexcept;
     ~ExplicitType();
 
-    std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>
-                                          type;
+    ExplicitType(const ExplicitType&)                        = delete;
+    auto operator=(const ExplicitType&) -> ExplicitType&     = delete;
+    ExplicitType(ExplicitType&&) noexcept                    = default;
+    auto operator=(ExplicitType&&) noexcept -> ExplicitType& = default;
+
+    ExplicitTypeVariant                   type;
     bool                                  nullable;
-    std::optional<ExplicitTypeConstraint> constraint{};
+    std::optional<ExplicitTypeConstraint> constraint;
 };
 
 class TypeExpression : public Expression {
   public:
     explicit TypeExpression(const Token& start_token) noexcept;
     explicit TypeExpression(const Token& start_token, std::optional<ExplicitType> exp) noexcept;
-    ~TypeExpression();
+    ~TypeExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<TypeExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto explicit_type() const noexcept -> const std::optional<ExplicitType>& {
+        return explicit_;
+    }
 
   private:
     std::optional<ExplicitType> explicit_;

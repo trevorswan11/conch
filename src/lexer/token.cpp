@@ -29,7 +29,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto intoIntBase(TokenType type) noexcept -> Base {
+auto to_base(TokenType type) noexcept -> Base {
     switch (type) {
     case TokenType::INT_2:
     case TokenType::UINT_2:
@@ -47,7 +47,7 @@ auto intoIntBase(TokenType type) noexcept -> Base {
     }
 }
 
-auto miscFromChar(byte c) noexcept -> std::optional<TokenType> {
+auto misc_from_char(byte c) noexcept -> std::optional<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
@@ -63,20 +63,20 @@ auto miscFromChar(byte c) noexcept -> std::optional<TokenType> {
     }
 }
 
-auto isSignedInt(TokenType t) noexcept -> bool {
+auto is_signed_int(TokenType t) noexcept -> bool {
     return TokenType::INT_2 <= t && t <= TokenType::INT_16;
 }
 
-auto isUnsignedInt(TokenType t) noexcept -> bool {
+auto is_unsigned_int(TokenType t) noexcept -> bool {
     return TokenType::UINT_2 <= t && t <= TokenType::UINT_16;
 }
 
-auto isSizeInt(TokenType t) noexcept -> bool {
+auto is_size_int(TokenType t) noexcept -> bool {
     return TokenType::UZINT_2 <= t && t <= TokenType::UZINT_16;
 }
 
-auto isInt(TokenType t) noexcept -> bool {
-    return isSignedInt(t) || isUnsignedInt(t) || isSizeInt(t);
+auto is_int(TokenType t) noexcept -> bool {
+    return is_signed_int(t) || is_unsigned_int(t) || is_size_int(t);
 }
 
 } // namespace token_type

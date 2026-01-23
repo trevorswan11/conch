@@ -22,7 +22,12 @@ class IfExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser) -> Expected<std::unique_ptr<IfExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<std::unique_ptr<IfExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto condition() const noexcept -> const Expression& { return *condition_; }
+    [[nodiscard]] auto consequence() const noexcept -> const Statement& { return *consequence_; }
+    [[nodiscard]] auto alternate() const noexcept -> const Statement& { return *alternate_; }
 
   private:
     std::unique_ptr<Expression> condition_;

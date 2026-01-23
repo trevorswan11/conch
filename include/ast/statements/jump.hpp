@@ -20,7 +20,13 @@ class JumpStatement : public Statement {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser) -> Expected<std::unique_ptr<JumpStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<std::unique_ptr<JumpStatement>, ParserDiagnostic>;
+
+    [[nodiscard]] auto expression() const noexcept -> std::optional<const Expression*> {
+        if (expression_) { return expression_->get(); }
+        return std::nullopt;
+    }
 
   private:
     std::optional<std::unique_ptr<Expression>> expression_;

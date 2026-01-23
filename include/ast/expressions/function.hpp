@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 
 #include "core.hpp"
 
@@ -16,28 +17,55 @@ class TypeExpression;
 class BlockStatement;
 
 struct FunctionParameter {
+    explicit FunctionParameter(bool                                  r,
+                               std::unique_ptr<IdentifierExpression> n,
+                               std::unique_ptr<TypeExpression>       t) noexcept;
+    explicit FunctionParameter(bool                                       r,
+                               std::unique_ptr<IdentifierExpression>      n,
+                               std::unique_ptr<TypeExpression>            t,
+                               std::optional<std::unique_ptr<Expression>> d) noexcept;
+    ~FunctionParameter();
+
+    FunctionParameter(const FunctionParameter&)                        = delete;
+    auto operator=(const FunctionParameter&) -> FunctionParameter&     = delete;
+    FunctionParameter(FunctionParameter&&) noexcept                    = default;
+    auto operator=(FunctionParameter&&) noexcept -> FunctionParameter& = default;
+
     bool                                       reference;
     std::unique_ptr<IdentifierExpression>      name;
     std::unique_ptr<TypeExpression>            type;
-    std::optional<std::unique_ptr<Expression>> default_value{};
+    std::optional<std::unique_ptr<Expression>> default_value;
 };
 
 class FunctionExpression : public Expression {
   public:
     explicit FunctionExpression(const Token&                                   start_token,
                                 std::vector<FunctionParameter>                 parameters,
-                                std::unique_ptr<TypeExpression>                return_typ,
+                                std::unique_ptr<TypeExpression>                return_type,
                                 std::optional<std::unique_ptr<BlockStatement>> body) noexcept;
-    ~FunctionExpression();
+    ~FunctionExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<FunctionExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto parameters() const noexcept -> std::span<const FunctionParameter> {
+        return parameters_;
+    }
+
+    [[nodiscard]] auto return_type() const noexcept -> const TypeExpression& {
+        return *return_type_;
+    }
+
+    [[nodiscard]] auto body() const noexcept -> std::optional<const BlockStatement*> {
+        if (body_) { return body_->get(); }
+        return std::nullopt;
+    }
 
   private:
     std::vector<FunctionParameter>                 parameters_;
-    std::unique_ptr<TypeExpression>                return_type;
+    std::unique_ptr<TypeExpression>                return_type_;
     std::optional<std::unique_ptr<BlockStatement>> body_;
 };
 

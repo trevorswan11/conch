@@ -7,7 +7,7 @@
 
 #include "lexer/token.hpp"
 
-enum class Precedence {
+enum class Precedence : u8 {
     LOWEST,
     BOOL_EQUIV,
     BOOL_LT_GT,

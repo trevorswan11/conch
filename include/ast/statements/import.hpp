@@ -21,12 +21,22 @@ class ImportStatement : public Statement {
                              std::variant<std::unique_ptr<IdentifierExpression>,
                                           std::unique_ptr<StringExpression>>      import,
                              std::optional<std::unique_ptr<IdentifierExpression>> alias) noexcept;
-    ~ImportStatement();
+    ~ImportStatement() override;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ImportStatement>, ParserDiagnostic>;
+
+    using ImportTarget = std::variant<const IdentifierExpression*, const StringExpression*>;
+    [[nodiscard]] auto import_target() const noexcept -> ImportTarget {
+        return std::visit([](const auto& ptr) -> ImportTarget { return ptr.get(); }, import_);
+    }
+
+    [[nodiscard]] auto alias() const noexcept -> std::optional<const IdentifierExpression*> {
+        if (alias_) { return alias_->get(); }
+        return std::nullopt;
+    }
 
   private:
     std::variant<std::unique_ptr<IdentifierExpression>, std::unique_ptr<StringExpression>> import_;

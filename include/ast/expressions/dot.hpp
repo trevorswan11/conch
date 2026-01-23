@@ -11,14 +11,14 @@
 
 namespace ast {
 
-class AssignmentExpression : public InfixExpression {
+class DotExpression : public InfixExpression {
   public:
     using InfixExpression::InfixExpression;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<AssignmentExpression>, ParserDiagnostic>;
+        -> Expected<std::unique_ptr<DotExpression>, ParserDiagnostic>;
 };
 
 } // namespace ast

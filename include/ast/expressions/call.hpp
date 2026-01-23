@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -13,6 +14,9 @@
 namespace ast {
 
 struct CallArgument {
+    explicit CallArgument(bool r, std::unique_ptr<Expression> a) noexcept
+        : reference{r}, argument{std::move(a)} {}
+
     bool                        reference;
     std::unique_ptr<Expression> argument;
 };
@@ -27,8 +31,14 @@ class CallExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<CallExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto function() const noexcept -> const Expression& { return *function_; }
+    [[nodiscard]] auto arguments() const noexcept
+        -> std::span<const std::unique_ptr<CallArgument>> {
+        return arguments_;
+    }
 
   private:
     std::unique_ptr<Expression>                function_;

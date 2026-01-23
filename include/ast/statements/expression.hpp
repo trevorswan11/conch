@@ -19,8 +19,10 @@ class ExpressionStatement : public Statement {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ExpressionStatement>, ParserDiagnostic>;
+
+    [[nodiscard]] auto expression() const noexcept -> const Expression& { return *expression_; }
 
   private:
     std::unique_ptr<Expression> expression_;

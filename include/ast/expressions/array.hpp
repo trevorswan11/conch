@@ -20,8 +20,11 @@ class ArrayExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ArrayExpression>, ParserDiagnostic>;
+
+    auto is_inferred() const noexcept -> bool { return inferred_size_; }
+    auto items() const noexcept -> const Expression& { return *items_; }
 
   private:
     bool                        inferred_size_;

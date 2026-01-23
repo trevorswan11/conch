@@ -6,4 +6,9 @@ namespace ast {
 
 auto PrefixExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
+auto PrefixExpression::parse(Parser& parser)
+    -> Expected<std::unique_ptr<PrefixExpression>, ParserDiagnostic> {
+    TODO(parser);
+}
+
 } // namespace ast

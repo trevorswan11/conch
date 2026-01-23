@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 
 #include "core.hpp"
@@ -13,6 +14,9 @@
 namespace ast {
 
 struct MatchArm {
+    explicit MatchArm(std::unique_ptr<Expression> p, std::unique_ptr<Statement> d) noexcept
+        : pattern{std::move(p)}, dispatch{std::move(d)} {}
+
     std::unique_ptr<Expression> pattern;
     std::unique_ptr<Statement>  dispatch;
 };
@@ -28,8 +32,15 @@ class MatchExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<MatchExpression>, ParserDiagnostic>;
+
+    [[nodiscard]] auto matcher() const noexcept -> const Expression& { return *matcher_; }
+    [[nodiscard]] auto arms() const noexcept -> std::span<const MatchArm> { return arms_; }
+    [[nodiscard]] auto catch_all() const noexcept -> std::optional<const Statement*> {
+        if (catch_all_) { return catch_all_->get(); }
+        return std::nullopt;
+    }
 
   private:
     std::unique_ptr<Expression>               matcher_;

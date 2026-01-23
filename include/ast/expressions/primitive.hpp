@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <utility>
 #include <variant>
@@ -25,83 +24,93 @@ template <typename T> class PrimitiveExpression : public Expression {
 };
 
 class StringExpression : public PrimitiveExpression<std::string> {
+  public:
     using PrimitiveExpression<std::string>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<StringExpression>, ParserDiagnostic>;
 };
 
-class SignedIntegerExpression : public PrimitiveExpression<int64_t> {
-    using PrimitiveExpression<int64_t>::PrimitiveExpression;
+class SignedIntegerExpression : public PrimitiveExpression<i64> {
+  public:
+    using PrimitiveExpression<i64>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<SignedIntegerExpression>, ParserDiagnostic>;
 };
 
-class UnsignedIntegerExpression : public PrimitiveExpression<uint64_t> {
-    using PrimitiveExpression<uint64_t>::PrimitiveExpression;
+class UnsignedIntegerExpression : public PrimitiveExpression<u64> {
+  public:
+    using PrimitiveExpression<u64>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<UnsignedIntegerExpression>, ParserDiagnostic>;
 };
 
-class SizeIntegerExpression : public PrimitiveExpression<size_t> {
-    using PrimitiveExpression<size_t>::PrimitiveExpression;
+class SizeIntegerExpression : public PrimitiveExpression<usize> {
+  public:
+    using PrimitiveExpression<usize>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<SizeIntegerExpression>, ParserDiagnostic>;
 };
 
-class ByteExpression : public PrimitiveExpression<uint8_t> {
-    using PrimitiveExpression<uint8_t>::PrimitiveExpression;
+class ByteExpression : public PrimitiveExpression<u8> {
+  public:
+    using PrimitiveExpression<u8>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<ByteExpression>, ParserDiagnostic>;
 };
 
+class FloatExpression : public PrimitiveExpression<f64> {
+  public:
+    using PrimitiveExpression<f64>::PrimitiveExpression;
+
+    auto accept(Visitor& v) const -> void override;
+
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<std::unique_ptr<FloatExpression>, ParserDiagnostic>;
+};
+
 class BoolExpression : public PrimitiveExpression<bool> {
+  public:
     using PrimitiveExpression<bool>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<BoolExpression>, ParserDiagnostic>;
 };
 
-class FloatExpression : public PrimitiveExpression<double> {
-    using PrimitiveExpression<double>::PrimitiveExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
-    static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<FloatExpression>, ParserDiagnostic>;
-};
-
 class VoidExpression : public PrimitiveExpression<std::monostate> {
+  public:
     using PrimitiveExpression<std::monostate>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<VoidExpression>, ParserDiagnostic>;
 };
 
 class NilExpression : public PrimitiveExpression<std::monostate> {
+  public:
     using PrimitiveExpression<std::monostate>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
-    static auto parse(Parser& parser) -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
 };
 
 } // namespace ast

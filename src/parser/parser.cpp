@@ -6,16 +6,31 @@
 #include "lexer/token.hpp"
 
 #include "ast/node.hpp"
+#include "ast/statements/block.hpp"
+#include "ast/statements/decl.hpp"
+#include "ast/statements/discard.hpp"
+#include "ast/statements/expression.hpp"
+#include "ast/statements/impl.hpp"
+#include "ast/statements/import.hpp"
+#include "ast/statements/jump.hpp"
 
 auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{input}; }
+
+auto Parser::advance(uint8_t times) noexcept -> const Token& {
+    for (uint8_t i = 0; i < times; ++i) {
+        current_token_ = peek_token_;
+        peek_token_    = lexer_.advance();
+    }
+    return current_token_;
+}
 
 auto Parser::consume() -> std::pair<AST, std::span<const ParserDiagnostic>> {
     reset(input_);
     AST ast;
 
-    while (!currentTokenIs(TokenType::END)) {
-        if (!currentTokenIs(TokenType::COMMENT)) {
-            auto stmt = parseStatement();
+    while (!current_token_is(TokenType::END)) {
+        if (!current_token_is(TokenType::COMMENT)) {
+            auto stmt = parse_statement();
             if (stmt) {
                 ast.emplace_back(std::move(*stmt));
             } else {
@@ -28,7 +43,39 @@ auto Parser::consume() -> std::pair<AST, std::span<const ParserDiagnostic>> {
     return {std::move(ast), diagnostics_};
 }
 
-auto Parser::tokenMismatchError(TokenType expected, const Token& actual) -> void {
+auto Parser::expect_current(TokenType expected) -> Expected<std::monostate, ParserError> {
+    if (current_token_is(expected)) {
+        advance();
+        return {};
+    }
+
+    current_error(expected);
+    return Unexpected{ParserError::UNEXPECTED_TOKEN};
+}
+
+auto Parser::expect_peek(TokenType expected) -> Expected<std::monostate, ParserError> {
+    if (peek_token_is(expected)) {
+        advance();
+        return {};
+    }
+
+    peek_error(expected);
+    return Unexpected{ParserError::UNEXPECTED_TOKEN};
+}
+
+auto Parser::current_precedence() const noexcept -> Precedence {
+    return get_binding(current_token_.type)
+        .transform([](const auto& binding) { return binding.second; })
+        .value_or(Precedence::LOWEST);
+}
+
+auto Parser::peek_precedence() const noexcept -> Precedence {
+    return get_binding(peek_token_.type)
+        .transform([](const auto& binding) { return binding.second; })
+        .value_or(Precedence::LOWEST);
+}
+
+auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> void {
     diagnostics_.emplace_back(
         std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
         ParserError::UNEXPECTED_TOKEN,
@@ -36,47 +83,21 @@ auto Parser::tokenMismatchError(TokenType expected, const Token& actual) -> void
         actual.column);
 }
 
-auto Parser::expectCurrent(TokenType expected) -> Expected<std::monostate, ParserError> {
-    if (currentTokenIs(expected)) {
-        advance();
-        return {};
-    }
-
-    currentError(expected);
-    return Unexpected{ParserError::UNEXPECTED_TOKEN};
-}
-
-auto Parser::expectPeek(TokenType expected) -> Expected<std::monostate, ParserError> {
-    if (peekTokenIs(expected)) {
-        advance();
-        return {};
-    }
-
-    peekError(expected);
-    return Unexpected{ParserError::UNEXPECTED_TOKEN};
-}
-
-auto Parser::currentPrecedence() const noexcept -> Precedence {
-    return get_binding(current_token_.type)
-        .transform([](const auto& binding) { return binding.second; })
-        .value_or(Precedence::LOWEST);
-}
-
-auto Parser::peekPrecedence() const noexcept -> Precedence {
-    return get_binding(peek_token_.type)
-        .transform([](const auto& binding) { return binding.second; })
-        .value_or(Precedence::LOWEST);
-}
-
-auto Parser::advance(uint8_t n) noexcept -> const Token& {
-    for (uint8_t i = 0; i < n; ++i) {
-        current_token_ = peek_token_;
-        peek_token_    = lexer_.advance();
-    }
-    return current_token_;
-}
-
-[[nodiscard]] auto Parser::parseStatement()
+[[nodiscard]] auto Parser::parse_statement()
     -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic> {
-    return nullptr;
+    using namespace ast;
+    switch (current_token_.type) {
+    case TokenType::VAR:
+    case TokenType::CONST: return DeclStatement::parse(*this);
+    case TokenType::BREAK:
+    case TokenType::RETURN:
+    case TokenType::CONTINUE: return JumpStatement::parse(*this);
+    case TokenType::IMPL: return ImplStatement::parse(*this);
+    case TokenType::IMPORT: return ImportStatement::parse(*this);
+    case TokenType::LBRACE: return BlockStatement::parse(*this);
+    case TokenType::UNDERSCORE: return DiscardStatement::parse(*this);
+    default: return ExpressionStatement::parse(*this);
+    }
+
+    std::unreachable();
 }

@@ -20,7 +20,7 @@ class Statement;
 
 } // namespace ast
 
-enum class ParserError {
+enum class ParserError : u8 {
     UNEXPECTED_TOKEN,
 };
 
@@ -33,28 +33,27 @@ class Parser {
     explicit Parser(std::string_view input) noexcept : input_{input}, lexer_{input} { advance(2); }
 
     auto reset(std::string_view input = {}) noexcept -> void;
+    auto advance(uint8_t times = 1) noexcept -> const Token&;
     auto consume() -> std::pair<AST, std::span<const ParserDiagnostic>>;
 
+    auto current_token_is(TokenType t) const noexcept -> bool { return current_token_.type == t; }
+    auto peek_token_is(TokenType t) const noexcept -> bool { return peek_token_.type == t; }
+
+    [[nodiscard]] auto expect_current(TokenType expected) -> Expected<std::monostate, ParserError>;
+    auto current_error(TokenType expected) -> void { tt_mismatch_error(expected, current_token_); }
+    [[nodiscard]] auto expect_peek(TokenType expected) -> Expected<std::monostate, ParserError>;
+    auto peek_error(TokenType expected) -> void { tt_mismatch_error(expected, peek_token_); }
+
+    auto current_precedence() const noexcept -> Precedence;
+    auto peek_precedence() const noexcept -> Precedence;
+
   private:
-    // Advances the parser n times, returning the resulting current token
-    auto advance(uint8_t n = 1) noexcept -> const Token&;
+    auto tt_mismatch_error(TokenType expected, const Token& actual) -> void;
 
-    auto currentTokenIs(TokenType t) const noexcept -> bool { return current_token_.type == t; }
-    auto peekTokenIs(TokenType t) const noexcept -> bool { return peek_token_.type == t; }
-
-    [[nodiscard]] auto expectCurrent(TokenType expected) -> Expected<std::monostate, ParserError>;
-    auto currentError(TokenType expected) -> void { tokenMismatchError(expected, current_token_); }
-    [[nodiscard]] auto expectPeek(TokenType expected) -> Expected<std::monostate, ParserError>;
-    auto peekError(TokenType expected) -> void { tokenMismatchError(expected, peek_token_); }
-
-    auto currentPrecedence() const noexcept -> Precedence;
-    auto peekPrecedence() const noexcept -> Precedence;
-
-    auto tokenMismatchError(TokenType expected, const Token& actual) -> void;
-
-    [[nodiscard]] auto parseStatement()
+    [[nodiscard]] auto parse_statement()
         -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic>;
 
+  private:
   private:
     std::string_view input_;
     Lexer            lexer_{};

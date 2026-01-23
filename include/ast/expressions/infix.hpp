@@ -3,11 +3,7 @@
 #include <memory>
 #include <utility>
 
-#include "core.hpp"
-
 #include "ast/node.hpp"
-
-#include "parser/parser.hpp"
 
 namespace ast {
 
@@ -19,12 +15,9 @@ class InfixExpression : public Expression {
                              std::unique_ptr<Expression> rhs) noexcept
         : Expression{start_token}, lhs_{std::move(lhs)}, op_{op}, rhs_{std::move(rhs)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
-    static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<InfixExpression>, ParserDiagnostic>;
-
-    auto op() const noexcept -> TokenType { return op_; }
+    [[nodiscard]] auto lhs() const noexcept -> const Expression& { return *lhs_; }
+    auto               op() const noexcept -> TokenType { return op_; }
+    [[nodiscard]] auto rhs() const noexcept -> const Expression& { return *rhs_; }
 
   private:
     std::unique_ptr<Expression> lhs_;
