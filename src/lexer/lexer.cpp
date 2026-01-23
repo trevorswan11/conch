@@ -3,8 +3,6 @@
 #include <string_view>
 #include <utility>
 
-#include "core.hpp"
-
 #include "lexer/keywords.hpp"
 #include "lexer/lexer.hpp"
 #include "lexer/operators.hpp"
@@ -108,7 +106,7 @@ auto Lexer::read_character(uint8_t n) noexcept -> void {
     }
 }
 
-auto Lexer::read_operator() const noexcept -> std::optional<Token> {
+auto Lexer::read_operator() const noexcept -> Optional<Token> {
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
 
@@ -134,7 +132,7 @@ auto Lexer::read_operator() const noexcept -> std::optional<Token> {
     }
 
     // We cannot greedily consume the lexer here since the next token instruction handles that
-    if (max_len == 0) { return std::nullopt; }
+    if (max_len == 0) { return nullopt; }
     return Token{
         .type   = matched_type,
         .slice  = input_.substr(pos_, max_len),

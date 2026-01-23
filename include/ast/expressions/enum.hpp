@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <span>
 
 #include "core.hpp"
@@ -16,8 +15,8 @@ class IdentifierExpression;
 
 struct EnumVariant {
     explicit EnumVariant(std::unique_ptr<IdentifierExpression> e) noexcept;
-    explicit EnumVariant(std::unique_ptr<IdentifierExpression>      e,
-                         std::optional<std::unique_ptr<Expression>> v) noexcept;
+    explicit EnumVariant(std::unique_ptr<IdentifierExpression> e,
+                         Optional<std::unique_ptr<Expression>> v) noexcept;
     ~EnumVariant();
 
     EnumVariant(const EnumVariant&)                        = delete;
@@ -25,8 +24,8 @@ struct EnumVariant {
     EnumVariant(EnumVariant&&) noexcept                    = default;
     auto operator=(EnumVariant&&) noexcept -> EnumVariant& = default;
 
-    std::unique_ptr<IdentifierExpression>      enumeration;
-    std::optional<std::unique_ptr<Expression>> value;
+    std::unique_ptr<IdentifierExpression> enumeration;
+    Optional<std::unique_ptr<Expression>> value;
 };
 
 class EnumExpression : public Expression {

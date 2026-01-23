@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <utility>
 
 #include "core.hpp"
@@ -14,8 +13,8 @@ namespace ast {
 
 class JumpStatement : public Statement {
   public:
-    explicit JumpStatement(const Token&                               start_token,
-                           std::optional<std::unique_ptr<Expression>> expression) noexcept
+    explicit JumpStatement(const Token&                          start_token,
+                           Optional<std::unique_ptr<Expression>> expression) noexcept
         : Statement{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
@@ -23,13 +22,12 @@ class JumpStatement : public Statement {
     [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<JumpStatement>, ParserDiagnostic>;
 
-    [[nodiscard]] auto expression() const noexcept -> std::optional<const Expression*> {
-        if (expression_) { return expression_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto expression() const noexcept -> Optional<const Expression&> {
+        return expression_ ? Optional<const Expression&>{**expression_} : nullopt;
     }
 
   private:
-    std::optional<std::unique_ptr<Expression>> expression_;
+    Optional<std::unique_ptr<Expression>> expression_;
 };
 
 } // namespace ast

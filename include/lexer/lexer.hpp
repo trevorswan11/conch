@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -23,7 +22,7 @@ class Lexer {
     static auto lu_ident(std::string_view ident) noexcept -> TokenType;
 
     auto read_character(uint8_t n = 1) noexcept -> void;
-    auto read_operator() const noexcept -> std::optional<Token>;
+    auto read_operator() const noexcept -> Optional<Token>;
     auto read_ident() noexcept -> std::string_view;
     auto read_number() noexcept -> Token;
     auto read_escape() noexcept -> byte;

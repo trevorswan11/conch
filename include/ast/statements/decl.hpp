@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include "core.hpp"
 
@@ -22,11 +21,11 @@ enum class DeclarationMetadata : u8 {
 
 class DeclStatement : public Statement {
   public:
-    explicit DeclStatement(const Token&                               start_token,
-                           std::unique_ptr<IdentifierExpression>      ident,
-                           std::unique_ptr<TypeExpression>            type,
-                           std::optional<std::unique_ptr<Expression>> value,
-                           DeclarationMetadata                        metadata) noexcept;
+    explicit DeclStatement(const Token&                          start_token,
+                           std::unique_ptr<IdentifierExpression> ident,
+                           std::unique_ptr<TypeExpression>       type,
+                           Optional<std::unique_ptr<Expression>> value,
+                           DeclarationMetadata                   metadata) noexcept;
     ~DeclStatement() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -36,17 +35,16 @@ class DeclStatement : public Statement {
 
     [[nodiscard]] auto ident() const noexcept -> const IdentifierExpression& { return *ident_; }
     [[nodiscard]] auto type() const noexcept -> const TypeExpression& { return *type_; }
-    [[nodiscard]] auto value() const noexcept -> std::optional<const Expression*> {
-        if (value_) { return value_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto value() const noexcept -> Optional<const Expression&> {
+        return value_ ? Optional<const Expression&>{**value_} : nullopt;
     }
     [[nodiscard]] auto metadata() const noexcept -> const DeclarationMetadata& { return metadata_; }
 
   private:
-    std::unique_ptr<IdentifierExpression>      ident_;
-    std::unique_ptr<TypeExpression>            type_;
-    std::optional<std::unique_ptr<Expression>> value_;
-    [[maybe_unused]] DeclarationMetadata       metadata_;
+    std::unique_ptr<IdentifierExpression> ident_;
+    std::unique_ptr<TypeExpression>       type_;
+    Optional<std::unique_ptr<Expression>> value_;
+    [[maybe_unused]] DeclarationMetadata  metadata_;
 };
 
 } // namespace ast

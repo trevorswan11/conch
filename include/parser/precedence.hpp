@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <utility>
+
+#include "util/optional.hpp"
 
 #include "lexer/token.hpp"
 
@@ -66,7 +67,7 @@ constexpr auto ALL_BINDINGS = std::to_array<Binding>({
     {TokenType::ORELSE, Precedence::ASSIGNMENT},
 });
 
-constexpr auto get_binding(TokenType tt) noexcept -> std::optional<Binding> {
+constexpr auto get_binding(TokenType tt) noexcept -> Optional<Binding> {
     const auto it = std::ranges::find(ALL_BINDINGS, tt, &Binding::first);
-    return it == ALL_BINDINGS.end() ? std::nullopt : std::optional{*it};
+    return it == ALL_BINDINGS.end() ? nullopt : Optional<Binding>{*it};
 }

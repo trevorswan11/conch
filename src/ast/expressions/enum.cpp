@@ -9,10 +9,10 @@
 namespace ast {
 
 EnumVariant::EnumVariant(std::unique_ptr<IdentifierExpression> e) noexcept
-    : EnumVariant{std::move(e), std::nullopt} {}
+    : EnumVariant{std::move(e), nullopt} {}
 
-EnumVariant::EnumVariant(std::unique_ptr<IdentifierExpression>      e,
-                         std::optional<std::unique_ptr<Expression>> v) noexcept
+EnumVariant::EnumVariant(std::unique_ptr<IdentifierExpression> e,
+                         Optional<std::unique_ptr<Expression>> v) noexcept
     : enumeration{std::move(e)}, value{std::move(v)} {}
 
 EnumVariant::~EnumVariant() = default;

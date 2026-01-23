@@ -1,7 +1,6 @@
 #pragma once
 
 #include <format>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -149,7 +148,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool;
 namespace token_type {
 
 auto to_base(TokenType type) noexcept -> Base;
-auto misc_from_char(byte c) noexcept -> std::optional<TokenType>;
+auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
 auto is_signed_int(TokenType t) noexcept -> bool;
 auto is_unsigned_int(TokenType t) noexcept -> bool;
 auto is_size_int(TokenType t) noexcept -> bool;

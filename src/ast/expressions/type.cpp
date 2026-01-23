@@ -16,19 +16,19 @@ ExplicitArrayType::ExplicitArrayType(std::vector<size_t>             d,
 ExplicitArrayType::~ExplicitArrayType() = default;
 
 ExplicitType::ExplicitType(ExplicitTypeVariant t, bool n) noexcept
-    : ExplicitType{std::move(t), n, std::nullopt} {};
+    : ExplicitType{std::move(t), n, nullopt} {};
 
-ExplicitType::ExplicitType(ExplicitTypeVariant                   t,
-                           bool                                  n,
-                           std::optional<ExplicitTypeConstraint> c) noexcept
+ExplicitType::ExplicitType(ExplicitTypeVariant              t,
+                           bool                             n,
+                           Optional<ExplicitTypeConstraint> c) noexcept
     : type{std::move(t)}, nullable{n}, constraint{std::move(c)} {}
 
 ExplicitType::~ExplicitType() = default;
 
 TypeExpression::TypeExpression(const Token& start_token) noexcept
-    : TypeExpression{start_token, std::nullopt} {}
+    : TypeExpression{start_token, nullopt} {}
 
-TypeExpression::TypeExpression(const Token& start_token, std::optional<ExplicitType> exp) noexcept
+TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
     : Expression{start_token}, explicit_{std::move(exp)} {}
 
 TypeExpression::~TypeExpression() = default;

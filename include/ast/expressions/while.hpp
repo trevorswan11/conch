@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include "core.hpp"
 
@@ -19,11 +18,11 @@ class WhileLoopExpression : public Expression {
                                  std::unique_ptr<Expression>     condition,
                                  std::unique_ptr<Expression>     continuation,
                                  std::unique_ptr<BlockStatement> block) noexcept;
-    explicit WhileLoopExpression(const Token&                              start_token,
-                                 std::unique_ptr<Expression>               condition,
-                                 std::unique_ptr<Expression>               continuation,
-                                 std::unique_ptr<BlockStatement>           block,
-                                 std::optional<std::unique_ptr<Statement>> non_break) noexcept;
+    explicit WhileLoopExpression(const Token&                         start_token,
+                                 std::unique_ptr<Expression>          condition,
+                                 std::unique_ptr<Expression>          continuation,
+                                 std::unique_ptr<BlockStatement>      block,
+                                 Optional<std::unique_ptr<Statement>> non_break) noexcept;
     ~WhileLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -34,16 +33,15 @@ class WhileLoopExpression : public Expression {
     [[nodiscard]] auto condition() const noexcept -> const Expression& { return *condition_; }
     [[nodiscard]] auto continuation() const noexcept -> const Expression& { return *continuation_; }
     [[nodiscard]] auto block() const noexcept -> const BlockStatement& { return *block_; }
-    [[nodiscard]] auto non_break() const noexcept -> std::optional<const Statement*> {
-        if (non_break_) { return non_break_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto non_break() const noexcept -> Optional<const Statement&> {
+        return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
   private:
-    std::unique_ptr<Expression>               condition_;
-    std::unique_ptr<Expression>               continuation_;
-    std::unique_ptr<BlockStatement>           block_;
-    std::optional<std::unique_ptr<Statement>> non_break_;
+    std::unique_ptr<Expression>          condition_;
+    std::unique_ptr<Expression>          continuation_;
+    std::unique_ptr<BlockStatement>      block_;
+    Optional<std::unique_ptr<Statement>> non_break_;
 };
 
 } // namespace ast

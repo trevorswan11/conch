@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <span>
 #include <utility>
 
@@ -23,10 +22,10 @@ struct MatchArm {
 
 class MatchExpression : public Expression {
   public:
-    explicit MatchExpression(const Token&                              start_token,
-                             std::unique_ptr<Expression>               matcher,
-                             std::vector<MatchArm>                     arms,
-                             std::optional<std::unique_ptr<Statement>> catch_all) noexcept
+    explicit MatchExpression(const Token&                         start_token,
+                             std::unique_ptr<Expression>          matcher,
+                             std::vector<MatchArm>                arms,
+                             Optional<std::unique_ptr<Statement>> catch_all) noexcept
         : Expression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
           catch_all_{std::move(catch_all)} {};
 
@@ -37,15 +36,14 @@ class MatchExpression : public Expression {
 
     [[nodiscard]] auto matcher() const noexcept -> const Expression& { return *matcher_; }
     [[nodiscard]] auto arms() const noexcept -> std::span<const MatchArm> { return arms_; }
-    [[nodiscard]] auto catch_all() const noexcept -> std::optional<const Statement*> {
-        if (catch_all_) { return catch_all_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto catch_all() const noexcept -> Optional<const Statement&> {
+        return catch_all_ ? Optional<const Statement&>{**catch_all_} : nullopt;
     }
 
   private:
-    std::unique_ptr<Expression>               matcher_;
-    std::vector<MatchArm>                     arms_;
-    std::optional<std::unique_ptr<Statement>> catch_all_;
+    std::unique_ptr<Expression>          matcher_;
+    std::vector<MatchArm>                arms_;
+    Optional<std::unique_ptr<Statement>> catch_all_;
 };
 
 } // namespace ast

@@ -2,9 +2,10 @@
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <string_view>
 #include <utility>
+
+#include "util/optional.hpp"
 
 #include "lexer/token.hpp"
 
@@ -107,7 +108,7 @@ constexpr auto MAX_OPERATOR_LEN = std::ranges::max_element(ALL_OPERATORS, [](aut
                                       return a.first.size() < b.first.size();
                                   })->first.size();
 
-constexpr auto get_operator(std::string_view sv) noexcept -> std::optional<Operator> {
+constexpr auto get_operator(std::string_view sv) noexcept -> Optional<Operator> {
     const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
-    return it == ALL_OPERATORS.end() ? std::nullopt : std::optional{*it};
+    return it == ALL_OPERATORS.end() ? nullopt : Optional<Operator>{*it};
 }

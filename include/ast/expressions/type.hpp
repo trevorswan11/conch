@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <variant>
 #include <vector>
 
@@ -44,9 +43,9 @@ using ExplicitTypeVariant =
 
 struct ExplicitType {
     explicit ExplicitType(ExplicitTypeVariant t, bool n) noexcept;
-    explicit ExplicitType(ExplicitTypeVariant                   t,
-                          bool                                  n,
-                          std::optional<ExplicitTypeConstraint> c) noexcept;
+    explicit ExplicitType(ExplicitTypeVariant              t,
+                          bool                             n,
+                          Optional<ExplicitTypeConstraint> c) noexcept;
     ~ExplicitType();
 
     ExplicitType(const ExplicitType&)                        = delete;
@@ -54,15 +53,15 @@ struct ExplicitType {
     ExplicitType(ExplicitType&&) noexcept                    = default;
     auto operator=(ExplicitType&&) noexcept -> ExplicitType& = default;
 
-    ExplicitTypeVariant                   type;
-    bool                                  nullable;
-    std::optional<ExplicitTypeConstraint> constraint;
+    ExplicitTypeVariant              type;
+    bool                             nullable;
+    Optional<ExplicitTypeConstraint> constraint;
 };
 
 class TypeExpression : public Expression {
   public:
     explicit TypeExpression(const Token& start_token) noexcept;
-    explicit TypeExpression(const Token& start_token, std::optional<ExplicitType> exp) noexcept;
+    explicit TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept;
     ~TypeExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -70,12 +69,12 @@ class TypeExpression : public Expression {
     [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<TypeExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto explicit_type() const noexcept -> const std::optional<ExplicitType>& {
+    [[nodiscard]] auto explicit_type() const noexcept -> const Optional<ExplicitType>& {
         return explicit_;
     }
 
   private:
-    std::optional<ExplicitType> explicit_;
+    Optional<ExplicitType> explicit_;
 };
 
 } // namespace ast

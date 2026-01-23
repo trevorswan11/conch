@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <span>
 #include <vector>
 
@@ -25,11 +24,11 @@ struct ForLoopCapture {
 
 class ForLoopExpression : public Expression {
   public:
-    explicit ForLoopExpression(const Token&                               start_token,
-                               std::vector<std::unique_ptr<Expression>>   iterables,
-                               std::vector<std::optional<ForLoopCapture>> captures,
-                               std::unique_ptr<BlockStatement>            block,
-                               std::unique_ptr<Statement>                 non_break) noexcept;
+    explicit ForLoopExpression(const Token&                             start_token,
+                               std::vector<std::unique_ptr<Expression>> iterables,
+                               std::vector<Optional<ForLoopCapture>>    captures,
+                               std::unique_ptr<BlockStatement>          block,
+                               std::unique_ptr<Statement>               non_break) noexcept;
     ~ForLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -40,20 +39,19 @@ class ForLoopExpression : public Expression {
     [[nodiscard]] auto iterables() const noexcept -> std::span<const std::unique_ptr<Expression>> {
         return iterables_;
     }
-    [[nodiscard]] auto captures() const noexcept -> std::span<const std::optional<ForLoopCapture>> {
+    [[nodiscard]] auto captures() const noexcept -> std::span<const Optional<ForLoopCapture>> {
         return captures_;
     }
     [[nodiscard]] auto block() const noexcept -> const BlockStatement& { return *block_; }
-    [[nodiscard]] auto non_break() const noexcept -> std::optional<const Statement*> {
-        if (non_break_) { return non_break_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto non_break() const noexcept -> Optional<const Statement&> {
+        return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
   private:
-    std::vector<std::unique_ptr<Expression>>   iterables_;
-    std::vector<std::optional<ForLoopCapture>> captures_;
-    std::unique_ptr<BlockStatement>            block_;
-    std::optional<std::unique_ptr<Statement>>  non_break_;
+    std::vector<std::unique_ptr<Expression>> iterables_;
+    std::vector<Optional<ForLoopCapture>>    captures_;
+    std::unique_ptr<BlockStatement>          block_;
+    Optional<std::unique_ptr<Statement>>     non_break_;
 };
 
 } // namespace ast

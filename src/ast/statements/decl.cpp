@@ -10,11 +10,11 @@
 
 namespace ast {
 
-DeclStatement::DeclStatement(const Token&                               start_token,
-                             std::unique_ptr<IdentifierExpression>      ident,
-                             std::unique_ptr<TypeExpression>            type,
-                             std::optional<std::unique_ptr<Expression>> value,
-                             DeclarationMetadata                        metadata) noexcept
+DeclStatement::DeclStatement(const Token&                          start_token,
+                             std::unique_ptr<IdentifierExpression> ident,
+                             std::unique_ptr<TypeExpression>       type,
+                             Optional<std::unique_ptr<Expression>> value,
+                             DeclarationMetadata                   metadata) noexcept
     : Statement{start_token}, ident_{std::move(ident)}, type_{std::move(type)},
       value_{std::move(value)}, metadata_{std::move(metadata)} {}
 

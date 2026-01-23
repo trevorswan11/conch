@@ -516,6 +516,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     const cppcheck = b.addRunArtifact(config.cppcheck);
 
     const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
+    cppcheck.addArg("--inline-suppr");
     cppcheck.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
     const cppcheck_cache = cppcheck.addPrefixedOutputDirectoryArg(
         "--cppcheck-build-dir=",

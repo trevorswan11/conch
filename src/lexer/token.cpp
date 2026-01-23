@@ -3,7 +3,6 @@
 #include <string>
 #include <utility>
 
-#include "core.hpp"
 #include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
@@ -47,7 +46,7 @@ auto to_base(TokenType type) noexcept -> Base {
     }
 }
 
-auto misc_from_char(byte c) noexcept -> std::optional<TokenType> {
+auto misc_from_char(byte c) noexcept -> Optional<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
@@ -59,7 +58,7 @@ auto misc_from_char(byte c) noexcept -> std::optional<TokenType> {
     case '[': return TokenType::LBRACKET;
     case ']': return TokenType::RBRACKET;
     case '_': return TokenType::UNDERSCORE;
-    default: return std::nullopt;
+    default: return nullopt;
     }
 }
 

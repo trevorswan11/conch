@@ -12,11 +12,11 @@ namespace ast {
 
 StructMember::StructMember(std::unique_ptr<IdentifierExpression> n,
                            std::unique_ptr<TypeExpression>       t) noexcept
-    : StructMember{std::move(n), std::move(t), std::nullopt} {}
+    : StructMember{std::move(n), std::move(t), nullopt} {}
 
-StructMember::StructMember(std::unique_ptr<IdentifierExpression>      n,
-                           std::unique_ptr<TypeExpression>            t,
-                           std::optional<std::unique_ptr<Expression>> d) noexcept
+StructMember::StructMember(std::unique_ptr<IdentifierExpression> n,
+                           std::unique_ptr<TypeExpression>       t,
+                           Optional<std::unique_ptr<Expression>> d) noexcept
     : name{std::move(n)}, type{std::move(t)}, default_value{std::move(d)} {}
 
 StructMember::~StructMember() = default;

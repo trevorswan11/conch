@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <span>
 
 #include "core.hpp"
@@ -20,10 +19,10 @@ struct FunctionParameter {
     explicit FunctionParameter(bool                                  r,
                                std::unique_ptr<IdentifierExpression> n,
                                std::unique_ptr<TypeExpression>       t) noexcept;
-    explicit FunctionParameter(bool                                       r,
-                               std::unique_ptr<IdentifierExpression>      n,
-                               std::unique_ptr<TypeExpression>            t,
-                               std::optional<std::unique_ptr<Expression>> d) noexcept;
+    explicit FunctionParameter(bool                                  r,
+                               std::unique_ptr<IdentifierExpression> n,
+                               std::unique_ptr<TypeExpression>       t,
+                               Optional<std::unique_ptr<Expression>> d) noexcept;
     ~FunctionParameter();
 
     FunctionParameter(const FunctionParameter&)                        = delete;
@@ -31,18 +30,18 @@ struct FunctionParameter {
     FunctionParameter(FunctionParameter&&) noexcept                    = default;
     auto operator=(FunctionParameter&&) noexcept -> FunctionParameter& = default;
 
-    bool                                       reference;
-    std::unique_ptr<IdentifierExpression>      name;
-    std::unique_ptr<TypeExpression>            type;
-    std::optional<std::unique_ptr<Expression>> default_value;
+    bool                                  reference;
+    std::unique_ptr<IdentifierExpression> name;
+    std::unique_ptr<TypeExpression>       type;
+    Optional<std::unique_ptr<Expression>> default_value;
 };
 
 class FunctionExpression : public Expression {
   public:
-    explicit FunctionExpression(const Token&                                   start_token,
-                                std::vector<FunctionParameter>                 parameters,
-                                std::unique_ptr<TypeExpression>                return_type,
-                                std::optional<std::unique_ptr<BlockStatement>> body) noexcept;
+    explicit FunctionExpression(const Token&                              start_token,
+                                std::vector<FunctionParameter>            parameters,
+                                std::unique_ptr<TypeExpression>           return_type,
+                                Optional<std::unique_ptr<BlockStatement>> body) noexcept;
     ~FunctionExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -58,15 +57,14 @@ class FunctionExpression : public Expression {
         return *return_type_;
     }
 
-    [[nodiscard]] auto body() const noexcept -> std::optional<const BlockStatement*> {
-        if (body_) { return body_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto body() const noexcept -> Optional<const BlockStatement&> {
+        return body_ ? Optional<const BlockStatement&>{**body_} : nullopt;
     }
 
   private:
-    std::vector<FunctionParameter>                 parameters_;
-    std::unique_ptr<TypeExpression>                return_type_;
-    std::optional<std::unique_ptr<BlockStatement>> body_;
+    std::vector<FunctionParameter>            parameters_;
+    std::unique_ptr<TypeExpression>           return_type_;
+    Optional<std::unique_ptr<BlockStatement>> body_;
 };
 
 } // namespace ast

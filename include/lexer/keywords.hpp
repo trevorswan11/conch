@@ -2,9 +2,10 @@
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <string_view>
 #include <utility>
+
+#include "util/optional.hpp"
 
 #include "lexer/token.hpp"
 
@@ -65,9 +66,9 @@ constexpr auto ALL_KEYWORDS = std::array{
     keywords::AS,
 };
 
-constexpr auto get_keyword(std::string_view sv) noexcept -> std::optional<Keyword> {
+constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {
     const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
-    return it == ALL_KEYWORDS.end() ? std::nullopt : std::optional{*it};
+    return it == ALL_KEYWORDS.end() ? nullopt : Optional<Keyword>{*it};
 }
 
 constexpr auto ALL_PRIMITIVES = std::array{

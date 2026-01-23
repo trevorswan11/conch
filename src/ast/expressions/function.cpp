@@ -13,20 +13,20 @@ namespace ast {
 FunctionParameter::FunctionParameter(bool                                  r,
                                      std::unique_ptr<IdentifierExpression> n,
                                      std::unique_ptr<TypeExpression>       t) noexcept
-    : FunctionParameter{r, std::move(n), std::move(t), std::nullopt} {}
+    : FunctionParameter{r, std::move(n), std::move(t), nullopt} {}
 
-FunctionParameter::FunctionParameter(bool                                       r,
-                                     std::unique_ptr<IdentifierExpression>      n,
-                                     std::unique_ptr<TypeExpression>            t,
-                                     std::optional<std::unique_ptr<Expression>> d) noexcept
+FunctionParameter::FunctionParameter(bool                                  r,
+                                     std::unique_ptr<IdentifierExpression> n,
+                                     std::unique_ptr<TypeExpression>       t,
+                                     Optional<std::unique_ptr<Expression>> d) noexcept
     : reference{r}, name{std::move(n)}, type{std::move(t)}, default_value{std::move(d)} {}
 
 FunctionParameter::~FunctionParameter() = default;
 
-FunctionExpression::FunctionExpression(const Token&                                   start_token,
-                                       std::vector<FunctionParameter>                 parameters,
-                                       std::unique_ptr<TypeExpression>                return_type,
-                                       std::optional<std::unique_ptr<BlockStatement>> body) noexcept
+FunctionExpression::FunctionExpression(const Token&                              start_token,
+                                       std::vector<FunctionParameter>            parameters,
+                                       std::unique_ptr<TypeExpression>           return_type,
+                                       Optional<std::unique_ptr<BlockStatement>> body) noexcept
     : Expression{start_token}, parameters_{std::move(parameters)},
       return_type_{std::move(return_type)}, body_{std::move(body)} {}
 

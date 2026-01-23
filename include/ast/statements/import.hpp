@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <variant>
 
 #include "core.hpp"
@@ -17,10 +16,10 @@ class StringExpression;
 
 class ImportStatement : public Statement {
   public:
-    explicit ImportStatement(const Token&                                         start_token,
+    explicit ImportStatement(const Token&                                    start_token,
                              std::variant<std::unique_ptr<IdentifierExpression>,
-                                          std::unique_ptr<StringExpression>>      import,
-                             std::optional<std::unique_ptr<IdentifierExpression>> alias) noexcept;
+                                          std::unique_ptr<StringExpression>> import,
+                             Optional<std::unique_ptr<IdentifierExpression>> alias) noexcept;
     ~ImportStatement() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -33,14 +32,13 @@ class ImportStatement : public Statement {
         return std::visit([](const auto& ptr) -> ImportTarget { return ptr.get(); }, import_);
     }
 
-    [[nodiscard]] auto alias() const noexcept -> std::optional<const IdentifierExpression*> {
-        if (alias_) { return alias_->get(); }
-        return std::nullopt;
+    [[nodiscard]] auto alias() const noexcept -> Optional<const IdentifierExpression&> {
+        return alias_ ? Optional<const IdentifierExpression&>{**alias_} : nullopt;
     }
 
   private:
     std::variant<std::unique_ptr<IdentifierExpression>, std::unique_ptr<StringExpression>> import_;
-    std::optional<std::unique_ptr<IdentifierExpression>>                                   alias_;
+    Optional<std::unique_ptr<IdentifierExpression>>                                        alias_;
 };
 
 } // namespace ast

@@ -6,11 +6,12 @@
 #include <expected>
 #include <format>
 #include <iostream>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+#include "util/optional.hpp"
 
 using u8    = uint8_t;
 using i8    = uint8_t;
@@ -88,10 +89,10 @@ class Diagnostic {
     }
 
   private:
-    std::string          message_{};
-    E                    error_;
-    std::optional<usize> line_{};
-    std::optional<usize> column_{};
+    std::string     message_{};
+    E               error_;
+    Optional<usize> line_{};
+    Optional<usize> column_{};
 
     friend struct std::formatter<Diagnostic>;
 };
@@ -114,14 +115,13 @@ template <typename E> struct std::formatter<Diagnostic<E>> : std::formatter<std:
     }
 };
 
-template <typename... Args>
-auto todo_impl(std::optional<std::string_view> message) noexcept -> void {
+template <typename... Args> auto todo_impl(Optional<std::string_view> message) noexcept -> void {
     if (message) { std::cerr << "TODO: " << *message << "\n"; }
     assert(false);
 }
 
 template <typename... Args> auto todo([[maybe_unused]] Args&&... args) noexcept -> void {
-    todo_impl(std::nullopt);
+    todo_impl(nullopt);
 }
 
 template <typename... Args>

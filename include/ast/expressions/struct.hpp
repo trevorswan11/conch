@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <span>
 
 #include "core.hpp"
@@ -18,9 +17,9 @@ class TypeExpression;
 struct StructMember {
     explicit StructMember(std::unique_ptr<IdentifierExpression> n,
                           std::unique_ptr<TypeExpression>       t) noexcept;
-    explicit StructMember(std::unique_ptr<IdentifierExpression>      n,
-                          std::unique_ptr<TypeExpression>            t,
-                          std::optional<std::unique_ptr<Expression>> d) noexcept;
+    explicit StructMember(std::unique_ptr<IdentifierExpression> n,
+                          std::unique_ptr<TypeExpression>       t,
+                          Optional<std::unique_ptr<Expression>> d) noexcept;
     ~StructMember();
 
     StructMember(const StructMember&)                        = delete;
@@ -28,9 +27,9 @@ struct StructMember {
     StructMember(StructMember&&) noexcept                    = default;
     auto operator=(StructMember&&) noexcept -> StructMember& = default;
 
-    std::unique_ptr<IdentifierExpression>      name;
-    std::unique_ptr<TypeExpression>            type;
-    std::optional<std::unique_ptr<Expression>> default_value;
+    std::unique_ptr<IdentifierExpression> name;
+    std::unique_ptr<TypeExpression>       type;
+    Optional<std::unique_ptr<Expression>> default_value;
 };
 
 class StructExpression : public Expression {
