@@ -1,19 +1,17 @@
 #pragma once
 
-#include <expected>
 #include <format>
-#include <optional>
 #include <string>
 #include <string_view>
 
 #include "core.hpp"
 
-enum class TokenError {
+enum class TokenError : u8 {
     NON_STRING_TOKEN,
     UNEXPECTED_CHAR,
 };
 
-enum class TokenType {
+enum class TokenType : u16 {
     END,
 
     IDENT,
@@ -136,7 +134,7 @@ enum class TokenType {
     ILLEGAL,
 };
 
-enum class Base {
+enum class Base : u8 {
     UNKNOWN     = 0,
     BINARY      = 2,
     OCTAL       = 8,
@@ -148,23 +146,26 @@ auto base_idx(Base base) noexcept -> int;
 auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
-auto intoIntBase(TokenType type) noexcept -> Base;
-auto miscFromChar(byte c) noexcept -> std::optional<TokenType>;
-auto isSignedInt(TokenType t) noexcept -> bool;
-auto isUnsignedInt(TokenType t) noexcept -> bool;
-auto isSizeInt(TokenType t) noexcept -> bool;
-auto isInt(TokenType t) noexcept -> bool;
+
+auto to_base(TokenType type) noexcept -> Base;
+auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
+auto is_signed_int(TokenType t) noexcept -> bool;
+auto is_unsigned_int(TokenType t) noexcept -> bool;
+auto is_size_int(TokenType t) noexcept -> bool;
+auto is_int(TokenType t) noexcept -> bool;
+
 } // namespace token_type
 
 struct Token {
     TokenType        type;
     std::string_view slice;
-    size_t           line;
-    size_t           column;
+    usize            line;
+    usize            column;
 
-    [[nodiscard]] auto promote() const -> std::expected<std::string, TokenError>;
+    [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
+    auto               primitive() const noexcept -> bool;
 
-    bool operator==(const Token& other) const noexcept {
+    auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && line == other.line &&
                column == other.column;
     }

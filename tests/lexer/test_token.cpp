@@ -16,7 +16,7 @@ TEST_CASE("Promotion of invalid tokens") {
 
     const auto promoted = tok.promote();
     REQUIRE_FALSE(promoted);
-    REQUIRE(promoted.error() == TokenError::NON_STRING_TOKEN);
+    REQUIRE(promoted.error() == Diagnostic{TokenError::NON_STRING_TOKEN, 0, 0});
 }
 
 TEST_CASE("Promotion of standard string literals") {
@@ -76,7 +76,7 @@ TEST_CASE("Promotion of standard string literals") {
 
         const auto promoted = tok.promote();
         REQUIRE_FALSE(promoted);
-        REQUIRE(promoted.error() == TokenError::UNEXPECTED_CHAR);
+        REQUIRE(promoted.error() == Diagnostic{TokenError::UNEXPECTED_CHAR, 0, 0});
     }
 }
 

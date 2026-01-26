@@ -1,8 +1,9 @@
+#include <algorithm>
 #include <cctype>
-#include <expected>
 #include <string>
 #include <utility>
 
+#include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
 auto base_idx(Base base) noexcept -> int {
@@ -26,7 +27,8 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 }
 
 namespace token_type {
-auto intoIntBase(TokenType type) noexcept -> Base {
+
+auto to_base(TokenType type) noexcept -> Base {
     switch (type) {
     case TokenType::INT_2:
     case TokenType::UINT_2:
@@ -44,7 +46,7 @@ auto intoIntBase(TokenType type) noexcept -> Base {
     }
 }
 
-auto miscFromChar(byte c) noexcept -> std::optional<TokenType> {
+auto misc_from_char(byte c) noexcept -> Optional<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
@@ -56,63 +58,64 @@ auto miscFromChar(byte c) noexcept -> std::optional<TokenType> {
     case '[': return TokenType::LBRACKET;
     case ']': return TokenType::RBRACKET;
     case '_': return TokenType::UNDERSCORE;
-    default: return std::nullopt;
+    default: return nullopt;
     }
 }
 
-auto isSignedInt(TokenType t) noexcept -> bool {
+auto is_signed_int(TokenType t) noexcept -> bool {
     return TokenType::INT_2 <= t && t <= TokenType::INT_16;
 }
 
-auto isUnsignedInt(TokenType t) noexcept -> bool {
+auto is_unsigned_int(TokenType t) noexcept -> bool {
     return TokenType::UINT_2 <= t && t <= TokenType::UINT_16;
 }
 
-auto isSizeInt(TokenType t) noexcept -> bool {
+auto is_size_int(TokenType t) noexcept -> bool {
     return TokenType::UZINT_2 <= t && t <= TokenType::UZINT_16;
 }
 
-auto isInt(TokenType t) noexcept -> bool {
-    return isSignedInt(t) || isUnsignedInt(t) || isSizeInt(t);
+auto is_int(TokenType t) noexcept -> bool {
+    return is_signed_int(t) || is_unsigned_int(t) || is_size_int(t);
 }
+
 } // namespace token_type
 
-auto Token::promote() const -> std::expected<std::string, TokenError> {
+auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
     if (type != TokenType::STRING && type != TokenType::MULTILINE_STRING) {
-        return std::unexpected{TokenError::NON_STRING_TOKEN};
+        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, line, column}};
     }
 
-    std::string builder;
+    // Here we can just trim off the start and finish of the string
+    if (type == TokenType::STRING) {
+        if (slice.size() < 2) {
+            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, line, column}};
+        }
+        return std::string{slice.begin() + 1, slice.end() - 1};
+    }
+
+    std::string builder{};
     builder.reserve(slice.size());
 
-    if (type == TokenType::STRING) {
-        if (slice.size() < 2) { return std::unexpected{TokenError::UNEXPECTED_CHAR}; }
+    auto at_line_start = true;
+    for (size_t i = 0; i < slice.size(); i++) {
+        const auto c = slice[i];
 
-        // Here we can just trim off the start and finish of the string
-        if (slice.size() > 2) {
-            const auto start = slice.begin() + 1;
-            const auto end   = slice.end() - 1;
-
-            builder += std::string_view{start, end};
-        }
-    } else if (type == TokenType::MULTILINE_STRING && !slice.empty()) {
-        auto at_line_start = true;
-        for (size_t i = 0; i < slice.size(); i++) {
-            const auto c = slice[i];
-
-            // Skip a double backslash at start of line to clean the string
-            if (at_line_start) {
-                if (c == '\\' && i + 1 < slice.size() && slice[i + 1] == '\\') {
-                    i += 1;
-                    continue;
-                }
-                at_line_start = false;
+        // Skip a double backslash at start of line to clean the string
+        if (at_line_start) {
+            if (c == '\\' && i + 1 < slice.size() && slice[i + 1] == '\\') {
+                i += 1;
+                continue;
             }
-
-            builder += c;
-            if (c == '\n') { at_line_start = true; }
+            at_line_start = false;
         }
+
+        builder.push_back(c);
+        if (c == '\n') { at_line_start = true; }
     }
 
     return builder;
+}
+
+auto Token::primitive() const noexcept -> bool {
+    return std::ranges::contains(ALL_PRIMITIVES, type);
 }

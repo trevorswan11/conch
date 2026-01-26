@@ -19,7 +19,7 @@ const Instrumentor = struct {
     const header_magic = 0xdeadbeef;
     const header_size = @sizeOf(AllocHeader);
 
-    gpa: std.heap.GeneralPurposeAllocator(.{
+    gpa: std.heap.DebugAllocator(.{
         .thread_safe = true,
     }),
 

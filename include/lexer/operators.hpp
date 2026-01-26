@@ -2,15 +2,17 @@
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <string_view>
 #include <utility>
+
+#include "util/optional.hpp"
 
 #include "lexer/token.hpp"
 
 using Operator = std::pair<std::string_view, TokenType>;
 
 namespace operators {
+
 constexpr Operator ASSIGN{"=", TokenType::ASSIGN};
 constexpr Operator WALRUS{":=", TokenType::WALRUS};
 constexpr Operator PLUS{"+", TokenType::PLUS};
@@ -55,6 +57,7 @@ constexpr Operator FAT_ARROW{"=>", TokenType::FAT_ARROW};
 constexpr Operator COMMENT{"//", TokenType::COMMENT};
 constexpr Operator MULTILINE_STRING{"\\\\", TokenType::MULTILINE_STRING};
 constexpr Operator REF{"ref", TokenType::REF};
+
 } // namespace operators
 
 constexpr auto ALL_OPERATORS = std::array{
@@ -101,13 +104,11 @@ constexpr auto ALL_OPERATORS = std::array{
     operators::REF,
 };
 
-constexpr auto MAX_OPERATOR_LEN = []() -> size_t {
-    return std::ranges::max_element(ALL_OPERATORS,
-                                    [](auto a, auto b) { return a.first.size() < b.first.size(); })
-        ->first.size();
-}();
+constexpr auto MAX_OPERATOR_LEN = std::ranges::max_element(ALL_OPERATORS, [](auto a, auto b) {
+                                      return a.first.size() < b.first.size();
+                                  })->first.size();
 
-constexpr auto get_operator(std::string_view sv) -> std::optional<Operator> {
+constexpr auto get_operator(std::string_view sv) noexcept -> Optional<Operator> {
     const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
-    return it == ALL_OPERATORS.end() ? std::nullopt : std::optional{*it};
+    return it == ALL_OPERATORS.end() ? nullopt : Optional<Operator>{*it};
 }

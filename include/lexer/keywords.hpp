@@ -2,15 +2,17 @@
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <string_view>
 #include <utility>
+
+#include "util/optional.hpp"
 
 #include "lexer/token.hpp"
 
 using Keyword = std::pair<std::string_view, TokenType>;
 
 namespace keywords {
+
 constexpr Keyword FN{"fn", TokenType::FUNCTION};
 constexpr Keyword VAR{"var", TokenType::VAR};
 constexpr Keyword CONST{"const", TokenType::CONST};
@@ -48,6 +50,7 @@ constexpr Keyword VOID{"void", TokenType::VOID_TYPE};
 constexpr Keyword TYPE{"type", TokenType::TYPE};
 constexpr Keyword WITH{"with", TokenType::WITH};
 constexpr Keyword AS{"as", TokenType::AS};
+
 } // namespace keywords
 
 constexpr auto ALL_KEYWORDS = std::array{
@@ -63,7 +66,19 @@ constexpr auto ALL_KEYWORDS = std::array{
     keywords::AS,
 };
 
-constexpr auto get_keyword(std::string_view sv) -> std::optional<Keyword> {
+constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {
     const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
-    return it == ALL_KEYWORDS.end() ? std::nullopt : std::optional{*it};
+    return it == ALL_KEYWORDS.end() ? nullopt : Optional<Keyword>{*it};
 }
+
+constexpr auto ALL_PRIMITIVES = std::array{
+    keywords::INT.second,
+    keywords::UINT.second,
+    keywords::SIZE.second,
+    keywords::FLOAT.second,
+    keywords::BYTE.second,
+    keywords::STRING.second,
+    keywords::BOOL.second,
+    keywords::VOID.second,
+    keywords::NIL.second,
+};

@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) !void {
         "-Wextra",
         "-Werror",
         "-Wpedantic",
+        "-Wno-gnu-statement-expression-from-macro-expansion",
     });
 
     var package_flags = try compiler_flags.clone(b.allocator);
@@ -516,6 +517,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     const cppcheck = b.addRunArtifact(config.cppcheck);
 
     const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
+    cppcheck.addArg("--inline-suppr");
     cppcheck.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
     const cppcheck_cache = cppcheck.addPrefixedOutputDirectoryArg(
         "--cppcheck-build-dir=",
