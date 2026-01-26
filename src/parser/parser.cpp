@@ -43,24 +43,20 @@ auto Parser::consume() -> std::pair<AST, std::span<const ParserDiagnostic>> {
     return {std::move(ast), diagnostics_};
 }
 
-auto Parser::expect_current(TokenType expected) -> Expected<std::monostate, ParserError> {
+auto Parser::expect_current(TokenType expected) -> Expected<std::monostate, ParserDiagnostic> {
     if (current_token_is(expected)) {
         advance();
         return {};
     }
-
-    current_error(expected);
-    return Unexpected{ParserError::UNEXPECTED_TOKEN};
+    return Unexpected{current_error(expected)};
 }
 
-auto Parser::expect_peek(TokenType expected) -> Expected<std::monostate, ParserError> {
+auto Parser::expect_peek(TokenType expected) -> Expected<std::monostate, ParserDiagnostic> {
     if (peek_token_is(expected)) {
         advance();
         return {};
     }
-
-    peek_error(expected);
-    return Unexpected{ParserError::UNEXPECTED_TOKEN};
+    return Unexpected{peek_error(expected)};
 }
 
 auto Parser::current_precedence() const noexcept -> Precedence {
@@ -75,12 +71,12 @@ auto Parser::peek_precedence() const noexcept -> Precedence {
         .value_or(Precedence::LOWEST);
 }
 
-auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> void {
-    diagnostics_.emplace_back(
+auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic {
+    return ParserDiagnostic{
         std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
         ParserError::UNEXPECTED_TOKEN,
         actual.line,
-        actual.column);
+        actual.column};
 }
 
 [[nodiscard]] auto Parser::parse_statement()
@@ -100,4 +96,9 @@ auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> void 
     }
 
     std::unreachable();
+}
+
+[[nodiscard]] auto parse_expression(Precedence precedence)
+    -> Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic> {
+    TODO(precedence);
 }

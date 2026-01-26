@@ -14,12 +14,13 @@ namespace ast {
 class IdentifierExpression;
 class TypeExpression;
 
-struct StructMember {
-    explicit StructMember(std::unique_ptr<IdentifierExpression> n,
-                          std::unique_ptr<TypeExpression>       t) noexcept;
-    explicit StructMember(std::unique_ptr<IdentifierExpression> n,
-                          std::unique_ptr<TypeExpression>       t,
-                          Optional<std::unique_ptr<Expression>> d) noexcept;
+class StructMember {
+  public:
+    explicit StructMember(std::unique_ptr<IdentifierExpression> name,
+                          std::unique_ptr<TypeExpression>       type) noexcept;
+    explicit StructMember(std::unique_ptr<IdentifierExpression> name,
+                          std::unique_ptr<TypeExpression>       type,
+                          Optional<std::unique_ptr<Expression>> default_value) noexcept;
     ~StructMember();
 
     StructMember(const StructMember&)                        = delete;
@@ -27,9 +28,16 @@ struct StructMember {
     StructMember(StructMember&&) noexcept                    = default;
     auto operator=(StructMember&&) noexcept -> StructMember& = default;
 
-    std::unique_ptr<IdentifierExpression> name;
-    std::unique_ptr<TypeExpression>       type;
-    Optional<std::unique_ptr<Expression>> default_value;
+    [[nodiscard]] auto name() const noexcept -> const IdentifierExpression& { return *name_; }
+    [[nodiscard]] auto type() const noexcept -> const TypeExpression& { return *type_; }
+    [[nodiscard]] auto default_value() const noexcept -> Optional<const Expression&> {
+        return default_value_ ? Optional<const Expression&>{**default_value_} : nullopt;
+    }
+
+  private:
+    std::unique_ptr<IdentifierExpression> name_;
+    std::unique_ptr<TypeExpression>       type_;
+    Optional<std::unique_ptr<Expression>> default_value_;
 };
 
 class StructExpression : public Expression {

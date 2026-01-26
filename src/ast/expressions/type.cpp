@@ -9,19 +9,19 @@
 
 namespace ast {
 
-ExplicitArrayType::ExplicitArrayType(std::vector<size_t>             d,
-                                     std::unique_ptr<TypeExpression> i) noexcept
-    : dimensions{std::move(d)}, inner_type{std::move(i)} {}
+ExplicitArrayType::ExplicitArrayType(std::vector<size_t>             dimensions,
+                                     std::unique_ptr<TypeExpression> inner_type) noexcept
+    : dimensions_{std::move(dimensions)}, inner_type_{std::move(inner_type)} {}
 
 ExplicitArrayType::~ExplicitArrayType() = default;
 
-ExplicitType::ExplicitType(ExplicitTypeVariant t, bool n) noexcept
-    : ExplicitType{std::move(t), n, nullopt} {};
+ExplicitType::ExplicitType(ExplicitTypeVariant type, bool nullable) noexcept
+    : ExplicitType{std::move(type), nullable, nullopt} {};
 
-ExplicitType::ExplicitType(ExplicitTypeVariant              t,
-                           bool                             n,
-                           Optional<ExplicitTypeConstraint> c) noexcept
-    : type{std::move(t)}, nullable{n}, constraint{std::move(c)} {}
+ExplicitType::ExplicitType(ExplicitTypeVariant              type,
+                           bool                             nullable,
+                           Optional<ExplicitTypeConstraint> constraint) noexcept
+    : type_{std::move(type)}, nullable_{nullable}, constraint_{std::move(constraint)} {}
 
 ExplicitType::~ExplicitType() = default;
 

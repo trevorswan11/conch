@@ -14,12 +14,17 @@ namespace ast {
 
 class BlockStatement;
 
-struct ForLoopCapture {
-    explicit ForLoopCapture(bool r, std::unique_ptr<Expression> c) noexcept
-        : reference{r}, capture{std::move(c)} {}
+class ForLoopCapture {
+  public:
+    explicit ForLoopCapture(bool reference, std::unique_ptr<Expression> capture) noexcept
+        : reference_{reference}, capture_{std::move(capture)} {}
 
-    bool                        reference;
-    std::unique_ptr<Expression> capture;
+    [[nodiscard]] auto reference() const noexcept -> bool { return reference_; }
+    [[nodiscard]] auto capture() const noexcept -> const Expression& { return *capture_; }
+
+  private:
+    bool                        reference_;
+    std::unique_ptr<Expression> capture_;
 };
 
 class ForLoopExpression : public Expression {

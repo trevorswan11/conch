@@ -12,12 +12,18 @@
 
 namespace ast {
 
-struct MatchArm {
-    explicit MatchArm(std::unique_ptr<Expression> p, std::unique_ptr<Statement> d) noexcept
-        : pattern{std::move(p)}, dispatch{std::move(d)} {}
+class MatchArm {
+  public:
+    explicit MatchArm(std::unique_ptr<Expression> pattern,
+                      std::unique_ptr<Statement>  dispatch) noexcept
+        : pattern_{std::move(pattern)}, dispatch_{std::move(dispatch)} {}
 
-    std::unique_ptr<Expression> pattern;
-    std::unique_ptr<Statement>  dispatch;
+    [[nodiscard]] auto pattern() const noexcept -> const Expression& { return *pattern_; }
+    [[nodiscard]] auto dispatch() const noexcept -> const Statement& { return *dispatch_; }
+
+  private:
+    std::unique_ptr<Expression> pattern_;
+    std::unique_ptr<Statement>  dispatch_;
 };
 
 class MatchExpression : public Expression {

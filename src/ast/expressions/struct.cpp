@@ -10,14 +10,14 @@
 
 namespace ast {
 
-StructMember::StructMember(std::unique_ptr<IdentifierExpression> n,
-                           std::unique_ptr<TypeExpression>       t) noexcept
-    : StructMember{std::move(n), std::move(t), nullopt} {}
+StructMember::StructMember(std::unique_ptr<IdentifierExpression> name,
+                           std::unique_ptr<TypeExpression>       type) noexcept
+    : StructMember{std::move(name), std::move(type), nullopt} {}
 
-StructMember::StructMember(std::unique_ptr<IdentifierExpression> n,
-                           std::unique_ptr<TypeExpression>       t,
-                           Optional<std::unique_ptr<Expression>> d) noexcept
-    : name{std::move(n)}, type{std::move(t)}, default_value{std::move(d)} {}
+StructMember::StructMember(std::unique_ptr<IdentifierExpression> name,
+                           std::unique_ptr<TypeExpression>       type,
+                           Optional<std::unique_ptr<Expression>> default_value) noexcept
+    : name_{std::move(name)}, type_{std::move(type)}, default_value_{std::move(default_value)} {}
 
 StructMember::~StructMember() = default;
 

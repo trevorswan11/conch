@@ -10,16 +10,17 @@
 
 namespace ast {
 
-FunctionParameter::FunctionParameter(bool                                  r,
-                                     std::unique_ptr<IdentifierExpression> n,
-                                     std::unique_ptr<TypeExpression>       t) noexcept
-    : FunctionParameter{r, std::move(n), std::move(t), nullopt} {}
+FunctionParameter::FunctionParameter(bool                                  reference,
+                                     std::unique_ptr<IdentifierExpression> name,
+                                     std::unique_ptr<TypeExpression>       type) noexcept
+    : FunctionParameter{reference, std::move(name), std::move(type), nullopt} {}
 
-FunctionParameter::FunctionParameter(bool                                  r,
-                                     std::unique_ptr<IdentifierExpression> n,
-                                     std::unique_ptr<TypeExpression>       t,
-                                     Optional<std::unique_ptr<Expression>> d) noexcept
-    : reference{r}, name{std::move(n)}, type{std::move(t)}, default_value{std::move(d)} {}
+FunctionParameter::FunctionParameter(bool                                  reference,
+                                     std::unique_ptr<IdentifierExpression> name,
+                                     std::unique_ptr<TypeExpression>       type,
+                                     Optional<std::unique_ptr<Expression>> default_value) noexcept
+    : reference_{reference}, name_{std::move(name)}, type_{std::move(type)},
+      default_value_{std::move(default_value)} {}
 
 FunctionParameter::~FunctionParameter() = default;
 

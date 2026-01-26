@@ -20,8 +20,10 @@ using ExplicitIdentType    = std::unique_ptr<IdentifierExpression>;
 using ExplicitReferredType = std::unique_ptr<Expression>;
 using ExplicitFunctionType = std::unique_ptr<FunctionExpression>;
 
-struct ExplicitArrayType {
-    explicit ExplicitArrayType(std::vector<usize> d, std::unique_ptr<TypeExpression> i) noexcept;
+class ExplicitArrayType {
+  public:
+    explicit ExplicitArrayType(std::vector<usize>              dimensions,
+                               std::unique_ptr<TypeExpression> inner_type) noexcept;
     ~ExplicitArrayType();
 
     ExplicitArrayType(const ExplicitArrayType&)                        = delete;
@@ -29,8 +31,15 @@ struct ExplicitArrayType {
     ExplicitArrayType(ExplicitArrayType&&) noexcept                    = default;
     auto operator=(ExplicitArrayType&&) noexcept -> ExplicitArrayType& = default;
 
-    std::vector<usize>              dimensions;
-    std::unique_ptr<TypeExpression> inner_type;
+    [[nodiscard]] auto dimensions() const noexcept -> const std::vector<usize>& {
+        return dimensions_;
+    }
+
+    [[nodiscard]] auto inner_type() const noexcept -> const TypeExpression& { return *inner_type_; }
+
+  private:
+    std::vector<usize>              dimensions_;
+    std::unique_ptr<TypeExpression> inner_type_;
 };
 
 enum class ExplicitTypeConstraint : u8 {
@@ -41,11 +50,12 @@ enum class ExplicitTypeConstraint : u8 {
 using ExplicitTypeVariant =
     std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>;
 
-struct ExplicitType {
-    explicit ExplicitType(ExplicitTypeVariant t, bool n) noexcept;
-    explicit ExplicitType(ExplicitTypeVariant              t,
-                          bool                             n,
-                          Optional<ExplicitTypeConstraint> c) noexcept;
+class ExplicitType {
+  public:
+    explicit ExplicitType(ExplicitTypeVariant type, bool nullable) noexcept;
+    explicit ExplicitType(ExplicitTypeVariant              type,
+                          bool                             nullable,
+                          Optional<ExplicitTypeConstraint> constraint) noexcept;
     ~ExplicitType();
 
     ExplicitType(const ExplicitType&)                        = delete;
@@ -53,9 +63,16 @@ struct ExplicitType {
     ExplicitType(ExplicitType&&) noexcept                    = default;
     auto operator=(ExplicitType&&) noexcept -> ExplicitType& = default;
 
-    ExplicitTypeVariant              type;
-    bool                             nullable;
-    Optional<ExplicitTypeConstraint> constraint;
+    [[nodiscard]] auto type() const noexcept -> const ExplicitTypeVariant& { return type_; }
+    [[nodiscard]] auto nullable() const noexcept -> bool { return nullable_; }
+    [[nodiscard]] auto constraint() const noexcept -> const Optional<ExplicitTypeConstraint>& {
+        return constraint_;
+    }
+
+  private:
+    ExplicitTypeVariant              type_;
+    bool                             nullable_;
+    Optional<ExplicitTypeConstraint> constraint_;
 };
 
 class TypeExpression : public Expression {

@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) !void {
         "-Wextra",
         "-Werror",
         "-Wpedantic",
+        "-Wno-gnu-statement-expression-from-macro-expansion",
     });
 
     var package_flags = try compiler_flags.clone(b.allocator);

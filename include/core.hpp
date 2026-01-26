@@ -33,6 +33,13 @@ static_assert(std::is_same_v<std::string::value_type, byte>);
 template <typename T, typename E> using Expected = std::__1::expected<T, E>;
 template <typename E> using Unexpected           = std::__1::unexpected<E>;
 
+#define TRY(expr)                                                      \
+    ({                                                                 \
+        auto&& _e = (expr);                                            \
+        if (!_e.has_value()) return Unexpected{std::move(_e).error()}; \
+        std::move(_e).value();                                         \
+    })
+
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
     return []<typename E, E EV>() -> std::string_view {
@@ -80,8 +87,20 @@ class Diagnostic {
     explicit Diagnostic(std::string msg, E err, usize ln, usize col)
         : message_{std::move(msg)}, error_{err}, line_{ln}, column_{col} {}
 
+    template <typename T>
+        requires requires(T t) {
+            t.line;
+            t.column;
+        }
+    explicit Diagnostic(E err, T t) : error_{err}, line_{t.line}, column_{t.column} {}
+
+    explicit Diagnostic(Diagnostic& other, E err) noexcept
+        : message_{std::move(other.message_)}, error_{err}, line_{other.line_},
+          column_{other.column_} {}
+
     auto message() const noexcept -> const std::string& { return message_; }
     auto error() const noexcept -> E { return error_; }
+    auto set_err(E err) noexcept -> void { error_ = err; }
 
     auto operator==(const Diagnostic& other) const noexcept -> bool {
         return message_ == other.message_ && error_ == other.error_ && line_ == other.line_ &&

@@ -13,12 +13,17 @@
 
 namespace ast {
 
-struct CallArgument {
-    explicit CallArgument(bool r, std::unique_ptr<Expression> a) noexcept
-        : reference{r}, argument{std::move(a)} {}
+class CallArgument {
+  public:
+    explicit CallArgument(bool reference, std::unique_ptr<Expression> argument) noexcept
+        : reference_{reference}, argument_{std::move(argument)} {}
 
-    bool                        reference;
-    std::unique_ptr<Expression> argument;
+    [[nodiscard]] auto reference() const noexcept -> bool { return reference_; }
+    [[nodiscard]] auto argument() const noexcept -> const Expression& { return *argument_; }
+
+  private:
+    bool                        reference_;
+    std::unique_ptr<Expression> argument_;
 };
 
 class CallExpression : public Expression {

@@ -15,14 +15,15 @@ class IdentifierExpression;
 class TypeExpression;
 class BlockStatement;
 
-struct FunctionParameter {
-    explicit FunctionParameter(bool                                  r,
-                               std::unique_ptr<IdentifierExpression> n,
-                               std::unique_ptr<TypeExpression>       t) noexcept;
-    explicit FunctionParameter(bool                                  r,
-                               std::unique_ptr<IdentifierExpression> n,
-                               std::unique_ptr<TypeExpression>       t,
-                               Optional<std::unique_ptr<Expression>> d) noexcept;
+class FunctionParameter {
+  public:
+    explicit FunctionParameter(bool                                  reference,
+                               std::unique_ptr<IdentifierExpression> name,
+                               std::unique_ptr<TypeExpression>       type) noexcept;
+    explicit FunctionParameter(bool                                  reference,
+                               std::unique_ptr<IdentifierExpression> name,
+                               std::unique_ptr<TypeExpression>       type,
+                               Optional<std::unique_ptr<Expression>> default_value) noexcept;
     ~FunctionParameter();
 
     FunctionParameter(const FunctionParameter&)                        = delete;
@@ -30,10 +31,18 @@ struct FunctionParameter {
     FunctionParameter(FunctionParameter&&) noexcept                    = default;
     auto operator=(FunctionParameter&&) noexcept -> FunctionParameter& = default;
 
-    bool                                  reference;
-    std::unique_ptr<IdentifierExpression> name;
-    std::unique_ptr<TypeExpression>       type;
-    Optional<std::unique_ptr<Expression>> default_value;
+    [[nodiscard]] auto reference() const noexcept -> bool { return reference_; }
+    [[nodiscard]] auto name() const noexcept -> const IdentifierExpression& { return *name_; }
+    [[nodiscard]] auto type() const noexcept -> const TypeExpression& { return *type_; }
+    [[nodiscard]] auto body() const noexcept -> Optional<const Expression&> {
+        return default_value_ ? Optional<const Expression&>{**default_value_} : nullopt;
+    }
+
+  private:
+    bool                                  reference_;
+    std::unique_ptr<IdentifierExpression> name_;
+    std::unique_ptr<TypeExpression>       type_;
+    Optional<std::unique_ptr<Expression>> default_value_;
 };
 
 class FunctionExpression : public Expression {

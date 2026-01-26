@@ -13,26 +13,36 @@ namespace ast {
 
 class IdentifierExpression;
 
-struct EnumVariant {
-    explicit EnumVariant(std::unique_ptr<IdentifierExpression> e) noexcept;
-    explicit EnumVariant(std::unique_ptr<IdentifierExpression> e,
-                         Optional<std::unique_ptr<Expression>> v) noexcept;
-    ~EnumVariant();
+class Enumeration {
+  public:
+    explicit Enumeration(std::unique_ptr<IdentifierExpression> enumeration) noexcept;
+    explicit Enumeration(std::unique_ptr<IdentifierExpression> enumeration,
+                         Optional<std::unique_ptr<Expression>> value) noexcept;
+    ~Enumeration();
 
-    EnumVariant(const EnumVariant&)                        = delete;
-    auto operator=(const EnumVariant&) -> EnumVariant&     = delete;
-    EnumVariant(EnumVariant&&) noexcept                    = default;
-    auto operator=(EnumVariant&&) noexcept -> EnumVariant& = default;
+    Enumeration(const Enumeration&)                        = delete;
+    auto operator=(const Enumeration&) -> Enumeration&     = delete;
+    Enumeration(Enumeration&&) noexcept                    = default;
+    auto operator=(Enumeration&&) noexcept -> Enumeration& = default;
 
-    std::unique_ptr<IdentifierExpression> enumeration;
-    Optional<std::unique_ptr<Expression>> value;
+    [[nodiscard]] auto reference() const noexcept -> const IdentifierExpression& {
+        return *enumeration_;
+    }
+
+    [[nodiscard]] auto argument() const noexcept -> Optional<const Expression&> {
+        return value_ ? Optional<const Expression&>{**value_} : nullopt;
+    }
+
+  private:
+    std::unique_ptr<IdentifierExpression> enumeration_;
+    Optional<std::unique_ptr<Expression>> value_;
 };
 
 class EnumExpression : public Expression {
   public:
     explicit EnumExpression(const Token&                          start_token,
                             std::unique_ptr<IdentifierExpression> name,
-                            std::vector<EnumVariant>              variants) noexcept;
+                            std::vector<Enumeration>              variants) noexcept;
     ~EnumExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -41,13 +51,13 @@ class EnumExpression : public Expression {
         -> Expected<std::unique_ptr<EnumExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto name() const noexcept -> const IdentifierExpression& { return *name_; }
-    [[nodiscard]] auto variants() const noexcept -> std::span<const EnumVariant> {
-        return variants_;
+    [[nodiscard]] auto enumerations() const noexcept -> std::span<const Enumeration> {
+        return enumerations_;
     }
 
   private:
     std::unique_ptr<IdentifierExpression> name_;
-    std::vector<EnumVariant>              variants_;
+    std::vector<Enumeration>              enumerations_;
 };
 
 } // namespace ast
