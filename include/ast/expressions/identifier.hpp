@@ -19,7 +19,7 @@ class IdentifierExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(const Parser& parser)
         -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto name() const noexcept -> std::string_view { return name_; }

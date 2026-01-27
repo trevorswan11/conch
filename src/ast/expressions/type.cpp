@@ -36,7 +36,7 @@ TypeExpression::~TypeExpression() = default;
 auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<TypeExpression>, ParserDiagnostic> {
+    -> Expected<std::pair<std::unique_ptr<TypeExpression>, bool>, ParserDiagnostic> {
     TODO(parser);
 }
 

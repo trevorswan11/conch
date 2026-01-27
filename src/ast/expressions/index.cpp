@@ -6,9 +6,9 @@ namespace ast {
 
 auto IndexExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IndexExpression::parse(Parser& parser)
+auto IndexExpression::parse(Parser& parser, std::unique_ptr<Expression> array)
     -> Expected<std::unique_ptr<IndexExpression>, ParserDiagnostic> {
-    TODO(parser);
+    TODO(parser, array);
 }
 
 } // namespace ast

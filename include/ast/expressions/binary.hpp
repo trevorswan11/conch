@@ -17,7 +17,7 @@ class BinaryExpression : public InfixExpression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> lhs)
         -> Expected<std::unique_ptr<BinaryExpression>, ParserDiagnostic>;
 };
 

@@ -11,24 +11,10 @@ auto StringExpression::parse(Parser& parser)
     TODO(parser);
 }
 
-auto SignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+auto IntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto SignedIntegerExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<SignedIntegerExpression>, ParserDiagnostic> {
-    TODO(parser);
-}
-
-auto UnsignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto UnsignedIntegerExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<UnsignedIntegerExpression>, ParserDiagnostic> {
-    TODO(parser);
-}
-
-auto SizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto SizeIntegerExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<SizeIntegerExpression>, ParserDiagnostic> {
+auto IntegerExpression::parse(Parser& parser)
+    -> Expected<std::unique_ptr<IntegerExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 

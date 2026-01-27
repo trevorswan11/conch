@@ -1,8 +1,11 @@
 #pragma once
 
+#include <array>
+#include <functional>
 #include <memory>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -25,16 +28,31 @@ enum class ParserError : u8 {
     UNEXPECTED_TOKEN,
     ENUM_MISSING_VARIANTS,
     MISSING_TRAILING_COMMA,
+    MISSING_PREFIX_PARSER,
+    INFIX_MISSING_RHS,
+    ILLEGAL_IDENTIFIER,
+    END_OF_TOKEN_STREAM,
+    CONST_DECL_MISSING_VALUE,
+    FORWARD_VAR_DECL_MISSING_TYPE,
+    EMPTY_IMPL_BLOCK,
+    USER_IMPORT_MISSING_ALIAS,
 };
 
 using AST              = std::vector<std::unique_ptr<ast::Node>>;
 using ParserDiagnostic = Diagnostic<ParserError>;
 
-template <typename... Args> auto parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
+template <typename... Args>
+auto make_parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
     return Unexpected<ParserDiagnostic>{ParserDiagnostic{std::forward<Args>(args)...}};
 }
 
 class Parser {
+  public:
+    using PrefixFn =
+        std::function<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(Parser&)>;
+    using InfixFn = std::function<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(
+        Parser&, std::unique_ptr<ast::Expression>)>;
+
   public:
     Parser() noexcept = default;
     explicit Parser(std::string_view input) noexcept : input_{input}, lexer_{input} { advance(2); }
@@ -68,8 +86,17 @@ class Parser {
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>;
 
+    static auto poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&>;
+    static auto poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&>;
+
   private:
     static auto tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic;
+
+    using PrefixPair = std::pair<TokenType, PrefixFn>;
+    static std::array<PrefixPair, 34> PREFIX_FNS;
+
+    using InfixPair = std::pair<TokenType, InfixFn>;
+    static std::array<InfixPair, 39> INFIX_FNS;
 
   private:
     std::string_view input_;

@@ -37,7 +37,7 @@ auto EnumExpression::parse(Parser& parser)
     TRY(parser.expect_peek(TokenType ::LBRACE));
     if (parser.peek_token_is(TokenType::RBRACE)) {
         parser.advance();
-        return parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, start_token);
+        return make_parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, std::move(start_token));
     }
 
     std::vector<Enumeration> variant;
@@ -55,7 +55,7 @@ auto EnumExpression::parse(Parser& parser)
         // All variants require a trailing comma!
         auto peek = parser.expect_peek(TokenType::COMMA);
         if (!peek.has_value()) {
-            return parser_unexpected(peek.error(), ParserError::MISSING_TRAILING_COMMA);
+            return make_parser_unexpected(peek.error(), ParserError::MISSING_TRAILING_COMMA);
         }
     }
 

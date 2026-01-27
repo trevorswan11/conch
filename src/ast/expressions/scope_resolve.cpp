@@ -18,9 +18,9 @@ ScopeResolutionExpression::~ScopeResolutionExpression() = default;
 
 auto ScopeResolutionExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ScopeResolutionExpression::parse(Parser& parser)
+auto ScopeResolutionExpression::parse(Parser& parser, std::unique_ptr<Expression> outer)
     -> Expected<std::unique_ptr<ScopeResolutionExpression>, ParserDiagnostic> {
-    TODO(parser);
+    TODO(parser, outer);
 }
 
 } // namespace ast
