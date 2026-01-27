@@ -4,9 +4,9 @@
 #include <new>
 
 extern "C" {
-    auto  launch(char* proc) -> int { return Catch::Session().run(1, &proc); }
-    void* alloc(size_t size);
-    void  dealloc(void* ptr);
+auto  launch(char* proc) -> int { return Catch::Session().run(1, &proc); }
+void* alloc(size_t size);
+void  dealloc(void* ptr);
 }
 
 void* operator new(size_t size) {

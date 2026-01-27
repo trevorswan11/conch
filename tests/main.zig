@@ -1,6 +1,6 @@
 const std = @import("std");
 
-extern fn launch(argv: [*c]u8) i32;
+extern fn launch([*c]u8) i32;
 
 const Instrumentor = struct {
     const internal_allocator = std.heap.c_allocator;

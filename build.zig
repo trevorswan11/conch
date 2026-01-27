@@ -137,13 +137,12 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.auto_install) b.installArtifact(libconch);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libconch.step);
 
-    const cxx_main = b.pathJoin(&.{ "src", "main.cpp" });
     const conch = createExecutable(b, .{
         .name = "conch",
         .target = config.target,
         .optimize = config.optimize,
         .include_paths = &.{b.path("include")},
-        .cxx_files = &.{cxx_main},
+        .cxx_files = &.{"src/main.cpp"},
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{libconch},
         .behavior = config.behavior orelse .{
@@ -167,19 +166,18 @@ fn addArtifacts(b: *std.Build, config: struct {
             .optimize = .ReleaseSafe,
             .include_path = catch2.path("extras"),
             .source_root = catch2.path("."),
-            .cxx_files = &.{b.pathJoin(&.{ "extras", "catch_amalgamated.cpp" })},
+            .cxx_files = &.{"extras/catch_amalgamated.cpp"},
             .flags = config.cxx_flags,
         });
         if (config.auto_install) b.installArtifact(libcatch2.?);
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
-        const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
         conch_tests = createExecutable(b, .{
             .name = "conch_tests",
-            .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
+            .zig_main = b.path("tests/main.zig"),
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{ b.path("include"), catch2.path("extras"), b.path(helper_dir) },
+            .include_paths = &.{ b.path("include"), catch2.path("extras"), b.path("tests/helpers") },
             .cxx_files = try collectFiles(b, "tests", .{}),
             .cxx_flags = config.cxx_flags,
             .link_libraries = &.{ libconch, libcatch2.? },
@@ -213,102 +211,101 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
     const cppcheck = b.dependency("cppcheck", .{});
     const cppcheck_includes: []const std.Build.LazyPath = &.{
         cppcheck.path("externals"),
-        cppcheck.path(b.pathJoin(&.{ "externals", "simplecpp" })),
-        cppcheck.path(b.pathJoin(&.{ "externals", "tinyxml2" })),
-        cppcheck.path(b.pathJoin(&.{ "externals", "picojson" })),
+        cppcheck.path("externals/simplecpp"),
+        cppcheck.path("externals/tinyxml2"),
+        cppcheck.path("externals/picojson"),
         cppcheck.path("lib"),
         cppcheck.path("frontend"),
     };
 
-    var cppcheck_sources: std.ArrayList([]const u8) = .empty;
-    try cppcheck_sources.appendSlice(b.allocator, &.{
-        b.pathJoin(&.{ "externals", "simplecpp", "simplecpp.cpp" }),
-        b.pathJoin(&.{ "externals", "tinyxml2", "tinyxml2.cpp" }),
-        b.pathJoin(&.{ "frontend", "frontend.cpp" }),
+    const cppcheck_sources = [_][]const u8{
+        "externals/simplecpp/simplecpp.cpp",
+        "externals/tinyxml2/tinyxml2.cpp",
+        "frontend/frontend.cpp",
 
-        b.pathJoin(&.{ "cli", "cmdlineparser.cpp" }),
-        b.pathJoin(&.{ "cli", "cppcheckexecutor.cpp" }),
-        b.pathJoin(&.{ "cli", "executor.cpp" }),
-        b.pathJoin(&.{ "cli", "filelister.cpp" }),
-        b.pathJoin(&.{ "cli", "main.cpp" }),
-        b.pathJoin(&.{ "cli", "processexecutor.cpp" }),
-        b.pathJoin(&.{ "cli", "sehwrapper.cpp" }),
-        b.pathJoin(&.{ "cli", "signalhandler.cpp" }),
-        b.pathJoin(&.{ "cli", "singleexecutor.cpp" }),
-        b.pathJoin(&.{ "cli", "stacktrace.cpp" }),
-        b.pathJoin(&.{ "cli", "threadexecutor.cpp" }),
+        "cli/cmdlineparser.cpp",
+        "cli/cppcheckexecutor.cpp",
+        "cli/executor.cpp",
+        "cli/filelister.cpp",
+        "cli/main.cpp",
+        "cli/processexecutor.cpp",
+        "cli/sehwrapper.cpp",
+        "cli/signalhandler.cpp",
+        "cli/singleexecutor.cpp",
+        "cli/stacktrace.cpp",
+        "cli/threadexecutor.cpp",
 
-        b.pathJoin(&.{ "lib", "addoninfo.cpp" }),
-        b.pathJoin(&.{ "lib", "analyzerinfo.cpp" }),
-        b.pathJoin(&.{ "lib", "astutils.cpp" }),
-        b.pathJoin(&.{ "lib", "check.cpp" }),
-        b.pathJoin(&.{ "lib", "check64bit.cpp" }),
-        b.pathJoin(&.{ "lib", "checkassert.cpp" }),
-        b.pathJoin(&.{ "lib", "checkautovariables.cpp" }),
-        b.pathJoin(&.{ "lib", "checkbool.cpp" }),
-        b.pathJoin(&.{ "lib", "checkbufferoverrun.cpp" }),
-        b.pathJoin(&.{ "lib", "checkclass.cpp" }),
-        b.pathJoin(&.{ "lib", "checkcondition.cpp" }),
-        b.pathJoin(&.{ "lib", "checkers.cpp" }),
-        b.pathJoin(&.{ "lib", "checkersidmapping.cpp" }),
-        b.pathJoin(&.{ "lib", "checkersreport.cpp" }),
-        b.pathJoin(&.{ "lib", "checkexceptionsafety.cpp" }),
-        b.pathJoin(&.{ "lib", "checkfunctions.cpp" }),
-        b.pathJoin(&.{ "lib", "checkinternal.cpp" }),
-        b.pathJoin(&.{ "lib", "checkio.cpp" }),
-        b.pathJoin(&.{ "lib", "checkleakautovar.cpp" }),
-        b.pathJoin(&.{ "lib", "checkmemoryleak.cpp" }),
-        b.pathJoin(&.{ "lib", "checknullpointer.cpp" }),
-        b.pathJoin(&.{ "lib", "checkother.cpp" }),
-        b.pathJoin(&.{ "lib", "checkpostfixoperator.cpp" }),
-        b.pathJoin(&.{ "lib", "checksizeof.cpp" }),
-        b.pathJoin(&.{ "lib", "checkstl.cpp" }),
-        b.pathJoin(&.{ "lib", "checkstring.cpp" }),
-        b.pathJoin(&.{ "lib", "checktype.cpp" }),
-        b.pathJoin(&.{ "lib", "checkuninitvar.cpp" }),
-        b.pathJoin(&.{ "lib", "checkunusedfunctions.cpp" }),
-        b.pathJoin(&.{ "lib", "checkunusedvar.cpp" }),
-        b.pathJoin(&.{ "lib", "checkvaarg.cpp" }),
-        b.pathJoin(&.{ "lib", "clangimport.cpp" }),
-        b.pathJoin(&.{ "lib", "color.cpp" }),
-        b.pathJoin(&.{ "lib", "cppcheck.cpp" }),
-        b.pathJoin(&.{ "lib", "ctu.cpp" }),
-        b.pathJoin(&.{ "lib", "errorlogger.cpp" }),
-        b.pathJoin(&.{ "lib", "errortypes.cpp" }),
-        b.pathJoin(&.{ "lib", "findtoken.cpp" }),
-        b.pathJoin(&.{ "lib", "forwardanalyzer.cpp" }),
-        b.pathJoin(&.{ "lib", "fwdanalysis.cpp" }),
-        b.pathJoin(&.{ "lib", "importproject.cpp" }),
-        b.pathJoin(&.{ "lib", "infer.cpp" }),
-        b.pathJoin(&.{ "lib", "keywords.cpp" }),
-        b.pathJoin(&.{ "lib", "library.cpp" }),
-        b.pathJoin(&.{ "lib", "mathlib.cpp" }),
-        b.pathJoin(&.{ "lib", "path.cpp" }),
-        b.pathJoin(&.{ "lib", "pathanalysis.cpp" }),
-        b.pathJoin(&.{ "lib", "pathmatch.cpp" }),
-        b.pathJoin(&.{ "lib", "platform.cpp" }),
-        b.pathJoin(&.{ "lib", "preprocessor.cpp" }),
-        b.pathJoin(&.{ "lib", "programmemory.cpp" }),
-        b.pathJoin(&.{ "lib", "regex.cpp" }),
-        b.pathJoin(&.{ "lib", "reverseanalyzer.cpp" }),
-        b.pathJoin(&.{ "lib", "sarifreport.cpp" }),
-        b.pathJoin(&.{ "lib", "settings.cpp" }),
-        b.pathJoin(&.{ "lib", "standards.cpp" }),
-        b.pathJoin(&.{ "lib", "summaries.cpp" }),
-        b.pathJoin(&.{ "lib", "suppressions.cpp" }),
-        b.pathJoin(&.{ "lib", "symboldatabase.cpp" }),
-        b.pathJoin(&.{ "lib", "templatesimplifier.cpp" }),
-        b.pathJoin(&.{ "lib", "timer.cpp" }),
-        b.pathJoin(&.{ "lib", "token.cpp" }),
-        b.pathJoin(&.{ "lib", "tokenize.cpp" }),
-        b.pathJoin(&.{ "lib", "tokenlist.cpp" }),
-        b.pathJoin(&.{ "lib", "utils.cpp" }),
-        b.pathJoin(&.{ "lib", "valueflow.cpp" }),
-        b.pathJoin(&.{ "lib", "vf_analyzers.cpp" }),
-        b.pathJoin(&.{ "lib", "vf_common.cpp" }),
-        b.pathJoin(&.{ "lib", "vf_settokenvalue.cpp" }),
-        b.pathJoin(&.{ "lib", "vfvalue.cpp" }),
-    });
+        "lib/addoninfo.cpp",
+        "lib/analyzerinfo.cpp",
+        "lib/astutils.cpp",
+        "lib/check.cpp",
+        "lib/check64bit.cpp",
+        "lib/checkassert.cpp",
+        "lib/checkautovariables.cpp",
+        "lib/checkbool.cpp",
+        "lib/checkbufferoverrun.cpp",
+        "lib/checkclass.cpp",
+        "lib/checkcondition.cpp",
+        "lib/checkers.cpp",
+        "lib/checkersidmapping.cpp",
+        "lib/checkersreport.cpp",
+        "lib/checkexceptionsafety.cpp",
+        "lib/checkfunctions.cpp",
+        "lib/checkinternal.cpp",
+        "lib/checkio.cpp",
+        "lib/checkleakautovar.cpp",
+        "lib/checkmemoryleak.cpp",
+        "lib/checknullpointer.cpp",
+        "lib/checkother.cpp",
+        "lib/checkpostfixoperator.cpp",
+        "lib/checksizeof.cpp",
+        "lib/checkstl.cpp",
+        "lib/checkstring.cpp",
+        "lib/checktype.cpp",
+        "lib/checkuninitvar.cpp",
+        "lib/checkunusedfunctions.cpp",
+        "lib/checkunusedvar.cpp",
+        "lib/checkvaarg.cpp",
+        "lib/clangimport.cpp",
+        "lib/color.cpp",
+        "lib/cppcheck.cpp",
+        "lib/ctu.cpp",
+        "lib/errorlogger.cpp",
+        "lib/errortypes.cpp",
+        "lib/findtoken.cpp",
+        "lib/forwardanalyzer.cpp",
+        "lib/fwdanalysis.cpp",
+        "lib/importproject.cpp",
+        "lib/infer.cpp",
+        "lib/keywords.cpp",
+        "lib/library.cpp",
+        "lib/mathlib.cpp",
+        "lib/path.cpp",
+        "lib/pathanalysis.cpp",
+        "lib/pathmatch.cpp",
+        "lib/platform.cpp",
+        "lib/preprocessor.cpp",
+        "lib/programmemory.cpp",
+        "lib/regex.cpp",
+        "lib/reverseanalyzer.cpp",
+        "lib/sarifreport.cpp",
+        "lib/settings.cpp",
+        "lib/standards.cpp",
+        "lib/summaries.cpp",
+        "lib/suppressions.cpp",
+        "lib/symboldatabase.cpp",
+        "lib/templatesimplifier.cpp",
+        "lib/timer.cpp",
+        "lib/token.cpp",
+        "lib/tokenize.cpp",
+        "lib/tokenlist.cpp",
+        "lib/utils.cpp",
+        "lib/valueflow.cpp",
+        "lib/vf_analyzers.cpp",
+        "lib/vf_common.cpp",
+        "lib/vf_settokenvalue.cpp",
+        "lib/vfvalue.cpp",
+    };
 
     // The path needs to be fixed on windows due to cppcheck internals
     const cfg_path = blk: {
@@ -331,7 +328,7 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .optimize = .ReleaseSafe,
         .include_paths = cppcheck_includes,
         .source_root = cppcheck.path("."),
-        .cxx_files = cppcheck_sources.items,
+        .cxx_files = &cppcheck_sources,
         .cxx_flags = &.{ files_dir_define, "-Uunix", "-std=c++11" },
     });
 }
@@ -571,11 +568,7 @@ fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const zig_paths: []const []const u8 = &.{
-        "build.zig",
-        "build.zig.zon",
-        b.pathJoin(&.{ "tests", "main.zig" }),
-    };
+    const zig_paths: []const []const u8 = &.{ "build.zig", "build.zig.zon", "tests/main.zig" };
     const build_fmt = b.addFmt(.{ .paths = zig_paths });
     const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
@@ -875,21 +868,21 @@ fn addPackageStep(b: *std.Build, config: struct {
                 , .{ zip orelse "null", tar orelse "null" });
             }
 
-            const legal_paths: []const []const []const u8 = &.{
-                &.{"LICENSE"},
-                &.{"README.md"},
-                &.{ ".github", "CHANGELOG.md" },
+            const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
+                .{ b.path("LICENSE"), "LICENSE" },
+                .{ b.path("README.md"), "README.md" },
+                .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
             };
 
-            var file_installs: std.ArrayList(*std.Build.Step) = .empty;
-            for (legal_paths) |path| {
+            var file_installs: [legal_paths.len]*std.Build.Step = undefined;
+            for (legal_paths, 0..) |path, i| {
                 const install_file_step = b.addInstallFileWithDir(
-                    b.path(b.pathJoin(path)),
+                    path.@"0",
                     .{ .custom = package_artifact_dir_path },
-                    path[path.len - 1],
+                    path.@"1",
                 );
                 package_step.dependOn(&install_file_step.step);
-                try file_installs.append(b.allocator, &install_file_step.step);
+                file_installs[i] = &install_file_step.step;
             }
 
             // Zip is only needed on windows
@@ -908,7 +901,7 @@ fn addPackageStep(b: *std.Build, config: struct {
 
                 zipper.step.dependOn(&platform.step);
                 package_step.dependOn(&zipper.step);
-                for (file_installs.items) |step| {
+                for (file_installs) |step| {
                     zipper.step.dependOn(step);
                 }
 
@@ -936,7 +929,7 @@ fn addPackageStep(b: *std.Build, config: struct {
 
             archiver.step.dependOn(&platform.step);
             package_step.dependOn(&archiver.step);
-            for (file_installs.items) |step| {
+            for (file_installs) |step| {
                 archiver.step.dependOn(step);
             }
 
