@@ -87,11 +87,11 @@ fn addFlagOptions(b: *std.Build) struct {
         "Skip compilation of cppcheck and disable static analysis tooling",
     ) orelse false;
 
-    const clean_cache = (builtin.os.tag != .windows) and (b.option(
+    const clean_cache = builtin.os.tag != .windows and b.option(
         bool,
         "clean-cache",
         "Clean the build cache with the clean step",
-    ) orelse false);
+    ) orelse false;
 
     return .{
         .compile_only = compile_only,
@@ -209,34 +209,109 @@ fn addArtifacts(b: *std.Build, config: struct {
 /// Compiles cppcheck from source using the flags given by
 /// https://github.com/danmar/cppcheck#g-for-experts
 fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
+    const cppcheck = b.dependency("cppcheck", .{});
     const cppcheck_includes: []const std.Build.LazyPath = &.{
-        b.path(getCppcheckRelativePath(b, &.{"externals"})),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "simplecpp" })),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "tinyxml2" })),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "picojson" })),
-        b.path(getCppcheckRelativePath(b, &.{"lib"})),
-        b.path(getCppcheckRelativePath(b, &.{"frontend"})),
+        cppcheck.path("externals"),
+        cppcheck.path(b.pathJoin(&.{ "externals", "simplecpp" })),
+        cppcheck.path(b.pathJoin(&.{ "externals", "tinyxml2" })),
+        cppcheck.path(b.pathJoin(&.{ "externals", "picojson" })),
+        cppcheck.path("lib"),
+        cppcheck.path("frontend"),
     };
 
     var cppcheck_sources: std.ArrayList([]const u8) = .empty;
     try cppcheck_sources.appendSlice(b.allocator, &.{
-        getCppcheckRelativePath(b, &.{ "externals", "simplecpp", "simplecpp.cpp" }),
-        getCppcheckRelativePath(b, &.{ "externals", "tinyxml2", "tinyxml2.cpp" }),
+        b.pathJoin(&.{ "externals", "simplecpp", "simplecpp.cpp" }),
+        b.pathJoin(&.{ "externals", "tinyxml2", "tinyxml2.cpp" }),
+        b.pathJoin(&.{ "frontend", "frontend.cpp" }),
+
+        b.pathJoin(&.{ "cli", "cmdlineparser.cpp" }),
+        b.pathJoin(&.{ "cli", "cppcheckexecutor.cpp" }),
+        b.pathJoin(&.{ "cli", "executor.cpp" }),
+        b.pathJoin(&.{ "cli", "filelister.cpp" }),
+        b.pathJoin(&.{ "cli", "main.cpp" }),
+        b.pathJoin(&.{ "cli", "processexecutor.cpp" }),
+        b.pathJoin(&.{ "cli", "sehwrapper.cpp" }),
+        b.pathJoin(&.{ "cli", "signalhandler.cpp" }),
+        b.pathJoin(&.{ "cli", "singleexecutor.cpp" }),
+        b.pathJoin(&.{ "cli", "stacktrace.cpp" }),
+        b.pathJoin(&.{ "cli", "threadexecutor.cpp" }),
+
+        b.pathJoin(&.{ "lib", "addoninfo.cpp" }),
+        b.pathJoin(&.{ "lib", "analyzerinfo.cpp" }),
+        b.pathJoin(&.{ "lib", "astutils.cpp" }),
+        b.pathJoin(&.{ "lib", "check.cpp" }),
+        b.pathJoin(&.{ "lib", "check64bit.cpp" }),
+        b.pathJoin(&.{ "lib", "checkassert.cpp" }),
+        b.pathJoin(&.{ "lib", "checkautovariables.cpp" }),
+        b.pathJoin(&.{ "lib", "checkbool.cpp" }),
+        b.pathJoin(&.{ "lib", "checkbufferoverrun.cpp" }),
+        b.pathJoin(&.{ "lib", "checkclass.cpp" }),
+        b.pathJoin(&.{ "lib", "checkcondition.cpp" }),
+        b.pathJoin(&.{ "lib", "checkers.cpp" }),
+        b.pathJoin(&.{ "lib", "checkersidmapping.cpp" }),
+        b.pathJoin(&.{ "lib", "checkersreport.cpp" }),
+        b.pathJoin(&.{ "lib", "checkexceptionsafety.cpp" }),
+        b.pathJoin(&.{ "lib", "checkfunctions.cpp" }),
+        b.pathJoin(&.{ "lib", "checkinternal.cpp" }),
+        b.pathJoin(&.{ "lib", "checkio.cpp" }),
+        b.pathJoin(&.{ "lib", "checkleakautovar.cpp" }),
+        b.pathJoin(&.{ "lib", "checkmemoryleak.cpp" }),
+        b.pathJoin(&.{ "lib", "checknullpointer.cpp" }),
+        b.pathJoin(&.{ "lib", "checkother.cpp" }),
+        b.pathJoin(&.{ "lib", "checkpostfixoperator.cpp" }),
+        b.pathJoin(&.{ "lib", "checksizeof.cpp" }),
+        b.pathJoin(&.{ "lib", "checkstl.cpp" }),
+        b.pathJoin(&.{ "lib", "checkstring.cpp" }),
+        b.pathJoin(&.{ "lib", "checktype.cpp" }),
+        b.pathJoin(&.{ "lib", "checkuninitvar.cpp" }),
+        b.pathJoin(&.{ "lib", "checkunusedfunctions.cpp" }),
+        b.pathJoin(&.{ "lib", "checkunusedvar.cpp" }),
+        b.pathJoin(&.{ "lib", "checkvaarg.cpp" }),
+        b.pathJoin(&.{ "lib", "clangimport.cpp" }),
+        b.pathJoin(&.{ "lib", "color.cpp" }),
+        b.pathJoin(&.{ "lib", "cppcheck.cpp" }),
+        b.pathJoin(&.{ "lib", "ctu.cpp" }),
+        b.pathJoin(&.{ "lib", "errorlogger.cpp" }),
+        b.pathJoin(&.{ "lib", "errortypes.cpp" }),
+        b.pathJoin(&.{ "lib", "findtoken.cpp" }),
+        b.pathJoin(&.{ "lib", "forwardanalyzer.cpp" }),
+        b.pathJoin(&.{ "lib", "fwdanalysis.cpp" }),
+        b.pathJoin(&.{ "lib", "importproject.cpp" }),
+        b.pathJoin(&.{ "lib", "infer.cpp" }),
+        b.pathJoin(&.{ "lib", "keywords.cpp" }),
+        b.pathJoin(&.{ "lib", "library.cpp" }),
+        b.pathJoin(&.{ "lib", "mathlib.cpp" }),
+        b.pathJoin(&.{ "lib", "path.cpp" }),
+        b.pathJoin(&.{ "lib", "pathanalysis.cpp" }),
+        b.pathJoin(&.{ "lib", "pathmatch.cpp" }),
+        b.pathJoin(&.{ "lib", "platform.cpp" }),
+        b.pathJoin(&.{ "lib", "preprocessor.cpp" }),
+        b.pathJoin(&.{ "lib", "programmemory.cpp" }),
+        b.pathJoin(&.{ "lib", "regex.cpp" }),
+        b.pathJoin(&.{ "lib", "reverseanalyzer.cpp" }),
+        b.pathJoin(&.{ "lib", "sarifreport.cpp" }),
+        b.pathJoin(&.{ "lib", "settings.cpp" }),
+        b.pathJoin(&.{ "lib", "standards.cpp" }),
+        b.pathJoin(&.{ "lib", "summaries.cpp" }),
+        b.pathJoin(&.{ "lib", "suppressions.cpp" }),
+        b.pathJoin(&.{ "lib", "symboldatabase.cpp" }),
+        b.pathJoin(&.{ "lib", "templatesimplifier.cpp" }),
+        b.pathJoin(&.{ "lib", "timer.cpp" }),
+        b.pathJoin(&.{ "lib", "token.cpp" }),
+        b.pathJoin(&.{ "lib", "tokenize.cpp" }),
+        b.pathJoin(&.{ "lib", "tokenlist.cpp" }),
+        b.pathJoin(&.{ "lib", "utils.cpp" }),
+        b.pathJoin(&.{ "lib", "valueflow.cpp" }),
+        b.pathJoin(&.{ "lib", "vf_analyzers.cpp" }),
+        b.pathJoin(&.{ "lib", "vf_common.cpp" }),
+        b.pathJoin(&.{ "lib", "vf_settokenvalue.cpp" }),
+        b.pathJoin(&.{ "lib", "vfvalue.cpp" }),
     });
-
-    const cppcheck_glob_srcs: []const []const []const u8 = &.{
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"frontend"}), .{}),
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"cli"}), .{}),
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"lib"}), .{}),
-    };
-
-    for (cppcheck_glob_srcs) |glob| {
-        try cppcheck_sources.appendSlice(b.allocator, glob);
-    }
 
     // The path needs to be fixed on windows due to cppcheck internals
     const cfg_path = blk: {
-        const raw_cfg_path = getCppcheckRelativePath(b, &.{});
+        const raw_cfg_path = try cppcheck.path(".").getPath3(b, null).toString(b.allocator);
         if (builtin.os.tag == .windows) {
             break :blk try std.mem.replaceOwned(u8, b.allocator, raw_cfg_path, "\\", "/");
         }
@@ -254,8 +329,9 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .target = target,
         .optimize = .ReleaseSafe,
         .include_paths = cppcheck_includes,
+        .source_root = cppcheck.path("."),
         .cxx_files = cppcheck_sources.items,
-        .cxx_flags = &.{ files_dir_define, "-Uunix" },
+        .cxx_flags = &.{ files_dir_define, "-Uunix", "-std=c++11" },
     });
 }
 
@@ -292,6 +368,7 @@ fn createExecutable(b: *std.Build, config: struct {
     target: ?std.Build.ResolvedTarget,
     optimize: ?std.builtin.OptimizeMode,
     include_paths: []const std.Build.LazyPath,
+    source_root: ?std.Build.LazyPath = null,
     cxx_files: []const []const u8,
     cxx_flags: []const []const u8,
     link_libraries: []const *std.Build.Step.Compile = &.{},
@@ -313,6 +390,7 @@ fn createExecutable(b: *std.Build, config: struct {
     }
 
     mod.addCSourceFiles(.{
+        .root = config.source_root,
         .files = config.cxx_files,
         .flags = config.cxx_flags,
         .language = .cpp,
