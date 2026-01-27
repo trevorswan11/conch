@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "core.hpp"
+#include "util/enum.hpp"
 
 enum class TestEnum {
     FIRST,

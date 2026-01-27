@@ -4,8 +4,6 @@
 
 #include "ast/expressions/identifier.hpp"
 
-#include "core.hpp"
-#include "parser/parser.hpp"
 #include "visitor/visitor.hpp"
 
 namespace ast {

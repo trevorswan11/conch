@@ -4,7 +4,10 @@
 #include <string>
 #include <string_view>
 
-#include "core.hpp"
+#include "util/common.hpp"
+#include "util/diagnostic.hpp"
+#include "util/enum.hpp"
+#include "util/expected.hpp"
 
 enum class TokenError : u8 {
     NON_STRING_TOKEN,

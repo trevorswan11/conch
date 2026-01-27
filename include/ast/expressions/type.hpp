@@ -4,7 +4,8 @@
 #include <variant>
 #include <vector>
 
-#include "core.hpp"
+#include "util/expected.hpp"
+#include "util/optional.hpp"
 
 #include "ast/node.hpp"
 

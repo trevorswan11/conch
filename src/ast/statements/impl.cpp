@@ -5,7 +5,6 @@
 #include "ast/expressions/identifier.hpp"
 #include "ast/statements/block.hpp"
 
-#include "lexer/token.hpp"
 #include "visitor/visitor.hpp"
 
 namespace ast {

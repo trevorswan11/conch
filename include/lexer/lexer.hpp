@@ -6,7 +6,8 @@
 
 #include "lexer/token.hpp"
 
-#include "core.hpp"
+#include "util/common.hpp"
+#include "util/optional.hpp"
 
 class Lexer {
   public:
