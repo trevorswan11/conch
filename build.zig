@@ -403,7 +403,7 @@ fn createExecutable(b: *std.Build, config: struct {
         .name = config.name,
         .root_module = mod,
     });
-    
+
     switch (config.behavior) {
         .runnable => |run| {
             const run_cmd = b.addRunArtifact(exe);
@@ -571,7 +571,11 @@ fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const zig_paths: []const []const u8 = &.{ "build.zig", b.pathJoin(&.{ "tests", "main.zig" }) };
+    const zig_paths: []const []const u8 = &.{
+        "build.zig",
+        "build.zig.zon",
+        b.pathJoin(&.{ "tests", "main.zig" }),
+    };
     const build_fmt = b.addFmt(.{ .paths = zig_paths });
     const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
@@ -1022,19 +1026,13 @@ fn getCacheRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
     return b.cache_root.join(b.allocator, paths) catch @panic("OOM");
 }
 
-fn getRelativeFromRoot(b: *std.Build, root: []const u8, paths: []const []const u8) []const u8 {
-    const total_path = std.mem.concat(
-        b.allocator,
-        []const u8,
-        &.{ &.{root}, paths },
-    ) catch @panic("OOM");
-    return b.pathJoin(total_path);
-}
-
 /// Resolves the relative path with its root at the installation directory
 fn getPrefixRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
-    const prefix_root = std.fs.path.basename(b.install_prefix);
-    return getRelativeFromRoot(b, prefix_root, paths);
+    return b.pathJoin(std.mem.concat(
+        b.allocator,
+        []const u8,
+        &.{ &.{std.fs.path.basename(b.install_prefix)}, paths },
+    ) catch @panic("OOM"));
 }
 
 /// Searches the system PATH for the cmd, returning the binary path if found
