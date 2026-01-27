@@ -160,13 +160,14 @@ fn addArtifacts(b: *std.Build, config: struct {
     var libcatch2: ?*std.Build.Step.Compile = null;
     var conch_tests: ?*std.Build.Step.Compile = null;
     if (!config.skip_tests) {
-        const catch2_dir = b.pathJoin(&.{ "vendor", "catch2" });
+        const catch2 = b.dependency("catch2", .{});
         libcatch2 = createLibrary(b, .{
             .name = "catch2",
             .target = config.target,
             .optimize = .ReleaseSafe,
-            .include_path = b.path(catch2_dir),
-            .cxx_files = try collectFiles(b, catch2_dir, .{}),
+            .include_path = catch2.path("extras"),
+            .source_root = catch2.path("."),
+            .cxx_files = &.{b.pathJoin(&.{ "extras", "catch_amalgamated.cpp" })},
             .flags = config.cxx_flags,
         });
         if (config.auto_install) b.installArtifact(libcatch2.?);
@@ -178,7 +179,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
+            .include_paths = &.{ b.path("include"), catch2.path("extras"), b.path(helper_dir) },
             .cxx_files = try collectFiles(b, "tests", .{}),
             .cxx_flags = config.cxx_flags,
             .link_libraries = &.{ libconch, libcatch2.? },
@@ -340,6 +341,7 @@ fn createLibrary(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     include_path: std.Build.LazyPath,
+    source_root: ?std.Build.LazyPath = null,
     cxx_files: []const []const u8,
     flags: []const []const u8,
 }) *std.Build.Step.Compile {
@@ -350,6 +352,7 @@ fn createLibrary(b: *std.Build, config: struct {
     });
     mod.addIncludePath(config.include_path);
     mod.addCSourceFiles(.{
+        .root = config.source_root,
         .files = config.cxx_files,
         .flags = config.flags,
         .language = .cpp,
@@ -400,7 +403,7 @@ fn createExecutable(b: *std.Build, config: struct {
         .name = config.name,
         .root_module = mod,
     });
-
+    
     switch (config.behavior) {
         .runnable => |run| {
             const run_cmd = b.addRunArtifact(exe);
@@ -1026,12 +1029,6 @@ fn getRelativeFromRoot(b: *std.Build, root: []const u8, paths: []const []const u
         &.{ &.{root}, paths },
     ) catch @panic("OOM");
     return b.pathJoin(total_path);
-}
-
-/// Resolves the relative path with its root at the vendored cppcheck directory
-fn getCppcheckRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
-    const cppcheck_root = b.pathJoin(&.{ "vendor", "cppcheck" });
-    return getRelativeFromRoot(b, cppcheck_root, paths);
 }
 
 /// Resolves the relative path with its root at the installation directory
