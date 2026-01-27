@@ -33,34 +33,14 @@ class StringExpression : public PrimitiveExpression<std::string> {
         -> Expected<std::unique_ptr<StringExpression>, ParserDiagnostic>;
 };
 
-class SignedIntegerExpression : public PrimitiveExpression<i64> {
-  public:
-    using PrimitiveExpression<i64>::PrimitiveExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<SignedIntegerExpression>, ParserDiagnostic>;
-};
-
-class UnsignedIntegerExpression : public PrimitiveExpression<u64> {
-  public:
-    using PrimitiveExpression<u64>::PrimitiveExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<UnsignedIntegerExpression>, ParserDiagnostic>;
-};
-
-class SizeIntegerExpression : public PrimitiveExpression<usize> {
+class IntegerExpression : public PrimitiveExpression<usize> {
   public:
     using PrimitiveExpression<usize>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<SizeIntegerExpression>, ParserDiagnostic>;
+        -> Expected<std::unique_ptr<IntegerExpression>, ParserDiagnostic>;
 };
 
 class ByteExpression : public PrimitiveExpression<u8> {

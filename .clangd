@@ -1,3 +1,7 @@
 CompileFlags:
     CompilationDatabase: ".zig-cache"
-    Add: -Wno-gnu-statement-expression-from-macro-expansion
+    Add:
+        [
+            -Wno-gnu-statement-expression,
+            -Wno-gnu-statement-expression-from-macro-expansion,
+        ]

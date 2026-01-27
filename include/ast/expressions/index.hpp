@@ -20,7 +20,7 @@ class IndexExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> array)
         -> Expected<std::unique_ptr<IndexExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto array() const noexcept -> const Expression& { return *array_; }

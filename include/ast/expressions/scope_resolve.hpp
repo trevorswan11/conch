@@ -21,7 +21,7 @@ class ScopeResolutionExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> outer)
         -> Expected<std::unique_ptr<ScopeResolutionExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto outer() const noexcept -> const Expression& { return *outer_; }

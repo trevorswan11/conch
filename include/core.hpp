@@ -92,6 +92,14 @@ class Diagnostic {
             t.line;
             t.column;
         }
+    explicit Diagnostic(std::string msg, E err, T t)
+        : message_{std::move(msg)}, error_{err}, line_{t.line}, column_{t.column} {}
+
+    template <typename T>
+        requires requires(T t) {
+            t.line;
+            t.column;
+        }
     explicit Diagnostic(E err, T t) : error_{err}, line_{t.line}, column_{t.column} {}
 
     explicit Diagnostic(Diagnostic& other, E err) noexcept
@@ -150,4 +158,4 @@ auto todo(std::string_view message, [[maybe_unused]] Args&&... args) noexcept ->
 
 #define TODO(...)      \
     todo(__VA_ARGS__); \
-    std::unreachable();
+    std::unreachable()

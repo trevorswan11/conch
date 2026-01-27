@@ -13,19 +13,13 @@ namespace ast {
 class IdentifierExpression;
 class TypeExpression;
 
-enum class DeclarationMetadata : u8 {
-    MUTABLE_VALUE,
-    CONSTANT_VALUE,
-    TYPE_ALIAS,
-};
-
 class DeclStatement : public Statement {
   public:
     explicit DeclStatement(const Token&                          start_token,
                            std::unique_ptr<IdentifierExpression> ident,
                            std::unique_ptr<TypeExpression>       type,
                            Optional<std::unique_ptr<Expression>> value,
-                           DeclarationMetadata                   metadata) noexcept;
+                           bool                                  constant) noexcept;
     ~DeclStatement() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -38,13 +32,13 @@ class DeclStatement : public Statement {
     [[nodiscard]] auto value() const noexcept -> Optional<const Expression&> {
         return value_ ? Optional<const Expression&>{**value_} : nullopt;
     }
-    [[nodiscard]] auto metadata() const noexcept -> const DeclarationMetadata& { return metadata_; }
+    [[nodiscard]] auto constant() const noexcept -> bool { return constant_; }
 
   private:
     std::unique_ptr<IdentifierExpression> ident_;
     std::unique_ptr<TypeExpression>       type_;
     Optional<std::unique_ptr<Expression>> value_;
-    [[maybe_unused]] DeclarationMetadata  metadata_;
+    bool                                  constant_;
 };
 
 } // namespace ast

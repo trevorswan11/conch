@@ -84,7 +84,7 @@ class TypeExpression : public Expression {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<TypeExpression>, ParserDiagnostic>;
+        -> Expected<std::pair<std::unique_ptr<TypeExpression>, bool>, ParserDiagnostic>;
 
     [[nodiscard]] auto explicit_type() const noexcept -> const Optional<ExplicitType>& {
         return explicit_;

@@ -20,6 +20,16 @@ TEST_CASE("Illegal characters") {
     }
 }
 
+TEST_CASE("Lexer over-consumption") {
+    const auto input{"lexer"};
+    Lexer      l{input};
+
+    l.consume();
+    for (size_t i = 0; i < 100; ++i) {
+        REQUIRE(l.advance().type == TokenType::END);
+    }
+}
+
 TEST_CASE("Basic next token and lexer consuming") {
     SECTION("Symbols Only") {
         const auto input{"=+(){}[],;: !-/*<>_"};

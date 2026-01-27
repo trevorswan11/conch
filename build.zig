@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) !void {
         "-Wextra",
         "-Werror",
         "-Wpedantic",
+        "-Wno-gnu-statement-expression",
         "-Wno-gnu-statement-expression-from-macro-expansion",
     });
 
@@ -86,11 +87,11 @@ fn addFlagOptions(b: *std.Build) struct {
         "Skip compilation of cppcheck and disable static analysis tooling",
     ) orelse false;
 
-    const clean_cache = (builtin.os.tag != .windows) and (b.option(
+    const clean_cache = builtin.os.tag != .windows and b.option(
         bool,
         "clean-cache",
         "Clean the build cache with the clean step",
-    ) orelse false);
+    ) orelse false;
 
     return .{
         .compile_only = compile_only,
@@ -136,13 +137,12 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.auto_install) b.installArtifact(libconch);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libconch.step);
 
-    const cxx_main = b.pathJoin(&.{ "src", "main.cpp" });
     const conch = createExecutable(b, .{
         .name = "conch",
         .target = config.target,
         .optimize = config.optimize,
         .include_paths = &.{b.path("include")},
-        .cxx_files = &.{cxx_main},
+        .cxx_files = &.{"src/main.cpp"},
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{libconch},
         .behavior = config.behavior orelse .{
@@ -159,25 +159,25 @@ fn addArtifacts(b: *std.Build, config: struct {
     var libcatch2: ?*std.Build.Step.Compile = null;
     var conch_tests: ?*std.Build.Step.Compile = null;
     if (!config.skip_tests) {
-        const catch2_dir = b.pathJoin(&.{ "vendor", "catch2" });
+        const catch2 = b.dependency("catch2", .{});
         libcatch2 = createLibrary(b, .{
             .name = "catch2",
             .target = config.target,
             .optimize = .ReleaseSafe,
-            .include_path = b.path(catch2_dir),
-            .cxx_files = try collectFiles(b, catch2_dir, .{}),
+            .include_path = catch2.path("extras"),
+            .source_root = catch2.path("."),
+            .cxx_files = &.{"extras/catch_amalgamated.cpp"},
             .flags = config.cxx_flags,
         });
         if (config.auto_install) b.installArtifact(libcatch2.?);
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
-        const helper_dir = b.pathJoin(&.{ "tests", "helpers" });
         conch_tests = createExecutable(b, .{
             .name = "conch_tests",
-            .zig_main = b.path(b.pathJoin(&.{ "tests", "main.zig" })),
+            .zig_main = b.path("tests/main.zig"),
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{ b.path("include"), b.path(catch2_dir), b.path(helper_dir) },
+            .include_paths = &.{ b.path("include"), catch2.path("extras"), b.path("tests/helpers") },
             .cxx_files = try collectFiles(b, "tests", .{}),
             .cxx_flags = config.cxx_flags,
             .link_libraries = &.{ libconch, libcatch2.? },
@@ -208,34 +208,108 @@ fn addArtifacts(b: *std.Build, config: struct {
 /// Compiles cppcheck from source using the flags given by
 /// https://github.com/danmar/cppcheck#g-for-experts
 fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
+    const cppcheck = b.dependency("cppcheck", .{});
     const cppcheck_includes: []const std.Build.LazyPath = &.{
-        b.path(getCppcheckRelativePath(b, &.{"externals"})),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "simplecpp" })),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "tinyxml2" })),
-        b.path(getCppcheckRelativePath(b, &.{ "externals", "picojson" })),
-        b.path(getCppcheckRelativePath(b, &.{"lib"})),
-        b.path(getCppcheckRelativePath(b, &.{"frontend"})),
+        cppcheck.path("externals"),
+        cppcheck.path("externals/simplecpp"),
+        cppcheck.path("externals/tinyxml2"),
+        cppcheck.path("externals/picojson"),
+        cppcheck.path("lib"),
+        cppcheck.path("frontend"),
     };
 
-    var cppcheck_sources: std.ArrayList([]const u8) = .empty;
-    try cppcheck_sources.appendSlice(b.allocator, &.{
-        getCppcheckRelativePath(b, &.{ "externals", "simplecpp", "simplecpp.cpp" }),
-        getCppcheckRelativePath(b, &.{ "externals", "tinyxml2", "tinyxml2.cpp" }),
-    });
+    const cppcheck_sources = [_][]const u8{
+        "externals/simplecpp/simplecpp.cpp",
+        "externals/tinyxml2/tinyxml2.cpp",
+        "frontend/frontend.cpp",
 
-    const cppcheck_glob_srcs: []const []const []const u8 = &.{
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"frontend"}), .{}),
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"cli"}), .{}),
-        try collectFiles(b, getCppcheckRelativePath(b, &.{"lib"}), .{}),
+        "cli/cmdlineparser.cpp",
+        "cli/cppcheckexecutor.cpp",
+        "cli/executor.cpp",
+        "cli/filelister.cpp",
+        "cli/main.cpp",
+        "cli/processexecutor.cpp",
+        "cli/sehwrapper.cpp",
+        "cli/signalhandler.cpp",
+        "cli/singleexecutor.cpp",
+        "cli/stacktrace.cpp",
+        "cli/threadexecutor.cpp",
+
+        "lib/addoninfo.cpp",
+        "lib/analyzerinfo.cpp",
+        "lib/astutils.cpp",
+        "lib/check.cpp",
+        "lib/check64bit.cpp",
+        "lib/checkassert.cpp",
+        "lib/checkautovariables.cpp",
+        "lib/checkbool.cpp",
+        "lib/checkbufferoverrun.cpp",
+        "lib/checkclass.cpp",
+        "lib/checkcondition.cpp",
+        "lib/checkers.cpp",
+        "lib/checkersidmapping.cpp",
+        "lib/checkersreport.cpp",
+        "lib/checkexceptionsafety.cpp",
+        "lib/checkfunctions.cpp",
+        "lib/checkinternal.cpp",
+        "lib/checkio.cpp",
+        "lib/checkleakautovar.cpp",
+        "lib/checkmemoryleak.cpp",
+        "lib/checknullpointer.cpp",
+        "lib/checkother.cpp",
+        "lib/checkpostfixoperator.cpp",
+        "lib/checksizeof.cpp",
+        "lib/checkstl.cpp",
+        "lib/checkstring.cpp",
+        "lib/checktype.cpp",
+        "lib/checkuninitvar.cpp",
+        "lib/checkunusedfunctions.cpp",
+        "lib/checkunusedvar.cpp",
+        "lib/checkvaarg.cpp",
+        "lib/clangimport.cpp",
+        "lib/color.cpp",
+        "lib/cppcheck.cpp",
+        "lib/ctu.cpp",
+        "lib/errorlogger.cpp",
+        "lib/errortypes.cpp",
+        "lib/findtoken.cpp",
+        "lib/forwardanalyzer.cpp",
+        "lib/fwdanalysis.cpp",
+        "lib/importproject.cpp",
+        "lib/infer.cpp",
+        "lib/keywords.cpp",
+        "lib/library.cpp",
+        "lib/mathlib.cpp",
+        "lib/path.cpp",
+        "lib/pathanalysis.cpp",
+        "lib/pathmatch.cpp",
+        "lib/platform.cpp",
+        "lib/preprocessor.cpp",
+        "lib/programmemory.cpp",
+        "lib/regex.cpp",
+        "lib/reverseanalyzer.cpp",
+        "lib/sarifreport.cpp",
+        "lib/settings.cpp",
+        "lib/standards.cpp",
+        "lib/summaries.cpp",
+        "lib/suppressions.cpp",
+        "lib/symboldatabase.cpp",
+        "lib/templatesimplifier.cpp",
+        "lib/timer.cpp",
+        "lib/token.cpp",
+        "lib/tokenize.cpp",
+        "lib/tokenlist.cpp",
+        "lib/utils.cpp",
+        "lib/valueflow.cpp",
+        "lib/vf_analyzers.cpp",
+        "lib/vf_common.cpp",
+        "lib/vf_settokenvalue.cpp",
+        "lib/vfvalue.cpp",
     };
-
-    for (cppcheck_glob_srcs) |glob| {
-        try cppcheck_sources.appendSlice(b.allocator, glob);
-    }
 
     // The path needs to be fixed on windows due to cppcheck internals
     const cfg_path = blk: {
-        const raw_cfg_path = getCppcheckRelativePath(b, &.{});
+        const raw_cfg_path = try cppcheck.path(".").getPath3(b, null).toString(b.allocator);
         if (builtin.os.tag == .windows) {
             break :blk try std.mem.replaceOwned(u8, b.allocator, raw_cfg_path, "\\", "/");
         }
@@ -253,8 +327,9 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .target = target,
         .optimize = .ReleaseSafe,
         .include_paths = cppcheck_includes,
-        .cxx_files = cppcheck_sources.items,
-        .cxx_flags = &.{ files_dir_define, "-Uunix" },
+        .source_root = cppcheck.path("."),
+        .cxx_files = &cppcheck_sources,
+        .cxx_flags = &.{ files_dir_define, "-Uunix", "-std=c++11" },
     });
 }
 
@@ -263,6 +338,7 @@ fn createLibrary(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     include_path: std.Build.LazyPath,
+    source_root: ?std.Build.LazyPath = null,
     cxx_files: []const []const u8,
     flags: []const []const u8,
 }) *std.Build.Step.Compile {
@@ -273,6 +349,7 @@ fn createLibrary(b: *std.Build, config: struct {
     });
     mod.addIncludePath(config.include_path);
     mod.addCSourceFiles(.{
+        .root = config.source_root,
         .files = config.cxx_files,
         .flags = config.flags,
         .language = .cpp,
@@ -291,6 +368,7 @@ fn createExecutable(b: *std.Build, config: struct {
     target: ?std.Build.ResolvedTarget,
     optimize: ?std.builtin.OptimizeMode,
     include_paths: []const std.Build.LazyPath,
+    source_root: ?std.Build.LazyPath = null,
     cxx_files: []const []const u8,
     cxx_flags: []const []const u8,
     link_libraries: []const *std.Build.Step.Compile = &.{},
@@ -312,6 +390,7 @@ fn createExecutable(b: *std.Build, config: struct {
     }
 
     mod.addCSourceFiles(.{
+        .root = config.source_root,
         .files = config.cxx_files,
         .flags = config.cxx_flags,
         .language = .cpp,
@@ -400,14 +479,18 @@ const CdbGenerator = struct {
 
             const entry_contents = try dir.readFile(entry.name, file_buf);
             const trimmed = std.mem.trimEnd(u8, entry_contents, ",\n\r\t");
-            const parsed: ParsedCdbFileInfo = try std.json.parseFromSlice(
+            const parsed: ParsedCdbFileInfo = std.json.parseFromSlice(
                 CdbFileInfo,
                 allocator,
                 trimmed,
                 .{ .ignore_unknown_fields = true },
-            );
+            ) catch continue;
             const ref_path = parsed.value.file;
-            std.fs.accessAbsolute(ref_path, .{}) catch continue;
+            const absolute_ref_path = if (std.fs.path.isAbsolute(ref_path))
+                ref_path
+            else
+                try b.build_root.join(allocator, &.{ref_path});
+            std.fs.accessAbsolute(absolute_ref_path, .{}) catch continue;
 
             const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
             if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
@@ -489,7 +572,7 @@ fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const zig_paths: []const []const u8 = &.{ "build.zig", b.pathJoin(&.{ "tests", "main.zig" }) };
+    const zig_paths: []const []const u8 = &.{ "build.zig", "build.zig.zon", "tests/main.zig" };
     const build_fmt = b.addFmt(.{ .paths = zig_paths });
     const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
@@ -789,21 +872,21 @@ fn addPackageStep(b: *std.Build, config: struct {
                 , .{ zip orelse "null", tar orelse "null" });
             }
 
-            const legal_paths: []const []const []const u8 = &.{
-                &.{"LICENSE"},
-                &.{"README.md"},
-                &.{ ".github", "CHANGELOG.md" },
+            const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
+                .{ b.path("LICENSE"), "LICENSE" },
+                .{ b.path("README.md"), "README.md" },
+                .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
             };
 
-            var file_installs: std.ArrayList(*std.Build.Step) = .empty;
-            for (legal_paths) |path| {
+            var file_installs: [legal_paths.len]*std.Build.Step = undefined;
+            for (legal_paths, 0..) |path, i| {
                 const install_file_step = b.addInstallFileWithDir(
-                    b.path(b.pathJoin(path)),
+                    path.@"0",
                     .{ .custom = package_artifact_dir_path },
-                    path[path.len - 1],
+                    path.@"1",
                 );
                 package_step.dependOn(&install_file_step.step);
-                try file_installs.append(b.allocator, &install_file_step.step);
+                file_installs[i] = &install_file_step.step;
             }
 
             // Zip is only needed on windows
@@ -822,7 +905,7 @@ fn addPackageStep(b: *std.Build, config: struct {
 
                 zipper.step.dependOn(&platform.step);
                 package_step.dependOn(&zipper.step);
-                for (file_installs.items) |step| {
+                for (file_installs) |step| {
                     zipper.step.dependOn(step);
                 }
 
@@ -850,7 +933,7 @@ fn addPackageStep(b: *std.Build, config: struct {
 
             archiver.step.dependOn(&platform.step);
             package_step.dependOn(&archiver.step);
-            for (file_installs.items) |step| {
+            for (file_installs) |step| {
                 archiver.step.dependOn(step);
             }
 
@@ -940,25 +1023,13 @@ fn getCacheRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
     return b.cache_root.join(b.allocator, paths) catch @panic("OOM");
 }
 
-fn getRelativeFromRoot(b: *std.Build, root: []const u8, paths: []const []const u8) []const u8 {
-    const total_path = std.mem.concat(
-        b.allocator,
-        []const u8,
-        &.{ &.{root}, paths },
-    ) catch @panic("OOM");
-    return b.pathJoin(total_path);
-}
-
-/// Resolves the relative path with its root at the vendored cppcheck directory
-fn getCppcheckRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
-    const cppcheck_root = b.pathJoin(&.{ "vendor", "cppcheck" });
-    return getRelativeFromRoot(b, cppcheck_root, paths);
-}
-
 /// Resolves the relative path with its root at the installation directory
 fn getPrefixRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
-    const prefix_root = std.fs.path.basename(b.install_prefix);
-    return getRelativeFromRoot(b, prefix_root, paths);
+    return b.pathJoin(std.mem.concat(
+        b.allocator,
+        []const u8,
+        &.{ &.{std.fs.path.basename(b.install_prefix)}, paths },
+    ) catch @panic("OOM"));
 }
 
 /// Searches the system PATH for the cmd, returning the binary path if found

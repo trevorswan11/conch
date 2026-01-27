@@ -24,10 +24,10 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and lazy installation.
 
 ## Other dependencies:
-1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for tests. It is automatically configured in the project's build script and links statically to the test builds.
-2. A striped version of [cppcheck](https://cppcheck.sourceforge.io/)'s source code is provided and is compiled from source. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
+1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
+2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
 
-Once these are installed, building conch is as easy as running:
+These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh
 git clone https://github.com/trevorswan11/conch
 cd conch

@@ -36,7 +36,7 @@ class CallExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> function)
         -> Expected<std::unique_ptr<CallExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto function() const noexcept -> const Expression& { return *function_; }
