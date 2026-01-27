@@ -486,7 +486,11 @@ const CdbGenerator = struct {
                 .{ .ignore_unknown_fields = true },
             );
             const ref_path = parsed.value.file;
-            std.fs.accessAbsolute(ref_path, .{}) catch continue;
+            const absolute_ref_path = if (std.fs.path.isAbsolute(ref_path))
+                ref_path
+            else
+                try b.build_root.join(allocator, &.{ref_path});
+            std.fs.accessAbsolute(absolute_ref_path, .{}) catch continue;
 
             const gop = try newest_frags.getOrPut(try allocator.dupe(u8, base_name));
             if (!gop.found_existing or stat.mtime > gop.value_ptr.mtime) {
