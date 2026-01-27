@@ -479,12 +479,12 @@ const CdbGenerator = struct {
 
             const entry_contents = try dir.readFile(entry.name, file_buf);
             const trimmed = std.mem.trimEnd(u8, entry_contents, ",\n\r\t");
-            const parsed: ParsedCdbFileInfo = try std.json.parseFromSlice(
+            const parsed: ParsedCdbFileInfo = std.json.parseFromSlice(
                 CdbFileInfo,
                 allocator,
                 trimmed,
                 .{ .ignore_unknown_fields = true },
-            );
+            ) catch continue;
             const ref_path = parsed.value.file;
             const absolute_ref_path = if (std.fs.path.isAbsolute(ref_path))
                 ref_path
