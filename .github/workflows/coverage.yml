@@ -9,6 +9,7 @@ on:
             - "include/**"
             - "tests/**"
             - "build.zig"
+            - "build.zig.zon"
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}

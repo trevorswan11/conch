@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "core.hpp"
+#include "util/expected.hpp"
 
 #include "ast/node.hpp"
 

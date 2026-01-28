@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "core.hpp"
+#include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
@@ -19,7 +19,7 @@ class IdentifierExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(const Parser& parser)
+    [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic>;
 
     [[nodiscard]] auto name() const noexcept -> std::string_view { return name_; }

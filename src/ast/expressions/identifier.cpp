@@ -6,7 +6,7 @@ namespace ast {
 
 auto IdentifierExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IdentifierExpression::parse(const Parser& parser)
+auto IdentifierExpression::parse(Parser& parser) // cppcheck-suppress constParameterReference
     -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     if (start_token.type != TokenType::IDENT && !start_token.primitive()) {

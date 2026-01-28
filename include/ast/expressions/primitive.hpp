@@ -4,7 +4,8 @@
 #include <utility>
 #include <variant>
 
-#include "core.hpp"
+#include "util/common.hpp"
+#include "util/expected.hpp"
 
 #include "ast/node.hpp"
 

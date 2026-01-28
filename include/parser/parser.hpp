@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <functional>
 #include <memory>
 #include <span>
 #include <string_view>
@@ -9,7 +8,9 @@
 #include <variant>
 #include <vector>
 
-#include "core.hpp"
+#include "util/common.hpp"
+#include "util/functional.hpp"
+#include "util/optional.hpp"
 
 #include "parser/precedence.hpp"
 
@@ -48,9 +49,8 @@ auto make_parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
 
 class Parser {
   public:
-    using PrefixFn =
-        std::function<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(Parser&)>;
-    using InfixFn = std::function<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(
+    using PrefixFn = Thunk<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(Parser&)>;
+    using InfixFn  = Thunk<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(
         Parser&, std::unique_ptr<ast::Expression>)>;
 
   public:

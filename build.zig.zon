@@ -4,13 +4,13 @@
     .minimum_zig_version = "0.15.2",
     .fingerprint = 0x34052af1661e21d7,
     .dependencies = .{
-        .cppcheck = .{
-            .url = "https://github.com/danmar/cppcheck/archive/refs/tags/2.19.0.tar.gz",
-            .hash = "N-V-__8AANXzZwG73ht_C8YDOphyBzqoNj12jpctC8cyIhQK",
-        },
         .catch2 = .{
             .url = "https://github.com/catchorg/Catch2/archive/refs/tags/v3.12.0.tar.gz",
             .hash = "N-V-__8AAA1iiAB-7p1uHA2cu3mmSN2ncyyURBkin7xOz0-V",
+        },
+        .cppcheck = .{
+            .url = "https://github.com/danmar/cppcheck/archive/refs/tags/2.19.0.tar.gz",
+            .hash = "N-V-__8AANXzZwG73ht_C8YDOphyBzqoNj12jpctC8cyIhQK",
         },
     },
     .paths = .{

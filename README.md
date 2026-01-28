@@ -21,11 +21,11 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 
 # Getting Started
 ## System dependencies:
-1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and lazy installation.
+1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and project tooling.
 
 ## Other dependencies:
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
-2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor are they shipped with releases.
+2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
 
 These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh
@@ -34,21 +34,20 @@ cd conch
 zig build --release
 ```
 
-This builds the `ReleaseFast` configuration, enabling maximum optimization and disabling assertions and debug symbols.
+This builds the `ReleaseFast` configuration. You can read about Zig's different optimization levels [here](https://ziglang.org/documentation/master/#Build-Mode).
 
 ## Tooling Dependencies
 1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter is used on all development platforms.
 2. [kcov](https://github.com/SimonKagstrom/kcov) is used for code coverage reporting, but is only supported on FreeBSD, Linux, and MacOS
 3. [curl](https://curl.se/) is a dependency of the code coverage reporting step, creating the GitHub badge containing the coverage percentage.
-4. [cloc](https://github.com/AlDanial/cloc) is used for LOC counting which is purely just for fun!
-5. zip and tar are both used for packaging releases, but these likely shipped with your OS and do not need to be manually installed.
+5. [zip](https://infozip.sourceforge.net/Zip.html) and [tar](https://www.gnu.org/software/tar/tar.html) are both used for packaging releases, but this is automated by GitHub actions runners.
 
-These dependencies are purely optional for users building the project from source. They can be installed either by building form source, downloading their corresponding GitHub release, or through your preferred package manager.
+Note that these dependencies are purely optional for users simply building the project from source!
 
 # Correctness & Availability
 [Catch2](https://github.com/catchorg/Catch2) is used with a custom [Zig](https://ziglang.org/) allocator to run automated CI tests on Windows, macOS, and Linux. This choice allows me to take advantage of the best-in-class testing suite provided by catch2 while making use of the undefined behavior and leak sanitizers provided by Zig and its build system.
 
-As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available. While releases have prebuilt binaries for a myriad of systems, I cannot verify that they all work as intended out of the box. In the event, that a release is shipped with a faulty binary, please open an issue!
+As I cannot run hundreds of matrix tests, I am unable to verify support for arbitrary platforms. Please let me know if there's something I can do to make the project more widely available. While releases have prebuilt binaries for a myriad of systems, I cannot verify that they all work as intended out of the box. In the event that a release is shipped with a faulty binary, please open an issue!
 
 # Resources
 This project would not be possible without the extensive work Thorsten Ball put into his two-book series, "Writing an Interpreter and Compiler in Go". The explanations presented in these books drove this project's development at a high level and greatly enhanced my learning. If you want to check out the books for yourself and support Thorsten, check him out [here](https://store.thorstenball.com/).

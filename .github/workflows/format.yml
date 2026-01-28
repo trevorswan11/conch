@@ -9,6 +9,7 @@ on:
             - "include/**"
             - "tests/**"
             - "build.zig"
+            - "build.zig.zon"
     pull_request:
         branches: [main]
         paths:
@@ -17,6 +18,7 @@ on:
             - "include/**"
             - "tests/**"
             - "build.zig"
+            - "build.zig.zon"
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
