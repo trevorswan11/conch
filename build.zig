@@ -1,8 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const version = "v0.0.1";
-
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
@@ -51,7 +49,7 @@ pub fn build(b: *std.Build) !void {
 
     try addTooling(b, .{
         .cdb_gen = cdb_gen,
-        .conch_tests = artifacts.conch_tests,
+        .tests = artifacts.tests,
         .cppcheck = artifacts.cppcheck,
         .clean_cache = flag_opts.clean_cache,
     });
@@ -59,7 +57,6 @@ pub fn build(b: *std.Build) !void {
     try addPackageStep(b, .{
         .cxx_flags = package_flags.items,
         .compile_only = flag_opts.compile_only,
-        .version = version,
     });
 }
 
@@ -123,7 +120,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     libconch: *std.Build.Step.Compile,
     conch: *std.Build.Step.Compile,
     libcatch2: ?*std.Build.Step.Compile,
-    conch_tests: ?*std.Build.Step.Compile,
+    tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
 } {
     const libconch = createLibrary(b, .{
@@ -157,7 +154,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch.step);
 
     var libcatch2: ?*std.Build.Step.Compile = null;
-    var conch_tests: ?*std.Build.Step.Compile = null;
+    var tests: ?*std.Build.Step.Compile = null;
     if (!config.skip_tests) {
         const catch2 = b.dependency("catch2", .{});
         libcatch2 = createLibrary(b, .{
@@ -172,8 +169,8 @@ fn addArtifacts(b: *std.Build, config: struct {
         if (config.auto_install) b.installArtifact(libcatch2.?);
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
-        conch_tests = createExecutable(b, .{
-            .name = "conch_tests",
+        tests = createExecutable(b, .{
+            .name = "tests",
             .zig_main = b.path("tests/main.zig"),
             .target = config.target,
             .optimize = config.optimize,
@@ -190,8 +187,8 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
         });
 
-        if (config.auto_install) b.installArtifact(conch_tests.?);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch_tests.?.step);
+        if (config.auto_install) b.installArtifact(tests.?);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.step);
     }
 
     const cppcheck = if (config.skip_cppcheck) null else try compileCppcheck(b, config.target);
@@ -200,7 +197,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         .libconch = libconch,
         .conch = conch,
         .libcatch2 = libcatch2,
-        .conch_tests = conch_tests,
+        .tests = tests,
         .cppcheck = cppcheck,
     };
 }
@@ -522,7 +519,7 @@ const CdbGenerator = struct {
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CdbGenerator,
-    conch_tests: ?*std.Build.Step.Compile,
+    tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
     clean_cache: bool,
 }) !void {
@@ -548,15 +545,15 @@ fn addTooling(b: *std.Build, config: struct {
         check_step.dependOn(&config.cdb_gen.step);
     }
 
-    if (findProgram(b, "cloc")) |cloc| {
-        try addClocStep(b, .{
-            .tooling_sources = tooling_sources,
-            .cloc = cloc,
-        });
-    }
+    const cloc: *LOCCounter = .init(b, .base);
+    const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
+    cloc_step.dependOn(&cloc.step);
+    const cloc_all: *LOCCounter = .init(b, .all);
+    const cloc_all_step = b.step("cloc-all", "Count lines of code in all project directories");
+    cloc_all_step.dependOn(&cloc_all.step);
 
-    if (config.conch_tests) |conch_tests| {
-        try addCoverageStep(b, conch_tests);
+    if (config.tests) |tests| {
+        try addCoverageStep(b, tests);
     }
 
     const clean_step = b.step("clean", "Remove all emitted artifacts");
@@ -633,25 +630,6 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     return check_step;
 }
 
-fn addClocStep(b: *std.Build, config: struct {
-    tooling_sources: []const []const u8,
-    cloc: []const u8,
-}) !void {
-    const cloc = b.addSystemCommand(&.{config.cloc});
-    cloc.addArgs(&.{ "--timeout", "0" });
-    cloc.addFileArg(b.path("src"));
-    cloc.addFileArg(b.path("include"));
-    const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
-    cloc_step.dependOn(&cloc.step);
-
-    const cloc_all = b.addSystemCommand(&.{config.cloc});
-    cloc_all.addArgs(&.{ "--timeout", "0" });
-    cloc_all.addArgs(config.tooling_sources);
-    cloc_all.addFileArg(b.path("build.zig"));
-    const cloc_all_step = b.step("cloc-all", "Count all lines of code including the tests and build script");
-    cloc_all_step.dependOn(&cloc_all.step);
-}
-
 fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
     const error_msg =
         \\Code coverage reporting requires kcov, a free FreeBSD/Linux/MacOS tool:
@@ -704,6 +682,134 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
         try kcov_step.addError(error_msg, .{});
     }
 }
+
+const LOCCounter = struct {
+    const LOCType = enum { base, all };
+
+    const LOCResult = struct {
+        cxx_count: usize = 0,
+        cxx_line_count: usize = 0,
+        hxx_count: usize = 0,
+        hxx_line_count: usize = 0,
+        zig_count: usize = 0,
+        zig_line_count: usize = 0,
+
+        file_count: usize = 0,
+
+        pub fn logCXXFile(self: *LOCResult, lines: usize, group: enum { header, source }) void {
+            switch (group) {
+                .header => {
+                    self.cxx_count += 1;
+                    self.cxx_line_count += lines;
+                },
+                .source => {
+                    self.hxx_count += 1;
+                    self.hxx_line_count += lines;
+                },
+            }
+            self.file_count += 1;
+        }
+
+        pub fn logZigFile(self: *LOCResult, lines: usize) void {
+            self.zig_count += 1;
+            self.zig_line_count += lines;
+            self.file_count += 1;
+        }
+
+        pub fn print(self: *const LOCResult) !void {
+            const stdout_handle = std.fs.File.stdout();
+            var stdout_buf: [1024]u8 = undefined;
+            var stdout_writer = stdout_handle.writer(&stdout_buf);
+            const stdout = &stdout_writer.interface;
+
+            try stdout.print("Scanned {d} total files:\n", .{self.file_count});
+            try stdout.print("  {d} total Zig files: {d} LOC\n", .{ self.zig_count, self.zig_line_count });
+            try stdout.print("  {d} total C++ files:\n", .{self.cxx_count + self.hxx_count});
+            try stdout.print("    {d} total header files: {d} LOC\n", .{ self.hxx_count, self.hxx_line_count });
+            try stdout.print("    {d} total source files: {d} LOC\n\n", .{ self.cxx_count, self.cxx_line_count });
+            try stdout.print("Total: {d} LOC\n", .{self.cxx_line_count + self.hxx_line_count + self.zig_line_count});
+
+            try stdout.flush();
+        }
+    };
+
+    step: std.Build.Step,
+    loc_type: LOCType,
+
+    pub fn init(
+        b: *std.Build,
+        loc_type: LOCType,
+    ) *LOCCounter {
+        const self = b.allocator.create(LOCCounter) catch @panic("OOM");
+        self.* = .{
+            .step = .init(.{
+                .id = .custom,
+                .name = if (loc_type == .base) "cloc" else "cloc-all",
+                .owner = b,
+                .makeFn = count,
+            }),
+            .loc_type = loc_type,
+        };
+        return self;
+    }
+
+    fn count(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+        const self: *LOCCounter = @fieldParentPtr("step", step);
+
+        const b = step.owner;
+        const allocator = b.allocator;
+
+        const extensions: []const []const u8 = switch (self.loc_type) {
+            .base => &.{ ".cpp", ".hpp" },
+            .all => &.{ ".cpp", ".hpp", ".zig" },
+        };
+
+        var files: std.ArrayList([]const u8) = .empty;
+        try files.appendSlice(
+            b.allocator,
+            try collectFiles(b, "src", .{ .allowed_extensions = extensions }),
+        );
+
+        try files.appendSlice(
+            b.allocator,
+            try collectFiles(b, "include", .{ .allowed_extensions = extensions }),
+        );
+
+        if (self.loc_type == .all) {
+            try files.appendSlice(
+                b.allocator,
+                try collectFiles(b, "tests", .{ .allowed_extensions = extensions }),
+            );
+            try files.append(b.allocator, "build.zig");
+        }
+
+        const build_dir = b.build_root.handle;
+        const buffer = try allocator.alloc(u8, 100 * 1024);
+        var result: LOCResult = .{};
+
+        for (files.items) |file| {
+            const contents = try build_dir.readFile(file, buffer);
+            var it = std.mem.tokenizeAny(u8, contents, "\r\n");
+
+            var lines: usize = 0;
+            while (it.next()) |line| {
+                if (!std.mem.startsWith(u8, line, "//")) {
+                    lines += 1;
+                }
+            }
+
+            if (std.mem.endsWith(u8, file, ".zig")) {
+                result.logZigFile(lines);
+            } else if (std.mem.endsWith(u8, file, ".hpp")) {
+                result.logCXXFile(lines, .header);
+            } else if (std.mem.endsWith(u8, file, ".cpp")) {
+                result.logCXXFile(lines, .source);
+            }
+        }
+
+        try result.print();
+    }
+};
 
 const CoverageParser = struct {
     const coverage_install_dirname = "coverage";
@@ -814,12 +920,25 @@ const target_queries = [_]std.Target.Query{
 fn addPackageStep(b: *std.Build, config: struct {
     compile_only: bool,
     cxx_flags: []const []const u8,
-    version: []const u8,
 }) !void {
     const package_step = b.step("package", "Build the artifacts for packaging");
 
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
+
+    var zon_buf: [2 * 1024]u8 = undefined;
+    const raw_zon_contents = try b.build_root.handle.readFile("build.zig.zon", &zon_buf);
+    zon_buf[raw_zon_contents.len] = 0;
+    const zon_contents = zon_buf[0..raw_zon_contents.len :0];
+
+    const parsed = try std.zon.parse.fromSlice(
+        struct { version: []const u8 },
+        b.allocator,
+        zon_contents,
+        null,
+        .{ .ignore_unknown_fields = true },
+    );
+    const version = parsed.version;
 
     for (target_queries) |query| {
         const resolved_target = b.resolveTargetQuery(query);
@@ -835,19 +954,19 @@ fn addPackageStep(b: *std.Build, config: struct {
         });
 
         std.debug.assert(artifacts.libcatch2 == null);
-        std.debug.assert(artifacts.conch_tests == null);
+        std.debug.assert(artifacts.tests == null);
         std.debug.assert(artifacts.cppcheck == null);
 
         try configurePackArtifacts(b, .{
             .artifacts = &.{ artifacts.libconch, artifacts.conch },
             .target = resolved_target,
-            .version = config.version,
+            .version = version,
         });
 
         const package_artifact_dirname = try std.fmt.allocPrint(
             b.allocator,
             "conch-{s}-{s}",
-            .{ try query.zigTriple(b.allocator), config.version },
+            .{ try query.zigTriple(b.allocator), version },
         );
 
         const package_artifact_dir_path = b.pathJoin(uncompressed_package_dir ++ .{package_artifact_dirname});
@@ -1032,7 +1151,6 @@ fn getPrefixRelativePath(b: *std.Build, paths: []const []const u8) []const u8 {
     ) catch @panic("OOM"));
 }
 
-/// Searches the system PATH for the cmd, returning the binary path if found
 fn findProgram(b: *std.Build, cmd: []const u8) ?[]const u8 {
     return b.findProgram(&.{cmd}, &.{}) catch null;
 }
