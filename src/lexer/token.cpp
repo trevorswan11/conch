@@ -6,6 +6,8 @@
 #include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
+namespace conch {
+
 auto base_idx(Base base) noexcept -> int {
     switch (base) {
     case Base::UNKNOWN: return -1;
@@ -119,3 +121,5 @@ auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
 auto Token::primitive() const noexcept -> bool {
     return std::ranges::contains(ALL_PRIMITIVES, type);
 }
+
+} // namespace conch

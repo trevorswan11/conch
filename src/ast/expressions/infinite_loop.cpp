@@ -6,10 +6,10 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-InfiniteLoopExpression::InfiniteLoopExpression(const Token&                    start_token,
-                                               std::unique_ptr<BlockStatement> block) noexcept
+InfiniteLoopExpression::InfiniteLoopExpression(const Token&        start_token,
+                                               Box<BlockStatement> block) noexcept
     : Expression{start_token}, block_{std::move(block)} {}
 
 InfiniteLoopExpression::~InfiniteLoopExpression() = default;
@@ -17,8 +17,8 @@ InfiniteLoopExpression::~InfiniteLoopExpression() = default;
 auto InfiniteLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto InfiniteLoopExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<InfiniteLoopExpression>, ParserDiagnostic> {
+    -> Expected<Box<InfiniteLoopExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

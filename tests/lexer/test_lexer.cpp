@@ -5,6 +5,8 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
+using namespace conch;
+
 TEST_CASE("Illegal characters") {
     const auto input{"月😭🎶"};
     Lexer      l{input};
@@ -220,7 +222,27 @@ TEST_CASE("Integer base variants") {
     }
 }
 
-TEST_CASE("Comment literals") {
+TEST_CASE("Other keywords") {
+    const auto input{"namespace private static extern export packed"};
+    Lexer      l{input};
+
+    const auto expecteds = std::array{
+        std::pair{TokenType::NAMESPACE, "namespace"},
+        std::pair{TokenType::PRIVATE, "private"},
+        std::pair{TokenType::STATIC, "static"},
+        std::pair{TokenType::EXTERN, "extern"},
+        std::pair{TokenType::EXPORT, "export"},
+        std::pair{TokenType::PACKED, "packed"},
+    };
+
+    for (const auto& [expected_token, expected_slice] : expecteds) {
+        const auto token = l.advance();
+        REQUIRE(expected_token == token.type);
+        REQUIRE(expected_slice == token.slice);
+    }
+}
+
+TEST_CASE("Comments") {
     const auto input{"const five = 5;\n"
                      "var ten_10 = 10;\n\n"
                      "// Comment on a new line\n"

@@ -9,6 +9,8 @@
 
 #include "lexer/token.hpp"
 
+namespace conch {
+
 using Operator = std::pair<std::string_view, TokenType>;
 
 namespace operators {
@@ -112,3 +114,5 @@ constexpr auto get_operator(std::string_view sv) noexcept -> Optional<Operator> 
     const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
     return it == ALL_OPERATORS.end() ? nullopt : Optional<Operator>{*it};
 }
+
+} // namespace conch

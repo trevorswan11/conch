@@ -1,31 +1,31 @@
 #pragma once
 
-#include <memory>
 #include <utility>
 #include <vector>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class BlockStatement : public Statement {
   public:
-    explicit BlockStatement(const Token&                            start_token,
-                            std::vector<std::unique_ptr<Statement>> statements) noexcept
+    using iterator       = typename std::vector<Box<Statement>>::iterator;
+    using const_iterator = typename std::vector<Box<Statement>>::const_iterator;
+
+  public:
+    explicit BlockStatement(const Token&                start_token,
+                            std::vector<Box<Statement>> statements) noexcept
         : Statement{start_token}, statements_{std::move(statements)} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<BlockStatement>, ParserDiagnostic>;
-
-  public:
-    using iterator       = typename std::vector<std::unique_ptr<Statement>>::iterator;
-    using const_iterator = typename std::vector<std::unique_ptr<Statement>>::const_iterator;
+        -> Expected<Box<BlockStatement>, ParserDiagnostic>;
 
     [[nodiscard]] auto begin() noexcept -> iterator { return statements_.begin(); }
     [[nodiscard]] auto end() noexcept -> iterator { return statements_.end(); }
@@ -37,7 +37,7 @@ class BlockStatement : public Statement {
     [[nodiscard]] auto empty() const noexcept -> bool { return statements_.empty(); }
 
   private:
-    std::vector<std::unique_ptr<Statement>> statements_;
+    std::vector<Box<Statement>> statements_;
 };
 
-} // namespace ast
+} // namespace conch::ast

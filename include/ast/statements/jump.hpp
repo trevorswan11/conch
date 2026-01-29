@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <utility>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 #include "util/optional.hpp"
 
@@ -10,25 +10,25 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class JumpStatement : public Statement {
   public:
-    explicit JumpStatement(const Token&                          start_token,
-                           Optional<std::unique_ptr<Expression>> expression) noexcept
+    explicit JumpStatement(const Token& start_token, Optional<Box<Expression>> expression) noexcept
         : Statement{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<JumpStatement>, ParserDiagnostic>;
+        -> Expected<Box<JumpStatement>, ParserDiagnostic>;
 
-    [[nodiscard]] auto expression() const noexcept -> Optional<const Expression&> {
+    [[nodiscard]] auto has_expression() const noexcept -> bool { return expression_.has_value(); }
+    [[nodiscard]] auto get_expression() const noexcept -> Optional<const Expression&> {
         return expression_ ? Optional<const Expression&>{**expression_} : nullopt;
     }
 
   private:
-    Optional<std::unique_ptr<Expression>> expression_;
+    Optional<Box<Expression>> expression_;
 };
 
-} // namespace ast
+} // namespace conch::ast

@@ -3,6 +3,8 @@
 #include <optional>
 #include <type_traits>
 
+namespace conch {
+
 template <typename T> class OptionalRef {
   public:
     OptionalRef() noexcept : ptr_{nullptr} {}
@@ -34,3 +36,5 @@ using Optional = std::conditional_t<std::is_reference_v<T>,
                                     std::optional<T>>;
 
 using std::nullopt;
+
+} // namespace conch

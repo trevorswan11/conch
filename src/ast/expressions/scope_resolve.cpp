@@ -6,21 +6,20 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-ScopeResolutionExpression::ScopeResolutionExpression(
-    const Token&                          start_token,
-    std::unique_ptr<Expression>           outer,
-    std::unique_ptr<IdentifierExpression> inner) noexcept
+ScopeResolutionExpression::ScopeResolutionExpression(const Token&              start_token,
+                                                     Box<Expression>           outer,
+                                                     Box<IdentifierExpression> inner) noexcept
     : Expression{start_token}, outer_{std::move(outer)}, inner_{std::move(inner)} {}
 
 ScopeResolutionExpression::~ScopeResolutionExpression() = default;
 
 auto ScopeResolutionExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ScopeResolutionExpression::parse(Parser& parser, std::unique_ptr<Expression> outer)
-    -> Expected<std::unique_ptr<ScopeResolutionExpression>, ParserDiagnostic> {
+auto ScopeResolutionExpression::parse(Parser& parser, Box<Expression> outer)
+    -> Expected<Box<ScopeResolutionExpression>, ParserDiagnostic> {
     TODO(parser, outer);
 }
 
-} // namespace ast
+} // namespace conch::ast

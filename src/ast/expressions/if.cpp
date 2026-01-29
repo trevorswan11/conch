@@ -2,13 +2,12 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto IfExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IfExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<IfExpression>, ParserDiagnostic> {
+auto IfExpression::parse(Parser& parser) -> Expected<Box<IfExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

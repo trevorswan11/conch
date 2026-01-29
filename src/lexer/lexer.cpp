@@ -8,6 +8,8 @@
 #include "lexer/operators.hpp"
 #include "lexer/token.hpp"
 
+namespace conch {
+
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
 auto Lexer::advance() noexcept -> Token {
@@ -471,3 +473,5 @@ auto Lexer::read_comment() noexcept -> Token {
         .column = start_col,
     };
 }
+
+} // namespace conch

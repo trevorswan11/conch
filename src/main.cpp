@@ -1,3 +1,6 @@
-#include <print>
+#include "cli/program.hpp"
 
-auto main() -> int { std::println("Hello, World!"); }
+auto main() -> int {
+    conch::Program program;
+    program.repl();
+}

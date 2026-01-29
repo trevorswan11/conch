@@ -4,6 +4,8 @@
 
 #include "util/enum.hpp"
 
+using namespace conch;
+
 enum class TestEnum {
     FIRST,
     SECOND,

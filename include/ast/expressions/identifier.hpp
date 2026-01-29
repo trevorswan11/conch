@@ -1,31 +1,32 @@
 #pragma once
 
-#include <memory>
 #include <string>
-#include <utility>
+#include <string_view>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class IdentifierExpression : public Expression {
   public:
-    explicit IdentifierExpression(const Token& start_token, std::string name) noexcept
-        : Expression{start_token}, name_{std::move(name)} {}
+    explicit IdentifierExpression(const Token& start_token, std::string_view name) noexcept
+        : Expression{start_token}, name_{name} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic>;
+        -> Expected<Box<IdentifierExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto name() const noexcept -> std::string_view { return name_; }
+    [[nodiscard]] auto get_name() const noexcept -> std::string_view { return name_; }
+    [[nodiscard]] auto materialize() const -> std::string { return std::string{name_}; }
 
   private:
-    std::string name_;
+    std::string_view name_;
 };
 
-} // namespace ast
+} // namespace conch::ast

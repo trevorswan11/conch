@@ -7,6 +7,8 @@
 #include "util/common.hpp"
 #include "util/optional.hpp"
 
+namespace conch {
+
 template <typename E>
     requires std::is_scoped_enum_v<E>
 class Diagnostic {
@@ -54,10 +56,12 @@ class Diagnostic {
     friend struct std::formatter<Diagnostic>;
 };
 
-template <typename E> struct std::formatter<Diagnostic<E>> : std::formatter<std::string> {
+} // namespace conch
+
+template <typename E> struct std::formatter<conch::Diagnostic<E>> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> auto format(const Diagnostic<E>& d, F& ctx) const {
+    template <typename F> auto format(const conch::Diagnostic<E>& d, F& ctx) const {
         if (d.line_ && d.column_) {
             return std::formatter<std::string>::format(
                 std::format("{} [{}, {}]",

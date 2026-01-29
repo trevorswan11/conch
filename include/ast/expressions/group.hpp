@@ -1,19 +1,17 @@
 #pragma once
 
-#include <memory>
-
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class GroupedExpression {
   public:
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<Expression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 };
 
-} // namespace ast
+} // namespace conch::ast

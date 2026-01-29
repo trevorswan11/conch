@@ -2,13 +2,12 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto MatchExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto MatchExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<MatchExpression>, ParserDiagnostic> {
+auto MatchExpression::parse(Parser& parser) -> Expected<Box<MatchExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

@@ -7,16 +7,13 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-ExplicitArrayType::ExplicitArrayType(std::vector<size_t>             dimensions,
-                                     std::unique_ptr<TypeExpression> inner_type) noexcept
+ExplicitArrayType::ExplicitArrayType(std::vector<size_t> dimensions,
+                                     Box<TypeExpression> inner_type) noexcept
     : dimensions_{std::move(dimensions)}, inner_type_{std::move(inner_type)} {}
 
 ExplicitArrayType::~ExplicitArrayType() = default;
-
-ExplicitType::ExplicitType(ExplicitTypeVariant type, bool nullable) noexcept
-    : ExplicitType{std::move(type), nullable, nullopt} {};
 
 ExplicitType::ExplicitType(ExplicitTypeVariant              type,
                            bool                             nullable,
@@ -24,9 +21,6 @@ ExplicitType::ExplicitType(ExplicitTypeVariant              type,
     : type_{std::move(type)}, nullable_{nullable}, constraint_{std::move(constraint)} {}
 
 ExplicitType::~ExplicitType() = default;
-
-TypeExpression::TypeExpression(const Token& start_token) noexcept
-    : TypeExpression{start_token, nullopt} {}
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
     : Expression{start_token}, explicit_{std::move(exp)} {}
@@ -36,8 +30,8 @@ TypeExpression::~TypeExpression() = default;
 auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
-    -> Expected<std::pair<std::unique_ptr<TypeExpression>, bool>, ParserDiagnostic> {
+    -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

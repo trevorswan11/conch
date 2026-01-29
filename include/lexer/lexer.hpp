@@ -9,6 +9,8 @@
 #include "util/common.hpp"
 #include "util/optional.hpp"
 
+namespace conch {
+
 class Lexer {
   public:
     Lexer() noexcept = default;
@@ -41,3 +43,5 @@ class Lexer {
     usize line_no_{1};
     usize col_no_{0};
 };
+
+} // namespace conch

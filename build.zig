@@ -793,7 +793,8 @@ const LOCCounter = struct {
 
             var lines: usize = 0;
             while (it.next()) |line| {
-                if (!std.mem.startsWith(u8, line, "//")) {
+                const trimmed = std.mem.trim(u8, line, " \t");
+                if (trimmed.len > 0 and !std.mem.startsWith(u8, trimmed, "//")) {
                     lines += 1;
                 }
             }

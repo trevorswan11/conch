@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <utility>
 
 #include "util/expected.hpp"
@@ -9,23 +8,22 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class DiscardStatement : public Statement {
   public:
-    explicit DiscardStatement(const Token&                start_token,
-                              std::unique_ptr<Expression> to_discard) noexcept
-        : Statement{start_token}, to_discard_{std::move(to_discard)} {}
+    explicit DiscardStatement(const Token& start_token, Box<Expression> discarded) noexcept
+        : Statement{start_token}, discarded_{std::move(discarded)} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<DiscardStatement>, ParserDiagnostic>;
+        -> Expected<Box<DiscardStatement>, ParserDiagnostic>;
 
-    [[nodiscard]] auto to_discard() const noexcept -> const Expression& { return *to_discard_; }
+    [[nodiscard]] auto get_discarded() const noexcept -> const Expression& { return *discarded_; }
 
   private:
-    std::unique_ptr<Expression> to_discard_;
+    Box<Expression> discarded_;
 };
 
-} // namespace ast
+} // namespace conch::ast

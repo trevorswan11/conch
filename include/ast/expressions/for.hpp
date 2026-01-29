@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
 #include <span>
 #include <vector>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 #include "util/optional.hpp"
 
@@ -11,53 +11,64 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
+class IdentifierExpression;
 class BlockStatement;
 
 class ForLoopCapture {
   public:
-    explicit ForLoopCapture(bool reference, std::unique_ptr<Expression> capture) noexcept
-        : reference_{reference}, capture_{std::move(capture)} {}
+    explicit ForLoopCapture(bool reference, Box<IdentifierExpression> capture) noexcept;
+    ~ForLoopCapture();
 
-    [[nodiscard]] auto reference() const noexcept -> bool { return reference_; }
-    [[nodiscard]] auto capture() const noexcept -> const Expression& { return *capture_; }
+    ForLoopCapture(const ForLoopCapture&)                        = delete;
+    auto operator=(const ForLoopCapture&) -> ForLoopCapture&     = delete;
+    ForLoopCapture(ForLoopCapture&&) noexcept                    = default;
+    auto operator=(ForLoopCapture&&) noexcept -> ForLoopCapture& = default;
+
+    [[nodiscard]] auto is_reference() const noexcept -> bool { return reference_; }
+    [[nodiscard]] auto get_capture() const noexcept -> const IdentifierExpression& {
+        return *capture_;
+    }
 
   private:
-    bool                        reference_;
-    std::unique_ptr<Expression> capture_;
+    bool                      reference_;
+    Box<IdentifierExpression> capture_;
 };
 
 class ForLoopExpression : public Expression {
   public:
-    explicit ForLoopExpression(const Token&                             start_token,
-                               std::vector<std::unique_ptr<Expression>> iterables,
-                               std::vector<Optional<ForLoopCapture>>    captures,
-                               std::unique_ptr<BlockStatement>          block,
-                               std::unique_ptr<Statement>               non_break) noexcept;
+    explicit ForLoopExpression(const Token&                          start_token,
+                               std::vector<Box<Expression>>          iterables,
+                               std::vector<Optional<ForLoopCapture>> captures,
+                               Box<BlockStatement>                   block,
+                               Box<Statement>                        non_break) noexcept;
     ~ForLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<ForLoopExpression>, ParserDiagnostic>;
+        -> Expected<Box<ForLoopExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto iterables() const noexcept -> std::span<const std::unique_ptr<Expression>> {
+    [[nodiscard]] auto get_iterables() const noexcept -> std::span<const Box<Expression>> {
         return iterables_;
     }
-    [[nodiscard]] auto captures() const noexcept -> std::span<const Optional<ForLoopCapture>> {
+
+    [[nodiscard]] auto get_captures() const noexcept -> std::span<const Optional<ForLoopCapture>> {
         return captures_;
     }
-    [[nodiscard]] auto block() const noexcept -> const BlockStatement& { return *block_; }
-    [[nodiscard]] auto non_break() const noexcept -> Optional<const Statement&> {
+
+    [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
+    [[nodiscard]] auto has_non_break() const noexcept -> bool { return non_break_.has_value(); }
+    [[nodiscard]] auto get_non_break() const noexcept -> Optional<const Statement&> {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
   private:
-    std::vector<std::unique_ptr<Expression>> iterables_;
-    std::vector<Optional<ForLoopCapture>>    captures_;
-    std::unique_ptr<BlockStatement>          block_;
-    Optional<std::unique_ptr<Statement>>     non_break_;
+    std::vector<Box<Expression>>          iterables_;
+    std::vector<Optional<ForLoopCapture>> captures_;
+    Box<BlockStatement>                   block_;
+    Optional<Box<Statement>>              non_break_;
 };
 
-} // namespace ast
+} // namespace conch::ast

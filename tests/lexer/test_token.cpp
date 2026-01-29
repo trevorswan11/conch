@@ -5,6 +5,8 @@
 
 #include "lexer/token.hpp"
 
+using namespace conch;
+
 TEST_CASE("Promotion of invalid tokens") {
     const auto  input{"1"};
     const Token tok = {

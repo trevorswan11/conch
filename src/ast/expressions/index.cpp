@@ -2,13 +2,13 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto IndexExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IndexExpression::parse(Parser& parser, std::unique_ptr<Expression> array)
-    -> Expected<std::unique_ptr<IndexExpression>, ParserDiagnostic> {
+auto IndexExpression::parse(Parser& parser, Box<Expression> array)
+    -> Expected<Box<IndexExpression>, ParserDiagnostic> {
     TODO(parser, array);
 }
 
-} // namespace ast
+} // namespace conch::ast

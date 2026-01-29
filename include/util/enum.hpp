@@ -3,6 +3,8 @@
 #include <string_view>
 #include <type_traits>
 
+namespace conch {
+
 // Returns the name of an enum as a string at compile time.
 template <auto V> consteval auto enum_name() noexcept -> std::string_view {
     return []<typename E, E EV>() -> std::string_view {
@@ -39,3 +41,5 @@ auto enum_name(E value) noexcept -> std::string_view {
     const U idx = static_cast<U>(value);
     return (idx < Min || idx >= Max) ? "UNKNOWN" : names[idx - Min];
 }
+
+} // namespace conch

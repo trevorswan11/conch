@@ -1,9 +1,10 @@
 #pragma once
 
-#include <memory>
+#include <span>
 #include <variant>
 #include <vector>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 #include "util/optional.hpp"
 
@@ -11,20 +12,20 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class IdentifierExpression;
 class TypeExpression;
 class FunctionExpression;
 
-using ExplicitIdentType    = std::unique_ptr<IdentifierExpression>;
-using ExplicitReferredType = std::unique_ptr<Expression>;
-using ExplicitFunctionType = std::unique_ptr<FunctionExpression>;
+using ExplicitIdentType    = Box<IdentifierExpression>;
+using ExplicitReferredType = Box<Expression>;
+using ExplicitFunctionType = Box<FunctionExpression>;
 
 class ExplicitArrayType {
   public:
-    explicit ExplicitArrayType(std::vector<usize>              dimensions,
-                               std::unique_ptr<TypeExpression> inner_type) noexcept;
+    explicit ExplicitArrayType(std::vector<usize>  dimensions,
+                               Box<TypeExpression> inner_type) noexcept;
     ~ExplicitArrayType();
 
     ExplicitArrayType(const ExplicitArrayType&)                        = delete;
@@ -32,15 +33,17 @@ class ExplicitArrayType {
     ExplicitArrayType(ExplicitArrayType&&) noexcept                    = default;
     auto operator=(ExplicitArrayType&&) noexcept -> ExplicitArrayType& = default;
 
-    [[nodiscard]] auto dimensions() const noexcept -> const std::vector<usize>& {
+    [[nodiscard]] auto get_dimensions() const noexcept -> std::span<const usize> {
         return dimensions_;
     }
 
-    [[nodiscard]] auto inner_type() const noexcept -> const TypeExpression& { return *inner_type_; }
+    [[nodiscard]] auto get_inner_type() const noexcept -> const TypeExpression& {
+        return *inner_type_;
+    }
 
   private:
-    std::vector<usize>              dimensions_;
-    std::unique_ptr<TypeExpression> inner_type_;
+    std::vector<usize>  dimensions_;
+    Box<TypeExpression> inner_type_;
 };
 
 enum class ExplicitTypeConstraint : u8 {
@@ -53,7 +56,6 @@ using ExplicitTypeVariant =
 
 class ExplicitType {
   public:
-    explicit ExplicitType(ExplicitTypeVariant type, bool nullable) noexcept;
     explicit ExplicitType(ExplicitTypeVariant              type,
                           bool                             nullable,
                           Optional<ExplicitTypeConstraint> constraint) noexcept;
@@ -64,9 +66,10 @@ class ExplicitType {
     ExplicitType(ExplicitType&&) noexcept                    = default;
     auto operator=(ExplicitType&&) noexcept -> ExplicitType& = default;
 
-    [[nodiscard]] auto type() const noexcept -> const ExplicitTypeVariant& { return type_; }
-    [[nodiscard]] auto nullable() const noexcept -> bool { return nullable_; }
-    [[nodiscard]] auto constraint() const noexcept -> const Optional<ExplicitTypeConstraint>& {
+    [[nodiscard]] auto get_type() const noexcept -> const ExplicitTypeVariant& { return type_; }
+    [[nodiscard]] auto is_nullable() const noexcept -> bool { return nullable_; }
+    [[nodiscard]] auto has_constraint() const noexcept -> bool { return constraint_.has_value(); }
+    [[nodiscard]] auto get_constraint() const noexcept -> const Optional<ExplicitTypeConstraint>& {
         return constraint_;
     }
 
@@ -78,16 +81,16 @@ class ExplicitType {
 
 class TypeExpression : public Expression {
   public:
-    explicit TypeExpression(const Token& start_token) noexcept;
     explicit TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept;
     ~TypeExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::pair<std::unique_ptr<TypeExpression>, bool>, ParserDiagnostic>;
+        -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic>;
 
-    [[nodiscard]] auto explicit_type() const noexcept -> const Optional<ExplicitType>& {
+    [[nodiscard]] auto has_explicit_type() const noexcept -> bool { return explicit_.has_value(); }
+    [[nodiscard]] auto get_explicit_type() const noexcept -> const Optional<ExplicitType>& {
         return explicit_;
     }
 
@@ -95,4 +98,4 @@ class TypeExpression : public Expression {
     Optional<ExplicitType> explicit_;
 };
 
-} // namespace ast
+} // namespace conch::ast

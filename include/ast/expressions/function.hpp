@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <span>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 #include "util/optional.hpp"
 
@@ -10,7 +10,7 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class IdentifierExpression;
 class TypeExpression;
@@ -18,13 +18,10 @@ class BlockStatement;
 
 class FunctionParameter {
   public:
-    explicit FunctionParameter(bool                                  reference,
-                               std::unique_ptr<IdentifierExpression> name,
-                               std::unique_ptr<TypeExpression>       type) noexcept;
-    explicit FunctionParameter(bool                                  reference,
-                               std::unique_ptr<IdentifierExpression> name,
-                               std::unique_ptr<TypeExpression>       type,
-                               Optional<std::unique_ptr<Expression>> default_value) noexcept;
+    explicit FunctionParameter(bool                      reference,
+                               Box<IdentifierExpression> name,
+                               Box<TypeExpression>       type,
+                               Optional<Box<Expression>> default_value) noexcept;
     ~FunctionParameter();
 
     FunctionParameter(const FunctionParameter&)                        = delete;
@@ -32,49 +29,55 @@ class FunctionParameter {
     FunctionParameter(FunctionParameter&&) noexcept                    = default;
     auto operator=(FunctionParameter&&) noexcept -> FunctionParameter& = default;
 
-    [[nodiscard]] auto reference() const noexcept -> bool { return reference_; }
-    [[nodiscard]] auto name() const noexcept -> const IdentifierExpression& { return *name_; }
-    [[nodiscard]] auto type() const noexcept -> const TypeExpression& { return *type_; }
-    [[nodiscard]] auto body() const noexcept -> Optional<const Expression&> {
+    [[nodiscard]] auto is_reference() const noexcept -> bool { return reference_; }
+    [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
+    [[nodiscard]] auto get_type() const noexcept -> const TypeExpression& { return *type_; }
+
+    [[nodiscard]] auto has_default_value() const noexcept -> bool {
+        return default_value_.has_value();
+    }
+
+    [[nodiscard]] auto get_default_value() const noexcept -> Optional<const Expression&> {
         return default_value_ ? Optional<const Expression&>{**default_value_} : nullopt;
     }
 
   private:
-    bool                                  reference_;
-    std::unique_ptr<IdentifierExpression> name_;
-    std::unique_ptr<TypeExpression>       type_;
-    Optional<std::unique_ptr<Expression>> default_value_;
+    bool                      reference_;
+    Box<IdentifierExpression> name_;
+    Box<TypeExpression>       type_;
+    Optional<Box<Expression>> default_value_;
 };
 
 class FunctionExpression : public Expression {
   public:
-    explicit FunctionExpression(const Token&                              start_token,
-                                std::vector<FunctionParameter>            parameters,
-                                std::unique_ptr<TypeExpression>           return_type,
-                                Optional<std::unique_ptr<BlockStatement>> body) noexcept;
+    explicit FunctionExpression(const Token&                   start_token,
+                                std::vector<FunctionParameter> parameters,
+                                Box<TypeExpression>            return_type,
+                                Optional<Box<BlockStatement>>  body) noexcept;
     ~FunctionExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<FunctionExpression>, ParserDiagnostic>;
+        -> Expected<Box<FunctionExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto parameters() const noexcept -> std::span<const FunctionParameter> {
+    [[nodiscard]] auto get_parameters() const noexcept -> std::span<const FunctionParameter> {
         return parameters_;
     }
 
-    [[nodiscard]] auto return_type() const noexcept -> const TypeExpression& {
+    [[nodiscard]] auto get_return_type() const noexcept -> const TypeExpression& {
         return *return_type_;
     }
 
-    [[nodiscard]] auto body() const noexcept -> Optional<const BlockStatement&> {
+    [[nodiscard]] auto has_body() const noexcept -> bool { return body_.has_value(); }
+    [[nodiscard]] auto get_body() const noexcept -> Optional<const BlockStatement&> {
         return body_ ? Optional<const BlockStatement&>{**body_} : nullopt;
     }
 
   private:
-    std::vector<FunctionParameter>            parameters_;
-    std::unique_ptr<TypeExpression>           return_type_;
-    Optional<std::unique_ptr<BlockStatement>> body_;
+    std::vector<FunctionParameter> parameters_;
+    Box<TypeExpression>            return_type_;
+    Optional<Box<BlockStatement>>  body_;
 };
 
-} // namespace ast
+} // namespace conch::ast

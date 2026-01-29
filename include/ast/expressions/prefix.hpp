@@ -1,31 +1,31 @@
 #pragma once
 
-#include <memory>
 #include <utility>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class PrefixExpression : public Expression {
   public:
-    explicit PrefixExpression(const Token& op, std::unique_ptr<Expression> rhs) noexcept
+    explicit PrefixExpression(const Token& op, Box<Expression> rhs) noexcept
         : Expression{op}, rhs_{std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<PrefixExpression>, ParserDiagnostic>;
+        -> Expected<Box<PrefixExpression>, ParserDiagnostic>;
 
-    auto               op() const noexcept -> TokenType { return start_token_.type; }
-    [[nodiscard]] auto rhs() const noexcept -> const Expression& { return *rhs_; }
+    auto               get_op() const noexcept -> TokenType { return start_token_.type; }
+    [[nodiscard]] auto get_rhs() const noexcept -> const Expression& { return *rhs_; }
 
   private:
-    std::unique_ptr<Expression> rhs_;
+    Box<Expression> rhs_;
 };
 
-} // namespace ast
+} // namespace conch::ast

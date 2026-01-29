@@ -1,8 +1,9 @@
 #pragma once
 
-#include <memory>
+#include <utility>
 #include <variant>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 #include "util/optional.hpp"
 
@@ -10,36 +11,57 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class IdentifierExpression;
 class StringExpression;
 
 class ImportStatement : public Statement {
   public:
-    explicit ImportStatement(const Token&                                    start_token,
-                             std::variant<std::unique_ptr<IdentifierExpression>,
-                                          std::unique_ptr<StringExpression>> import,
-                             Optional<std::unique_ptr<IdentifierExpression>> alias) noexcept;
+    using ModuleImport = Box<IdentifierExpression>;
+    using UserImport   = Box<StringExpression>;
+
+  public:
+    explicit ImportStatement(const Token&                           start_token,
+                             std::variant<ModuleImport, UserImport> imported,
+                             Optional<Box<IdentifierExpression>>    alias) noexcept;
     ~ImportStatement() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<ImportStatement>, ParserDiagnostic>;
+        -> Expected<Box<ImportStatement>, ParserDiagnostic>;
 
-    using ImportTarget = std::variant<const IdentifierExpression*, const StringExpression*>;
-    [[nodiscard]] auto import_target() const noexcept -> ImportTarget {
-        return std::visit([](const auto& ptr) -> ImportTarget { return ptr.get(); }, import_);
+    // UB if the import is not a module import.
+    [[nodiscard]] auto get_module_import() const noexcept -> const ModuleImport& {
+        try {
+            return std::get<ModuleImport>(imported_);
+        } catch (...) { std::unreachable(); }
     }
 
-    [[nodiscard]] auto alias() const noexcept -> Optional<const IdentifierExpression&> {
+    [[nodiscard]] auto is_module_import() const noexcept -> bool {
+        return std::holds_alternative<ModuleImport>(imported_);
+    }
+
+    // UB if the import is not a user import.
+    [[nodiscard]] auto get_user_import() const noexcept -> const UserImport& {
+        try {
+            return std::get<UserImport>(imported_);
+        } catch (...) { std::unreachable(); }
+    }
+
+    [[nodiscard]] auto is_user_import() const noexcept -> bool {
+        return std::holds_alternative<UserImport>(imported_);
+    }
+
+    [[nodiscard]] auto has_alias() const noexcept -> bool { return alias_.has_value(); }
+    [[nodiscard]] auto get_alias() const noexcept -> Optional<const IdentifierExpression&> {
         return alias_ ? Optional<const IdentifierExpression&>{**alias_} : nullopt;
     }
 
   private:
-    std::variant<std::unique_ptr<IdentifierExpression>, std::unique_ptr<StringExpression>> import_;
-    Optional<std::unique_ptr<IdentifierExpression>>                                        alias_;
+    std::variant<ModuleImport, UserImport> imported_;
+    Optional<Box<IdentifierExpression>>    alias_;
 };
 
-} // namespace ast
+} // namespace conch::ast

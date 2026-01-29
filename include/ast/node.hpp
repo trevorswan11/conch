@@ -2,6 +2,8 @@
 
 #include "lexer/token.hpp"
 
+namespace conch {
+
 class Visitor;
 
 namespace ast {
@@ -18,7 +20,7 @@ class Node {
 
     virtual auto accept(Visitor& v) const -> void = 0;
 
-    auto start_token() const noexcept -> const Token& { return start_token_; }
+    auto get_token() const noexcept -> const Token& { return start_token_; }
 
   protected:
     explicit Node(const Token& tok) noexcept : start_token_{tok} {}
@@ -36,3 +38,4 @@ class Statement : public Node {
 };
 
 } // namespace ast
+} // namespace conch

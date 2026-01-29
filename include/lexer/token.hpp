@@ -9,6 +9,8 @@
 #include "util/enum.hpp"
 #include "util/expected.hpp"
 
+namespace conch {
+
 enum class TokenError : u8 {
     NON_STRING_TOKEN,
     UNEXPECTED_CHAR,
@@ -120,10 +122,10 @@ enum class TokenType : u16 {
     TYPEOF,
     IMPORT,
     TYPE,
-    IMPL,
     ORELSE,
     DO,
     AS,
+    NAMESPACE,
 
     INT_TYPE,
     UINT_TYPE,
@@ -133,6 +135,12 @@ enum class TokenType : u16 {
     STRING_TYPE,
     BOOL_TYPE,
     VOID_TYPE,
+
+    PRIVATE,
+    STATIC,
+    EXTERN,
+    EXPORT,
+    PACKED,
 
     ILLEGAL,
 };
@@ -174,10 +182,12 @@ struct Token {
     }
 };
 
-template <> struct std::formatter<Token> : std::formatter<std::string> {
+} // namespace conch
+
+template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> auto format(const Token& t, F& ctx) const {
+    template <typename F> auto format(const conch::Token& t, F& ctx) const {
         return std::formatter<std::string>::format(
             std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line, t.column), ctx);
     }

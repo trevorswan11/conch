@@ -1,34 +1,34 @@
 #pragma once
 
-#include <memory>
 #include <utility>
 
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class IndexExpression : public Expression {
   public:
-    explicit IndexExpression(const Token&                start_token,
-                             std::unique_ptr<Expression> array,
-                             std::unique_ptr<Expression> idx) noexcept
-        : Expression{start_token}, array_{std::move(array)}, idx_{std::move(idx)} {}
+    explicit IndexExpression(const Token&    start_token,
+                             Box<Expression> array,
+                             Box<Expression> idx) noexcept
+        : Expression{start_token}, array_{std::move(array)}, index_{std::move(idx)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> array)
-        -> Expected<std::unique_ptr<IndexExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser, Box<Expression> array)
+        -> Expected<Box<IndexExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto array() const noexcept -> const Expression& { return *array_; }
-    [[nodiscard]] auto idx() const noexcept -> const Expression& { return *idx_; }
+    [[nodiscard]] auto get_array() const noexcept -> const Expression& { return *array_; }
+    [[nodiscard]] auto get_index() const noexcept -> const Expression& { return *index_; }
 
   private:
-    std::unique_ptr<Expression> array_;
-    std::unique_ptr<Expression> idx_;
+    Box<Expression> array_;
+    Box<Expression> index_;
 };
 
-} // namespace ast
+} // namespace conch::ast
