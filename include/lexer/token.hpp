@@ -137,7 +137,6 @@ enum class TokenType : u16 {
     VOID_TYPE,
 
     PRIVATE,
-    STATIC,
     EXTERN,
     EXPORT,
     PACKED,

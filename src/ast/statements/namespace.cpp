@@ -4,14 +4,16 @@
 
 #include "ast/expressions/identifier.hpp"
 #include "ast/expressions/scope_resolve.hpp"
+#include "ast/statements/block.hpp"
 
 #include "visitor/visitor.hpp"
 
 namespace conch::ast {
 
 NamespaceStatement::NamespaceStatement(const Token&                  start_token,
-                                       std::variant<Default, Nested> nspace) noexcept
-    : Statement{start_token}, namespace_{std::move(nspace)} {}
+                                       std::variant<Single, Nested> nspace,
+                                       Box<BlockStatement>           block) noexcept
+    : Statement{start_token}, namespace_{std::move(nspace)}, block_{std::move(block)} {}
 
 NamespaceStatement::~NamespaceStatement() = default;
 

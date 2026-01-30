@@ -99,7 +99,6 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     case TokenType::VAR:
     case TokenType::CONST:
     case TokenType::PRIVATE:
-    case TokenType::STATIC:
     case TokenType::EXTERN:
     case TokenType::EXPORT: return ast::DeclStatement::parse(*this);
     case TokenType::BREAK:

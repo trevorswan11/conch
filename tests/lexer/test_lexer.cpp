@@ -222,23 +222,23 @@ TEST_CASE("Integer base variants") {
     }
 }
 
-TEST_CASE("Other keywords") {
-    const auto input{"namespace private static extern export packed"};
+TEST_CASE("Iterator with other keywords") {
+    const auto input{"namespace private extern export packed"};
     Lexer      l{input};
 
     const auto expecteds = std::array{
         std::pair{TokenType::NAMESPACE, "namespace"},
         std::pair{TokenType::PRIVATE, "private"},
-        std::pair{TokenType::STATIC, "static"},
         std::pair{TokenType::EXTERN, "extern"},
         std::pair{TokenType::EXPORT, "export"},
         std::pair{TokenType::PACKED, "packed"},
     };
 
-    for (const auto& [expected_token, expected_slice] : expecteds) {
-        const auto token = l.advance();
-        REQUIRE(expected_token == token.type);
-        REQUIRE(expected_slice == token.slice);
+    size_t i = 0;
+    for (const auto& token : l) {
+        REQUIRE(expecteds[i].first == token.type);
+        REQUIRE(expecteds[i].second == token.slice);
+        i += 1;
     }
 }
 

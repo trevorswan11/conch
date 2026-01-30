@@ -21,9 +21,8 @@ enum class DeclModifiers : u8 {
     MUTABLE  = 1 << 0,
     CONSTANT = 1 << 1,
     PRIVATE  = 1 << 2,
-    STATIC   = 1 << 3,
-    EXTERN   = 1 << 4,
-    EXPORT   = 1 << 5,
+    EXTERN   = 1 << 3,
+    EXPORT   = 1 << 4,
 };
 
 constexpr auto operator|(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
@@ -95,7 +94,6 @@ class DeclStatement : public Statement {
         ModifierMapping{TokenType::VAR, DeclModifiers::MUTABLE},
         ModifierMapping{TokenType::CONST, DeclModifiers::CONSTANT},
         ModifierMapping{TokenType::PRIVATE, DeclModifiers::PRIVATE},
-        ModifierMapping{TokenType::STATIC, DeclModifiers::STATIC},
         ModifierMapping{TokenType::EXTERN, DeclModifiers::EXTERN},
         ModifierMapping{TokenType::EXPORT, DeclModifiers::EXPORT},
     };

@@ -40,7 +40,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
         return make_parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, std::move(start_token));
     }
 
-    std::vector<Enumeration> variant;
+    std::vector<Enumeration> enumeration;
     while (!parser.peek_token_is(TokenType::RBRACE) && !parser.peek_token_is(TokenType::END)) {
         TRY(parser.expect_peek(TokenType ::IDENT));
         auto ident = TRY(IdentifierExpression::parse(parser));
@@ -50,7 +50,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
             parser.advance(2);
             value = TRY(parser.parse_expression());
         }
-        variant.emplace_back(std::move(ident), std::move(value));
+        enumeration.emplace_back(std::move(ident), std::move(value));
 
         // All variants require a trailing comma!
         auto peek = parser.expect_peek(TokenType::COMMA);
@@ -60,7 +60,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
     }
 
     TRY(parser.expect_peek(TokenType::RBRACE));
-    return std::make_unique<EnumExpression>(start_token, std::move(underlying), std::move(variant));
+    return std::make_unique<EnumExpression>(start_token, std::move(underlying), std::move(enumeration));
 }
 
 } // namespace conch::ast

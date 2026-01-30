@@ -33,9 +33,9 @@ class ImportStatement : public Statement {
         -> Expected<Box<ImportStatement>, ParserDiagnostic>;
 
     // UB if the import is not a module import.
-    [[nodiscard]] auto get_module_import() const noexcept -> const ModuleImport& {
+    [[nodiscard]] auto get_module_import() const noexcept -> const IdentifierExpression& {
         try {
-            return std::get<ModuleImport>(imported_);
+            return *std::get<ModuleImport>(imported_);
         } catch (...) { std::unreachable(); }
     }
 
@@ -44,9 +44,9 @@ class ImportStatement : public Statement {
     }
 
     // UB if the import is not a user import.
-    [[nodiscard]] auto get_user_import() const noexcept -> const UserImport& {
+    [[nodiscard]] auto get_user_import() const noexcept -> const StringExpression& {
         try {
-            return std::get<UserImport>(imported_);
+            return *std::get<UserImport>(imported_);
         } catch (...) { std::unreachable(); }
     }
 

@@ -8,16 +8,20 @@
 
 #include "cli/program.hpp"
 
+#include "lexer/lexer.hpp"
+
 namespace conch {
 
 auto Program::repl() const -> void {
     const auto trim = [](std::string_view s) -> std::string_view {
-        const auto is_space = [](unsigned char c) { return std::isspace(c); };
-        const auto first    = std::ranges::find_if_not(s, is_space);
-        const auto last     = std::ranges::find_if_not(s | std::views::reverse, is_space).base();
+        const auto isspace = [](byte c) { return std::isspace(c); };
+        const auto first   = std::ranges::find_if_not(s, isspace);
+        const auto last    = std::ranges::find_if_not(s | std::views::reverse, isspace).base();
 
         return first < last ? std::string_view(first, last - first) : std::string_view{};
     };
+
+    Lexer lexer;
 
     std::println("Welcome to Conch REPL! Type 'exit' to quit.");
     std::string line;
@@ -25,9 +29,14 @@ auto Program::repl() const -> void {
         std::print(">>> ");
         line.clear();
 
-        std::getline(std::cin, line);
+        if (!std::getline(std::cin, line)) { break; }
         const auto trimmed = trim(line);
         if (trimmed == "exit") { break; }
+
+        lexer.reset(trimmed);
+        for (const auto& token : lexer) {
+            std::println("{}", token);
+        }
     }
 }
 
