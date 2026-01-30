@@ -12,11 +12,11 @@
 
   outputs =
     {
-      self,
       nixpkgs,
       utils,
       zig-flake,
       zls-flake,
+      ...
     }:
     utils.lib.eachSystem
       [
@@ -47,8 +47,14 @@
               pkgs.zig
               pkgs.zls
               pkgs.git
+              pkgs.curl
+              pkgs.zip
             ]
             ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.kcov ];
+
+            shellHook = ''
+              export IN_NIX_SHELL=1
+            '';
           };
         }
       );
