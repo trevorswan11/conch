@@ -51,8 +51,11 @@ class Lexer {
     auto advance() noexcept -> Token;
     auto consume() -> std::vector<Token>;
 
-    auto begin() -> Iterator { return Iterator{*this, advance()}; }
-    auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
+    auto begin() noexcept -> Iterator { return Iterator{*this, advance()}; }
+    auto end() const noexcept // cppcheck-suppress functionStatic
+        -> std::default_sentinel_t {
+        return std::default_sentinel;
+    }
 
   private:
     auto        skip_whitespace() noexcept -> void;

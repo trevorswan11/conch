@@ -60,7 +60,8 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
     }
 
     TRY(parser.expect_peek(TokenType::RBRACE));
-    return std::make_unique<EnumExpression>(start_token, std::move(underlying), std::move(enumeration));
+    return std::make_unique<EnumExpression>(
+        start_token, std::move(underlying), std::move(enumeration));
 }
 
 } // namespace conch::ast

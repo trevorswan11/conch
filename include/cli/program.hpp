@@ -4,7 +4,7 @@ namespace conch {
 
 class Program {
   public:
-    auto repl() const -> void;
+    static auto repl() -> void;
 };
 
 } // namespace conch

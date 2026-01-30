@@ -12,7 +12,7 @@
 
 namespace conch {
 
-auto Program::repl() const -> void {
+auto Program::repl() -> void {
     const auto trim = [](std::string_view s) -> std::string_view {
         const auto isspace = [](byte c) { return std::isspace(c); };
         const auto first   = std::ranges::find_if_not(s, isspace);

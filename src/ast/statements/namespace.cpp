@@ -10,9 +10,9 @@
 
 namespace conch::ast {
 
-NamespaceStatement::NamespaceStatement(const Token&                  start_token,
+NamespaceStatement::NamespaceStatement(const Token&                 start_token,
                                        std::variant<Single, Nested> nspace,
-                                       Box<BlockStatement>           block) noexcept
+                                       Box<BlockStatement>          block) noexcept
     : Statement{start_token}, namespace_{std::move(nspace)}, block_{std::move(block)} {}
 
 NamespaceStatement::~NamespaceStatement() = default;
