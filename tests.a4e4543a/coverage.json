@@ -1,0 +1,20 @@
+{
+  "files": [
+    {"file": "/home/runner/work/conch/conch/include/util/enum.hpp", "percent_covered": "100.00", "covered_lines": "3", "total_lines": "3"},
+    {"file": "/home/runner/work/conch/conch/include/util/diagnostic.hpp", "percent_covered": "100.00", "covered_lines": "6", "total_lines": "6"},
+    {"file": "/home/runner/work/conch/conch/include/parser/parser.hpp", "percent_covered": "100.00", "covered_lines": "6", "total_lines": "6"},
+    {"file": "/home/runner/work/conch/conch/include/lexer/operators.hpp", "percent_covered": "100.00", "covered_lines": "3", "total_lines": "3"},
+    {"file": "/home/runner/work/conch/conch/include/lexer/keywords.hpp", "percent_covered": "100.00", "covered_lines": "3", "total_lines": "3"},
+    {"file": "/home/runner/work/conch/conch/src/lexer/token.cpp", "percent_covered": "70.42", "covered_lines": "50", "total_lines": "71"},
+    {"file": "/home/runner/work/conch/conch/include/lexer/lexer.hpp", "percent_covered": "100.00", "covered_lines": "18", "total_lines": "18"},
+    {"file": "/home/runner/work/conch/conch/include/lexer/token.hpp", "percent_covered": "88.89", "covered_lines": "8", "total_lines": "9"},
+    {"file": "/home/runner/work/conch/conch/src/lexer/lexer.cpp", "percent_covered": "93.27", "covered_lines": "277", "total_lines": "297"}
+  ],
+  "percent_covered": "89.90",
+  "covered_lines": 374,
+  "total_lines": 416,
+  "percent_low": 25,
+  "percent_high": 75,
+  "command": "tests",
+  "date": "2026-01-30 15:53:19"
+}
