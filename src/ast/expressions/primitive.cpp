@@ -1,3 +1,6 @@
+#include <charconv>
+#include <utility>
+
 #include "ast/expressions/primitive.hpp"
 
 #include "visitor/visitor.hpp"
@@ -10,11 +13,41 @@ auto StringExpression::parse(Parser& parser) -> Expected<Box<StringExpression>, 
     TODO(parser);
 }
 
-auto IntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+auto SignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IntegerExpression::parse(Parser& parser)
-    -> Expected<Box<IntegerExpression>, ParserDiagnostic> {
-    TODO(parser);
+auto SignedIntegerExpression::parse(Parser& parser)
+    -> Expected<Box<SignedIntegerExpression>, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    const auto base        = token_type::to_base(start_token.type);
+
+    value_type v;
+    const auto& [_, ec] = std::from_chars(
+        start_token.slice.cbegin(), start_token.slice.cend(), v, std::to_underlying(base));
+    switch (ec) {
+    case std::errc::result_out_of_range:
+        return make_parser_unexpected(ParserError::PRIMITIVE_OVERFLOW, start_token);
+    case std::errc::invalid_argument:
+        return make_parser_unexpected(ParserError::PRIMITIVE_PARSE_ERROR, start_token);
+    default:
+        if (ec == std::errc{}) { break; }
+        std::unreachable();
+    }
+}
+
+auto UnsignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto UnsignedIntegerExpression::parse(Parser& parser)
+    -> Expected<Box<UnsignedIntegerExpression>, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    const auto base        = token_type::to_base(start_token.type);
+}
+
+auto SizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto SizeIntegerExpression::parse(Parser& parser)
+    -> Expected<Box<SizeIntegerExpression>, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    const auto base        = token_type::to_base(start_token.type);
 }
 
 auto ByteExpression::accept(Visitor& v) const -> void { v.visit(*this); }

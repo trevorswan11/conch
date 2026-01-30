@@ -15,13 +15,16 @@ namespace conch::ast {
 
 template <typename T> class PrimitiveExpression : public Expression {
   public:
-    explicit PrimitiveExpression(const Token& start_token, T value) noexcept
+    using value_type = T;
+
+  public:
+    explicit PrimitiveExpression(const Token& start_token, value_type value) noexcept
         : Expression{start_token}, value_{std::move(value)} {}
 
-    auto get_value() const -> const T& { return value_; }
+    auto get_value() const -> const value_type& { return value_; }
 
   private:
-    T value_;
+    value_type value_;
 };
 
 class StringExpression : public PrimitiveExpression<std::string> {
@@ -34,14 +37,34 @@ class StringExpression : public PrimitiveExpression<std::string> {
         -> Expected<Box<StringExpression>, ParserDiagnostic>;
 };
 
-class IntegerExpression : public PrimitiveExpression<usize> {
+class SignedIntegerExpression : public PrimitiveExpression<i64> {
+  public:
+    using PrimitiveExpression<i64>::PrimitiveExpression;
+
+    auto accept(Visitor& v) const -> void override;
+
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<Box<SignedIntegerExpression>, ParserDiagnostic>;
+};
+
+class UnsignedIntegerExpression : public PrimitiveExpression<u64> {
+  public:
+    using PrimitiveExpression<u64>::PrimitiveExpression;
+
+    auto accept(Visitor& v) const -> void override;
+
+    [[nodiscard]] static auto parse(Parser& parser)
+        -> Expected<Box<UnsignedIntegerExpression>, ParserDiagnostic>;
+};
+
+class SizeIntegerExpression : public PrimitiveExpression<usize> {
   public:
     using PrimitiveExpression<usize>::PrimitiveExpression;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<IntegerExpression>, ParserDiagnostic>;
+        -> Expected<Box<SizeIntegerExpression>, ParserDiagnostic>;
 };
 
 class ByteExpression : public PrimitiveExpression<u8> {

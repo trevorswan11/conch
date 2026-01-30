@@ -43,14 +43,16 @@
         in
         {
           devShells.default = pkgs.mkShell {
-            nativeBuildInputs = [
-              pkgs.zig
-              pkgs.zls
-              pkgs.git
-              pkgs.curl
-              pkgs.zip
-            ]
-            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.kcov ];
+            nativeBuildInputs =
+              with pkgs;
+              [
+                zig
+                zls
+                git
+                curl
+                zip
+              ]
+              ++ lib.optionals stdenv.isLinux [ kcov ];
           };
         }
       );

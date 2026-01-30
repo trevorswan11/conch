@@ -42,6 +42,8 @@ enum class ParserError : u8 {
     USER_IMPORT_MISSING_ALIAS,
     DUPLICATE_DECL_MODIFIER,
     ILLEGAL_DECL_MODIFIERS,
+    PRIMITIVE_OVERFLOW,
+    PRIMITIVE_PARSE_ERROR,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;
