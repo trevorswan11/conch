@@ -2,13 +2,13 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto CallExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto CallExpression::parse(Parser& parser, std::unique_ptr<Expression> function)
-    -> Expected<std::unique_ptr<CallExpression>, ParserDiagnostic> {
+auto CallExpression::parse(Parser& parser, Box<Expression> function)
+    -> Expected<Box<CallExpression>, ParserDiagnostic> {
     TODO(parser, function);
 }
 
-} // namespace ast
+} // namespace conch::ast

@@ -8,26 +8,21 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-FunctionParameter::FunctionParameter(bool                                  reference,
-                                     std::unique_ptr<IdentifierExpression> name,
-                                     std::unique_ptr<TypeExpression>       type) noexcept
-    : FunctionParameter{reference, std::move(name), std::move(type), nullopt} {}
-
-FunctionParameter::FunctionParameter(bool                                  reference,
-                                     std::unique_ptr<IdentifierExpression> name,
-                                     std::unique_ptr<TypeExpression>       type,
-                                     Optional<std::unique_ptr<Expression>> default_value) noexcept
+FunctionParameter::FunctionParameter(bool                      reference,
+                                     Box<IdentifierExpression> name,
+                                     Box<TypeExpression>       type,
+                                     Optional<Box<Expression>> default_value) noexcept
     : reference_{reference}, name_{std::move(name)}, type_{std::move(type)},
       default_value_{std::move(default_value)} {}
 
 FunctionParameter::~FunctionParameter() = default;
 
-FunctionExpression::FunctionExpression(const Token&                              start_token,
-                                       std::vector<FunctionParameter>            parameters,
-                                       std::unique_ptr<TypeExpression>           return_type,
-                                       Optional<std::unique_ptr<BlockStatement>> body) noexcept
+FunctionExpression::FunctionExpression(const Token&                   start_token,
+                                       std::vector<FunctionParameter> parameters,
+                                       Box<TypeExpression>            return_type,
+                                       Optional<Box<BlockStatement>>  body) noexcept
     : Expression{start_token}, parameters_{std::move(parameters)},
       return_type_{std::move(return_type)}, body_{std::move(body)} {}
 
@@ -36,8 +31,8 @@ FunctionExpression::~FunctionExpression() = default;
 auto FunctionExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto FunctionExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<FunctionExpression>, ParserDiagnostic> {
+    -> Expected<Box<FunctionExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

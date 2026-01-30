@@ -2,18 +2,18 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto IdentifierExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto IdentifierExpression::parse(Parser& parser) // cppcheck-suppress constParameterReference
-    -> Expected<std::unique_ptr<IdentifierExpression>, ParserDiagnostic> {
+    -> Expected<Box<IdentifierExpression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     if (start_token.type != TokenType::IDENT && !start_token.primitive()) {
         return make_parser_unexpected(ParserError::ILLEGAL_IDENTIFIER, start_token);
     }
 
-    return std::make_unique<IdentifierExpression>(start_token, std::string{start_token.slice});
+    return std::make_unique<IdentifierExpression>(start_token, start_token.slice);
 }
 
-} // namespace ast
+} // namespace conch::ast

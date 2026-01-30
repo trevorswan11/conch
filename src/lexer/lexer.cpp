@@ -8,6 +8,8 @@
 #include "lexer/operators.hpp"
 #include "lexer/token.hpp"
 
+namespace conch {
+
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
 auto Lexer::advance() noexcept -> Token {
@@ -356,7 +358,7 @@ auto Lexer::read_multiline_string() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
-    auto       end        = start;
+    auto       end_pos    = start;
 
     while (true) {
         // Consume characters until newline or EOF
@@ -378,7 +380,7 @@ auto Lexer::read_multiline_string() noexcept -> Token {
 
         // Don't include the newline if there is no continuation to prevent trailing whitespace
         if (!has_continuation) {
-            end = pos_;
+            end_pos = pos_;
             break;
         }
 
@@ -394,7 +396,7 @@ auto Lexer::read_multiline_string() noexcept -> Token {
 
     return {
         .type   = TokenType::MULTILINE_STRING,
-        .slice  = input_.substr(start, end - start),
+        .slice  = input_.substr(start, end_pos - start),
         .line   = start_line,
         .column = start_col,
     };
@@ -471,3 +473,5 @@ auto Lexer::read_comment() noexcept -> Token {
         .column = start_col,
     };
 }
+
+} // namespace conch

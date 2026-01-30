@@ -71,3 +71,6 @@ Makefile
 .DS_Store
 
 __cmake_systeminformation/
+
+*.lock
+!flake.lock

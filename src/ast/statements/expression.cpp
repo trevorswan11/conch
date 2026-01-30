@@ -2,16 +2,16 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto ExpressionStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto ExpressionStatement::parse(Parser& parser)
-    -> Expected<std::unique_ptr<ExpressionStatement>, ParserDiagnostic> {
+    -> Expected<Box<ExpressionStatement>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     auto       expr        = TRY(parser.parse_expression());
 
-    return std::make_unique<ExpressionStatement>(start_token, std::move(expr));
+    return make_box<ExpressionStatement>(start_token, std::move(expr));
 }
 
-} // namespace ast
+} // namespace conch::ast

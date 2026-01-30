@@ -131,7 +131,6 @@ fn addArtifacts(b: *std.Build, config: struct {
         .cxx_files = try collectFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
         .flags = config.cxx_flags,
     });
-    if (config.auto_install) b.installArtifact(libconch);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libconch.step);
 
     const conch = createExecutable(b, .{
@@ -166,7 +165,6 @@ fn addArtifacts(b: *std.Build, config: struct {
             .cxx_files = &.{"extras/catch_amalgamated.cpp"},
             .flags = config.cxx_flags,
         });
-        if (config.auto_install) b.installArtifact(libcatch2.?);
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
         tests = createExecutable(b, .{
@@ -793,7 +791,8 @@ const LOCCounter = struct {
 
             var lines: usize = 0;
             while (it.next()) |line| {
-                if (!std.mem.startsWith(u8, line, "//")) {
+                const trimmed = std.mem.trim(u8, line, " \t");
+                if (trimmed.len > 0 and !std.mem.startsWith(u8, trimmed, "//")) {
                     lines += 1;
                 }
             }

@@ -1,10 +1,9 @@
 #include "ast/expressions/group.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-auto GroupedExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<Expression>, ParserDiagnostic> {
+auto GroupedExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

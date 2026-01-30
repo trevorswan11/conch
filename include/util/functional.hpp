@@ -2,6 +2,8 @@
 
 #include <utility>
 
+namespace conch {
+
 template <typename Signature> class Thunk;
 template <typename Ret, typename... Args> class Thunk<Ret(Args...)> {
   public:
@@ -19,3 +21,5 @@ template <typename Ret, typename... Args> class Thunk<Ret(Args...)> {
     void* ptr_                      = nullptr;
     Ret (*thunk_)(void*, Args&&...) = nullptr;
 };
+
+} // namespace conch

@@ -11,14 +11,14 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 template <typename T> class PrimitiveExpression : public Expression {
   public:
     explicit PrimitiveExpression(const Token& start_token, T value) noexcept
         : Expression{start_token}, value_{std::move(value)} {}
 
-    auto value() const -> const T& { return value_; }
+    auto get_value() const -> const T& { return value_; }
 
   private:
     T value_;
@@ -31,7 +31,7 @@ class StringExpression : public PrimitiveExpression<std::string> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<StringExpression>, ParserDiagnostic>;
+        -> Expected<Box<StringExpression>, ParserDiagnostic>;
 };
 
 class IntegerExpression : public PrimitiveExpression<usize> {
@@ -41,7 +41,7 @@ class IntegerExpression : public PrimitiveExpression<usize> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<IntegerExpression>, ParserDiagnostic>;
+        -> Expected<Box<IntegerExpression>, ParserDiagnostic>;
 };
 
 class ByteExpression : public PrimitiveExpression<u8> {
@@ -51,7 +51,7 @@ class ByteExpression : public PrimitiveExpression<u8> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<ByteExpression>, ParserDiagnostic>;
+        -> Expected<Box<ByteExpression>, ParserDiagnostic>;
 };
 
 class FloatExpression : public PrimitiveExpression<f64> {
@@ -61,7 +61,7 @@ class FloatExpression : public PrimitiveExpression<f64> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<FloatExpression>, ParserDiagnostic>;
+        -> Expected<Box<FloatExpression>, ParserDiagnostic>;
 };
 
 class BoolExpression : public PrimitiveExpression<bool> {
@@ -71,7 +71,7 @@ class BoolExpression : public PrimitiveExpression<bool> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<BoolExpression>, ParserDiagnostic>;
+        -> Expected<Box<BoolExpression>, ParserDiagnostic>;
 };
 
 class VoidExpression : public PrimitiveExpression<std::monostate> {
@@ -81,7 +81,7 @@ class VoidExpression : public PrimitiveExpression<std::monostate> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<VoidExpression>, ParserDiagnostic>;
+        -> Expected<Box<VoidExpression>, ParserDiagnostic>;
 };
 
 class NilExpression : public PrimitiveExpression<std::monostate> {
@@ -91,7 +91,7 @@ class NilExpression : public PrimitiveExpression<std::monostate> {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<NilExpression>, ParserDiagnostic>;
+        -> Expected<Box<NilExpression>, ParserDiagnostic>;
 };
 
-} // namespace ast
+} // namespace conch::ast

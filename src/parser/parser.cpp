@@ -11,7 +11,6 @@
 #include "ast/statements/decl.hpp"
 #include "ast/statements/discard.hpp"
 #include "ast/statements/expression.hpp"
-#include "ast/statements/impl.hpp"
 #include "ast/statements/import.hpp"
 #include "ast/statements/jump.hpp"
 
@@ -35,6 +34,8 @@
 #include "ast/expressions/struct.hpp"
 #include "ast/expressions/while.hpp"
 
+namespace conch {
+
 auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{input}; }
 
 auto Parser::advance(uint8_t times) noexcept -> const Token& {
@@ -46,9 +47,9 @@ auto Parser::advance(uint8_t times) noexcept -> const Token& {
     return current_token_;
 }
 
-auto Parser::consume() -> std::pair<AST, std::span<const ParserDiagnostic>> {
+auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>> {
     reset(input_);
-    AST ast;
+    ast::AST ast;
 
     while (!current_token_is(TokenType::END)) {
         if (!current_token_is(TokenType::COMMENT)) {
@@ -93,14 +94,16 @@ auto Parser::peek_precedence() const noexcept -> Precedence {
         .value_or(Precedence::LOWEST);
 }
 
-auto Parser::parse_statement() -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic> {
+auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic> {
     switch (current_token_.type) {
     case TokenType::VAR:
-    case TokenType::CONST: return ast::DeclStatement::parse(*this);
+    case TokenType::CONST:
+    case TokenType::PRIVATE:
+    case TokenType::EXTERN:
+    case TokenType::EXPORT: return ast::DeclStatement::parse(*this);
     case TokenType::BREAK:
     case TokenType::RETURN:
     case TokenType::CONTINUE: return ast::JumpStatement::parse(*this);
-    case TokenType::IMPL: return ast::ImplStatement::parse(*this);
     case TokenType::IMPORT: return ast::ImportStatement::parse(*this);
     case TokenType::LBRACE: return ast::BlockStatement::parse(*this);
     case TokenType::UNDERSCORE: return ast::DiscardStatement::parse(*this);
@@ -111,7 +114,7 @@ auto Parser::parse_statement() -> Expected<std::unique_ptr<ast::Statement>, Pars
 }
 
 auto Parser::parse_expression(Precedence precedence)
-    -> Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic> {
+    -> Expected<Box<ast::Expression>, ParserDiagnostic> {
     if (current_token_is(TokenType::END)) {
         return make_parser_unexpected(ParserError::END_OF_TOKEN_STREAM, current_token_);
     }
@@ -234,3 +237,5 @@ std::array<std::pair<TokenType, Parser::InfixFn>, 39> Parser::INFIX_FNS = {
     InfixPair{TokenType::XOR_ASSIGN, ast::AssignmentExpression::parse},
     InfixPair{TokenType::COLON_COLON, ast::ScopeResolutionExpression::parse},
 };
+
+} // namespace conch

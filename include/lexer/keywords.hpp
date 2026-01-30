@@ -9,6 +9,8 @@
 
 #include "lexer/token.hpp"
 
+namespace conch {
+
 using Keyword = std::pair<std::string_view, TokenType>;
 
 namespace keywords {
@@ -37,7 +39,6 @@ constexpr Keyword CONTINUE{"continue", TokenType::CONTINUE};
 constexpr Keyword BREAK{"break", TokenType::BREAK};
 constexpr Keyword NIL{"nil", TokenType::NIL};
 constexpr Keyword TYPEOF{"typeof", TokenType::TYPEOF};
-constexpr Keyword IMPL{"impl", TokenType::IMPL};
 constexpr Keyword IMPORT{"import", TokenType::IMPORT};
 constexpr Keyword INT{"int", TokenType::INT_TYPE};
 constexpr Keyword UINT{"uint", TokenType::UINT_TYPE};
@@ -50,20 +51,26 @@ constexpr Keyword VOID{"void", TokenType::VOID_TYPE};
 constexpr Keyword TYPE{"type", TokenType::TYPE};
 constexpr Keyword WITH{"with", TokenType::WITH};
 constexpr Keyword AS{"as", TokenType::AS};
+constexpr Keyword PRIVATE{"private", TokenType::PRIVATE};
+constexpr Keyword EXTERN{"extern", TokenType::EXTERN};
+constexpr Keyword EXPORT{"export", TokenType::EXPORT};
+constexpr Keyword NAMESPACE{"namespace", TokenType::NAMESPACE};
+constexpr Keyword PACKED{"packed", TokenType::PACKED};
 
 } // namespace keywords
 
 constexpr auto ALL_KEYWORDS = std::array{
-    keywords::FN,         keywords::VAR,    keywords::CONST, keywords::STRUCT,
-    keywords::ENUM,       keywords::TRUE,   keywords::FALSE, keywords::BOOLEAN_AND,
-    keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,    keywords::IF,
-    keywords::ELSE,       keywords::ORELSE, keywords::DO,    keywords::MATCH,
-    keywords::RETURN,     keywords::LOOP,   keywords::FOR,   keywords::WHILE,
-    keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,   keywords::TYPEOF,
-    keywords::IMPL,       keywords::IMPORT, keywords::INT,   keywords::UINT,
-    keywords::SIZE,       keywords::FLOAT,  keywords::BYTE,  keywords::STRING,
-    keywords::BOOL,       keywords::VOID,   keywords::TYPE,  keywords::WITH,
-    keywords::AS,
+    keywords::FN,         keywords::VAR,    keywords::CONST,  keywords::STRUCT,
+    keywords::ENUM,       keywords::TRUE,   keywords::FALSE,  keywords::BOOLEAN_AND,
+    keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,     keywords::IF,
+    keywords::ELSE,       keywords::ORELSE, keywords::DO,     keywords::MATCH,
+    keywords::RETURN,     keywords::LOOP,   keywords::FOR,    keywords::WHILE,
+    keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,    keywords::TYPEOF,
+    keywords::IMPORT,     keywords::INT,    keywords::UINT,   keywords::SIZE,
+    keywords::FLOAT,      keywords::BYTE,   keywords::STRING, keywords::BOOL,
+    keywords::VOID,       keywords::TYPE,   keywords::WITH,   keywords::AS,
+    keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::NAMESPACE,
+    keywords::PACKED,
 };
 
 constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {
@@ -82,3 +89,5 @@ constexpr auto ALL_PRIMITIVES = std::array{
     keywords::VOID.second,
     keywords::NIL.second,
 };
+
+} // namespace conch

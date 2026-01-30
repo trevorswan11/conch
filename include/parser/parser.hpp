@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <memory>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -17,11 +16,15 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
+namespace conch {
+
 namespace ast {
 
 class Node;
 class Statement;
 class Expression;
+
+using AST = std::vector<Box<Node>>;
 
 } // namespace ast
 
@@ -37,9 +40,10 @@ enum class ParserError : u8 {
     FORWARD_VAR_DECL_MISSING_TYPE,
     EMPTY_IMPL_BLOCK,
     USER_IMPORT_MISSING_ALIAS,
+    DUPLICATE_DECL_MODIFIER,
+    ILLEGAL_DECL_MODIFIERS,
 };
 
-using AST              = std::vector<std::unique_ptr<ast::Node>>;
 using ParserDiagnostic = Diagnostic<ParserError>;
 
 template <typename... Args>
@@ -49,9 +53,9 @@ auto make_parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
 
 class Parser {
   public:
-    using PrefixFn = Thunk<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(Parser&)>;
-    using InfixFn  = Thunk<Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>(
-        Parser&, std::unique_ptr<ast::Expression>)>;
+    using PrefixFn = Thunk<Expected<Box<ast::Expression>, ParserDiagnostic>(Parser&)>;
+    using InfixFn =
+        Thunk<Expected<Box<ast::Expression>, ParserDiagnostic>(Parser&, Box<ast::Expression>)>;
 
   public:
     Parser() noexcept = default;
@@ -59,7 +63,7 @@ class Parser {
 
     auto reset(std::string_view input = {}) noexcept -> void;
     auto advance(uint8_t times = 1) noexcept -> const Token&;
-    auto consume() -> std::pair<AST, std::span<const ParserDiagnostic>>;
+    auto consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>;
 
     auto current_token() const noexcept -> const Token& { return current_token_; }
     auto peek_token() const noexcept -> const Token& { return peek_token_; }
@@ -81,10 +85,9 @@ class Parser {
     auto current_precedence() const noexcept -> Precedence;
     auto peek_precedence() const noexcept -> Precedence;
 
-    [[nodiscard]] auto parse_statement()
-        -> Expected<std::unique_ptr<ast::Statement>, ParserDiagnostic>;
+    [[nodiscard]] auto parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
-        -> Expected<std::unique_ptr<ast::Expression>, ParserDiagnostic>;
+        -> Expected<Box<ast::Expression>, ParserDiagnostic>;
 
     static auto poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&>;
     static auto poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&>;
@@ -106,3 +109,5 @@ class Parser {
 
     std::vector<ParserDiagnostic> diagnostics_{};
 };
+
+} // namespace conch

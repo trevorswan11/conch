@@ -2,13 +2,13 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto RangeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto RangeExpression::parse(Parser& parser, std::unique_ptr<Expression> lower)
-    -> Expected<std::unique_ptr<RangeExpression>, ParserDiagnostic> {
+auto RangeExpression::parse(Parser& parser, Box<Expression> lower)
+    -> Expected<Box<RangeExpression>, ParserDiagnostic> {
     TODO(parser, lower);
 }
 
-} // namespace ast
+} // namespace conch::ast

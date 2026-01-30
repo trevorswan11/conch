@@ -1,35 +1,34 @@
 #pragma once
 
-#include <memory>
-
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class BlockStatement;
 
 class DoWhileLoopExpression : public Expression {
   public:
-    explicit DoWhileLoopExpression(const Token&                    start_token,
-                                   std::unique_ptr<BlockStatement> block,
-                                   std::unique_ptr<Expression>     condition) noexcept;
+    explicit DoWhileLoopExpression(const Token&        start_token,
+                                   Box<BlockStatement> block,
+                                   Box<Expression>     condition) noexcept;
     ~DoWhileLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<DoWhileLoopExpression>, ParserDiagnostic>;
+        -> Expected<Box<DoWhileLoopExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto block() const noexcept -> const BlockStatement& { return *block_; }
-    [[nodiscard]] auto condition() const noexcept -> const Expression& { return *condition_; }
+    [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
+    [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }
 
   private:
-    std::unique_ptr<BlockStatement> block_;
-    std::unique_ptr<Expression>     condition_;
+    Box<BlockStatement> block_;
+    Box<Expression>     condition_;
 };
 
-} // namespace ast
+} // namespace conch::ast

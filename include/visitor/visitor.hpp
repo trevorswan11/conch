@@ -1,5 +1,6 @@
 #pragma once
 
+namespace conch {
 namespace ast {
 
 class ArrayExpression;
@@ -34,9 +35,9 @@ class BlockStatement;
 class DeclStatement;
 class DiscardStatement;
 class ExpressionStatement;
-class ImplStatement;
 class ImportStatement;
 class JumpStatement;
+class NamespaceStatement;
 
 } // namespace ast
 
@@ -74,7 +75,9 @@ class Visitor {
     virtual auto visit(const ast::DeclStatement&) -> void             = 0;
     virtual auto visit(const ast::DiscardStatement&) -> void          = 0;
     virtual auto visit(const ast::ExpressionStatement&) -> void       = 0;
-    virtual auto visit(const ast::ImplStatement&) -> void             = 0;
     virtual auto visit(const ast::ImportStatement&) -> void           = 0;
     virtual auto visit(const ast::JumpStatement&) -> void             = 0;
+    virtual auto visit(const ast::NamespaceStatement&) -> void        = 0;
 };
+
+} // namespace conch

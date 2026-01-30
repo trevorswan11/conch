@@ -1,32 +1,30 @@
 #pragma once
 
-#include <memory>
-
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class BlockStatement;
 
 class InfiniteLoopExpression : public Expression {
   public:
-    explicit InfiniteLoopExpression(const Token&                    start_token,
-                                    std::unique_ptr<BlockStatement> block) noexcept;
+    explicit InfiniteLoopExpression(const Token& start_token, Box<BlockStatement> block) noexcept;
     ~InfiniteLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::unique_ptr<InfiniteLoopExpression>, ParserDiagnostic>;
+        -> Expected<Box<InfiniteLoopExpression>, ParserDiagnostic>;
 
-    [[nodiscard]] auto block() const noexcept -> const BlockStatement& { return *block_; }
+    [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
 
   private:
-    std::unique_ptr<BlockStatement> block_;
+    Box<BlockStatement> block_;
 };
 
-} // namespace ast
+} // namespace conch::ast

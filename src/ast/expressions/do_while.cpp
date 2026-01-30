@@ -6,11 +6,11 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
-DoWhileLoopExpression::DoWhileLoopExpression(const Token&                    start_token,
-                                             std::unique_ptr<BlockStatement> block,
-                                             std::unique_ptr<Expression>     condition) noexcept
+DoWhileLoopExpression::DoWhileLoopExpression(const Token&        start_token,
+                                             Box<BlockStatement> block,
+                                             Box<Expression>     condition) noexcept
     : Expression{start_token}, block_{std::move(block)}, condition_{std::move(condition)} {}
 
 DoWhileLoopExpression::~DoWhileLoopExpression() = default;
@@ -18,8 +18,8 @@ DoWhileLoopExpression::~DoWhileLoopExpression() = default;
 auto DoWhileLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto DoWhileLoopExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<DoWhileLoopExpression>, ParserDiagnostic> {
+    -> Expected<Box<DoWhileLoopExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast

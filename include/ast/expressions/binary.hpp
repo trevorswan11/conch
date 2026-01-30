@@ -1,7 +1,6 @@
 #pragma once
 
-#include <memory>
-
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/expressions/infix.hpp"
@@ -9,7 +8,7 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class BinaryExpression : public InfixExpression {
   public:
@@ -17,8 +16,8 @@ class BinaryExpression : public InfixExpression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> lhs)
-        -> Expected<std::unique_ptr<BinaryExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lhs)
+        -> Expected<Box<BinaryExpression>, ParserDiagnostic>;
 };
 
-} // namespace ast
+} // namespace conch::ast

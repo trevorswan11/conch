@@ -8,6 +8,8 @@
 
 #include "lexer/token.hpp"
 
+namespace conch {
+
 enum class Precedence : u8 {
     LOWEST,
     BOOL_EQUIV,
@@ -41,9 +43,10 @@ constexpr auto ALL_BINDINGS = std::to_array<Binding>({
     {TokenType::BOOLEAN_OR, Precedence::BOOL_EQUIV},
     {TokenType::IS, Precedence::BOOL_EQUIV},
     {TokenType::IN, Precedence::BOOL_EQUIV},
-    {TokenType::AND, Precedence::ADD_SUB},
+    {TokenType::AND, Precedence::MUL_DIV},
     {TokenType::OR, Precedence::ADD_SUB},
     {TokenType::XOR, Precedence::ADD_SUB},
+    {TokenType::NOT, Precedence::EXPONENT},
     {TokenType::SHR, Precedence::MUL_DIV},
     {TokenType::SHL, Precedence::MUL_DIV},
     {TokenType::LPAREN, Precedence::CALL_IDX},
@@ -71,3 +74,5 @@ constexpr auto get_binding(TokenType tt) noexcept -> Optional<Binding> {
     const auto it = std::ranges::find(ALL_BINDINGS, tt, &Binding::first);
     return it == ALL_BINDINGS.end() ? nullopt : Optional<Binding>{*it};
 }
+
+} // namespace conch

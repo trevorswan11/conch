@@ -1,7 +1,6 @@
 #pragma once
 
-#include <memory>
-
+#include "util/common.hpp"
 #include "util/expected.hpp"
 
 #include "ast/expressions/infix.hpp"
@@ -9,7 +8,7 @@
 
 #include "parser/parser.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 class RangeExpression : public InfixExpression {
   public:
@@ -17,8 +16,8 @@ class RangeExpression : public InfixExpression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser, std::unique_ptr<Expression> lower)
-        -> Expected<std::unique_ptr<RangeExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lower)
+        -> Expected<Box<RangeExpression>, ParserDiagnostic>;
 };
 
-} // namespace ast
+} // namespace conch::ast

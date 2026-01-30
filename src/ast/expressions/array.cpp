@@ -2,13 +2,12 @@
 
 #include "visitor/visitor.hpp"
 
-namespace ast {
+namespace conch::ast {
 
 auto ArrayExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ArrayExpression::parse(Parser& parser)
-    -> Expected<std::unique_ptr<ArrayExpression>, ParserDiagnostic> {
+auto ArrayExpression::parse(Parser& parser) -> Expected<Box<ArrayExpression>, ParserDiagnostic> {
     TODO(parser);
 }
 
-} // namespace ast
+} // namespace conch::ast
