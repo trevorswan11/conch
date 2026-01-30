@@ -51,10 +51,6 @@
               pkgs.zip
             ]
             ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.kcov ];
-
-            shellHook = ''
-              export IN_NIX_SHELL=1
-            '';
           };
         }
       );
