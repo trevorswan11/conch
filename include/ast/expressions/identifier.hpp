@@ -25,6 +25,11 @@ class IdentifierExpression : public Expression {
     [[nodiscard]] auto get_name() const noexcept -> std::string_view { return name_; }
     [[nodiscard]] auto materialize() const -> std::string { return std::string{name_}; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<IdentifierExpression>(other);
+        return name_ == casted.name_;
+    }
+
   private:
     std::string_view name_;
 };

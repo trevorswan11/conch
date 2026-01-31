@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lexer/token.hpp"
-#include <type_traits>
 
 namespace conch { class Visitor; } // namespace conch
 
@@ -85,11 +84,15 @@ class Node {
 class Expression : public Node {
   protected:
     using Node::Node;
+
+    virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
 class Statement : public Node {
   protected:
     using Node::Node;
+
+    virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
 } // namespace conch::ast

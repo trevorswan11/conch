@@ -42,6 +42,8 @@ class StructMember {
         return default_value_ ? Optional<const Expression&>{**default_value_} : nullopt;
     }
 
+    friend class StructExpression;
+
   private:
     bool                      private_;
     Box<IdentifierExpression> name_;
@@ -75,6 +77,8 @@ class StructExpression : public Expression {
     [[nodiscard]] auto get_functions() const noexcept -> std::span<const Box<FunctionExpression>> {
         return functions_;
     }
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     bool                                 packed_;

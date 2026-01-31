@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 
 #include "ast/expressions/for.hpp"
@@ -18,7 +19,7 @@ ForLoopExpression::ForLoopExpression(const Token&                          start
                                      std::vector<Box<Expression>>          iterables,
                                      std::vector<Optional<ForLoopCapture>> captures,
                                      Box<BlockStatement>                   block,
-                                     Box<Statement>                        non_break) noexcept
+                                     Optional<Box<Statement>>              non_break) noexcept
     : Expression{start_token, NodeKind::FOR_LOOP_EXPRESSION}, iterables_{std::move(iterables)},
       captures_{std::move(captures)}, block_{std::move(block)}, non_break_{std::move(non_break)} {}
 
@@ -29,6 +30,20 @@ auto ForLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 auto ForLoopExpression::parse(Parser& parser)
     -> Expected<Box<ForLoopExpression>, ParserDiagnostic> {
     TODO(parser);
+}
+
+auto ForLoopExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted       = as<ForLoopExpression>(other);
+    const auto  iterables_eq = std::ranges::equal(
+        iterables_, casted.iterables_, [](const auto& a, const auto& b) { return *a == *b; });
+    const auto captures_eq =
+        std::ranges::equal(captures_, casted.captures_, [](const auto& a, const auto& b) {
+            return optional::safe_eq<ForLoopCapture>(a, b, [](const auto& ae, const auto& be) {
+                return ae.reference_ == be.reference_ && *ae.capture_ == *be.capture_;
+            });
+        });
+    return iterables_eq && captures_eq && block_ == casted.block_ &&
+           optional::unsafe_eq<Statement>(non_break_, casted.non_break_);
 }
 
 } // namespace conch::ast

@@ -25,4 +25,19 @@ auto NamespaceStatement::parse(Parser& parser)
     TODO(parser);
 }
 
+auto NamespaceStatement::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted          = as<NamespaceStatement>(other);
+    const auto& other_namespace = casted.namespace_;
+    const auto  variant_eq      = std::visit(overloaded{
+                                           [&other_namespace](const Single& v) {
+                                               return *v == *std::get<Single>(other_namespace);
+                                           },
+                                           [&other_namespace](const Nested& v) {
+                                               return *v == *std::get<Nested>(other_namespace);
+                                           },
+                                       },
+                                       namespace_);
+    return variant_eq && *block_ == *casted.block_;
+}
+
 } // namespace conch::ast

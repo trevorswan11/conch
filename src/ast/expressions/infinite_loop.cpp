@@ -21,4 +21,9 @@ auto InfiniteLoopExpression::parse(Parser& parser)
     TODO(parser);
 }
 
+auto InfiniteLoopExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<InfiniteLoopExpression>(other);
+    return *block_ == *casted.block_;
+}
+
 } // namespace conch::ast

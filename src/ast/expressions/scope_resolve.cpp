@@ -23,4 +23,9 @@ auto ScopeResolutionExpression::parse(Parser& parser, Box<Expression> outer)
     TODO(parser, outer);
 }
 
+auto ScopeResolutionExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<ScopeResolutionExpression>(other);
+    return *outer_ == *casted.outer_ && *inner_ == *casted.inner_;
+}
+
 } // namespace conch::ast

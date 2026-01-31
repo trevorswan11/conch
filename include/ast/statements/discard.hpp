@@ -22,6 +22,11 @@ class DiscardStatement : public Statement {
 
     [[nodiscard]] auto get_discarded() const noexcept -> const Expression& { return *discarded_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<DiscardStatement>(other);
+        return *discarded_ == *casted.discarded_;
+    }
+
   private:
     Box<Expression> discarded_;
 };

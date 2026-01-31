@@ -34,6 +34,8 @@ class ForLoopCapture {
   private:
     bool                      reference_;
     Box<IdentifierExpression> capture_;
+
+    friend class ForLoopExpression;
 };
 
 class ForLoopExpression : public Expression {
@@ -42,7 +44,7 @@ class ForLoopExpression : public Expression {
                                std::vector<Box<Expression>>          iterables,
                                std::vector<Optional<ForLoopCapture>> captures,
                                Box<BlockStatement>                   block,
-                               Box<Statement>                        non_break) noexcept;
+                               Optional<Box<Statement>>              non_break) noexcept;
     ~ForLoopExpression() override;
 
     auto accept(Visitor& v) const -> void override;
@@ -63,6 +65,8 @@ class ForLoopExpression : public Expression {
     [[nodiscard]] auto get_non_break() const noexcept -> Optional<const Statement&> {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     std::vector<Box<Expression>>          iterables_;

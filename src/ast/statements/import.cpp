@@ -46,4 +46,19 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<ImportStatement>, Pa
     return make_box<ImportStatement>(start_token, std::move(imported), std::move(imported_alias));
 }
 
+auto ImportStatement::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted         = as<ImportStatement>(other);
+    const auto& other_imported = casted.imported_;
+    const auto  variant_eq     = std::visit(overloaded{
+                                           [&other_imported](const ModuleImport& v) {
+                                               return *v == *std::get<ModuleImport>(other_imported);
+                                           },
+                                           [&other_imported](const UserImport& v) {
+                                               return *v == *std::get<UserImport>(other_imported);
+                                           },
+                                       },
+                                       imported_);
+    return variant_eq && optional::unsafe_eq<IdentifierExpression>(alias_, casted.alias_);
+}
+
 } // namespace conch::ast

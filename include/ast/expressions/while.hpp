@@ -36,6 +36,8 @@ class WhileLoopExpression : public Expression {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     Box<Expression>          condition_;
     Box<Expression>          continuation_;

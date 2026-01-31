@@ -22,6 +22,11 @@ template <typename T> class PrimitiveExpression : public Expression {
 
     auto get_value() const -> const value_type& { return value_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<PrimitiveExpression>(other);
+        return value_ == casted.value_;
+    }
+
   protected:
     explicit PrimitiveExpression(const Token& start_token, NodeKind kind, value_type value) noexcept
         : Expression{start_token, kind}, value_{std::move(value)} {}

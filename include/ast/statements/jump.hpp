@@ -27,6 +27,11 @@ class JumpStatement : public Statement {
         return expression_ ? Optional<const Expression&>{**expression_} : nullopt;
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<JumpStatement>(other);
+        return optional::unsafe_eq<Expression>(expression_, casted.expression_);
+    }
+
   private:
     Optional<Box<Expression>> expression_;
 };

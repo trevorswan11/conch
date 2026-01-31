@@ -26,6 +26,8 @@ class ScopeResolutionExpression : public Expression {
     [[nodiscard]] auto get_outer() const noexcept -> const Expression& { return *outer_; }
     [[nodiscard]] auto get_inner() const noexcept -> const IdentifierExpression& { return *inner_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     Box<Expression>           outer_;
     Box<IdentifierExpression> inner_;

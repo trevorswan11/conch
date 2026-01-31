@@ -24,6 +24,11 @@ class ExpressionStatement : public Statement {
 
     [[nodiscard]] auto get_expression() const noexcept -> const Expression& { return *expression_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<ExpressionStatement>(other);
+        return *expression_ == *casted.expression_;
+    }
+
   private:
     Box<Expression> expression_;
 };

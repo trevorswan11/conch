@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -35,6 +36,12 @@ class BlockStatement : public Statement {
 
     [[nodiscard]] auto size() const noexcept -> std::size_t { return statements_.size(); }
     [[nodiscard]] auto empty() const noexcept -> bool { return statements_.empty(); }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<BlockStatement>(other);
+        return std::ranges::equal(
+            statements_, casted.statements_, [](const auto& a, const auto& b) { return *a == *b; });
+    }
 
   private:
     std::vector<Box<Statement>> statements_;

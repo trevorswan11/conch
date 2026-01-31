@@ -38,12 +38,31 @@ using Optional = std::conditional_t<std::is_reference_v<T>,
 
 using std::nullopt;
 
+namespace optional {
+
+template <typename T>
+auto safe_eq(const Optional<T>& a, const Optional<T>& b, bool (*cmp)(const T&, const T&)) noexcept
+    -> bool {
+    if (a.has_value() != b.has_value()) { return false; }
+    if (!a.has_value()) { return true; }
+    return cmp(*a, *b);
+}
+
+template <typename T>
+auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
+               const Optional<std::unique_ptr<T>>& b,
+               bool (*cmp)(const T&, const T&)) noexcept -> bool {
+    if (a.has_value() != b.has_value()) { return false; }
+    if (!a.has_value()) { return true; }
+    return cmp(**a, **b);
+}
+
 template <typename T>
 auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
                const Optional<std::unique_ptr<T>>& b) noexcept -> bool {
-    if (a.has_value() != b.has_value()) { return false; }
-    if (!a.has_value()) { return true; }
-    return **a == **b;
+    return unsafe_eq<T>(a, b, [](const T& ae, const T& be) { return ae == be; });
 }
+
+} // namespace optional
 
 } // namespace conch

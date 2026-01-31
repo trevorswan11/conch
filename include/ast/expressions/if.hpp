@@ -35,6 +35,12 @@ class IfExpression : public Expression {
         return alternate_ ? Optional<const Statement&>{**alternate_} : nullopt;
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<IfExpression>(other);
+        return *condition_ == *casted.condition_ && *consequence_ == *casted.consequence_ &&
+               optional::unsafe_eq<Statement>(alternate_, casted.alternate_);
+    }
+
   private:
     Box<Expression>          condition_;
     Box<Statement>           consequence_;

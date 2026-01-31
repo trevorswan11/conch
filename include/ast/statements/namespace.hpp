@@ -53,6 +53,8 @@ class NamespaceStatement : public Statement {
         return std::holds_alternative<Nested>(namespace_);
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     std::variant<Single, Nested> namespace_;
     Box<BlockStatement>          block_;

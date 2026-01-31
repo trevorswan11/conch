@@ -46,6 +46,8 @@ class FunctionParameter {
     Box<IdentifierExpression> name_;
     Box<TypeExpression>       type_;
     Optional<Box<Expression>> default_value_;
+
+    friend class FunctionExpression;
 };
 
 class FunctionExpression : public Expression {
@@ -73,6 +75,8 @@ class FunctionExpression : public Expression {
     [[nodiscard]] auto get_body() const noexcept -> Optional<const BlockStatement&> {
         return body_ ? Optional<const BlockStatement&>{**body_} : nullopt;
     }
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     std::vector<FunctionParameter> parameters_;

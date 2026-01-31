@@ -27,6 +27,11 @@ class IndexExpression : public Expression {
     [[nodiscard]] auto get_array() const noexcept -> const Expression& { return *array_; }
     [[nodiscard]] auto get_index() const noexcept -> const Expression& { return *index_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<IndexExpression>(other);
+        return *array_ == *casted.array_ && *index_ == *casted.index_;
+    }
+
   private:
     Box<Expression> array_;
     Box<Expression> index_;

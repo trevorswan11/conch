@@ -67,11 +67,11 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
 
 auto EnumExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<EnumExpression>(other);
-    return unsafe_eq<IdentifierExpression>(underlying_, casted.underlying_) &&
+    return optional::unsafe_eq<IdentifierExpression>(underlying_, casted.underlying_) &&
            std::ranges::equal(
                enumerations_, casted.enumerations_, [](const auto& a, const auto& b) {
                    return *a.enumeration_ == *b.enumeration_ &&
-                          unsafe_eq<Expression>(a.value_, b.value_);
+                          optional::unsafe_eq<Expression>(a.value_, b.value_);
                });
 }
 

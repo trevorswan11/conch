@@ -26,4 +26,10 @@ auto WhileLoopExpression::parse(Parser& parser)
     TODO(parser);
 }
 
+auto WhileLoopExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<WhileLoopExpression>(other);
+    return *condition_ == *casted.condition_ && *continuation_ == *casted.continuation_ &&
+           block_ == casted.block_ && optional::unsafe_eq<Statement>(non_break_, casted.non_break_);
+}
+
 } // namespace conch::ast
