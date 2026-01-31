@@ -10,7 +10,8 @@ namespace conch::ast {
 ImportStatement::ImportStatement(const Token&                           start_token,
                                  std::variant<ModuleImport, UserImport> imported,
                                  Optional<Box<IdentifierExpression>>    alias) noexcept
-    : Statement{start_token}, imported_{std::move(imported)}, alias_{std::move(alias)} {}
+    : Statement{start_token, NodeKind::IMPORT_STATEMENT}, imported_{std::move(imported)},
+      alias_{std::move(alias)} {}
 
 ImportStatement::~ImportStatement() = default;
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <type_traits>
 
@@ -36,5 +37,13 @@ using Optional = std::conditional_t<std::is_reference_v<T>,
                                     std::optional<T>>;
 
 using std::nullopt;
+
+template <typename T>
+auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
+               const Optional<std::unique_ptr<T>>& b) noexcept -> bool {
+    if (a.has_value() != b.has_value()) { return false; }
+    if (!a.has_value()) { return true; }
+    return **a == **b;
+}
 
 } // namespace conch

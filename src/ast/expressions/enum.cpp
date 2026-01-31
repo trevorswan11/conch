@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 
 #include "ast/expressions/enum.hpp"
@@ -17,7 +18,7 @@ Enumeration::~Enumeration() = default;
 EnumExpression::EnumExpression(const Token&                        start_token,
                                Optional<Box<IdentifierExpression>> underlying,
                                std::vector<Enumeration>            enumerations) noexcept
-    : Expression{start_token}, underlying_{std::move(underlying)},
+    : Expression{start_token, NodeKind::ENUM_EXPRESSION}, underlying_{std::move(underlying)},
       enumerations_{std::move(enumerations)} {}
 
 EnumExpression::~EnumExpression() = default;
@@ -62,6 +63,16 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
     TRY(parser.expect_peek(TokenType::RBRACE));
     return std::make_unique<EnumExpression>(
         start_token, std::move(underlying), std::move(enumeration));
+}
+
+auto EnumExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<EnumExpression>(other);
+    return unsafe_eq<IdentifierExpression>(underlying_, casted.underlying_) &&
+           std::ranges::equal(
+               enumerations_, casted.enumerations_, [](const auto& a, const auto& b) {
+                   return *a.enumeration_ == *b.enumeration_ &&
+                          unsafe_eq<Expression>(a.value_, b.value_);
+               });
 }
 
 } // namespace conch::ast

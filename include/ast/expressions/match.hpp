@@ -32,8 +32,8 @@ class MatchExpression : public Expression {
                              Box<Expression>          matcher,
                              std::vector<MatchArm>    arms,
                              Optional<Box<Statement>> catch_all) noexcept
-        : Expression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
-          catch_all_{std::move(catch_all)} {};
+        : Expression{start_token, NodeKind::MATCH_EXPRESSION}, matcher_{std::move(matcher)},
+          arms_{std::move(arms)}, catch_all_{std::move(catch_all)} {};
 
     auto accept(Visitor& v) const -> void override;
 

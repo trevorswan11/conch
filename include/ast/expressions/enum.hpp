@@ -37,6 +37,8 @@ class Enumeration {
   private:
     Box<IdentifierExpression> enumeration_;
     Optional<Box<Expression>> value_;
+
+    friend class EnumExpression;
 };
 
 class EnumExpression : public Expression {
@@ -58,6 +60,8 @@ class EnumExpression : public Expression {
     [[nodiscard]] auto get_enumerations() const noexcept -> std::span<const Enumeration> {
         return enumerations_;
     }
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     Optional<Box<IdentifierExpression>> underlying_;

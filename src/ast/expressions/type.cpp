@@ -23,7 +23,7 @@ ExplicitType::ExplicitType(ExplicitTypeVariant              type,
 ExplicitType::~ExplicitType() = default;
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
-    : Expression{start_token}, explicit_{std::move(exp)} {}
+    : Expression{start_token, NodeKind::TYPE_EXPRESSION}, explicit_{std::move(exp)} {}
 
 TypeExpression::~TypeExpression() = default;
 

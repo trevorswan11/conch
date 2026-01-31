@@ -13,7 +13,7 @@ namespace conch::ast {
 class DiscardStatement : public Statement {
   public:
     explicit DiscardStatement(const Token& start_token, Box<Expression> discarded) noexcept
-        : Statement{start_token}, discarded_{std::move(discarded)} {}
+        : Statement{start_token, NodeKind::DISCARD_STATEMENT}, discarded_{std::move(discarded)} {}
 
     auto accept(Visitor& v) const -> void override;
 

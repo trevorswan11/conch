@@ -25,8 +25,9 @@ StructExpression::StructExpression(const Token&                         start_to
                                    std::vector<Box<DeclStatement>>      declarations,
                                    std::vector<StructMember>            members,
                                    std::vector<Box<FunctionExpression>> functions) noexcept
-    : Expression{start_token}, packed_{packed}, declarations_{std::move(declarations)},
-      members_{std::move(members)}, functions_{std::move(functions)} {}
+    : Expression{start_token, NodeKind::STRUCT_EXPRESSION}, packed_{packed},
+      declarations_{std::move(declarations)}, members_{std::move(members)},
+      functions_{std::move(functions)} {}
 
 StructExpression::~StructExpression() = default;
 

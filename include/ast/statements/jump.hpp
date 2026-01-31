@@ -15,7 +15,7 @@ namespace conch::ast {
 class JumpStatement : public Statement {
   public:
     explicit JumpStatement(const Token& start_token, Optional<Box<Expression>> expression) noexcept
-        : Statement{start_token}, expression_{std::move(expression)} {}
+        : Statement{start_token, NodeKind::JUMP_STATEMENT}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 

@@ -16,7 +16,7 @@ enum class TokenError : u8 {
     UNEXPECTED_CHAR,
 };
 
-enum class TokenType : u16 {
+enum class TokenType : u8 {
     END,
 
     IDENT,

@@ -26,6 +26,8 @@ class DoWhileLoopExpression : public Expression {
     [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     Box<BlockStatement> block_;
     Box<Expression>     condition_;

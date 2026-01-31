@@ -17,7 +17,7 @@ class IfExpression : public Expression {
                           Box<Expression>          condition,
                           Box<Statement>           consequence,
                           Optional<Box<Statement>> alternate) noexcept
-        : Expression{start_token}, condition_{std::move(condition)},
+        : Expression{start_token, NodeKind::IF_EXPRESSION}, condition_{std::move(condition)},
           consequence_{std::move(consequence)}, alternate_{std::move(alternate)} {}
 
     auto accept(Visitor& v) const -> void override;

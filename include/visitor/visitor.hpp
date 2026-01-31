@@ -1,7 +1,6 @@
 #pragma once
 
-namespace conch {
-namespace ast {
+namespace conch::ast {
 
 class ArrayExpression;
 class AssignmentExpression;
@@ -41,7 +40,9 @@ class ImportStatement;
 class JumpStatement;
 class NamespaceStatement;
 
-} // namespace ast
+} // namespace conch::ast
+
+namespace conch {
 
 class Visitor {
   public:

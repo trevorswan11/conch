@@ -15,7 +15,7 @@ namespace conch::ast {
 class IdentifierExpression : public Expression {
   public:
     explicit IdentifierExpression(const Token& start_token, std::string_view name) noexcept
-        : Expression{start_token}, name_{name} {}
+        : Expression{start_token, NodeKind::IDENTIFIER_EXPRESSION}, name_{name} {}
 
     auto accept(Visitor& v) const -> void override;
 

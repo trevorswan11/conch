@@ -15,8 +15,8 @@ DeclStatement::DeclStatement(const Token&              start_token,
                              Box<TypeExpression>       type,
                              Optional<Box<Expression>> value,
                              DeclModifiers             modifiers) noexcept
-    : Statement{start_token}, ident_{std::move(ident)}, type_{std::move(type)},
-      value_{std::move(value)}, modifiers_{modifiers} {}
+    : Statement{start_token, NodeKind::DECL_STATEMENT}, ident_{std::move(ident)},
+      type_{std::move(type)}, value_{std::move(value)}, modifiers_{modifiers} {}
 
 DeclStatement::~DeclStatement() = default;
 

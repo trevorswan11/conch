@@ -20,7 +20,7 @@ class BlockStatement : public Statement {
   public:
     explicit BlockStatement(const Token&                start_token,
                             std::vector<Box<Statement>> statements) noexcept
-        : Statement{start_token}, statements_{std::move(statements)} {}
+        : Statement{start_token, NodeKind::BLOCK_STATEMENT}, statements_{std::move(statements)} {}
 
     auto accept(Visitor& v) const -> void override;
 

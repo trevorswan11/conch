@@ -23,7 +23,7 @@ FunctionExpression::FunctionExpression(const Token&                   start_toke
                                        std::vector<FunctionParameter> parameters,
                                        Box<TypeExpression>            return_type,
                                        Optional<Box<BlockStatement>>  body) noexcept
-    : Expression{start_token}, parameters_{std::move(parameters)},
+    : Expression{start_token, NodeKind::FUNCTION_EXPRESSION}, parameters_{std::move(parameters)},
       return_type_{std::move(return_type)}, body_{std::move(body)} {}
 
 FunctionExpression::~FunctionExpression() = default;

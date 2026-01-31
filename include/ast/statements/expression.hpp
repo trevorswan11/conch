@@ -14,7 +14,8 @@ namespace conch::ast {
 class ExpressionStatement : public Statement {
   public:
     explicit ExpressionStatement(const Token& start_token, Box<Expression> expression) noexcept
-        : Statement{start_token}, expression_{std::move(expression)} {}
+        : Statement{start_token, NodeKind::EXPRESSION_STATEMENT},
+          expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 

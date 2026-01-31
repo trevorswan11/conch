@@ -12,7 +12,12 @@ namespace conch::ast {
 
 class BinaryExpression : public InfixExpression {
   public:
-    using InfixExpression::InfixExpression;
+    explicit BinaryExpression(const Token&    start_token,
+                              Box<Expression> lhs,
+                              TokenType       op,
+                              Box<Expression> rhs) noexcept
+        : InfixExpression{
+              start_token, NodeKind::BINARY_EXPRESSION, std::move(lhs), op, std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 

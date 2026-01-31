@@ -16,9 +16,7 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
-namespace conch {
-
-namespace ast {
+namespace conch::ast {
 
 class Node;
 class Statement;
@@ -26,7 +24,9 @@ class Expression;
 
 using AST = std::vector<Box<Node>>;
 
-} // namespace ast
+} // namespace conch::ast
+
+namespace conch {
 
 enum class ParserError : u8 {
     UNEXPECTED_TOKEN,
