@@ -48,7 +48,6 @@
               [
                 zig
                 zls
-                git
                 curl
                 zip
               ]
