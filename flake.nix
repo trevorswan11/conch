@@ -50,6 +50,7 @@
                 zls
                 curl
                 zip
+                clang-tools
               ]
               ++ lib.optionals stdenv.isLinux [ kcov ];
           };
