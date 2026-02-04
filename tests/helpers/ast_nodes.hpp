@@ -18,10 +18,10 @@ using namespace conch;
 template <typename T>
 auto numbers(std::string_view input, TokenType expected_type, T expected_value) -> void {
     Parser p{input};
-    auto   ast = p.consume();
+    auto   parse_result = p.consume();
 
-    REQUIRE(ast.second.empty());
-    REQUIRE(ast.first.size() == 1);
+    REQUIRE(parse_result.second.empty());
+    REQUIRE(parse_result.first.size() == 1);
 
     using NodeType =
         std::conditional_t<std::is_same_v<T, f64>,
@@ -32,9 +32,10 @@ auto numbers(std::string_view input, TokenType expected_type, T expected_value) 
                                                                  ast::UnsignedIntegerExpression,
                                                                  ast::SignedIntegerExpression>>>;
 
-    const auto actual{std::move(ast.first[0])};
+    auto&      ast = parse_result.first;
+    const auto actual{std::move(ast[0])};
     REQUIRE(actual->get_kind() == ast::NodeKind::EXPRESSION_STATEMENT);
-    const auto&    expr_stmt = dynamic_cast<const ast::ExpressionStatement&>(*actual);
+    const auto&    expr_stmt = static_cast<const ast::ExpressionStatement&>(*actual);
     const NodeType expected{Token{expected_type, input}, expected_value};
     REQUIRE(expected == expr_stmt.get_expression());
 }

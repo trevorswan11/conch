@@ -172,23 +172,25 @@ struct MinimalSourceLocation {
     auto operator==(const MinimalSourceLocation& other) const noexcept -> bool {
         return line == other.line && column == other.column;
     }
+
+    [[nodiscard]] auto at_start() const noexcept -> bool { return line == 0 && column == 0; }
 };
 
 struct Token {
-    TokenType             type;
-    std::string_view      slice;
-    MinimalSourceLocation location;
+    TokenType             type{};
+    std::string_view      slice{};
+    MinimalSourceLocation location{};
 
     Token() noexcept = default;
-    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok}, location{} {};
+    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {};
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
         : type{tt}, slice{slice}, location{.line = line, .column = column} {}
 
-    [[nodiscard]] auto line() const noexcept -> usize { return location.line; }
-    [[nodiscard]] auto column() const noexcept -> usize { return location.column; }
+    [[nodiscard]] auto get_line() const noexcept -> usize { return location.line; }
+    [[nodiscard]] auto get_column() const noexcept -> usize { return location.column; }
 
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
-    auto               primitive() const noexcept -> bool;
+    auto               is_primitive() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && location == other.location;
@@ -202,6 +204,8 @@ template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
 
     template <typename F> auto format(const conch::Token& t, F& ctx) const {
         return std::formatter<std::string>::format(
-            std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line(), t.column()), ctx);
+            std::format(
+                "{}({}) [{}, {}]", enum_name(t.type), t.slice, t.get_line(), t.get_column()),
+            ctx);
     }
 };

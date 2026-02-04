@@ -49,6 +49,7 @@ pub fn build(b: *std.Build) !void {
 
     try addTooling(b, .{
         .cdb_gen = cdb_gen,
+        .conch = artifacts.conch,
         .tests = artifacts.tests,
         .cppcheck = artifacts.cppcheck,
         .clean_cache = flag_opts.clean_cache,
@@ -517,6 +518,7 @@ const CdbGenerator = struct {
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CdbGenerator,
+    conch: *std.Build.Step.Compile,
     tests: ?*std.Build.Step.Compile,
     cppcheck: ?*std.Build.Step.Compile,
     clean_cache: bool,
@@ -552,6 +554,7 @@ fn addTooling(b: *std.Build, config: struct {
 
     if (config.tests) |tests| {
         try addCoverageStep(b, tests);
+        try addLLDBStep(b, config.conch, tests);
     }
 
     const clean_step = b.step("clean", "Remove all emitted artifacts");
@@ -678,6 +681,48 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
         kcov_step.dependOn(&cov_ignore.step);
     } else {
         try kcov_step.addError(error_msg, .{});
+    }
+}
+
+fn addLLDBStep(b: *std.Build, conch: *std.Build.Step.Compile, tests: *std.Build.Step.Compile) !void {
+    const rdbg_step = b.step("rdbg", "Debug the main executable with lldb");
+    const tdbg_step = b.step("tdbg", "Debug the test executable with lldb");
+    const error_msg =
+        \\LLDB is is LLVM's CLI debugger whose source code can be found here:
+        \\  https://github.com/llvm/llvm-project
+        \\
+        \\It is available on most major platforms through their corresponding package managers.
+    ;
+
+    if (findProgram(b, "lldb")) |lldb| {
+        var lrdbg: *std.Build.Step.Run = undefined;
+        var ltdbg: *std.Build.Step.Run = undefined;
+
+        if (findProgram(b, "coreutils")) |coreutils| {
+            lrdbg = b.addSystemCommand(&.{coreutils});
+            lrdbg.addArgs(&.{ "--coreutils-prog=env", "-i", lldb });
+
+            ltdbg = b.addSystemCommand(&.{coreutils});
+            ltdbg.addArgs(&.{ "--coreutils-prog=env", "-i", lldb });
+        } else if (findProgram(b, "env")) |env| {
+            lrdbg = b.addSystemCommand(&.{env});
+            lrdbg.addArgs(&.{ "-i", lldb });
+
+            ltdbg = b.addSystemCommand(&.{env});
+            ltdbg.addArgs(&.{ "-i", lldb });
+        } else {
+            lrdbg = b.addSystemCommand(&.{lldb});
+            ltdbg = b.addSystemCommand(&.{lldb});
+        }
+
+        lrdbg.addArtifactArg(conch);
+        rdbg_step.dependOn(&lrdbg.step);
+
+        ltdbg.addArtifactArg(tests);
+        tdbg_step.dependOn(&ltdbg.step);
+    } else {
+        try rdbg_step.addError(error_msg, .{});
+        try tdbg_step.addError(error_msg, .{});
     }
 }
 

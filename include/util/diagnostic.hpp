@@ -21,18 +21,18 @@ class Diagnostic {
 
     template <typename T>
         requires requires(T t) {
-            t.line();
-            t.column();
+            t.get_line();
+            t.get_column();
         }
     explicit Diagnostic(std::string msg, E err, T t)
-        : message_{std::move(msg)}, error_{err}, line_{t.line()}, column_{t.column()} {}
+        : message_{std::move(msg)}, error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
 
     template <typename T>
         requires requires(T t) {
-            t.line();
-            t.column();
+            t.get_line();
+            t.get_column();
         }
-    explicit Diagnostic(E err, T t) : error_{err}, line_{t.line()}, column_{t.column()} {}
+    explicit Diagnostic(E err, T t) : error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
 
     explicit Diagnostic(Diagnostic& other, E err) noexcept
         : message_{std::move(other.message_)}, error_{err}, line_{other.line_},

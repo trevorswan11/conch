@@ -119,7 +119,7 @@ auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
     return builder;
 }
 
-auto Token::primitive() const noexcept -> bool {
+auto Token::is_primitive() const noexcept -> bool {
     return std::ranges::contains(ALL_PRIMITIVES, type);
 }
 
