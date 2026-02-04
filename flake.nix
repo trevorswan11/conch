@@ -51,6 +51,7 @@
                 curl
                 zip
                 clang-tools
+                lldb
               ]
               ++ lib.optionals stdenv.isLinux [ kcov ];
           };

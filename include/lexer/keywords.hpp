@@ -54,7 +54,6 @@ constexpr Keyword AS{"as", TokenType::AS};
 constexpr Keyword PRIVATE{"private", TokenType::PRIVATE};
 constexpr Keyword EXTERN{"extern", TokenType::EXTERN};
 constexpr Keyword EXPORT{"export", TokenType::EXPORT};
-constexpr Keyword NAMESPACE{"namespace", TokenType::NAMESPACE};
 constexpr Keyword PACKED{"packed", TokenType::PACKED};
 
 } // namespace keywords
@@ -69,8 +68,7 @@ constexpr auto ALL_KEYWORDS = std::array{
     keywords::IMPORT,     keywords::INT,    keywords::UINT,   keywords::SIZE,
     keywords::FLOAT,      keywords::BYTE,   keywords::STRING, keywords::BOOL,
     keywords::VOID,       keywords::TYPE,   keywords::WITH,   keywords::AS,
-    keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::NAMESPACE,
-    keywords::PACKED,
+    keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::PACKED,
 };
 
 constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {

@@ -47,12 +47,12 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<DeclStatement>, Parser
 
     Optional<Box<Expression>> decl_value;
     if (value_initialized) {
-        if (!modifiers_has(modifiers, DeclModifiers::MUTABLE)) {
+        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         }
         decl_value = TRY(parser.parse_expression());
     } else {
-        if (!modifiers_has(modifiers, DeclModifiers::MUTABLE)) {
+        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         } else if (!decl_type->has_explicit_type()) {
             return make_parser_unexpected(ParserError::FORWARD_VAR_DECL_MISSING_TYPE, start_token);

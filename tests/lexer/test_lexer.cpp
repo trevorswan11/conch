@@ -223,11 +223,10 @@ TEST_CASE("Integer base variants") {
 }
 
 TEST_CASE("Iterator with other keywords") {
-    const auto input{"namespace private extern export packed"};
+    const auto input{"private extern export packed"};
     Lexer      l{input};
 
     const auto expecteds = std::array{
-        std::pair{TokenType::NAMESPACE, "namespace"},
         std::pair{TokenType::PRIVATE, "private"},
         std::pair{TokenType::EXTERN, "extern"},
         std::pair{TokenType::EXPORT, "export"},

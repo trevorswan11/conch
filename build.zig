@@ -168,7 +168,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
         tests = createExecutable(b, .{
-            .name = "tests",
+            .name = "conch_tests",
             .zig_main = b.path("tests/main.zig"),
             .target = config.target,
             .optimize = config.optimize,

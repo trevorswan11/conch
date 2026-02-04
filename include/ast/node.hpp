@@ -43,7 +43,6 @@ enum class NodeKind : u8 {
     EXPRESSION_STATEMENT,
     IMPORT_STATEMENT,
     JUMP_STATEMENT,
-    NAMESPACE_STATEMENT,
 };
 
 class Node {

@@ -38,7 +38,6 @@ class DiscardStatement;
 class ExpressionStatement;
 class ImportStatement;
 class JumpStatement;
-class NamespaceStatement;
 
 } // namespace conch::ast
 
@@ -82,7 +81,6 @@ class Visitor {
     virtual auto visit(const ast::ExpressionStatement&) -> void       = 0;
     virtual auto visit(const ast::ImportStatement&) -> void           = 0;
     virtual auto visit(const ast::JumpStatement&) -> void             = 0;
-    virtual auto visit(const ast::NamespaceStatement&) -> void        = 0;
 };
 
 } // namespace conch

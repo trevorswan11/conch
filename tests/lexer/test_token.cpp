@@ -9,12 +9,7 @@ using namespace conch;
 
 TEST_CASE("Promotion of invalid tokens") {
     const auto  input{"1"};
-    const Token tok = {
-        .type   = TokenType::INT_10,
-        .slice  = input,
-        .line   = 0,
-        .column = 0,
-    };
+    const Token tok{TokenType::INT_10, input, 0, 0};
 
     const auto promoted = tok.promote();
     REQUIRE_FALSE(promoted);
@@ -24,12 +19,7 @@ TEST_CASE("Promotion of invalid tokens") {
 TEST_CASE("Promotion of standard string literals") {
     SECTION("Normal case") {
         const auto  input{R"("Hello, World!")"};
-        const Token tok = {
-            .type   = TokenType::STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok = {TokenType::STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -39,12 +29,7 @@ TEST_CASE("Promotion of standard string literals") {
 
     SECTION("Escaped case") {
         const auto  input{R"(""Hello, World!"")"};
-        const Token tok = {
-            .type   = TokenType::STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -54,12 +39,7 @@ TEST_CASE("Promotion of standard string literals") {
 
     SECTION("Empty case") {
         const auto  input{R"("")"};
-        const Token tok = {
-            .type   = TokenType::STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -69,12 +49,7 @@ TEST_CASE("Promotion of standard string literals") {
 
     SECTION("Malformed case") {
         const auto  input{R"(")"};
-        const Token tok = {
-            .type   = TokenType::STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE_FALSE(promoted);
@@ -85,12 +60,7 @@ TEST_CASE("Promotion of standard string literals") {
 TEST_CASE("Promotion of multiline literals") {
     SECTION("Normal case no newline") {
         const auto  input{R"(\\Hello,"World!")"};
-        const Token tok = {
-            .type   = TokenType::MULTILINE_STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::MULTILINE_STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -100,12 +70,7 @@ TEST_CASE("Promotion of multiline literals") {
 
     SECTION("Normal case newline") {
         const auto  input{"\\\\Hello,\n\\\\World!\n\\\\"};
-        const Token tok = {
-            .type   = TokenType::MULTILINE_STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::MULTILINE_STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -115,12 +80,7 @@ TEST_CASE("Promotion of multiline literals") {
 
     SECTION("Empty case") {
         const auto  input{R"(\\)"};
-        const Token tok = {
-            .type   = TokenType::MULTILINE_STRING,
-            .slice  = input,
-            .line   = 0,
-            .column = 0,
-        };
+        const Token tok{TokenType::MULTILINE_STRING, input, 0, 0};
 
         const auto promoted = tok.promote();
         REQUIRE(promoted);
@@ -130,12 +90,7 @@ TEST_CASE("Promotion of multiline literals") {
 }
 
 TEST_CASE("Token formatting") {
-    const Token tok = {
-        .type   = TokenType::STRING,
-        .slice  = R"("Hello, World!")",
-        .line   = 1,
-        .column = 24,
-    };
+    const Token tok{TokenType::STRING, R"("Hello, World!")", 1, 24};
 
     const auto expected{R"(STRING("Hello, World!") [1, 24])"};
     const auto actual = std::format("{}", tok);
