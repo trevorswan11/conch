@@ -58,7 +58,7 @@ class Node {
     virtual auto accept(Visitor& v) const -> void = 0;
 
     auto get_token() const noexcept -> const Token& { return start_token_; }
-    auto get_kind() const noexcept -> const Token& { return start_token_; }
+    auto get_kind() const noexcept -> NodeKind { return kind_; }
 
     friend auto operator==(const Node& lhs, const Node& rhs) noexcept -> bool {
         if (lhs.kind_ != rhs.kind_) { return false; }

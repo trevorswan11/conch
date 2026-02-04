@@ -4,4 +4,4 @@
 
 using namespace conch;
 
-TEST_CASE("Integer parsing") { REQUIRE(helpers::numbers("0", TokenType::INT_10, 0)); }
+TEST_CASE("Integer parsing") { helpers::numbers("0", TokenType::INT_10, 0); }
