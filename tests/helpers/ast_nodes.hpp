@@ -12,8 +12,7 @@ namespace helpers {
 using namespace conch;
 
 template <typename T>
-auto numbers(std::string_view input, TokenType expected_type, T expected_value)
-    -> bool {
+auto numbers(std::string_view input, TokenType expected_type, T expected_value) -> bool {
     Parser p{input};
     auto   ast = p.consume();
 
