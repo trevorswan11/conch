@@ -685,6 +685,8 @@ fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
 }
 
 fn addLLDBStep(b: *std.Build, conch: *std.Build.Step.Compile, tests: *std.Build.Step.Compile) !void {
+    if (builtin.os.tag == .windows) return;
+
     const rdbg_step = b.step("rdbg", "Debug the main executable with lldb");
     const tdbg_step = b.step("tdbg", "Debug the test executable with lldb");
     const error_msg =
