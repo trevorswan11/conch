@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
 #include <catch_amalgamated.hpp>
 
@@ -16,9 +17,18 @@ namespace helpers {
 using namespace conch;
 
 template <typename T>
-auto numbers(std::string_view input, TokenType expected_type, T expected_value) -> void {
+auto numbers(std::string_view                  input,
+             TokenType                         expected_type,
+             std::variant<T, ParserDiagnostic> expected_value) -> void {
     Parser p{input};
     auto   parse_result = p.consume();
+
+    if (std::holds_alternative<ParserDiagnostic>(expected_value)) {
+        const auto& actual_errors = parse_result.second;
+        REQUIRE(actual_errors.size() == 1);
+        const auto& actual_error = actual_errors[0];
+        REQUIRE(std::get<ParserDiagnostic>(expected_value) == actual_error);
+    }
 
     REQUIRE(parse_result.second.empty());
     REQUIRE(parse_result.first.size() == 1);
@@ -36,7 +46,7 @@ auto numbers(std::string_view input, TokenType expected_type, T expected_value) 
     const auto actual{std::move(ast[0])};
     REQUIRE(actual->get_kind() == ast::NodeKind::EXPRESSION_STATEMENT);
     const auto&    expr_stmt = static_cast<const ast::ExpressionStatement&>(*actual);
-    const NodeType expected{Token{expected_type, input}, expected_value};
+    const NodeType expected{Token{expected_type, input}, std::get<T>(expected_value)};
     REQUIRE(expected == expr_stmt.get_expression());
 }
 

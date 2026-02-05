@@ -1173,13 +1173,7 @@ fn collectToolingFiles(b: *std.Build) ![]const []const u8 {
     return std.mem.concat(b.allocator, []const u8, &.{
         try collectFiles(b, "src", .{}),
         try collectFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
-        try collectFiles(b, "tests", .{
-            .dropped_files = &.{
-                "catch_amalgamated.cpp",
-                "catch_amalgamated.hpp",
-            },
-            .allowed_extensions = &.{ ".hpp", ".cpp" },
-        }),
+        try collectFiles(b, "tests", .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
     });
 }
 

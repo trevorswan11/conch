@@ -26,7 +26,7 @@ static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
     const auto     start_token       = parser.current_token();
     const auto     base              = token_type::to_base(start_token.type);
 
-    const auto* first = start_token.slice.cbegin();
+    const auto* first = start_token.slice.cbegin() + (base == Base::DECIMAL ? 0 : 2);
     const auto* last  = start_token.slice.cend();
 
     value_type             v;
