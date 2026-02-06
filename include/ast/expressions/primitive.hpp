@@ -100,6 +100,11 @@ class FloatExpression : public PrimitiveExpression<f64> {
 
     [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<Box<FloatExpression>, ParserDiagnostic>;
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
+  private:
+    static auto approx_eq(value_type a, value_type b) -> bool;
 };
 
 class BoolExpression : public PrimitiveExpression<bool> {

@@ -1,4 +1,6 @@
 #include <charconv>
+#include <cmath>
+#include <limits>
 #include <utility>
 
 #include "ast/expressions/primitive.hpp"
@@ -22,11 +24,11 @@ auto StringExpression::parse(Parser& parser) -> Expected<Box<StringExpression>, 
 template <typename T>
 static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
     using value_type                 = typename T::value_type;
-    constexpr auto is_floating_point = std::is_same_v<value_type, double>;
+    constexpr auto is_floating_point = std::is_same_v<value_type, f64>;
     const auto     start_token       = parser.current_token();
     const auto     base              = token_type::to_base(start_token.type);
 
-    const auto* first = start_token.slice.cbegin() + (base == Base::DECIMAL ? 0 : 2);
+    const auto* first = start_token.slice.cbegin() + (!base || *base == Base::DECIMAL ? 0 : 2);
     const auto* last  = start_token.slice.cend();
 
     value_type             v;
@@ -34,7 +36,7 @@ static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
     if constexpr (is_floating_point) {
         result = std::from_chars(first, last, v);
     } else {
-        result = std::from_chars(first, last, v, std::to_underlying(base));
+        result = std::from_chars(first, last, v, std::to_underlying(*base));
     }
     if (result.ec == std::errc{} && result.ptr == last) { return make_box<T>(start_token, v); }
 
@@ -102,6 +104,17 @@ auto FloatExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto FloatExpression::parse(Parser& parser) -> Expected<Box<FloatExpression>, ParserDiagnostic> {
     return parse_number<FloatExpression>(parser);
+}
+
+auto FloatExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<FloatExpression>(other);
+    return approx_eq(value_, casted.value_);
+}
+
+auto FloatExpression::approx_eq(value_type a, value_type b) -> bool {
+    const auto largest = std::max(std::abs(b), std::abs(a));
+    const auto diff    = std::abs(a - b);
+    return diff <= largest * std::numeric_limits<value_type>::epsilon();
 }
 
 auto BoolExpression::accept(Visitor& v) const -> void { v.visit(*this); }

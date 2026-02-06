@@ -30,7 +30,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Base {
+auto to_base(TokenType type) noexcept -> Optional<Base> {
     switch (type) {
     case TokenType::INT_2:
     case TokenType::UINT_2:
@@ -44,7 +44,7 @@ auto to_base(TokenType type) noexcept -> Base {
     case TokenType::INT_16:
     case TokenType::UINT_16:
     case TokenType::UZINT_16: return Base::HEXADECIMAL;
-    default: std::unreachable();
+    default: return nullopt;
     }
 }
 
