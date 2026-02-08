@@ -11,15 +11,14 @@ namespace conch::ast {
 ScopeResolutionExpression::ScopeResolutionExpression(const Token&              start_token,
                                                      Box<Expression>           outer,
                                                      Box<IdentifierExpression> inner) noexcept
-    : Expression{start_token, NodeKind::SCOPE_RESOLUTION_EXPRESSION}, outer_{std::move(outer)},
-      inner_{std::move(inner)} {}
+    : KindExpression{start_token}, outer_{std::move(outer)}, inner_{std::move(inner)} {}
 
 ScopeResolutionExpression::~ScopeResolutionExpression() = default;
 
 auto ScopeResolutionExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto ScopeResolutionExpression::parse(Parser& parser, Box<Expression> outer)
-    -> Expected<Box<ScopeResolutionExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, outer);
 }
 

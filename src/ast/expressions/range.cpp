@@ -7,7 +7,7 @@ namespace conch::ast {
 auto RangeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto RangeExpression::parse(Parser& parser, Box<Expression> lower)
-    -> Expected<Box<RangeExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, lower);
 }
 

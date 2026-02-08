@@ -11,7 +11,10 @@ namespace conch::ast {
 
 class IdentifierExpression;
 
-class ScopeResolutionExpression : public Expression {
+class ScopeResolutionExpression : public KindExpression<ScopeResolutionExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::SCOPE_RESOLUTION_EXPRESSION;
+
   public:
     explicit ScopeResolutionExpression(const Token&              start_token,
                                        Box<Expression>           outer,
@@ -21,7 +24,7 @@ class ScopeResolutionExpression : public Expression {
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> outer)
-        -> Expected<Box<ScopeResolutionExpression>, ParserDiagnostic>;
+        -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_outer() const noexcept -> const Expression& { return *outer_; }
     [[nodiscard]] auto get_inner() const noexcept -> const IdentifierExpression& { return *inner_; }

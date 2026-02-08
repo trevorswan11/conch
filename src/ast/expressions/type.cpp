@@ -23,14 +23,14 @@ ExplicitType::ExplicitType(ExplicitTypeVariant              type,
 ExplicitType::~ExplicitType() = default;
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
-    : Expression{start_token, NodeKind::TYPE_EXPRESSION}, explicit_{std::move(exp)} {}
+    : KindExpression{start_token}, explicit_{std::move(exp)} {}
 
 TypeExpression::~TypeExpression() = default;
 
 auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
-    -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic> {
+    -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic> {
     TODO(parser);
 }
 

@@ -42,7 +42,10 @@ constexpr auto operator|=(DeclModifiers& lhs, DeclModifiers rhs) -> DeclModifier
     return lhs;
 }
 
-class DeclStatement : public Statement {
+class DeclStatement : public KindStatement<DeclStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::DECL_STATEMENT;
+
   public:
     explicit DeclStatement(const Token&              start_token,
                            Box<IdentifierExpression> ident,
@@ -53,8 +56,7 @@ class DeclStatement : public Statement {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<DeclStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_ident() const noexcept -> const IdentifierExpression& { return *ident_; }
     [[nodiscard]] auto get_type() const noexcept -> const TypeExpression& { return *type_; }

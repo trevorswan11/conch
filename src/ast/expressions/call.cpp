@@ -7,7 +7,7 @@ namespace conch::ast {
 auto CallExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto CallExpression::parse(Parser& parser, Box<Expression> function)
-    -> Expected<Box<CallExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, function);
 }
 

@@ -51,7 +51,10 @@ class StructMember {
     Optional<Box<Expression>> default_value_;
 };
 
-class StructExpression : public Expression {
+class StructExpression : public KindExpression<StructExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::STRUCT_EXPRESSION;
+
   public:
     explicit StructExpression(const Token&                         start_token,
                               bool                                 packed,
@@ -62,8 +65,7 @@ class StructExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<StructExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto is_packed() const noexcept -> bool { return packed_; }
     [[nodiscard]] auto get_decls() const noexcept -> std::span<const Box<DeclStatement>> {

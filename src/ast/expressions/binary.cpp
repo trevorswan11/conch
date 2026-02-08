@@ -7,7 +7,7 @@ namespace conch::ast {
 auto BinaryExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto BinaryExpression::parse(Parser& parser, Box<Expression> lhs)
-    -> Expected<Box<BinaryExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, lhs);
 }
 

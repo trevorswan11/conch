@@ -8,7 +8,7 @@
 
 namespace conch::ast {
 
-class InfixExpression : public Expression {
+template <typename I> class InfixExpression : public Expression {
   public:
     InfixExpression() = delete;
 
@@ -23,11 +23,10 @@ class InfixExpression : public Expression {
 
   protected:
     explicit InfixExpression(const Token&    start_token,
-                             NodeKind        kind,
                              Box<Expression> lhs,
                              TokenType       op,
                              Box<Expression> rhs) noexcept
-        : Expression{start_token, kind}, lhs_{std::move(lhs)}, op_{op}, rhs_{std::move(rhs)} {}
+        : Expression{start_token, I::KIND}, lhs_{std::move(lhs)}, op_{op}, rhs_{std::move(rhs)} {}
 
   protected:
     Box<Expression> lhs_;

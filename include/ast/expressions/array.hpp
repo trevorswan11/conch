@@ -11,18 +11,19 @@
 
 namespace conch::ast {
 
-class ArrayExpression : public Expression {
+class ArrayExpression : public KindExpression<ArrayExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::ARRAY_EXPRESSION;
+
   public:
     explicit ArrayExpression(const Token&    start_token,
                              bool            inferred_size,
                              Box<Expression> items) noexcept
-        : Expression{start_token, NodeKind::ARRAY_EXPRESSION}, inferred_size_{inferred_size},
-          items_{std::move(items)} {}
+        : KindExpression{start_token}, inferred_size_{inferred_size}, items_{std::move(items)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<ArrayExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     auto is_inferred() const noexcept -> bool { return inferred_size_; }
     auto get_items() const noexcept -> const Expression& { return *items_; }

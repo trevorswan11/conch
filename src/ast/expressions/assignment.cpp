@@ -7,7 +7,7 @@ namespace conch::ast {
 auto AssignmentExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto AssignmentExpression::parse(Parser& parser, Box<Expression> assignee)
-    -> Expected<Box<AssignmentExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, assignee);
 }
 

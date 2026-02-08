@@ -50,7 +50,10 @@ class FunctionParameter {
     friend class FunctionExpression;
 };
 
-class FunctionExpression : public Expression {
+class FunctionExpression : public KindExpression<FunctionExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::FUNCTION_EXPRESSION;
+
   public:
     explicit FunctionExpression(const Token&                   start_token,
                                 std::vector<FunctionParameter> parameters,
@@ -60,8 +63,7 @@ class FunctionExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<FunctionExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_parameters() const noexcept -> std::span<const FunctionParameter> {
         return parameters_;

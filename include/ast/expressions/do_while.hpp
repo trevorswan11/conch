@@ -11,7 +11,10 @@ namespace conch::ast {
 
 class BlockStatement;
 
-class DoWhileLoopExpression : public Expression {
+class DoWhileLoopExpression : public KindExpression<DoWhileLoopExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::DO_WHILE_LOOP_EXPRESSION;
+
   public:
     explicit DoWhileLoopExpression(const Token&        start_token,
                                    Box<BlockStatement> block,
@@ -20,8 +23,7 @@ class DoWhileLoopExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<DoWhileLoopExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }

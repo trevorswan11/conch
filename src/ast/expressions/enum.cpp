@@ -18,21 +18,21 @@ Enumeration::~Enumeration() = default;
 EnumExpression::EnumExpression(const Token&                        start_token,
                                Optional<Box<IdentifierExpression>> underlying,
                                std::vector<Enumeration>            enumerations) noexcept
-    : Expression{start_token, NodeKind::ENUM_EXPRESSION}, underlying_{std::move(underlying)},
+    : KindExpression{start_token}, underlying_{std::move(underlying)},
       enumerations_{std::move(enumerations)} {}
 
 EnumExpression::~EnumExpression() = default;
 
 auto EnumExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, ParserDiagnostic> {
+auto EnumExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
 
     Box<IdentifierExpression> underlying;
     if (parser.peek_token_is(TokenType::COLON)) {
         parser.advance();
         TRY(parser.expect_peek(TokenType ::IDENT));
-        underlying = TRY(IdentifierExpression::parse(parser));
+        underlying = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
     }
 
     TRY(parser.expect_peek(TokenType ::LBRACE));
@@ -44,7 +44,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
     std::vector<Enumeration> enumeration;
     while (!parser.peek_token_is(TokenType::RBRACE) && !parser.peek_token_is(TokenType::END)) {
         TRY(parser.expect_peek(TokenType ::IDENT));
-        auto ident = TRY(IdentifierExpression::parse(parser));
+        auto ident = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
 
         Optional<Box<Expression>> value = nullopt;
         if (parser.peek_token_is(TokenType::ASSIGN)) {
@@ -61,8 +61,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<EnumExpression>, Pars
     }
 
     TRY(parser.expect_peek(TokenType::RBRACE));
-    return std::make_unique<EnumExpression>(
-        start_token, std::move(underlying), std::move(enumeration));
+    return make_box<EnumExpression>(start_token, std::move(underlying), std::move(enumeration));
 }
 
 auto EnumExpression::is_equal(const Node& other) const noexcept -> bool {

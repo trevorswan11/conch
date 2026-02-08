@@ -7,7 +7,7 @@ namespace conch::ast {
 auto IndexExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto IndexExpression::parse(Parser& parser, Box<Expression> array)
-    -> Expected<Box<IndexExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser, array);
 }
 

@@ -41,7 +41,10 @@ class Enumeration {
     friend class EnumExpression;
 };
 
-class EnumExpression : public Expression {
+class EnumExpression : public KindExpression<EnumExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::ENUM_EXPRESSION;
+
   public:
     explicit EnumExpression(const Token&                        start_token,
                             Optional<Box<IdentifierExpression>> underlying,
@@ -50,8 +53,7 @@ class EnumExpression : public Expression {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<EnumExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_underlying() const noexcept -> Optional<const IdentifierExpression&> {
         return underlying_ ? Optional<const IdentifierExpression&>{**underlying_} : nullopt;

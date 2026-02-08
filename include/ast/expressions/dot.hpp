@@ -10,21 +10,20 @@
 
 namespace conch::ast {
 
-class DotExpression : public InfixExpression {
+class DotExpression : public InfixExpression<DotExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::DOT_EXPRESSION;
+
   public:
     explicit DotExpression(const Token&    start_token,
                            Box<Expression> lhs,
                            Box<Expression> rhs) noexcept
-        : InfixExpression{start_token,
-                          NodeKind::DOT_EXPRESSION,
-                          std::move(lhs),
-                          TokenType::DOT,
-                          std::move(rhs)} {}
+        : InfixExpression{start_token, std::move(lhs), TokenType::DOT, std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lhs)
-        -> Expected<Box<DotExpression>, ParserDiagnostic>;
+        -> Expected<Box<Expression>, ParserDiagnostic>;
 };
 
 } // namespace conch::ast

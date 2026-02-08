@@ -16,8 +16,10 @@ namespace conch::ast {
 class IdentifierExpression;
 class StringExpression;
 
-class ImportStatement : public Statement {
+class ImportStatement : public KindStatement<ImportStatement> {
   public:
+    static constexpr auto KIND = NodeKind::IMPORT_STATEMENT;
+
     using ModuleImport = Box<IdentifierExpression>;
     using UserImport   = Box<StringExpression>;
 
@@ -29,8 +31,7 @@ class ImportStatement : public Statement {
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<ImportStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     // UB if the import is not a module import.
     [[nodiscard]] auto get_module_import() const noexcept -> const IdentifierExpression& {

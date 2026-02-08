@@ -11,16 +11,17 @@
 
 namespace conch::ast {
 
-class ExpressionStatement : public Statement {
+class ExpressionStatement : public KindStatement<ExpressionStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::EXPRESSION_STATEMENT;
+
   public:
     explicit ExpressionStatement(const Token& start_token, Box<Expression> expression) noexcept
-        : Statement{start_token, NodeKind::EXPRESSION_STATEMENT},
-          expression_{std::move(expression)} {}
+        : KindStatement{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<ExpressionStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_expression() const noexcept -> const Expression& { return *expression_; }
 

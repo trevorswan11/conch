@@ -10,14 +10,13 @@ namespace conch::ast {
 
 InfiniteLoopExpression::InfiniteLoopExpression(const Token&        start_token,
                                                Box<BlockStatement> block) noexcept
-    : Expression{start_token, NodeKind::INFINITE_LOOP_EXPRESSION}, block_{std::move(block)} {}
+    : KindExpression{start_token}, block_{std::move(block)} {}
 
 InfiniteLoopExpression::~InfiniteLoopExpression() = default;
 
 auto InfiniteLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto InfiniteLoopExpression::parse(Parser& parser)
-    -> Expected<Box<InfiniteLoopExpression>, ParserDiagnostic> {
+auto InfiniteLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

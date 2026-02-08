@@ -13,7 +13,7 @@ namespace conch::ast {
 
 auto StringExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto StringExpression::parse(Parser& parser) -> Expected<Box<StringExpression>, ParserDiagnostic> {
+auto StringExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     const auto promoted    = start_token.promote();
     if (!promoted) { return make_parser_unexpected(ParserError::MALFORMED_STRING, start_token); }
@@ -59,28 +59,26 @@ static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
 
 auto SignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto SignedIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<SignedIntegerExpression>, ParserDiagnostic> {
+auto SignedIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     return parse_number<SignedIntegerExpression>(parser);
 }
 
 auto UnsignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto UnsignedIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<UnsignedIntegerExpression>, ParserDiagnostic> {
+    -> Expected<Box<Expression>, ParserDiagnostic> {
     return parse_number<UnsignedIntegerExpression>(parser);
 }
 
 auto SizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto SizeIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<SizeIntegerExpression>, ParserDiagnostic> {
+auto SizeIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     return parse_number<SizeIntegerExpression>(parser);
 }
 
 auto ByteExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ByteExpression::parse(Parser& parser) -> Expected<Box<ByteExpression>, ParserDiagnostic> {
+auto ByteExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     const auto slice       = start_token.slice;
 
@@ -108,7 +106,7 @@ auto ByteExpression::parse(Parser& parser) -> Expected<Box<ByteExpression>, Pars
 
 auto FloatExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto FloatExpression::parse(Parser& parser) -> Expected<Box<FloatExpression>, ParserDiagnostic> {
+auto FloatExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     return parse_number<FloatExpression>(parser);
 }
 
@@ -125,14 +123,14 @@ auto FloatExpression::approx_eq(value_type a, value_type b) -> bool {
 
 auto BoolExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto BoolExpression::parse(Parser& parser) -> Expected<Box<BoolExpression>, ParserDiagnostic> {
+auto BoolExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto& start_token = parser.current_token();
     return make_box<BoolExpression>(start_token, start_token.type == TokenType::TRUE);
 }
 
 auto NilExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto NilExpression::parse(Parser& parser) -> Expected<Box<NilExpression>, ParserDiagnostic> {
+auto NilExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     return make_box<NilExpression>(parser.current_token(), std::monostate{});
 }
 

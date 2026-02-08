@@ -13,7 +13,10 @@
 
 namespace conch::ast {
 
-class BlockStatement : public Statement {
+class BlockStatement : public KindStatement<BlockStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::BLOCK_STATEMENT;
+
   public:
     using iterator       = typename std::vector<Box<Statement>>::iterator;
     using const_iterator = typename std::vector<Box<Statement>>::const_iterator;
@@ -21,12 +24,11 @@ class BlockStatement : public Statement {
   public:
     explicit BlockStatement(const Token&                start_token,
                             std::vector<Box<Statement>> statements) noexcept
-        : Statement{start_token, NodeKind::BLOCK_STATEMENT}, statements_{std::move(statements)} {}
+        : KindStatement{start_token}, statements_{std::move(statements)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<BlockStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto begin() noexcept -> iterator { return statements_.begin(); }
     [[nodiscard]] auto end() noexcept -> iterator { return statements_.end(); }

@@ -1,14 +1,22 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <format>
 #include <string>
 
 #include "lexer/token.hpp"
 
+#include "util/common.hpp"
+
 namespace conch { class Visitor; } // namespace conch
 
 namespace conch::ast {
+
+class Node;
+
+template <typename N>
+concept DerivedNode = requires { std::derived_from<N, Node>; };
 
 enum class NodeKind : u8 {
     ARRAY_EXPRESSION,
@@ -72,16 +80,31 @@ class Node {
         return lhs.is_equal(rhs);
     }
 
+    template <typename T> auto is() const noexcept -> bool { return kind_ == T::KIND; }
+
   protected:
     explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}
 
     virtual auto is_equal(const Node& other) const noexcept -> bool = 0;
 
-    template <typename T> static const T& as(const Node& n) { return static_cast<const T&>(n); }
+    template <DerivedNode T> static auto as(const Node& n) -> const T& {
+        return static_cast<const T&>(n);
+    }
+
+    // Transfers ownership and downcasts a boxed node into the requested type...
+    template <DerivedNode To, DerivedNode From> static auto downcast(Box<From>&& from) -> Box<To> {
+        assert(from && from->template is<To>());
+        return box_from<To>(from.release());
+    }
 
   protected:
     const Token    start_token_;
     const NodeKind kind_;
+};
+
+template <typename Derived, typename Base> class KindNode : public Base {
+  protected:
+    explicit KindNode(const Token& tok) noexcept : Base{tok, Derived::KIND} {}
 };
 
 class Expression : public Node {
@@ -91,6 +114,11 @@ class Expression : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
+template <typename Derived> class KindExpression : public KindNode<Derived, Expression> {
+  protected:
+    using KindNode<Derived, Expression>::KindNode;
+};
+
 class Statement : public Node {
   protected:
     using Node::Node;
@@ -98,11 +126,14 @@ class Statement : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
+template <typename Derived> class KindStatement : public KindNode<Derived, Statement> {
+  protected:
+    using KindNode<Derived, Statement>::KindNode;
+};
+
 } // namespace conch::ast
 
-template <typename N>
-    requires std::derived_from<N, conch::ast::Node>
-struct std::formatter<N> : std::formatter<std::string> {
+template <conch::ast::DerivedNode N> struct std::formatter<N> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const N& n, F& ctx) const {

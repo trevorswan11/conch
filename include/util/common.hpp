@@ -35,6 +35,10 @@ template <typename T, typename... Args> constexpr Box<T> make_box(Args&&... args
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
+template <typename T, typename P> constexpr Box<T> box_from(P* ptr) {
+    return std::unique_ptr<T>(static_cast<T*>(ptr));
+}
+
 template <typename T> using Rc = std::shared_ptr<T>;
 template <typename T, typename... Args> constexpr Rc<T> make_rc(Args&&... args) {
     return std::make_shared<T>(std::forward<Args>(args)...);

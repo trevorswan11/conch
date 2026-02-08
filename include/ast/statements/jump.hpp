@@ -12,15 +12,17 @@
 
 namespace conch::ast {
 
-class JumpStatement : public Statement {
+class JumpStatement : public KindStatement<JumpStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::JUMP_STATEMENT;
+
   public:
     explicit JumpStatement(const Token& start_token, Optional<Box<Expression>> expression) noexcept
-        : Statement{start_token, NodeKind::JUMP_STATEMENT}, expression_{std::move(expression)} {}
+        : KindStatement{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<JumpStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto has_expression() const noexcept -> bool { return expression_.has_value(); }
     [[nodiscard]] auto get_expression() const noexcept -> Optional<const Expression&> {

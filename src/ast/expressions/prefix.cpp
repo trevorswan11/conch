@@ -6,7 +6,7 @@ namespace conch::ast {
 
 auto PrefixExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto PrefixExpression::parse(Parser& parser) -> Expected<Box<PrefixExpression>, ParserDiagnostic> {
+auto PrefixExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

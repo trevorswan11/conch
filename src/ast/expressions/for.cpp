@@ -20,15 +20,14 @@ ForLoopExpression::ForLoopExpression(const Token&                          start
                                      std::vector<Optional<ForLoopCapture>> captures,
                                      Box<BlockStatement>                   block,
                                      Optional<Box<Statement>>              non_break) noexcept
-    : Expression{start_token, NodeKind::FOR_LOOP_EXPRESSION}, iterables_{std::move(iterables)},
-      captures_{std::move(captures)}, block_{std::move(block)}, non_break_{std::move(non_break)} {}
+    : KindExpression{start_token}, iterables_{std::move(iterables)}, captures_{std::move(captures)},
+      block_{std::move(block)}, non_break_{std::move(non_break)} {}
 
 ForLoopExpression::~ForLoopExpression() = default;
 
 auto ForLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ForLoopExpression::parse(Parser& parser)
-    -> Expected<Box<ForLoopExpression>, ParserDiagnostic> {
+auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

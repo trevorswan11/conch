@@ -29,19 +29,21 @@ class MatchArm {
     friend class MatchExpression;
 };
 
-class MatchExpression : public Expression {
+class MatchExpression : public KindExpression<MatchExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::MATCH_EXPRESSION;
+
   public:
     explicit MatchExpression(const Token&             start_token,
                              Box<Expression>          matcher,
                              std::vector<MatchArm>    arms,
                              Optional<Box<Statement>> catch_all) noexcept
-        : Expression{start_token, NodeKind::MATCH_EXPRESSION}, matcher_{std::move(matcher)},
-          arms_{std::move(arms)}, catch_all_{std::move(catch_all)} {};
+        : KindExpression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
+          catch_all_{std::move(catch_all)} {};
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<MatchExpression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_matcher() const noexcept -> const Expression& { return *matcher_; }
     [[nodiscard]] auto get_arms() const noexcept -> std::span<const MatchArm> { return arms_; }

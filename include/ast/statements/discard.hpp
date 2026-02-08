@@ -10,15 +10,17 @@
 
 namespace conch::ast {
 
-class DiscardStatement : public Statement {
+class DiscardStatement : public KindStatement<DiscardStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::DISCARD_STATEMENT;
+
   public:
     explicit DiscardStatement(const Token& start_token, Box<Expression> discarded) noexcept
-        : Statement{start_token, NodeKind::DISCARD_STATEMENT}, discarded_{std::move(discarded)} {}
+        : KindStatement{start_token}, discarded_{std::move(discarded)} {}
 
     auto accept(Visitor& v) const -> void override;
 
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<DiscardStatement>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_discarded() const noexcept -> const Expression& { return *discarded_; }
 
