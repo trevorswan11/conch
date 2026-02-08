@@ -80,7 +80,7 @@ class SizeIntegerExpression : public PrimitiveExpression<usize> {
         -> Expected<Box<SizeIntegerExpression>, ParserDiagnostic>;
 };
 
-class ByteExpression : public PrimitiveExpression<u8> {
+class ByteExpression : public PrimitiveExpression<byte> {
   public:
     explicit ByteExpression(const Token& start_token, value_type value) noexcept
         : PrimitiveExpression{start_token, NodeKind::BYTE_EXPRESSION, std::move(value)} {}
@@ -118,17 +118,6 @@ class BoolExpression : public PrimitiveExpression<bool> {
         -> Expected<Box<BoolExpression>, ParserDiagnostic>;
 
     operator bool() const noexcept { return value_; }
-};
-
-class VoidExpression : public PrimitiveExpression<std::monostate> {
-  public:
-    explicit VoidExpression(const Token& start_token, value_type value) noexcept
-        : PrimitiveExpression{start_token, NodeKind::VOID_EXPRESSION, std::move(value)} {}
-
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<VoidExpression>, ParserDiagnostic>;
 };
 
 class NilExpression : public PrimitiveExpression<std::monostate> {

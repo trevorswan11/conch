@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <format>
+#include <ranges>
 
 #include "parser/parser.hpp"
 #include "parser/precedence.hpp"
 
+#include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
 #include "ast/node.hpp"
@@ -58,6 +60,7 @@ auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>
     while (!current_token_is(TokenType::END)) {
         if (!current_token_is(TokenType::COMMENT)) {
             auto stmt = parse_statement();
+            if (peek_token_is(TokenType::SEMICOLON)) { advance(); }
             if (stmt) {
                 ast.emplace_back(std::move(*stmt));
             } else {
@@ -163,42 +166,53 @@ auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> Parse
         actual};
 }
 
-std::array<Parser::PrefixPair, 34> Parser::PREFIX_FNS = {
-    PrefixPair{TokenType::IDENT, ast::IdentifierExpression::parse},
-    PrefixPair{TokenType::INT_2, ast::SignedIntegerExpression::parse},
-    PrefixPair{TokenType::INT_8, ast::SignedIntegerExpression::parse},
-    PrefixPair{TokenType::INT_10, ast::SignedIntegerExpression::parse},
-    PrefixPair{TokenType::INT_16, ast::SignedIntegerExpression::parse},
-    PrefixPair{TokenType::UINT_2, ast::UnsignedIntegerExpression::parse},
-    PrefixPair{TokenType::UINT_8, ast::UnsignedIntegerExpression::parse},
-    PrefixPair{TokenType::UINT_10, ast::UnsignedIntegerExpression::parse},
-    PrefixPair{TokenType::UINT_16, ast::UnsignedIntegerExpression::parse},
-    PrefixPair{TokenType::UZINT_2, ast::SizeIntegerExpression::parse},
-    PrefixPair{TokenType::UZINT_8, ast::SizeIntegerExpression::parse},
-    PrefixPair{TokenType::UZINT_10, ast::SizeIntegerExpression::parse},
-    PrefixPair{TokenType::UZINT_16, ast::SizeIntegerExpression::parse},
-    PrefixPair{TokenType::CHARACTER, ast::ByteExpression::parse},
-    PrefixPair{TokenType::FLOAT, ast::FloatExpression::parse},
-    PrefixPair{TokenType::BANG, ast::PrefixExpression::parse},
-    PrefixPair{TokenType::NOT, ast::PrefixExpression::parse},
-    PrefixPair{TokenType::MINUS, ast::PrefixExpression::parse},
-    PrefixPair{TokenType::TRUE, ast::BoolExpression::parse},
-    PrefixPair{TokenType::FALSE, ast::BoolExpression::parse},
-    PrefixPair{TokenType::STRING, ast::StringExpression::parse},
-    PrefixPair{TokenType::MULTILINE_STRING, ast::StringExpression::parse},
-    PrefixPair{TokenType::LPAREN, ast::GroupedExpression::parse},
-    PrefixPair{TokenType::IF, ast::IfExpression::parse},
-    PrefixPair{TokenType::FUNCTION, ast::FunctionExpression::parse},
-    PrefixPair{TokenType::STRUCT, ast::StructExpression::parse},
-    PrefixPair{TokenType::ENUM, ast::FunctionExpression::parse},
-    PrefixPair{TokenType::NIL, ast::NilExpression::parse},
-    PrefixPair{TokenType::MATCH, ast::MatchExpression::parse},
-    PrefixPair{TokenType::LBRACKET, ast::ArrayExpression::parse},
-    PrefixPair{TokenType::FOR, ast::ForLoopExpression::parse},
-    PrefixPair{TokenType::WHILE, ast::WhileLoopExpression::parse},
-    PrefixPair{TokenType::DO, ast::DoWhileLoopExpression::parse},
-    PrefixPair{TokenType::LOOP, ast::InfiniteLoopExpression::parse},
-};
+std::array<Parser::PrefixPair, 42> Parser::PREFIX_FNS = []() {
+    const auto initial_prefixes = std::array{
+        PrefixPair{TokenType::IDENT, ast::IdentifierExpression::parse},
+        PrefixPair{TokenType::INT_2, ast::SignedIntegerExpression::parse},
+        PrefixPair{TokenType::INT_8, ast::SignedIntegerExpression::parse},
+        PrefixPair{TokenType::INT_10, ast::SignedIntegerExpression::parse},
+        PrefixPair{TokenType::INT_16, ast::SignedIntegerExpression::parse},
+        PrefixPair{TokenType::UINT_2, ast::UnsignedIntegerExpression::parse},
+        PrefixPair{TokenType::UINT_8, ast::UnsignedIntegerExpression::parse},
+        PrefixPair{TokenType::UINT_10, ast::UnsignedIntegerExpression::parse},
+        PrefixPair{TokenType::UINT_16, ast::UnsignedIntegerExpression::parse},
+        PrefixPair{TokenType::UZINT_2, ast::SizeIntegerExpression::parse},
+        PrefixPair{TokenType::UZINT_8, ast::SizeIntegerExpression::parse},
+        PrefixPair{TokenType::UZINT_10, ast::SizeIntegerExpression::parse},
+        PrefixPair{TokenType::UZINT_16, ast::SizeIntegerExpression::parse},
+        PrefixPair{TokenType::BYTE, ast::ByteExpression::parse},
+        PrefixPair{TokenType::FLOAT, ast::FloatExpression::parse},
+        PrefixPair{TokenType::BANG, ast::PrefixExpression::parse},
+        PrefixPair{TokenType::NOT, ast::PrefixExpression::parse},
+        PrefixPair{TokenType::MINUS, ast::PrefixExpression::parse},
+        PrefixPair{TokenType::TRUE, ast::BoolExpression::parse},
+        PrefixPair{TokenType::FALSE, ast::BoolExpression::parse},
+        PrefixPair{TokenType::STRING, ast::StringExpression::parse},
+        PrefixPair{TokenType::MULTILINE_STRING, ast::StringExpression::parse},
+        PrefixPair{TokenType::LPAREN, ast::GroupedExpression::parse},
+        PrefixPair{TokenType::IF, ast::IfExpression::parse},
+        PrefixPair{TokenType::FUNCTION, ast::FunctionExpression::parse},
+        PrefixPair{TokenType::STRUCT, ast::StructExpression::parse},
+        PrefixPair{TokenType::ENUM, ast::FunctionExpression::parse},
+        PrefixPair{TokenType::NIL, ast::NilExpression::parse},
+        PrefixPair{TokenType::MATCH, ast::MatchExpression::parse},
+        PrefixPair{TokenType::LBRACKET, ast::ArrayExpression::parse},
+        PrefixPair{TokenType::FOR, ast::ForLoopExpression::parse},
+        PrefixPair{TokenType::WHILE, ast::WhileLoopExpression::parse},
+        PrefixPair{TokenType::DO, ast::DoWhileLoopExpression::parse},
+        PrefixPair{TokenType::LOOP, ast::InfiniteLoopExpression::parse},
+    };
+
+    constexpr auto keyword_prefixes = ALL_PRIMITIVES | std::views::transform([](TokenType tt) {
+                                          return PrefixPair{tt, ast::IdentifierExpression::parse};
+                                      });
+
+    std::array<Parser::PrefixPair, initial_prefixes.size() + keyword_prefixes.size()> prefix_fns{};
+    std::ranges::copy(initial_prefixes, prefix_fns.begin());
+    std::ranges::copy(keyword_prefixes, prefix_fns.begin() + initial_prefixes.size());
+    return prefix_fns;
+}();
 
 std::array<std::pair<TokenType, Parser::InfixFn>, 39> Parser::INFIX_FNS = {
     InfixPair{TokenType::PLUS, ast::BinaryExpression::parse},

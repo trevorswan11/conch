@@ -1,5 +1,9 @@
 #pragma once
 
+#include <concepts>
+#include <format>
+#include <string>
+
 #include "lexer/token.hpp"
 
 namespace conch { class Visitor; } // namespace conch
@@ -95,3 +99,14 @@ class Statement : public Node {
 };
 
 } // namespace conch::ast
+
+template <typename N>
+    requires std::derived_from<N, conch::ast::Node>
+struct std::formatter<N> : std::formatter<std::string> {
+    static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
+
+    template <typename F> auto format(const N& n, F& ctx) const {
+        return std::formatter<std::string>::format(
+            std::format("{}: {}", conch::enum_name(n.get_kind()), n.get_token()), ctx);
+    }
+};

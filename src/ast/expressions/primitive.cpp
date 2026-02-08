@@ -28,8 +28,14 @@ static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
     const auto     start_token       = parser.current_token();
     const auto     base              = token_type::to_base(start_token.type);
 
+    const auto trim_amount = [](TokenType tt) -> usize {
+        if (token_type::is_unsigned_int(tt)) { return 1; }
+        if (token_type::is_size_int(tt)) { return 2; }
+        return 0;
+    };
+
     const auto* first = start_token.slice.cbegin() + (!base || *base == Base::DECIMAL ? 0 : 2);
-    const auto* last  = start_token.slice.cend();
+    const auto* last  = start_token.slice.cend() - trim_amount(start_token.type);
 
     value_type             v;
     std::from_chars_result result;
@@ -122,12 +128,6 @@ auto BoolExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 auto BoolExpression::parse(Parser& parser) -> Expected<Box<BoolExpression>, ParserDiagnostic> {
     const auto& start_token = parser.current_token();
     return make_box<BoolExpression>(start_token, start_token.type == TokenType::TRUE);
-}
-
-auto VoidExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto VoidExpression::parse(Parser& parser) -> Expected<Box<VoidExpression>, ParserDiagnostic> {
-    return make_box<VoidExpression>(parser.current_token(), std::monostate{});
 }
 
 auto NilExpression::accept(Visitor& v) const -> void { v.visit(*this); }

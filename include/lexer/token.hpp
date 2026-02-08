@@ -35,7 +35,7 @@ enum class TokenType : u8 {
     UZINT_16,
     FLOAT,
     STRING,
-    CHARACTER,
+    BYTE,
 
     ASSIGN,
     WALRUS,

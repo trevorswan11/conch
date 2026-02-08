@@ -103,7 +103,7 @@ class Parser {
     static auto tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic;
 
     using PrefixPair = std::pair<TokenType, PrefixFn>;
-    static std::array<PrefixPair, 34> PREFIX_FNS;
+    static std::array<PrefixPair, 42> PREFIX_FNS;
 
     using InfixPair = std::pair<TokenType, InfixFn>;
     static std::array<InfixPair, 39> INFIX_FNS;

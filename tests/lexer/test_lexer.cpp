@@ -317,19 +317,19 @@ TEST_CASE("Character literals") {
 
     const auto expecteds = std::array{
         std::pair{TokenType::IF, "if"},
-        std::pair{TokenType::CHARACTER, "'e'"},
+        std::pair{TokenType::BYTE, "'e'"},
         std::pair{TokenType::ELSE, "else"},
         std::pair{TokenType::ILLEGAL, "'\\'"},
         std::pair{TokenType::RETURN, "return"},
-        std::pair{TokenType::CHARACTER, "'\\r'"},
+        std::pair{TokenType::BYTE, "'\\r'"},
         std::pair{TokenType::BREAK, "break"},
-        std::pair{TokenType::CHARACTER, "'\\n'"},
+        std::pair{TokenType::BYTE, "'\\n'"},
         std::pair{TokenType::CONTINUE, "continue"},
-        std::pair{TokenType::CHARACTER, "'\\0'"},
+        std::pair{TokenType::BYTE, "'\\0'"},
         std::pair{TokenType::FOR, "for"},
-        std::pair{TokenType::CHARACTER, "'\\''"},
+        std::pair{TokenType::BYTE, "'\\''"},
         std::pair{TokenType::WHILE, "while"},
-        std::pair{TokenType::CHARACTER, "'\\\\'"},
+        std::pair{TokenType::BYTE, "'\\\\'"},
         std::pair{TokenType::CONST, "const"},
         std::pair{TokenType::ILLEGAL, "'"},
         std::pair{TokenType::ILLEGAL, "'"},
@@ -347,10 +347,12 @@ TEST_CASE("Character literals") {
 
 TEST_CASE("String literals") {
     const auto input{
-        R"(const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)"};
+        R"("This is a string";const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)"};
     Lexer l{input};
 
     const auto expecteds = std::array{
+        std::pair{TokenType::STRING, R"("This is a string")"},
+        std::pair{TokenType::SEMICOLON, ";"},
         std::pair{TokenType::CONST, "const"},
         std::pair{TokenType::IDENT, "five"},
         std::pair{TokenType::ASSIGN, "="},

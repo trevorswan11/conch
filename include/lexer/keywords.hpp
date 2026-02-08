@@ -85,7 +85,6 @@ constexpr auto ALL_PRIMITIVES = std::array{
     keywords::STRING.second,
     keywords::BOOL.second,
     keywords::VOID.second,
-    keywords::NIL.second,
 };
 
 } // namespace conch

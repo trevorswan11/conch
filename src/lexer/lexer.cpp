@@ -390,7 +390,7 @@ auto Lexer::read_byte_literal() noexcept -> Token {
     }
     read_character();
 
-    return {TokenType::CHARACTER, input_.substr(start, pos_ - start), start_line, start_col};
+    return {TokenType::BYTE, input_.substr(start, pos_ - start), start_line, start_col};
 }
 
 // Reads a comment from the token, assuming the '//' operator has been consumed
