@@ -59,6 +59,8 @@ class ImportStatement : public Statement {
         return alias_ ? Optional<const IdentifierExpression&>{**alias_} : nullopt;
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     std::variant<ModuleImport, UserImport> imported_;
     Optional<Box<IdentifierExpression>>    alias_;

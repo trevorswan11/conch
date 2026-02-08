@@ -16,9 +16,7 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
-namespace conch {
-
-namespace ast {
+namespace conch::ast {
 
 class Node;
 class Statement;
@@ -26,7 +24,9 @@ class Expression;
 
 using AST = std::vector<Box<Node>>;
 
-} // namespace ast
+} // namespace conch::ast
+
+namespace conch {
 
 enum class ParserError : u8 {
     UNEXPECTED_TOKEN,
@@ -42,6 +42,13 @@ enum class ParserError : u8 {
     USER_IMPORT_MISSING_ALIAS,
     DUPLICATE_DECL_MODIFIER,
     ILLEGAL_DECL_MODIFIERS,
+    INTEGER_OVERFLOW,
+    MALFORMED_INTEGER,
+    FLOAT_OVERFLOW,
+    MALFORMED_FLOAT,
+    UNKNOWN_CHARACTER_ESCAPE,
+    MALFORMED_CHARACTER,
+    MALFORMED_STRING,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;
@@ -96,7 +103,7 @@ class Parser {
     static auto tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic;
 
     using PrefixPair = std::pair<TokenType, PrefixFn>;
-    static std::array<PrefixPair, 34> PREFIX_FNS;
+    static std::array<PrefixPair, 42> PREFIX_FNS;
 
     using InfixPair = std::pair<TokenType, InfixFn>;
     static std::array<InfixPair, 39> INFIX_FNS;

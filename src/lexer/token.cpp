@@ -30,7 +30,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Base {
+auto to_base(TokenType type) noexcept -> Optional<Base> {
     switch (type) {
     case TokenType::INT_2:
     case TokenType::UINT_2:
@@ -44,7 +44,7 @@ auto to_base(TokenType type) noexcept -> Base {
     case TokenType::INT_16:
     case TokenType::UINT_16:
     case TokenType::UZINT_16: return Base::HEXADECIMAL;
-    default: std::unreachable();
+    default: return nullopt;
     }
 }
 
@@ -83,14 +83,15 @@ auto is_int(TokenType t) noexcept -> bool {
 } // namespace token_type
 
 auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
+    const auto [ln, col] = location;
     if (type != TokenType::STRING && type != TokenType::MULTILINE_STRING) {
-        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, line, column}};
+        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, ln, col}};
     }
 
     // Here we can just trim off the start and finish of the string
     if (type == TokenType::STRING) {
         if (slice.size() < 2) {
-            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, line, column}};
+            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, ln, col}};
         }
         return std::string{slice.begin() + 1, slice.end() - 1};
     }
@@ -118,7 +119,7 @@ auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
     return builder;
 }
 
-auto Token::primitive() const noexcept -> bool {
+auto Token::is_primitive() const noexcept -> bool {
     return std::ranges::contains(ALL_PRIMITIVES, type);
 }
 

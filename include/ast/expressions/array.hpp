@@ -16,7 +16,8 @@ class ArrayExpression : public Expression {
     explicit ArrayExpression(const Token&    start_token,
                              bool            inferred_size,
                              Box<Expression> items) noexcept
-        : Expression{start_token}, inferred_size_{inferred_size}, items_{std::move(items)} {}
+        : Expression{start_token, NodeKind::ARRAY_EXPRESSION}, inferred_size_{inferred_size},
+          items_{std::move(items)} {}
 
     auto accept(Visitor& v) const -> void override;
 
@@ -25,6 +26,11 @@ class ArrayExpression : public Expression {
 
     auto is_inferred() const noexcept -> bool { return inferred_size_; }
     auto get_items() const noexcept -> const Expression& { return *items_; }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<ArrayExpression>(other);
+        return inferred_size_ == casted.inferred_size_ && *items_ == *casted.items_;
+    }
 
   private:
     bool            inferred_size_;

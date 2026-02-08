@@ -44,6 +44,9 @@ class ExplicitArrayType {
   private:
     std::vector<usize>  dimensions_;
     Box<TypeExpression> inner_type_;
+
+    friend class ExplicitType;
+    friend class TypeExpression;
 };
 
 enum class ExplicitTypeConstraint : u8 {
@@ -77,6 +80,8 @@ class ExplicitType {
     ExplicitTypeVariant              type_;
     bool                             nullable_;
     Optional<ExplicitTypeConstraint> constraint_;
+
+    friend class TypeExpression;
 };
 
 class TypeExpression : public Expression {
@@ -93,6 +98,8 @@ class TypeExpression : public Expression {
     [[nodiscard]] auto get_explicit_type() const noexcept -> const Optional<ExplicitType>& {
         return explicit_;
     }
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     Optional<ExplicitType> explicit_;

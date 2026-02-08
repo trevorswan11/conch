@@ -16,7 +16,8 @@ class IndexExpression : public Expression {
     explicit IndexExpression(const Token&    start_token,
                              Box<Expression> array,
                              Box<Expression> idx) noexcept
-        : Expression{start_token}, array_{std::move(array)}, index_{std::move(idx)} {}
+        : Expression{start_token, NodeKind::INDEX_EXPRESSION}, array_{std::move(array)},
+          index_{std::move(idx)} {}
 
     auto accept(Visitor& v) const -> void override;
 
@@ -25,6 +26,11 @@ class IndexExpression : public Expression {
 
     [[nodiscard]] auto get_array() const noexcept -> const Expression& { return *array_; }
     [[nodiscard]] auto get_index() const noexcept -> const Expression& { return *index_; }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<IndexExpression>(other);
+        return *array_ == *casted.array_ && *index_ == *casted.index_;
+    }
 
   private:
     Box<Expression> array_;

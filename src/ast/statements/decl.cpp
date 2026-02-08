@@ -15,8 +15,8 @@ DeclStatement::DeclStatement(const Token&              start_token,
                              Box<TypeExpression>       type,
                              Optional<Box<Expression>> value,
                              DeclModifiers             modifiers) noexcept
-    : Statement{start_token}, ident_{std::move(ident)}, type_{std::move(type)},
-      value_{std::move(value)}, modifiers_{modifiers} {}
+    : Statement{start_token, NodeKind::DECL_STATEMENT}, ident_{std::move(ident)},
+      type_{std::move(type)}, value_{std::move(value)}, modifiers_{modifiers} {}
 
 DeclStatement::~DeclStatement() = default;
 
@@ -47,12 +47,12 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<DeclStatement>, Parser
 
     Optional<Box<Expression>> decl_value;
     if (value_initialized) {
-        if (!modifiers_has(modifiers, DeclModifiers::MUTABLE)) {
+        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         }
         decl_value = TRY(parser.parse_expression());
     } else {
-        if (!modifiers_has(modifiers, DeclModifiers::MUTABLE)) {
+        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         } else if (!decl_type->has_explicit_type()) {
             return make_parser_unexpected(ParserError::FORWARD_VAR_DECL_MISSING_TYPE, start_token);
@@ -61,6 +61,13 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<DeclStatement>, Parser
 
     return make_box<DeclStatement>(
         start_token, std::move(decl_name), std::move(decl_type), std::move(decl_value), modifiers);
+}
+
+auto DeclStatement::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<DeclStatement>(other);
+    return ident_ == casted.ident_ && type_ == casted.type_ &&
+           optional::unsafe_eq<Expression>(value_, casted.value_) &&
+           modifiers_ == casted.modifiers_;
 }
 
 } // namespace conch::ast

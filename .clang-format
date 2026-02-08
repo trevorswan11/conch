@@ -24,5 +24,6 @@ AlignConsecutiveBitFields: true
 WrapNamespaceBodyWithEmptyLines: Always
 FixNamespaceComments: true
 ShortNamespaceLines: 0
+AllowShortNamespacesOnASingleLine: true
 IndentPPDirectives: AfterHash
 LineEnding: LF

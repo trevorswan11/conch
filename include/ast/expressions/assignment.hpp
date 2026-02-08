@@ -12,7 +12,12 @@ namespace conch::ast {
 
 class AssignmentExpression : public InfixExpression {
   public:
-    using InfixExpression::InfixExpression;
+    explicit AssignmentExpression(const Token&    start_token,
+                                  Box<Expression> lhs,
+                                  TokenType       op,
+                                  Box<Expression> rhs) noexcept
+        : InfixExpression{
+              start_token, NodeKind::ASSIGNMENT_EXPRESSION, std::move(lhs), op, std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 

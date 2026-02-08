@@ -17,7 +17,7 @@ class IfExpression : public Expression {
                           Box<Expression>          condition,
                           Box<Statement>           consequence,
                           Optional<Box<Statement>> alternate) noexcept
-        : Expression{start_token}, condition_{std::move(condition)},
+        : Expression{start_token, NodeKind::IF_EXPRESSION}, condition_{std::move(condition)},
           consequence_{std::move(consequence)}, alternate_{std::move(alternate)} {}
 
     auto accept(Visitor& v) const -> void override;
@@ -33,6 +33,12 @@ class IfExpression : public Expression {
     [[nodiscard]] auto has_alternate() const noexcept -> bool { return alternate_.has_value(); }
     [[nodiscard]] auto get_alternate() const noexcept -> Optional<const Statement&> {
         return alternate_ ? Optional<const Statement&>{**alternate_} : nullopt;
+    }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<IfExpression>(other);
+        return *condition_ == *casted.condition_ && *consequence_ == *casted.consequence_ &&
+               optional::unsafe_eq<Statement>(alternate_, casted.alternate_);
     }
 
   private:

@@ -14,7 +14,7 @@ namespace conch::ast {
 class PrefixExpression : public Expression {
   public:
     explicit PrefixExpression(const Token& op, Box<Expression> rhs) noexcept
-        : Expression{op}, rhs_{std::move(rhs)} {}
+        : Expression{op, NodeKind::PREFIX_EXPRESSION}, rhs_{std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 
@@ -23,6 +23,11 @@ class PrefixExpression : public Expression {
 
     auto               get_op() const noexcept -> TokenType { return start_token_.type; }
     [[nodiscard]] auto get_rhs() const noexcept -> const Expression& { return *rhs_; }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<PrefixExpression>(other);
+        return *rhs_ == *casted.rhs_;
+    }
 
   private:
     Box<Expression> rhs_;

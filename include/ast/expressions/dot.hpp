@@ -12,7 +12,14 @@ namespace conch::ast {
 
 class DotExpression : public InfixExpression {
   public:
-    using InfixExpression::InfixExpression;
+    explicit DotExpression(const Token&    start_token,
+                           Box<Expression> lhs,
+                           Box<Expression> rhs) noexcept
+        : InfixExpression{start_token,
+                          NodeKind::DOT_EXPRESSION,
+                          std::move(lhs),
+                          TokenType::DOT,
+                          std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 

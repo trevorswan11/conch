@@ -12,7 +12,12 @@ namespace conch::ast {
 
 class RangeExpression : public InfixExpression {
   public:
-    using InfixExpression::InfixExpression;
+    explicit RangeExpression(const Token&    start_token,
+                             Box<Expression> lower,
+                             TokenType       op,
+                             Box<Expression> upper) noexcept
+        : InfixExpression{
+              start_token, NodeKind::RANGE_EXPRESSION, std::move(lower), op, std::move(upper)} {}
 
     auto accept(Visitor& v) const -> void override;
 

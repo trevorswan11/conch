@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <span>
 #include <utility>
 
@@ -24,6 +25,8 @@ class MatchArm {
   private:
     Box<Expression> pattern_;
     Box<Statement>  dispatch_;
+
+    friend class MatchExpression;
 };
 
 class MatchExpression : public Expression {
@@ -32,8 +35,8 @@ class MatchExpression : public Expression {
                              Box<Expression>          matcher,
                              std::vector<MatchArm>    arms,
                              Optional<Box<Statement>> catch_all) noexcept
-        : Expression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
-          catch_all_{std::move(catch_all)} {};
+        : Expression{start_token, NodeKind::MATCH_EXPRESSION}, matcher_{std::move(matcher)},
+          arms_{std::move(arms)}, catch_all_{std::move(catch_all)} {};
 
     auto accept(Visitor& v) const -> void override;
 
@@ -45,6 +48,16 @@ class MatchExpression : public Expression {
     [[nodiscard]] auto has_catch_all() const noexcept -> bool { return catch_all_.has_value(); }
     [[nodiscard]] auto get_catch_all() const noexcept -> Optional<const Statement&> {
         return catch_all_ ? Optional<const Statement&>{**catch_all_} : nullopt;
+    }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<MatchExpression>(other);
+        const auto  arms_eq =
+            std::ranges::equal(arms_, casted.arms_, [](const auto& a, const auto& b) {
+                return *a.pattern_ == *b.pattern_ && *a.dispatch_ == *b.dispatch_;
+            });
+        return *matcher_ == *casted.matcher_ && arms_eq &&
+               optional::unsafe_eq<Statement>(catch_all_, casted.catch_all_);
     }
 
   private:

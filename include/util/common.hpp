@@ -40,6 +40,11 @@ template <typename T, typename... Args> constexpr Rc<T> make_rc(Args&&... args) 
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
+template <class... Ts> struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 template <typename... Args> auto todo_impl(Optional<std::string_view> message) noexcept -> void {
     if (message) { std::cerr << "TODO: " << *message << "\n"; }
     assert(false);

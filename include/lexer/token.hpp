@@ -8,6 +8,7 @@
 #include "util/diagnostic.hpp"
 #include "util/enum.hpp"
 #include "util/expected.hpp"
+#include "util/optional.hpp"
 
 namespace conch {
 
@@ -16,7 +17,7 @@ enum class TokenError : u8 {
     UNEXPECTED_CHAR,
 };
 
-enum class TokenType : u16 {
+enum class TokenType : u8 {
     END,
 
     IDENT,
@@ -34,7 +35,7 @@ enum class TokenType : u16 {
     UZINT_16,
     FLOAT,
     STRING,
-    CHARACTER,
+    BYTE,
 
     ASSIGN,
     WALRUS,
@@ -125,7 +126,6 @@ enum class TokenType : u16 {
     ORELSE,
     DO,
     AS,
-    NAMESPACE,
 
     INT_TYPE,
     UINT_TYPE,
@@ -157,7 +157,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Base;
+auto to_base(TokenType type) noexcept -> Optional<Base>;
 auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
 auto is_signed_int(TokenType t) noexcept -> bool;
 auto is_unsigned_int(TokenType t) noexcept -> bool;
@@ -166,18 +166,35 @@ auto is_int(TokenType t) noexcept -> bool;
 
 } // namespace token_type
 
+struct MinimalSourceLocation {
+    usize line   = 0;
+    usize column = 0;
+
+    auto operator==(const MinimalSourceLocation& other) const noexcept -> bool {
+        return line == other.line && column == other.column;
+    }
+
+    [[nodiscard]] auto at_start() const noexcept -> bool { return line == 0 && column == 0; }
+};
+
 struct Token {
-    TokenType        type;
-    std::string_view slice;
-    usize            line;
-    usize            column;
+    TokenType             type{};
+    std::string_view      slice{};
+    MinimalSourceLocation location{};
+
+    Token() noexcept = default;
+    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {};
+    Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
+        : type{tt}, slice{slice}, location{.line = line, .column = column} {}
+
+    [[nodiscard]] auto get_line() const noexcept -> usize { return location.line; }
+    [[nodiscard]] auto get_column() const noexcept -> usize { return location.column; }
 
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
-    auto               primitive() const noexcept -> bool;
+    auto               is_primitive() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {
-        return type == other.type && slice == other.slice && line == other.line &&
-               column == other.column;
+        return type == other.type && slice == other.slice && location == other.location;
     }
 };
 
@@ -188,6 +205,8 @@ template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
 
     template <typename F> auto format(const conch::Token& t, F& ctx) const {
         return std::formatter<std::string>::format(
-            std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line, t.column), ctx);
+            std::format(
+                "{}({}) [{}, {}]", enum_name(t.type), t.slice, t.get_line(), t.get_column()),
+            ctx);
     }
 };

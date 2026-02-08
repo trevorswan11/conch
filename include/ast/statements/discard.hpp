@@ -13,7 +13,7 @@ namespace conch::ast {
 class DiscardStatement : public Statement {
   public:
     explicit DiscardStatement(const Token& start_token, Box<Expression> discarded) noexcept
-        : Statement{start_token}, discarded_{std::move(discarded)} {}
+        : Statement{start_token, NodeKind::DISCARD_STATEMENT}, discarded_{std::move(discarded)} {}
 
     auto accept(Visitor& v) const -> void override;
 
@@ -21,6 +21,11 @@ class DiscardStatement : public Statement {
         -> Expected<Box<DiscardStatement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_discarded() const noexcept -> const Expression& { return *discarded_; }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<DiscardStatement>(other);
+        return *discarded_ == *casted.discarded_;
+    }
 
   private:
     Box<Expression> discarded_;

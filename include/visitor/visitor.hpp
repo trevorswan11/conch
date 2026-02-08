@@ -1,7 +1,6 @@
 #pragma once
 
-namespace conch {
-namespace ast {
+namespace conch::ast {
 
 class ArrayExpression;
 class AssignmentExpression;
@@ -19,11 +18,12 @@ class InfiniteLoopExpression;
 class MatchExpression;
 class PrefixExpression;
 class StringExpression;
-class IntegerExpression;
+class SignedIntegerExpression;
+class UnsignedIntegerExpression;
+class SizeIntegerExpression;
 class ByteExpression;
 class FloatExpression;
 class BoolExpression;
-class VoidExpression;
 class NilExpression;
 class RangeExpression;
 class ScopeResolutionExpression;
@@ -37,9 +37,10 @@ class DiscardStatement;
 class ExpressionStatement;
 class ImportStatement;
 class JumpStatement;
-class NamespaceStatement;
 
-} // namespace ast
+} // namespace conch::ast
+
+namespace conch {
 
 class Visitor {
   public:
@@ -60,11 +61,12 @@ class Visitor {
     virtual auto visit(const ast::MatchExpression&) -> void           = 0;
     virtual auto visit(const ast::PrefixExpression&) -> void          = 0;
     virtual auto visit(const ast::StringExpression&) -> void          = 0;
-    virtual auto visit(const ast::IntegerExpression&) -> void         = 0;
+    virtual auto visit(const ast::SignedIntegerExpression&) -> void   = 0;
+    virtual auto visit(const ast::UnsignedIntegerExpression&) -> void = 0;
+    virtual auto visit(const ast::SizeIntegerExpression&) -> void     = 0;
     virtual auto visit(const ast::ByteExpression&) -> void            = 0;
     virtual auto visit(const ast::FloatExpression&) -> void           = 0;
     virtual auto visit(const ast::BoolExpression&) -> void            = 0;
-    virtual auto visit(const ast::VoidExpression&) -> void            = 0;
     virtual auto visit(const ast::NilExpression&) -> void             = 0;
     virtual auto visit(const ast::RangeExpression&) -> void           = 0;
     virtual auto visit(const ast::ScopeResolutionExpression&) -> void = 0;
@@ -77,7 +79,6 @@ class Visitor {
     virtual auto visit(const ast::ExpressionStatement&) -> void       = 0;
     virtual auto visit(const ast::ImportStatement&) -> void           = 0;
     virtual auto visit(const ast::JumpStatement&) -> void             = 0;
-    virtual auto visit(const ast::NamespaceStatement&) -> void        = 0;
 };
 
 } // namespace conch

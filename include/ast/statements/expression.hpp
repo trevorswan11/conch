@@ -14,7 +14,8 @@ namespace conch::ast {
 class ExpressionStatement : public Statement {
   public:
     explicit ExpressionStatement(const Token& start_token, Box<Expression> expression) noexcept
-        : Statement{start_token}, expression_{std::move(expression)} {}
+        : Statement{start_token, NodeKind::EXPRESSION_STATEMENT},
+          expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 
@@ -22,6 +23,11 @@ class ExpressionStatement : public Statement {
         -> Expected<Box<ExpressionStatement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_expression() const noexcept -> const Expression& { return *expression_; }
+
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = as<ExpressionStatement>(other);
+        return *expression_ == *casted.expression_;
+    }
 
   private:
     Box<Expression> expression_;

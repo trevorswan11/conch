@@ -21,7 +21,7 @@ template <auto V> consteval auto enum_name() noexcept -> std::string_view {
 }
 
 // Returns the name of an enum as a string at runtime.
-template <typename E, int Min = 0, int Max = 256>
+template <typename E, int Min = 0, int Max = 255>
     requires(std::is_scoped_enum_v<E>)
 auto enum_name(E value) noexcept -> std::string_view {
     using U = std::underlying_type_t<E>;

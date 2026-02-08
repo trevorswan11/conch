@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 
 #include "ast/expressions/function.hpp"
@@ -23,7 +24,7 @@ FunctionExpression::FunctionExpression(const Token&                   start_toke
                                        std::vector<FunctionParameter> parameters,
                                        Box<TypeExpression>            return_type,
                                        Optional<Box<BlockStatement>>  body) noexcept
-    : Expression{start_token}, parameters_{std::move(parameters)},
+    : Expression{start_token, NodeKind::FUNCTION_EXPRESSION}, parameters_{std::move(parameters)},
       return_type_{std::move(return_type)}, body_{std::move(body)} {}
 
 FunctionExpression::~FunctionExpression() = default;
@@ -33,6 +34,17 @@ auto FunctionExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 auto FunctionExpression::parse(Parser& parser)
     -> Expected<Box<FunctionExpression>, ParserDiagnostic> {
     TODO(parser);
+}
+
+auto FunctionExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<FunctionExpression>(other);
+    const auto  parameters_eq =
+        std::ranges::equal(parameters_, casted.parameters_, [](const auto& a, const auto& b) {
+            return a.reference_ == b.reference_ && *a.name_ == *b.name_ && *a.type_ == *b.type_ &&
+                   optional::unsafe_eq<Expression>(a.default_value_, b.default_value_);
+        });
+    return parameters_eq && *return_type_ == *casted.return_type_ &&
+           optional::unsafe_eq<BlockStatement>(body_, casted.body_);
 }
 
 } // namespace conch::ast

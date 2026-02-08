@@ -88,6 +88,8 @@ class DeclStatement : public Statement {
         return it == LEGAL_MODIFIERS.end() ? nullopt : Optional<DeclModifiers>{it->second};
     }
 
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
   private:
     using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
     static constexpr auto LEGAL_MODIFIERS = std::array{
