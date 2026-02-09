@@ -10,21 +10,21 @@ namespace conch {
 
 auto base_idx(Base base) noexcept -> int {
     switch (base) {
-    case Base::UNKNOWN: return -1;
-    case Base::BINARY: return 0;
-    case Base::OCTAL: return 1;
-    case Base::DECIMAL: return 2;
+    case Base::UNKNOWN:     return -1;
+    case Base::BINARY:      return 0;
+    case Base::OCTAL:       return 1;
+    case Base::DECIMAL:     return 2;
     case Base::HEXADECIMAL: return 3;
     }
 }
 
 auto digit_in_base(byte c, Base base) noexcept -> bool {
     switch (base) {
-    case Base::BINARY: return c == '0' || c == '1';
-    case Base::OCTAL: return c >= '0' && c <= '7';
-    case Base::DECIMAL: return std::isdigit(c);
+    case Base::BINARY:      return c == '0' || c == '1';
+    case Base::OCTAL:       return c >= '0' && c <= '7';
+    case Base::DECIMAL:     return std::isdigit(c);
     case Base::HEXADECIMAL: return std::isxdigit(c);
-    default: std::unreachable();
+    default:                std::unreachable();
     }
 }
 
@@ -34,17 +34,17 @@ auto to_base(TokenType type) noexcept -> Optional<Base> {
     switch (type) {
     case TokenType::INT_2:
     case TokenType::UINT_2:
-    case TokenType::UZINT_2: return Base::BINARY;
+    case TokenType::UZINT_2:  return Base::BINARY;
     case TokenType::INT_8:
     case TokenType::UINT_8:
-    case TokenType::UZINT_8: return Base::OCTAL;
+    case TokenType::UZINT_8:  return Base::OCTAL;
     case TokenType::INT_10:
     case TokenType::UINT_10:
     case TokenType::UZINT_10: return Base::DECIMAL;
     case TokenType::INT_16:
     case TokenType::UINT_16:
     case TokenType::UZINT_16: return Base::HEXADECIMAL;
-    default: return nullopt;
+    default:                  return nullopt;
     }
 }
 
@@ -60,7 +60,7 @@ auto misc_from_char(byte c) noexcept -> Optional<TokenType> {
     case '[': return TokenType::LBRACKET;
     case ']': return TokenType::RBRACKET;
     case '_': return TokenType::UNDERSCORE;
-    default: return nullopt;
+    default:  return nullopt;
     }
 }
 

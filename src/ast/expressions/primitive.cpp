@@ -91,14 +91,14 @@ auto ByteExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
     const auto escaped = slice[2];
     byte       value;
     switch (escaped) {
-    case 'n': value = '\n'; break;
-    case 'r': value = '\r'; break;
-    case 't': value = '\t'; break;
+    case 'n':  value = '\n'; break;
+    case 'r':  value = '\r'; break;
+    case 't':  value = '\t'; break;
     case '\\': value = '\\'; break;
     case '\'': value = '\''; break;
-    case '"': value = '"'; break;
-    case '0': value = '\0'; break;
-    default: return make_parser_unexpected(ParserError::UNKNOWN_CHARACTER_ESCAPE, start_token);
+    case '"':  value = '"'; break;
+    case '0':  value = '\0'; break;
+    default:   return make_parser_unexpected(ParserError::UNKNOWN_CHARACTER_ESCAPE, start_token);
     }
 
     return make_box<ByteExpression>(start_token, value);

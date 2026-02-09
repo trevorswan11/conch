@@ -108,14 +108,14 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     case TokenType::CONST:
     case TokenType::PRIVATE:
     case TokenType::EXTERN:
-    case TokenType::EXPORT: return ast::DeclStatement::parse(*this);
+    case TokenType::EXPORT:     return ast::DeclStatement::parse(*this);
     case TokenType::BREAK:
     case TokenType::RETURN:
-    case TokenType::CONTINUE: return ast::JumpStatement::parse(*this);
-    case TokenType::IMPORT: return ast::ImportStatement::parse(*this);
-    case TokenType::LBRACE: return ast::BlockStatement::parse(*this);
+    case TokenType::CONTINUE:   return ast::JumpStatement::parse(*this);
+    case TokenType::IMPORT:     return ast::ImportStatement::parse(*this);
+    case TokenType::LBRACE:     return ast::BlockStatement::parse(*this);
     case TokenType::UNDERSCORE: return ast::DiscardStatement::parse(*this);
-    default: return ast::ExpressionStatement::parse(*this);
+    default:                    return ast::ExpressionStatement::parse(*this);
     }
 
     std::unreachable();

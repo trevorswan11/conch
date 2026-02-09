@@ -1,11 +1,14 @@
 #include <catch_amalgamated.hpp>
 
+#include <string_view>
 #include <utility>
 
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
 using namespace conch;
+
+using ExpectedLexeme = std::pair<TokenType, std::string_view>;
 
 TEST_CASE("Illegal characters") {
     const auto input{"月😭🎶"};
@@ -27,9 +30,7 @@ TEST_CASE("Lexer over-consumption") {
     Lexer      l{input};
 
     l.consume();
-    for (size_t i = 0; i < 100; ++i) {
-        REQUIRE(l.advance().type == TokenType::END);
-    }
+    for (size_t i = 0; i < 100; ++i) { REQUIRE(l.advance().type == TokenType::END); }
 }
 
 TEST_CASE("Basic next token and lexer consuming") {
@@ -37,18 +38,15 @@ TEST_CASE("Basic next token and lexer consuming") {
         const auto input{"=+(){}[],;: !-/*<>_"};
         Lexer      l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::ASSIGN, "="},   std::pair{TokenType::PLUS, "+"},
-            std::pair{TokenType::LPAREN, "("},   std::pair{TokenType::RPAREN, ")"},
-            std::pair{TokenType::LBRACE, "{"},   std::pair{TokenType::RBRACE, "}"},
-            std::pair{TokenType::LBRACKET, "["}, std::pair{TokenType::RBRACKET, "]"},
-            std::pair{TokenType::COMMA, ","},    std::pair{TokenType::SEMICOLON, ";"},
-            std::pair{TokenType::COLON, ":"},    std::pair{TokenType::BANG, "!"},
-            std::pair{TokenType::MINUS, "-"},    std::pair{TokenType::SLASH, "/"},
-            std::pair{TokenType::STAR, "*"},     std::pair{TokenType::LT, "<"},
-            std::pair{TokenType::GT, ">"},       std::pair{TokenType::UNDERSCORE, "_"},
-            std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::ASSIGN, "="},    {TokenType::PLUS, "+"},     {TokenType::LPAREN, "("},
+            {TokenType::RPAREN, ")"},    {TokenType::LBRACE, "{"},   {TokenType::RBRACE, "}"},
+            {TokenType::LBRACKET, "["},  {TokenType::RBRACKET, "]"}, {TokenType::COMMA, ","},
+            {TokenType::SEMICOLON, ";"}, {TokenType::COLON, ":"},    {TokenType::BANG, "!"},
+            {TokenType::MINUS, "-"},     {TokenType::SLASH, "/"},    {TokenType::STAR, "*"},
+            {TokenType::LT, "<"},        {TokenType::GT, ">"},       {TokenType::UNDERSCORE, "_"},
+            {TokenType::END, ""},
+        });
 
         for (const auto& [expected_tok, expected_slice] : expecteds) {
             const auto token = l.advance();
@@ -67,29 +65,29 @@ TEST_CASE("Basic next token and lexer consuming") {
                          "var four_and_some = 4.2;"};
         Lexer      l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::CONST, "const"}, std::pair{TokenType::IDENT, "five"},
-            std::pair{TokenType::ASSIGN, "="},    std::pair{TokenType::INT_10, "5"},
-            std::pair{TokenType::SEMICOLON, ";"}, std::pair{TokenType::VAR, "var"},
-            std::pair{TokenType::IDENT, "ten"},   std::pair{TokenType::ASSIGN, "="},
-            std::pair{TokenType::INT_10, "10"},   std::pair{TokenType::SEMICOLON, ";"},
-            std::pair{TokenType::VAR, "var"},     std::pair{TokenType::IDENT, "add"},
-            std::pair{TokenType::ASSIGN, "="},    std::pair{TokenType::FUNCTION, "fn"},
-            std::pair{TokenType::LPAREN, "("},    std::pair{TokenType::IDENT, "x"},
-            std::pair{TokenType::COMMA, ","},     std::pair{TokenType::IDENT, "y"},
-            std::pair{TokenType::RPAREN, ")"},    std::pair{TokenType::LBRACE, "{"},
-            std::pair{TokenType::IDENT, "x"},     std::pair{TokenType::PLUS, "+"},
-            std::pair{TokenType::IDENT, "y"},     std::pair{TokenType::SEMICOLON, ";"},
-            std::pair{TokenType::RBRACE, "}"},    std::pair{TokenType::SEMICOLON, ";"},
-            std::pair{TokenType::VAR, "var"},     std::pair{TokenType::IDENT, "result"},
-            std::pair{TokenType::ASSIGN, "="},    std::pair{TokenType::IDENT, "add"},
-            std::pair{TokenType::LPAREN, "("},    std::pair{TokenType::IDENT, "five"},
-            std::pair{TokenType::COMMA, ","},     std::pair{TokenType::IDENT, "ten"},
-            std::pair{TokenType::RPAREN, ")"},    std::pair{TokenType::SEMICOLON, ";"},
-            std::pair{TokenType::VAR, "var"},     std::pair{TokenType::IDENT, "four_and_some"},
-            std::pair{TokenType::ASSIGN, "="},    std::pair{TokenType::FLOAT, "4.2"},
-            std::pair{TokenType::SEMICOLON, ";"}, std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::CONST, "const"}, {TokenType::IDENT, "five"},
+            {TokenType::ASSIGN, "="},    {TokenType::INT_10, "5"},
+            {TokenType::SEMICOLON, ";"}, {TokenType::VAR, "var"},
+            {TokenType::IDENT, "ten"},   {TokenType::ASSIGN, "="},
+            {TokenType::INT_10, "10"},   {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},     {TokenType::IDENT, "add"},
+            {TokenType::ASSIGN, "="},    {TokenType::FUNCTION, "fn"},
+            {TokenType::LPAREN, "("},    {TokenType::IDENT, "x"},
+            {TokenType::COMMA, ","},     {TokenType::IDENT, "y"},
+            {TokenType::RPAREN, ")"},    {TokenType::LBRACE, "{"},
+            {TokenType::IDENT, "x"},     {TokenType::PLUS, "+"},
+            {TokenType::IDENT, "y"},     {TokenType::SEMICOLON, ";"},
+            {TokenType::RBRACE, "}"},    {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},     {TokenType::IDENT, "result"},
+            {TokenType::ASSIGN, "="},    {TokenType::IDENT, "add"},
+            {TokenType::LPAREN, "("},    {TokenType::IDENT, "five"},
+            {TokenType::COMMA, ","},     {TokenType::IDENT, "ten"},
+            {TokenType::RPAREN, ")"},    {TokenType::SEMICOLON, ";"},
+            {TokenType::VAR, "var"},     {TokenType::IDENT, "four_and_some"},
+            {TokenType::ASSIGN, "="},    {TokenType::FLOAT, "4.2"},
+            {TokenType::SEMICOLON, ";"}, {TokenType::END, ""},
+        });
 
         Lexer      l_accumulator{input};
         const auto accumulated_tokens = l_accumulator.consume();
@@ -116,19 +114,19 @@ TEST_CASE("Base-10 ints and floats") {
         const auto input{"0 123 3.14 42.0 1e20 1.e-3 2.3901E4 1e."};
         Lexer      l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::INT_10, "0"},
-            std::pair{TokenType::INT_10, "123"},
-            std::pair{TokenType::FLOAT, "3.14"},
-            std::pair{TokenType::FLOAT, "42.0"},
-            std::pair{TokenType::FLOAT, "1e20"},
-            std::pair{TokenType::FLOAT, "1.e-3"},
-            std::pair{TokenType::FLOAT, "2.3901E4"},
-            std::pair{TokenType::INT_10, "1"},
-            std::pair{TokenType::IDENT, "e"},
-            std::pair{TokenType::DOT, "."},
-            std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::INT_10, "0"},
+            {TokenType::INT_10, "123"},
+            {TokenType::FLOAT, "3.14"},
+            {TokenType::FLOAT, "42.0"},
+            {TokenType::FLOAT, "1e20"},
+            {TokenType::FLOAT, "1.e-3"},
+            {TokenType::FLOAT, "2.3901E4"},
+            {TokenType::INT_10, "1"},
+            {TokenType::IDENT, "e"},
+            {TokenType::DOT, "."},
+            {TokenType::END, ""},
+        });
 
         for (const auto& [expected_token, expected_slice] : expecteds) {
             const auto token = l.advance();
@@ -141,19 +139,19 @@ TEST_CASE("Base-10 ints and floats") {
         const auto input{".0 1..2 3.4.5 3.4u"};
         Lexer      l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::DOT, "."},
-            std::pair{TokenType::INT_10, "0"},
-            std::pair{TokenType::INT_10, "1"},
-            std::pair{TokenType::DOT_DOT, ".."},
-            std::pair{TokenType::INT_10, "2"},
-            std::pair{TokenType::FLOAT, "3.4"},
-            std::pair{TokenType::DOT, "."},
-            std::pair{TokenType::INT_10, "5"},
-            std::pair{TokenType::FLOAT, "3.4"},
-            std::pair{TokenType::IDENT, "u"},
-            std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::DOT, "."},
+            {TokenType::INT_10, "0"},
+            {TokenType::INT_10, "1"},
+            {TokenType::DOT_DOT, ".."},
+            {TokenType::INT_10, "2"},
+            {TokenType::FLOAT, "3.4"},
+            {TokenType::DOT, "."},
+            {TokenType::INT_10, "5"},
+            {TokenType::FLOAT, "3.4"},
+            {TokenType::IDENT, "u"},
+            {TokenType::END, ""},
+        });
 
         for (const auto& [expected_token, expected_slice] : expecteds) {
             const auto token = l.advance();
@@ -168,18 +166,18 @@ TEST_CASE("Integer base variants") {
         const auto input{"0b1010 0o17 0O17 42 0x2A 0X2A 0b 0x 0o"};
         Lexer      l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::INT_2, "0b1010"},
-            std::pair{TokenType::INT_8, "0o17"},
-            std::pair{TokenType::INT_8, "0O17"},
-            std::pair{TokenType::INT_10, "42"},
-            std::pair{TokenType::INT_16, "0x2A"},
-            std::pair{TokenType::INT_16, "0X2A"},
-            std::pair{TokenType::ILLEGAL, "0b"},
-            std::pair{TokenType::ILLEGAL, "0x"},
-            std::pair{TokenType::ILLEGAL, "0o"},
-            std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::INT_2, "0b1010"},
+            {TokenType::INT_8, "0o17"},
+            {TokenType::INT_8, "0O17"},
+            {TokenType::INT_10, "42"},
+            {TokenType::INT_16, "0x2A"},
+            {TokenType::INT_16, "0X2A"},
+            {TokenType::ILLEGAL, "0b"},
+            {TokenType::ILLEGAL, "0x"},
+            {TokenType::ILLEGAL, "0o"},
+            {TokenType::END, ""},
+        });
 
         for (const auto& [expected_token, expected_slice] : expecteds) {
             const auto token = l.advance();
@@ -193,26 +191,26 @@ TEST_CASE("Integer base variants") {
             "0b1010u 0b1010uz 0o17u 0o17uz 0O17u 42u 42UZ 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou"};
         Lexer l{input};
 
-        const auto expecteds = std::array{
-            std::pair{TokenType::UINT_2, "0b1010u"},
-            std::pair{TokenType::UZINT_2, "0b1010uz"},
-            std::pair{TokenType::UINT_8, "0o17u"},
-            std::pair{TokenType::UZINT_8, "0o17uz"},
-            std::pair{TokenType::UINT_8, "0O17u"},
-            std::pair{TokenType::UINT_10, "42u"},
-            std::pair{TokenType::UZINT_10, "42UZ"},
-            std::pair{TokenType::UINT_16, "0x2AU"},
-            std::pair{TokenType::UINT_16, "0X2Au"},
-            std::pair{TokenType::UINT_10, "123u"},
-            std::pair{TokenType::IDENT, "foo"},
-            std::pair{TokenType::ILLEGAL, "0b"},
-            std::pair{TokenType::IDENT, "u"},
-            std::pair{TokenType::ILLEGAL, "0x"},
-            std::pair{TokenType::IDENT, "u"},
-            std::pair{TokenType::ILLEGAL, "0o"},
-            std::pair{TokenType::IDENT, "u"},
-            std::pair{TokenType::END, ""},
-        };
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::UINT_2, "0b1010u"},
+            {TokenType::UZINT_2, "0b1010uz"},
+            {TokenType::UINT_8, "0o17u"},
+            {TokenType::UZINT_8, "0o17uz"},
+            {TokenType::UINT_8, "0O17u"},
+            {TokenType::UINT_10, "42u"},
+            {TokenType::UZINT_10, "42UZ"},
+            {TokenType::UINT_16, "0x2AU"},
+            {TokenType::UINT_16, "0X2Au"},
+            {TokenType::UINT_10, "123u"},
+            {TokenType::IDENT, "foo"},
+            {TokenType::ILLEGAL, "0b"},
+            {TokenType::IDENT, "u"},
+            {TokenType::ILLEGAL, "0x"},
+            {TokenType::IDENT, "u"},
+            {TokenType::ILLEGAL, "0o"},
+            {TokenType::IDENT, "u"},
+            {TokenType::END, ""},
+        });
 
         for (const auto& [expected_token, expected_slice] : expecteds) {
             const auto token = l.advance();
@@ -226,12 +224,12 @@ TEST_CASE("Iterator with other keywords") {
     const auto input{"private extern export packed"};
     Lexer      l{input};
 
-    const auto expecteds = std::array{
-        std::pair{TokenType::PRIVATE, "private"},
-        std::pair{TokenType::EXTERN, "extern"},
-        std::pair{TokenType::EXPORT, "export"},
-        std::pair{TokenType::PACKED, "packed"},
-    };
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::PRIVATE, "private"},
+        {TokenType::EXTERN, "extern"},
+        {TokenType::EXPORT, "export"},
+        {TokenType::PACKED, "packed"},
+    });
 
     size_t i = 0;
     for (const auto& token : l) {
@@ -244,63 +242,40 @@ TEST_CASE("Iterator with other keywords") {
 TEST_CASE("Comments") {
     const auto input{"const five = 5;\n"
                      "var ten_10 = 10;\n\n"
-                     "// Comment on a new line\n"
+                     "// BOL\n"
                      "var add = fn(x, y) {\n"
                      "   x + y;\n"
                      "};\n\n"
-                     "var result = add(five, ten); // This is an end of line comment\n"
+                     "var result = add(five, ten); // EOL\n"
                      "var four_and_some = 4.2;\n"
                      "work;"};
     Lexer      l{input};
 
-    const auto expecteds = std::array{
-        std::pair{TokenType::CONST, "const"},
-        std::pair{TokenType::IDENT, "five"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::INT_10, "5"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "ten_10"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::INT_10, "10"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::COMMENT, " Comment on a new line"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "add"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::FUNCTION, "fn"},
-        std::pair{TokenType::LPAREN, "("},
-        std::pair{TokenType::IDENT, "x"},
-        std::pair{TokenType::COMMA, ","},
-        std::pair{TokenType::IDENT, "y"},
-        std::pair{TokenType::RPAREN, ")"},
-        std::pair{TokenType::LBRACE, "{"},
-        std::pair{TokenType::IDENT, "x"},
-        std::pair{TokenType::PLUS, "+"},
-        std::pair{TokenType::IDENT, "y"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::RBRACE, "}"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "result"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::IDENT, "add"},
-        std::pair{TokenType::LPAREN, "("},
-        std::pair{TokenType::IDENT, "five"},
-        std::pair{TokenType::COMMA, ","},
-        std::pair{TokenType::IDENT, "ten"},
-        std::pair{TokenType::RPAREN, ")"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::COMMENT, " This is an end of line comment"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "four_and_some"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::FLOAT, "4.2"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::IDENT, "work"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::END, ""},
-    };
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::CONST, "const"},  {TokenType::IDENT, "five"},
+        {TokenType::ASSIGN, "="},     {TokenType::INT_10, "5"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::VAR, "var"},
+        {TokenType::IDENT, "ten_10"}, {TokenType::ASSIGN, "="},
+        {TokenType::INT_10, "10"},    {TokenType::SEMICOLON, ";"},
+        {TokenType::COMMENT, " BOL"}, {TokenType::VAR, "var"},
+        {TokenType::IDENT, "add"},    {TokenType::ASSIGN, "="},
+        {TokenType::FUNCTION, "fn"},  {TokenType::LPAREN, "("},
+        {TokenType::IDENT, "x"},      {TokenType::COMMA, ","},
+        {TokenType::IDENT, "y"},      {TokenType::RPAREN, ")"},
+        {TokenType::LBRACE, "{"},     {TokenType::IDENT, "x"},
+        {TokenType::PLUS, "+"},       {TokenType::IDENT, "y"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::RBRACE, "}"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::VAR, "var"},
+        {TokenType::IDENT, "result"}, {TokenType::ASSIGN, "="},
+        {TokenType::IDENT, "add"},    {TokenType::LPAREN, "("},
+        {TokenType::IDENT, "five"},   {TokenType::COMMA, ","},
+        {TokenType::IDENT, "ten"},    {TokenType::RPAREN, ")"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::COMMENT, " EOL"},
+        {TokenType::VAR, "var"},      {TokenType::IDENT, "four_and_some"},
+        {TokenType::ASSIGN, "="},     {TokenType::FLOAT, "4.2"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::IDENT, "work"},
+        {TokenType::SEMICOLON, ";"},  {TokenType::END, ""},
+    });
 
     for (const auto& [expected_token, expected_slice] : expecteds) {
         const auto token = l.advance();
@@ -315,28 +290,28 @@ TEST_CASE("Character literals") {
                      "var'asd'"};
     Lexer      l{input};
 
-    const auto expecteds = std::array{
-        std::pair{TokenType::IF, "if"},
-        std::pair{TokenType::BYTE, "'e'"},
-        std::pair{TokenType::ELSE, "else"},
-        std::pair{TokenType::ILLEGAL, "'\\'"},
-        std::pair{TokenType::RETURN, "return"},
-        std::pair{TokenType::BYTE, "'\\r'"},
-        std::pair{TokenType::BREAK, "break"},
-        std::pair{TokenType::BYTE, "'\\n'"},
-        std::pair{TokenType::CONTINUE, "continue"},
-        std::pair{TokenType::BYTE, "'\\0'"},
-        std::pair{TokenType::FOR, "for"},
-        std::pair{TokenType::BYTE, "'\\''"},
-        std::pair{TokenType::WHILE, "while"},
-        std::pair{TokenType::BYTE, "'\\\\'"},
-        std::pair{TokenType::CONST, "const"},
-        std::pair{TokenType::ILLEGAL, "'"},
-        std::pair{TokenType::ILLEGAL, "'"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::ILLEGAL, "'asd'"},
-        std::pair{TokenType::END, ""},
-    };
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::IF, "if"},
+        {TokenType::BYTE, "'e'"},
+        {TokenType::ELSE, "else"},
+        {TokenType::ILLEGAL, "'\\'"},
+        {TokenType::RETURN, "return"},
+        {TokenType::BYTE, "'\\r'"},
+        {TokenType::BREAK, "break"},
+        {TokenType::BYTE, "'\\n'"},
+        {TokenType::CONTINUE, "continue"},
+        {TokenType::BYTE, "'\\0'"},
+        {TokenType::FOR, "for"},
+        {TokenType::BYTE, "'\\''"},
+        {TokenType::WHILE, "while"},
+        {TokenType::BYTE, "'\\\\'"},
+        {TokenType::CONST, "const"},
+        {TokenType::ILLEGAL, "'"},
+        {TokenType::ILLEGAL, "'"},
+        {TokenType::VAR, "var"},
+        {TokenType::ILLEGAL, "'asd'"},
+        {TokenType::END, ""},
+    });
 
     for (const auto& [expected_token, expected_slice] : expecteds) {
         const auto token = l.advance();
@@ -350,25 +325,25 @@ TEST_CASE("String literals") {
         R"("This is a string";const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)"};
     Lexer l{input};
 
-    const auto expecteds = std::array{
-        std::pair{TokenType::STRING, R"("This is a string")"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::CONST, "const"},
-        std::pair{TokenType::IDENT, "five"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::STRING, R"("Hello, World!")"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "ten"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::STRING, R"("Hello\n, World!\0")"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "one"},
-        std::pair{TokenType::WALRUS, ":="},
-        std::pair{TokenType::ILLEGAL, R"("Hello, World!;)"},
-        std::pair{TokenType::END, ""},
-    };
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::STRING, R"("This is a string")"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::CONST, "const"},
+        {TokenType::IDENT, "five"},
+        {TokenType::ASSIGN, "="},
+        {TokenType::STRING, R"("Hello, World!")"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::VAR, "var"},
+        {TokenType::IDENT, "ten"},
+        {TokenType::ASSIGN, "="},
+        {TokenType::STRING, R"("Hello\n, World!\0")"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::VAR, "var"},
+        {TokenType::IDENT, "one"},
+        {TokenType::WALRUS, ":="},
+        {TokenType::ILLEGAL, R"("Hello, World!;)"},
+        {TokenType::END, ""},
+    });
 
     for (const auto& [expected_token, expected_slice] : expecteds) {
         const auto token = l.advance();
@@ -388,24 +363,24 @@ TEST_CASE("Multiline string literals") {
                      ";\n"};
     Lexer      l{input};
 
-    const auto expecteds = std::array{
-        std::pair{TokenType::CONST, "const"},
-        std::pair{TokenType::IDENT, "five"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::MULTILINE_STRING, "Multiline stringing"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::VAR, "var"},
-        std::pair{TokenType::IDENT, "ten"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::MULTILINE_STRING, "Multiline stringing\n\\\\Continuation"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::CONST, "const"},
-        std::pair{TokenType::IDENT, "one"},
-        std::pair{TokenType::ASSIGN, "="},
-        std::pair{TokenType::MULTILINE_STRING, "Nesting \" \' \\ [] const var\n\\\\"},
-        std::pair{TokenType::SEMICOLON, ";"},
-        std::pair{TokenType::END, ""},
-    };
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::CONST, "const"},
+        {TokenType::IDENT, "five"},
+        {TokenType::ASSIGN, "="},
+        {TokenType::MULTILINE_STRING, "Multiline stringing"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::VAR, "var"},
+        {TokenType::IDENT, "ten"},
+        {TokenType::ASSIGN, "="},
+        {TokenType::MULTILINE_STRING, "Multiline stringing\n\\\\Continuation"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::CONST, "const"},
+        {TokenType::IDENT, "one"},
+        {TokenType::ASSIGN, "="},
+        {TokenType::MULTILINE_STRING, "Nesting \" \' \\ [] const var\n\\\\"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::END, ""},
+    });
 
     for (const auto& [expected_token, expected_slice] : expecteds) {
         const auto token = l.advance();

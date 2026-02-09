@@ -3,10 +3,16 @@ BreakBeforeBraces: Attach
 ColumnLimit: 100
 AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
 AllowShortBlocksOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortEnumsOnASingleLine: false
+AllowShortCaseExpressionOnASingleLine: true
+AlignConsecutiveShortCaseStatements:
+    Enabled: true
+    AcrossEmptyLines: true
+    AcrossComments: true
+    AlignCaseColons: false
+AllowShortEnumsOnASingleLine: true
 AllowAllConstructorInitializersOnNextLine: true
 BinPackArguments: false
 BinPackParameters: false

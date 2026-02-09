@@ -34,9 +34,7 @@ auto Program::repl() -> void {
         if (trimmed == "exit") { break; }
 
         lexer.reset(trimmed);
-        for (const auto& token : lexer) {
-            std::println("{}", token);
-        }
+        for (const auto& token : lexer) { std::println("{}", token); }
     }
 }
 

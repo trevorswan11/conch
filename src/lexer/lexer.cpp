@@ -23,9 +23,7 @@ auto Lexer::advance() noexcept -> Token {
 
     if (maybe_operator) {
         if (maybe_operator->type == TokenType::END) { return *maybe_operator; }
-        for (size_t i = 0; i < maybe_operator->slice.size(); ++i) {
-            read_character();
-        }
+        for (size_t i = 0; i < maybe_operator->slice.size(); ++i) { read_character(); }
 
         if (maybe_operator->type == TokenType::COMMENT) { return read_comment(); }
         if (maybe_operator->type == TokenType::MULTILINE_STRING) { return read_multiline_string(); }
@@ -59,17 +57,13 @@ auto Lexer::consume() -> std::vector<Token> {
     reset(input_);
 
     std::vector<Token> tokens;
-    do {
-        tokens.emplace_back(advance());
-    } while (tokens.back().type != TokenType::END);
+    do { tokens.emplace_back(advance()); } while (tokens.back().type != TokenType::END);
 
     return tokens;
 }
 
 auto Lexer::skip_whitespace() noexcept -> void {
-    while (std::isspace(current_byte_)) {
-        read_character();
-    }
+    while (std::isspace(current_byte_)) { read_character(); }
 }
 
 auto Lexer::lu_ident(std::string_view ident) noexcept -> TokenType {
@@ -186,9 +180,7 @@ auto Lexer::read_number() noexcept -> Token {
             read_character();
 
             if (current_byte_ == '+' || current_byte_ == '-') { read_character(); }
-            while (std::isdigit(current_byte_)) {
-                read_character();
-            }
+            while (std::isdigit(current_byte_)) { read_character(); }
 
             continue;
         }
@@ -250,9 +242,9 @@ auto Lexer::read_number() noexcept -> Token {
         type = TokenType::FLOAT;
     } else {
         switch (suffix) {
-        case NumberSuffix::NONE: type = TokenType::INT_2; break;
+        case NumberSuffix::NONE:     type = TokenType::INT_2; break;
         case NumberSuffix::UNSIGNED: type = TokenType::UINT_2; break;
-        case NumberSuffix::SIZE: type = TokenType::UZINT_2; break;
+        case NumberSuffix::SIZE:     type = TokenType::UZINT_2; break;
         }
         type = static_cast<TokenType>(std::to_underlying(type) + base_idx(base));
     }
@@ -264,14 +256,14 @@ auto Lexer::read_escape() noexcept -> byte {
     read_character();
 
     switch (current_byte_) {
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 't': return '\t';
+    case 'n':  return '\n';
+    case 'r':  return '\r';
+    case 't':  return '\t';
     case '\\': return '\\';
     case '\'': return '\'';
-    case '"': return '"';
-    case '0': return '\0';
-    default: return current_byte_;
+    case '"':  return '"';
+    case '0':  return '\0';
+    default:   return current_byte_;
     }
 }
 
@@ -398,9 +390,7 @@ auto Lexer::read_comment() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
-    while (current_byte_ != '\n' && current_byte_ != '\0') {
-        read_character();
-    }
+    while (current_byte_ != '\n' && current_byte_ != '\0') { read_character(); }
 
     return {TokenType::COMMENT, input_.substr(start, pos_ - start), start_line, start_col};
 }
