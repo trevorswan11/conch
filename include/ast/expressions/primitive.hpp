@@ -13,6 +13,10 @@
 
 namespace conch::ast {
 
+// A necessarily instantiable Node with an underlying primitive value type.
+template <typename N>
+concept PrimitiveNode = LeafNode<N> && requires { typename N::value_type; };
+
 template <typename Derived, typename T> class PrimitiveExpression : public ExprBase<Derived> {
   public:
     using value_type = T;

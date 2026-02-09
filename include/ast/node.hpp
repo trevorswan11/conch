@@ -54,11 +54,13 @@ enum class NodeKind : u8 {
 
 class Node;
 
+// A type that can be anything in the Node inheritance hierarchy
 template <typename N>
 concept NodeSubtype = std::derived_from<N, Node>;
 
+// A necessarily instantiable Node, meaning it has a NodeKind marker.
 template <typename T>
-concept LeafNode = std::derived_from<T, Node> && requires {
+concept LeafNode = NodeSubtype<T> && requires {
     { T::KIND } -> std::convertible_to<NodeKind>;
 };
 

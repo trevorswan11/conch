@@ -10,12 +10,11 @@
 #include "ast/node.hpp"
 #include "ast/statements/expression.hpp"
 
+#include "ast/expressions/primitive.hpp"
+
 namespace helpers {
 
 using namespace conch;
-
-template <typename N>
-concept Primitive = ast::LeafNode<N> && requires { typename N::value_type; };
 
 template <typename N>
 auto into_expression_statement(const N& node) -> const ast::ExpressionStatement& {
@@ -23,7 +22,7 @@ auto into_expression_statement(const N& node) -> const ast::ExpressionStatement&
     return static_cast<const ast::ExpressionStatement&>(node);
 }
 
-template <Primitive N>
+template <ast::PrimitiveNode N>
 auto test_primitive(std::string_view                                       input,
                     std::string_view                                       node_token_slice,
                     Optional<TokenType>                                    expected_type,
@@ -50,7 +49,7 @@ auto test_primitive(std::string_view                                       input
     REQUIRE(expected == expr_stmt.get_expression());
 }
 
-template <Primitive N>
+template <ast::PrimitiveNode N>
 auto test_primitive(std::string_view                                       input,
                     Optional<TokenType>                                    expected_type,
                     std::variant<typename N::value_type, ParserDiagnostic> expected_value) -> void {
