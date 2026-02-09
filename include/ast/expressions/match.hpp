@@ -29,7 +29,7 @@ class MatchArm {
     friend class MatchExpression;
 };
 
-class MatchExpression : public KindExpression<MatchExpression> {
+class MatchExpression : public ExprBase<MatchExpression> {
   public:
     static constexpr auto KIND = NodeKind::MATCH_EXPRESSION;
 
@@ -38,11 +38,10 @@ class MatchExpression : public KindExpression<MatchExpression> {
                              Box<Expression>          matcher,
                              std::vector<MatchArm>    arms,
                              Optional<Box<Statement>> catch_all) noexcept
-        : KindExpression{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
+        : ExprBase{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
           catch_all_{std::move(catch_all)} {};
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_matcher() const noexcept -> const Expression& { return *matcher_; }

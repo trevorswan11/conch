@@ -11,7 +11,7 @@
 
 namespace conch::ast {
 
-class IndexExpression : public KindExpression<IndexExpression> {
+class IndexExpression : public ExprBase<IndexExpression> {
   public:
     static constexpr auto KIND = NodeKind::INDEX_EXPRESSION;
 
@@ -19,10 +19,9 @@ class IndexExpression : public KindExpression<IndexExpression> {
     explicit IndexExpression(const Token&    start_token,
                              Box<Expression> array,
                              Box<Expression> idx) noexcept
-        : KindExpression{start_token}, array_{std::move(array)}, index_{std::move(idx)} {}
+        : ExprBase{start_token}, array_{std::move(array)}, index_{std::move(idx)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> array)
         -> Expected<Box<Expression>, ParserDiagnostic>;
 

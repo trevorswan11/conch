@@ -15,11 +15,7 @@ class BinaryExpression : public InfixExpression<BinaryExpression> {
     static constexpr auto KIND = NodeKind::BINARY_EXPRESSION;
 
   public:
-    explicit BinaryExpression(const Token&    start_token,
-                              Box<Expression> lhs,
-                              TokenType       op,
-                              Box<Expression> rhs) noexcept
-        : InfixExpression{start_token, std::move(lhs), op, std::move(rhs)} {}
+    using InfixExpression::InfixExpression;
 
     auto accept(Visitor& v) const -> void override;
 

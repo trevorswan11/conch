@@ -23,7 +23,7 @@ ExplicitType::ExplicitType(ExplicitTypeVariant              type,
 ExplicitType::~ExplicitType() = default;
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
-    : KindExpression{start_token}, explicit_{std::move(exp)} {}
+    : ExprBase{start_token}, explicit_{std::move(exp)} {}
 
 TypeExpression::~TypeExpression() = default;
 
@@ -42,7 +42,7 @@ auto TypeExpression::is_equal(const Node& other) const noexcept -> bool {
 
             const auto& btype = b.type_;
             const auto  variant_eq =
-                std::visit(overloaded{
+                std::visit(Overloaded{
                                [&btype](const ExplicitIdentType& v) {
                                    return *v == *std::get<ExplicitIdentType>(btype);
                                },

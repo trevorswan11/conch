@@ -42,7 +42,7 @@ constexpr auto operator|=(DeclModifiers& lhs, DeclModifiers rhs) -> DeclModifier
     return lhs;
 }
 
-class DeclStatement : public KindStatement<DeclStatement> {
+class DeclStatement : public StmtBase<DeclStatement> {
   public:
     static constexpr auto KIND = NodeKind::DECL_STATEMENT;
 
@@ -94,13 +94,13 @@ class DeclStatement : public KindStatement<DeclStatement> {
 
   private:
     using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
-    static constexpr auto LEGAL_MODIFIERS = std::array{
-        ModifierMapping{TokenType::VAR, DeclModifiers::MUTABLE},
-        ModifierMapping{TokenType::CONST, DeclModifiers::CONSTANT},
-        ModifierMapping{TokenType::PRIVATE, DeclModifiers::PRIVATE},
-        ModifierMapping{TokenType::EXTERN, DeclModifiers::EXTERN},
-        ModifierMapping{TokenType::EXPORT, DeclModifiers::EXPORT},
-    };
+    static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
+        {TokenType::VAR, DeclModifiers::MUTABLE},
+        {TokenType::CONST, DeclModifiers::CONSTANT},
+        {TokenType::PRIVATE, DeclModifiers::PRIVATE},
+        {TokenType::EXTERN, DeclModifiers::EXTERN},
+        {TokenType::EXPORT, DeclModifiers::EXPORT},
+    });
 
   private:
     Box<IdentifierExpression> ident_;

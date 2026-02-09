@@ -13,7 +13,7 @@
 
 namespace conch::ast {
 
-class BlockStatement : public KindStatement<BlockStatement> {
+class BlockStatement : public StmtBase<BlockStatement> {
   public:
     static constexpr auto KIND = NodeKind::BLOCK_STATEMENT;
 
@@ -24,7 +24,7 @@ class BlockStatement : public KindStatement<BlockStatement> {
   public:
     explicit BlockStatement(const Token&                start_token,
                             std::vector<Box<Statement>> statements) noexcept
-        : KindStatement{start_token}, statements_{std::move(statements)} {}
+        : StmtBase{start_token}, statements_{std::move(statements)} {}
 
     auto accept(Visitor& v) const -> void override;
 

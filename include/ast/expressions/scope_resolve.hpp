@@ -11,7 +11,7 @@ namespace conch::ast {
 
 class IdentifierExpression;
 
-class ScopeResolutionExpression : public KindExpression<ScopeResolutionExpression> {
+class ScopeResolutionExpression : public ExprBase<ScopeResolutionExpression> {
   public:
     static constexpr auto KIND = NodeKind::SCOPE_RESOLUTION_EXPRESSION;
 

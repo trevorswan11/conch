@@ -38,7 +38,7 @@ class ForLoopCapture {
     friend class ForLoopExpression;
 };
 
-class ForLoopExpression : public KindExpression<ForLoopExpression> {
+class ForLoopExpression : public ExprBase<ForLoopExpression> {
   public:
     static constexpr auto KIND = NodeKind::FOR_LOOP_EXPRESSION;
 

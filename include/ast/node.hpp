@@ -13,11 +13,6 @@ namespace conch { class Visitor; } // namespace conch
 
 namespace conch::ast {
 
-class Node;
-
-template <typename N>
-concept DerivedNode = requires { std::derived_from<N, Node>; };
-
 enum class NodeKind : u8 {
     ARRAY_EXPRESSION,
     ASSIGNMENT_EXPRESSION,
@@ -57,6 +52,16 @@ enum class NodeKind : u8 {
     JUMP_STATEMENT,
 };
 
+class Node;
+
+template <typename N>
+concept NodeSubtype = std::derived_from<N, Node>;
+
+template <typename T>
+concept LeafNode = std::derived_from<T, Node> && requires {
+    { T::KIND } -> std::convertible_to<NodeKind>;
+};
+
 class Node {
   public:
     Node()          = delete;
@@ -76,23 +81,24 @@ class Node {
         if (lhs.kind_ != rhs.kind_) { return false; }
         if (lhs.start_token_.type != rhs.start_token_.type) { return false; }
         if (lhs.start_token_.slice != rhs.start_token_.slice) { return false; }
-
         return lhs.is_equal(rhs);
     }
 
-    template <typename T> auto is() const noexcept -> bool { return kind_ == T::KIND; }
+    template <LeafNode T> auto is() const noexcept -> bool { return kind_ == T::KIND; }
 
   protected:
     explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}
 
     virtual auto is_equal(const Node& other) const noexcept -> bool = 0;
 
-    template <DerivedNode T> static auto as(const Node& n) -> const T& {
+    // A safe alternative to a raw static cast for nodes.
+    template <LeafNode T> static auto as(const Node& n) -> const T& {
+        assert(n.is<T>());
         return static_cast<const T&>(n);
     }
 
-    // Transfers ownership and downcasts a boxed node into the requested type...
-    template <DerivedNode To, DerivedNode From> static auto downcast(Box<From>&& from) -> Box<To> {
+    // Transfers ownership and downcasts a boxed node into the requested type.
+    template <LeafNode To, NodeSubtype From> static auto downcast(Box<From>&& from) -> Box<To> {
         assert(from && from->template is<To>());
         return box_from<To>(from.release());
     }
@@ -102,9 +108,9 @@ class Node {
     const NodeKind kind_;
 };
 
-template <typename Derived, typename Base> class KindNode : public Base {
+template <typename Derived, typename Base> class NodeBase : public Base {
   protected:
-    explicit KindNode(const Token& tok) noexcept : Base{tok, Derived::KIND} {}
+    explicit NodeBase(const Token& tok) noexcept : Base{tok, Derived::KIND} {}
 };
 
 class Expression : public Node {
@@ -114,9 +120,9 @@ class Expression : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
-template <typename Derived> class KindExpression : public KindNode<Derived, Expression> {
+template <typename Derived> class ExprBase : public NodeBase<Derived, Expression> {
   protected:
-    using KindNode<Derived, Expression>::KindNode;
+    using NodeBase<Derived, Expression>::NodeBase;
 };
 
 class Statement : public Node {
@@ -126,14 +132,14 @@ class Statement : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
-template <typename Derived> class KindStatement : public KindNode<Derived, Statement> {
+template <typename Derived> class StmtBase : public NodeBase<Derived, Statement> {
   protected:
-    using KindNode<Derived, Statement>::KindNode;
+    using NodeBase<Derived, Statement>::NodeBase;
 };
 
 } // namespace conch::ast
 
-template <conch::ast::DerivedNode N> struct std::formatter<N> : std::formatter<std::string> {
+template <conch::ast::LeafNode N> struct std::formatter<N> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const N& n, F& ctx) const {

@@ -12,7 +12,7 @@ namespace conch::ast {
 
 class BlockStatement;
 
-class WhileLoopExpression : public KindExpression<WhileLoopExpression> {
+class WhileLoopExpression : public ExprBase<WhileLoopExpression> {
   public:
     static constexpr auto KIND = NodeKind::WHILE_LOOP_EXPRESSION;
 

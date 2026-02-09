@@ -11,7 +11,7 @@
 
 namespace conch::ast {
 
-class ArrayExpression : public KindExpression<ArrayExpression> {
+class ArrayExpression : public ExprBase<ArrayExpression> {
   public:
     static constexpr auto KIND = NodeKind::ARRAY_EXPRESSION;
 
@@ -19,7 +19,7 @@ class ArrayExpression : public KindExpression<ArrayExpression> {
     explicit ArrayExpression(const Token&    start_token,
                              bool            inferred_size,
                              Box<Expression> items) noexcept
-        : KindExpression{start_token}, inferred_size_{inferred_size}, items_{std::move(items)} {}
+        : ExprBase{start_token}, inferred_size_{inferred_size}, items_{std::move(items)} {}
 
     auto accept(Visitor& v) const -> void override;
 

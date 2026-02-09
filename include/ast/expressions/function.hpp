@@ -50,7 +50,7 @@ class FunctionParameter {
     friend class FunctionExpression;
 };
 
-class FunctionExpression : public KindExpression<FunctionExpression> {
+class FunctionExpression : public ExprBase<FunctionExpression> {
   public:
     static constexpr auto KIND = NodeKind::FUNCTION_EXPRESSION;
 

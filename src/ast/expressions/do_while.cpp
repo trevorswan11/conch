@@ -11,7 +11,7 @@ namespace conch::ast {
 DoWhileLoopExpression::DoWhileLoopExpression(const Token&        start_token,
                                              Box<BlockStatement> block,
                                              Box<Expression>     condition) noexcept
-    : KindExpression{start_token}, block_{std::move(block)}, condition_{std::move(condition)} {}
+    : ExprBase{start_token}, block_{std::move(block)}, condition_{std::move(condition)} {}
 
 DoWhileLoopExpression::~DoWhileLoopExpression() = default;
 

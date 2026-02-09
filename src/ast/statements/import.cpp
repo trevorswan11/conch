@@ -10,7 +10,7 @@ namespace conch::ast {
 ImportStatement::ImportStatement(const Token&                           start_token,
                                  std::variant<ModuleImport, UserImport> imported,
                                  Optional<Box<IdentifierExpression>>    alias) noexcept
-    : KindStatement{start_token}, imported_{std::move(imported)}, alias_{std::move(alias)} {}
+    : StmtBase{start_token}, imported_{std::move(imported)}, alias_{std::move(alias)} {}
 
 ImportStatement::~ImportStatement() = default;
 
@@ -46,7 +46,7 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDi
 auto ImportStatement::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted         = as<ImportStatement>(other);
     const auto& other_imported = casted.imported_;
-    const auto  variant_eq     = std::visit(overloaded{
+    const auto  variant_eq     = std::visit(Overloaded{
                                            [&other_imported](const ModuleImport& v) {
                                                return *v == *std::get<ModuleImport>(other_imported);
                                            },

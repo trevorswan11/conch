@@ -12,13 +12,13 @@
 
 namespace conch::ast {
 
-class JumpStatement : public KindStatement<JumpStatement> {
+class JumpStatement : public StmtBase<JumpStatement> {
   public:
     static constexpr auto KIND = NodeKind::JUMP_STATEMENT;
 
   public:
     explicit JumpStatement(const Token& start_token, Optional<Box<Expression>> expression) noexcept
-        : KindStatement{start_token}, expression_{std::move(expression)} {}
+        : StmtBase{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 

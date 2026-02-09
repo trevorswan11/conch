@@ -11,13 +11,13 @@
 
 namespace conch::ast {
 
-class ExpressionStatement : public KindStatement<ExpressionStatement> {
+class ExpressionStatement : public StmtBase<ExpressionStatement> {
   public:
     static constexpr auto KIND = NodeKind::EXPRESSION_STATEMENT;
 
   public:
     explicit ExpressionStatement(const Token& start_token, Box<Expression> expression) noexcept
-        : KindStatement{start_token}, expression_{std::move(expression)} {}
+        : StmtBase{start_token}, expression_{std::move(expression)} {}
 
     auto accept(Visitor& v) const -> void override;
 

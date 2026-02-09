@@ -10,7 +10,7 @@ namespace conch::ast {
 
 InfiniteLoopExpression::InfiniteLoopExpression(const Token&        start_token,
                                                Box<BlockStatement> block) noexcept
-    : KindExpression{start_token}, block_{std::move(block)} {}
+    : ExprBase{start_token}, block_{std::move(block)} {}
 
 InfiniteLoopExpression::~InfiniteLoopExpression() = default;
 

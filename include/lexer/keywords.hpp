@@ -58,22 +58,28 @@ constexpr Keyword PACKED{"packed", TokenType::PACKED};
 
 } // namespace keywords
 
-constexpr auto ALL_KEYWORDS = std::array{
-    keywords::FN,         keywords::VAR,    keywords::CONST,  keywords::STRUCT,
-    keywords::ENUM,       keywords::TRUE,   keywords::FALSE,  keywords::BOOLEAN_AND,
-    keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,     keywords::IF,
-    keywords::ELSE,       keywords::ORELSE, keywords::DO,     keywords::MATCH,
-    keywords::RETURN,     keywords::LOOP,   keywords::FOR,    keywords::WHILE,
-    keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,    keywords::TYPEOF,
-    keywords::IMPORT,     keywords::INT,    keywords::UINT,   keywords::SIZE,
-    keywords::FLOAT,      keywords::BYTE,   keywords::STRING, keywords::BOOL,
-    keywords::VOID,       keywords::TYPE,   keywords::WITH,   keywords::AS,
-    keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::PACKED,
-};
+constexpr auto ALL_KEYWORDS = []() {
+    auto all_keywords = std::array{
+        keywords::FN,         keywords::VAR,    keywords::CONST,  keywords::STRUCT,
+        keywords::ENUM,       keywords::TRUE,   keywords::FALSE,  keywords::BOOLEAN_AND,
+        keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,     keywords::IF,
+        keywords::ELSE,       keywords::ORELSE, keywords::DO,     keywords::MATCH,
+        keywords::RETURN,     keywords::LOOP,   keywords::FOR,    keywords::WHILE,
+        keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,    keywords::TYPEOF,
+        keywords::IMPORT,     keywords::INT,    keywords::UINT,   keywords::SIZE,
+        keywords::FLOAT,      keywords::BYTE,   keywords::STRING, keywords::BOOL,
+        keywords::VOID,       keywords::TYPE,   keywords::WITH,   keywords::AS,
+        keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::PACKED,
+    };
+
+    std::ranges::sort(all_keywords, {}, &Keyword::first);
+    return all_keywords;
+}();
 
 constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {
-    const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
-    return it == ALL_KEYWORDS.end() ? nullopt : Optional<Keyword>{*it};
+    const auto it = std::ranges::lower_bound(ALL_KEYWORDS, sv, {}, &Keyword::first);
+    if (it == ALL_KEYWORDS.end() || it->first != sv) { return nullopt; }
+    return Optional<Keyword>{*it};
 }
 
 constexpr auto ALL_PRIMITIVES = std::array{

@@ -11,7 +11,7 @@ namespace conch::ast {
 ScopeResolutionExpression::ScopeResolutionExpression(const Token&              start_token,
                                                      Box<Expression>           outer,
                                                      Box<IdentifierExpression> inner) noexcept
-    : KindExpression{start_token}, outer_{std::move(outer)}, inner_{std::move(inner)} {}
+    : ExprBase{start_token}, outer_{std::move(outer)}, inner_{std::move(inner)} {}
 
 ScopeResolutionExpression::~ScopeResolutionExpression() = default;
 

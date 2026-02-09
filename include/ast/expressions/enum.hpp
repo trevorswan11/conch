@@ -41,7 +41,7 @@ class Enumeration {
     friend class EnumExpression;
 };
 
-class EnumExpression : public KindExpression<EnumExpression> {
+class EnumExpression : public ExprBase<EnumExpression> {
   public:
     static constexpr auto KIND = NodeKind::ENUM_EXPRESSION;
 

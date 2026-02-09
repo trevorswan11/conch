@@ -11,7 +11,7 @@ namespace conch::ast {
 
 class BlockStatement;
 
-class DoWhileLoopExpression : public KindExpression<DoWhileLoopExpression> {
+class DoWhileLoopExpression : public ExprBase<DoWhileLoopExpression> {
   public:
     static constexpr auto KIND = NodeKind::DO_WHILE_LOOP_EXPRESSION;
 

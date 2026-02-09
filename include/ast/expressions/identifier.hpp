@@ -12,16 +12,15 @@
 
 namespace conch::ast {
 
-class IdentifierExpression : public KindExpression<IdentifierExpression> {
+class IdentifierExpression : public ExprBase<IdentifierExpression> {
   public:
     static constexpr auto KIND = NodeKind::IDENTIFIER_EXPRESSION;
 
   public:
     explicit IdentifierExpression(const Token& start_token, std::string_view name) noexcept
-        : KindExpression{start_token}, name_{name} {}
+        : ExprBase{start_token}, name_{name} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_name() const noexcept -> std::string_view { return name_; }

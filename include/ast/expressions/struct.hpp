@@ -51,7 +51,7 @@ class StructMember {
     Optional<Box<Expression>> default_value_;
 };
 
-class StructExpression : public KindExpression<StructExpression> {
+class StructExpression : public ExprBase<StructExpression> {
   public:
     static constexpr auto KIND = NodeKind::STRUCT_EXPRESSION;
 

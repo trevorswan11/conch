@@ -15,7 +15,7 @@ namespace helpers {
 using namespace conch;
 
 template <typename N>
-concept Primitive = requires { typename N::value_type; };
+concept Primitive = ast::LeafNode<N> && requires { typename N::value_type; };
 
 template <typename N>
 auto into_expression_statement(const N& node) -> const ast::ExpressionStatement& {

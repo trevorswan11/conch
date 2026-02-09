@@ -11,7 +11,7 @@
 
 namespace conch::ast {
 
-class IfExpression : public KindExpression<IfExpression> {
+class IfExpression : public ExprBase<IfExpression> {
   public:
     static constexpr auto KIND = NodeKind::IF_EXPRESSION;
 
@@ -20,11 +20,10 @@ class IfExpression : public KindExpression<IfExpression> {
                           Box<Expression>          condition,
                           Box<Statement>           consequence,
                           Optional<Box<Statement>> alternate) noexcept
-        : KindExpression{start_token}, condition_{std::move(condition)},
+        : ExprBase{start_token}, condition_{std::move(condition)},
           consequence_{std::move(consequence)}, alternate_{std::move(alternate)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }

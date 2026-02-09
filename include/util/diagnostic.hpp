@@ -9,6 +9,12 @@
 
 namespace conch {
 
+template <typename T>
+concept TokenLike = requires(T t) {
+    t.get_line();
+    t.get_column();
+};
+
 template <typename E>
     requires std::is_scoped_enum_v<E>
 class Diagnostic {
@@ -19,19 +25,11 @@ class Diagnostic {
     explicit Diagnostic(std::string msg, E err, usize ln, usize col)
         : message_{std::move(msg)}, error_{err}, line_{ln}, column_{col} {}
 
-    template <typename T>
-        requires requires(T t) {
-            t.get_line();
-            t.get_column();
-        }
+    template <TokenLike T>
     explicit Diagnostic(std::string msg, E err, T t)
         : message_{std::move(msg)}, error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
 
-    template <typename T>
-        requires requires(T t) {
-            t.get_line();
-            t.get_column();
-        }
+    template <TokenLike T>
     explicit Diagnostic(E err, T t) : error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
 
     explicit Diagnostic(Diagnostic& other, E err) noexcept

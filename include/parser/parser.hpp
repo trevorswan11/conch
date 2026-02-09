@@ -81,6 +81,7 @@ class Parser {
     [[nodiscard]] auto current_error(TokenType expected) -> ParserDiagnostic {
         return tt_mismatch_error(expected, current_token_);
     }
+
     [[nodiscard]] auto expect_peek(TokenType expected)
         -> Expected<std::monostate, ParserDiagnostic>;
     [[nodiscard]] auto peek_error(TokenType expected) -> ParserDiagnostic {

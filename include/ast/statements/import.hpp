@@ -16,7 +16,7 @@ namespace conch::ast {
 class IdentifierExpression;
 class StringExpression;
 
-class ImportStatement : public KindStatement<ImportStatement> {
+class ImportStatement : public StmtBase<ImportStatement> {
   public:
     static constexpr auto KIND = NodeKind::IMPORT_STATEMENT;
 

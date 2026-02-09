@@ -18,7 +18,7 @@ Enumeration::~Enumeration() = default;
 EnumExpression::EnumExpression(const Token&                        start_token,
                                Optional<Box<IdentifierExpression>> underlying,
                                std::vector<Enumeration>            enumerations) noexcept
-    : KindExpression{start_token}, underlying_{std::move(underlying)},
+    : ExprBase{start_token}, underlying_{std::move(underlying)},
       enumerations_{std::move(enumerations)} {}
 
 EnumExpression::~EnumExpression() = default;

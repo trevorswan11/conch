@@ -84,7 +84,7 @@ class ExplicitType {
     friend class TypeExpression;
 };
 
-class TypeExpression : public KindExpression<TypeExpression> {
+class TypeExpression : public ExprBase<TypeExpression> {
   public:
     static constexpr auto KIND = NodeKind::TYPE_EXPRESSION;
 

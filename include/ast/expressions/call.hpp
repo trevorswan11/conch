@@ -29,7 +29,7 @@ class CallArgument {
     friend class CallExpression;
 };
 
-class CallExpression : public KindExpression<CallExpression> {
+class CallExpression : public ExprBase<CallExpression> {
   public:
     static constexpr auto KIND = NodeKind::CALL_EXPRESSION;
 
@@ -37,8 +37,7 @@ class CallExpression : public KindExpression<CallExpression> {
     explicit CallExpression(const Token&              start_token,
                             Box<Expression>           function,
                             std::vector<CallArgument> arguments) noexcept
-        : KindExpression{start_token}, function_{std::move(function)},
-          arguments_{std::move(arguments)} {}
+        : ExprBase{start_token}, function_{std::move(function)}, arguments_{std::move(arguments)} {}
 
     auto accept(Visitor& v) const -> void override;
 

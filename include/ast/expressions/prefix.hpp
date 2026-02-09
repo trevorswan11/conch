@@ -11,13 +11,13 @@
 
 namespace conch::ast {
 
-class PrefixExpression : public KindExpression<PrefixExpression> {
+class PrefixExpression : public ExprBase<PrefixExpression> {
   public:
     static constexpr auto KIND = NodeKind::PREFIX_EXPRESSION;
 
   public:
     explicit PrefixExpression(const Token& op, Box<Expression> rhs) noexcept
-        : KindExpression{op}, rhs_{std::move(rhs)} {}
+        : ExprBase{op}, rhs_{std::move(rhs)} {}
 
     auto accept(Visitor& v) const -> void override;
 
