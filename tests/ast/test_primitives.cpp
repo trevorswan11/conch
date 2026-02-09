@@ -30,7 +30,7 @@ TEST_CASE("Signed integer parsing") {
     using N = ast::SignedIntegerExpression;
     helpers::test_primitive<N>("0", TokenType::INT_10, 0LL);
     helpers::test_primitive<N>("0b10011101101", TokenType::INT_2, 0b10011101101LL);
-    helpers::test_primitive<N>("0o1234567", TokenType::INT_8, 342391LL);
+    helpers::test_primitive<N>("0o1234567", TokenType::INT_8, 342'391LL);
     helpers::test_primitive<N>("0xFF8a91d", TokenType::INT_16, 0xFF8a91dLL);
 
     helpers::test_primitive<N>(
@@ -41,7 +41,7 @@ TEST_CASE("Unsigned integer parsing") {
     using N = ast::UnsignedIntegerExpression;
     helpers::test_primitive<N>("0u", TokenType::UINT_10, 0ULL);
     helpers::test_primitive<N>("0b10011101101u", TokenType::UINT_2, 0b10011101101ULL);
-    helpers::test_primitive<N>("0o1234567u", TokenType::UINT_8, 342391ULL);
+    helpers::test_primitive<N>("0o1234567u", TokenType::UINT_8, 342'391ULL);
     helpers::test_primitive<N>("0xFF8a91du", TokenType::UINT_16, 0xFF8a91dULL);
 
     helpers::test_primitive<N>(
@@ -52,7 +52,7 @@ TEST_CASE("Size integer parsing") {
     using N = ast::SizeIntegerExpression;
     helpers::test_primitive<N>("0uz", TokenType::UZINT_10, 0UZ);
     helpers::test_primitive<N>("0b10011101101uz", TokenType::UZINT_2, 0b10011101101UZ);
-    helpers::test_primitive<N>("0o1234567uz", TokenType::UZINT_8, 342391UZ);
+    helpers::test_primitive<N>("0o1234567uz", TokenType::UZINT_8, 342'391UZ);
     helpers::test_primitive<N>("0xFF8a91duz", TokenType::UZINT_16, 0xFF8a91dUZ);
 
     helpers::test_primitive<N>(

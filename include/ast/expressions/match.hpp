@@ -39,7 +39,7 @@ class MatchExpression : public ExprBase<MatchExpression> {
                              std::vector<MatchArm>    arms,
                              Optional<Box<Statement>> catch_all) noexcept
         : ExprBase{start_token}, matcher_{std::move(matcher)}, arms_{std::move(arms)},
-          catch_all_{std::move(catch_all)} {};
+          catch_all_{std::move(catch_all)} {}
 
     auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;

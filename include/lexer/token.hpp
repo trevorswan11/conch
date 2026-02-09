@@ -183,7 +183,7 @@ struct Token {
     MinimalSourceLocation location{};
 
     Token() noexcept = default;
-    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {};
+    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {}
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
         : type{tt}, slice{slice}, location{.line = line, .column = column} {}
 
