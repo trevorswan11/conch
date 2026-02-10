@@ -27,7 +27,7 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDi
         TRY(parser.expect_peek(TokenType::STRING));
         imported = downcast<StringExpression>(TRY(StringExpression::parse(parser)));
     } else {
-        return make_parser_unexpected(ParserError::EMPTY_IMPL_BLOCK, parser.peek_token());
+        return make_parser_unexpected(ParserError::ILLEGAL_IMPORT, parser.peek_token());
     }
 
     Optional<Box<IdentifierExpression>> imported_alias;

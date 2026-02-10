@@ -6,9 +6,4 @@ namespace conch::ast {
 
 auto DotExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto DotExpression::parse(Parser& parser, Box<Expression> lhs)
-    -> Expected<Box<Expression>, ParserDiagnostic> {
-    TODO(parser, lhs);
-}
-
 } // namespace conch::ast

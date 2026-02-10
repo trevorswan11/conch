@@ -19,7 +19,10 @@ auto ScopeResolutionExpression::accept(Visitor& v) const -> void { v.visit(*this
 
 auto ScopeResolutionExpression::parse(Parser& parser, Box<Expression> outer)
     -> Expected<Box<Expression>, ParserDiagnostic> {
-    TODO(parser, outer);
+    TRY(parser.expect_peek(TokenType::IDENT));
+    auto inner = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
+    return make_box<ScopeResolutionExpression>(
+        outer->get_token(), std::move(outer), std::move(inner));
 }
 
 auto ScopeResolutionExpression::is_equal(const Node& other) const noexcept -> bool {

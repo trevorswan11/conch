@@ -4,6 +4,7 @@
 #include <concepts>
 #include <format>
 #include <string>
+#include <utility>
 
 #include "lexer/token.hpp"
 
@@ -102,7 +103,7 @@ class Node {
     // Transfers ownership and downcasts a boxed node into the requested type.
     template <LeafNode To, NodeSubtype From> static auto downcast(Box<From>&& from) -> Box<To> {
         assert(from && from->template is<To>());
-        return box_from<To>(from.release());
+        return box_into<To>(std::move(from));
     }
 
   protected:

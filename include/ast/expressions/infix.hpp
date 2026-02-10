@@ -6,6 +6,8 @@
 
 #include "ast/node.hpp"
 
+#include "parser/parser.hpp"
+
 namespace conch::ast {
 
 template <typename Derived> class InfixExpression : public ExprBase<Derived> {
@@ -23,6 +25,16 @@ template <typename Derived> class InfixExpression : public ExprBase<Derived> {
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = Node::as<Derived>(other);
         return *lhs_ == *casted.lhs_ && op_ == casted.op_ && *rhs_ == *casted.rhs_;
+    }
+
+    [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lhs)
+        -> Expected<Box<Expression>, ParserDiagnostic> {
+        const auto op_token_type      = parser.current_token().type;
+        const auto current_precedence = parser.current_precedence();
+
+        parser.advance();
+        auto rhs = TRY(parser.parse_expression(current_precedence));
+        return make_box<Derived>(lhs->get_token(), std::move(lhs), op_token_type, std::move(rhs));
     }
 
   protected:

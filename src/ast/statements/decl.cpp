@@ -29,12 +29,10 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
     Optional<DeclModifiers> current_modifier;
     while ((current_modifier = token_to_modifier(parser.peek_token()))) {
         parser.advance();
-        const auto& next_modifier = current_modifier.value();
-        if (modifiers_has(modifiers, next_modifier)) {
+        if (modifiers_has(modifiers, *current_modifier)) {
             return make_parser_unexpected(ParserError::DUPLICATE_DECL_MODIFIER, start_token);
         }
-
-        modifiers |= next_modifier;
+        modifiers |= *current_modifier;
     }
 
     if (!validate_modifiers(modifiers)) {
@@ -48,9 +46,6 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
 
     Optional<Box<Expression>> decl_value;
     if (value_initialized) {
-        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
-            return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
-        }
         decl_value = TRY(parser.parse_expression());
     } else {
         if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {

@@ -189,15 +189,14 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::LOOP, ast::InfiniteLoopExpression::parse},
     });
 
-    constexpr auto keyword_prefixes =
+    constexpr auto primitive_prefixes =
         ALL_PRIMITIVES | std::views::transform([](TokenType tt) -> PrefixPair {
             return {tt, ast::IdentifierExpression::parse};
         });
+    constexpr auto num_keywords = primitive_prefixes.size();
 
-    std::array<PrefixPair, initial_prefixes.size() + keyword_prefixes.size()> prefix_fns{};
-    std::ranges::copy(initial_prefixes, prefix_fns.begin());
-    std::ranges::copy(keyword_prefixes, prefix_fns.begin() + initial_prefixes.size());
-
+    constexpr auto materialized_keywords = materialize_sized_view<num_keywords>(primitive_prefixes);
+    auto           prefix_fns            = concat_arrays(initial_prefixes, materialized_keywords);
     std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
     return prefix_fns;
 }();

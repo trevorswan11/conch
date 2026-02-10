@@ -18,7 +18,7 @@ class IdentifierExpression;
 class TypeExpression;
 
 enum class DeclModifiers : u8 {
-    MUTABLE  = 1 << 0,
+    VARIABLE = 1 << 0,
     CONSTANT = 1 << 1,
     PRIVATE  = 1 << 2,
     EXTERN   = 1 << 3,
@@ -76,7 +76,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
 
     static constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept -> bool {
         const auto unique_mut =
-            (modifiers & DeclModifiers::MUTABLE) ^ (modifiers & DeclModifiers::CONSTANT);
+            (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
         const auto unique_abi =
             (modifiers & DeclModifiers::EXTERN) ^ (modifiers & DeclModifiers::EXPORT);
         const auto unique_access =
@@ -95,7 +95,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
   private:
     using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
     static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
-        {TokenType::VAR, DeclModifiers::MUTABLE},
+        {TokenType::VAR, DeclModifiers::VARIABLE},
         {TokenType::CONST, DeclModifiers::CONSTANT},
         {TokenType::PRIVATE, DeclModifiers::PRIVATE},
         {TokenType::EXTERN, DeclModifiers::EXTERN},
