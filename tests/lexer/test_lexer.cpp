@@ -11,10 +11,9 @@ using namespace conch;
 using ExpectedLexeme = std::pair<TokenType, std::string_view>;
 
 TEST_CASE("Illegal characters") {
-    const auto input{"月😭🎶"};
-    Lexer      l{input};
-
+    Lexer      l{"月😭🎶"};
     const auto tokens = l.consume();
+
     for (size_t i = 0; i < tokens.size(); ++i) {
         const auto& token = tokens[i];
         if (i == tokens.size() - 1) {
@@ -26,17 +25,14 @@ TEST_CASE("Illegal characters") {
 }
 
 TEST_CASE("Lexer over-consumption") {
-    const auto input{"lexer"};
-    Lexer      l{input};
-
+    Lexer l{"lexer"};
     l.consume();
     for (size_t i = 0; i < 100; ++i) { REQUIRE(l.advance().type == TokenType::END); }
 }
 
 TEST_CASE("Basic next token and lexer consuming") {
     SECTION("Symbols Only") {
-        const auto input{"=+(){}[],;: !-/*<>_"};
-        Lexer      l{input};
+        Lexer l{"=+(){}[],;: !-/*<>_"};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::ASSIGN, "="},    {TokenType::PLUS, "+"},     {TokenType::LPAREN, "("},
@@ -56,14 +52,14 @@ TEST_CASE("Basic next token and lexer consuming") {
     }
 
     SECTION("Basic Language Snippet") {
-        const auto input{"const five = 5;\n"
-                         "var ten = 10;\n\n"
-                         "var add = fn(x, y) {\n"
-                         "   x + y;\n"
-                         "};\n\n"
-                         "var result = add(five, ten);\n"
-                         "var four_and_some = 4.2;"};
-        Lexer      l{input};
+        const std::string_view input{"const five = 5;\n"
+                                     "var ten = 10;\n\n"
+                                     "var add = fn(x, y) {\n"
+                                     "   x + y;\n"
+                                     "};\n\n"
+                                     "var result = add(five, ten);\n"
+                                     "var four_and_some = 4.2;"};
+        Lexer                  l{input};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::CONST, "const"}, {TokenType::IDENT, "five"},
@@ -111,8 +107,7 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Base-10 ints and floats") {
     SECTION("Correct numbers") {
-        const auto input{"0 123 3.14 42.0 1e20 1.e-3 2.3901E4 1e."};
-        Lexer      l{input};
+        Lexer l{"0 123 3.14 42.0 1e20 1.e-3 2.3901E4 1e."};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::INT_10, "0"},
@@ -136,8 +131,7 @@ TEST_CASE("Base-10 ints and floats") {
     }
 
     SECTION("Illegal Floats") {
-        const auto input{".0 1..2 3.4.5 3.4u"};
-        Lexer      l{input};
+        Lexer l{".0 1..2 3.4.5 3.4u"};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::DOT, "."},
@@ -163,8 +157,7 @@ TEST_CASE("Base-10 ints and floats") {
 
 TEST_CASE("Integer base variants") {
     SECTION("Signed integer variants") {
-        const auto input{"0b1010 0o17 0O17 42 0x2A 0X2A 0b 0x 0o"};
-        Lexer      l{input};
+        Lexer l{"0b1010 0o17 0O17 42 0x2A 0X2A 0b 0x 0o"};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::INT_2, "0b1010"},
@@ -187,9 +180,7 @@ TEST_CASE("Integer base variants") {
     }
 
     SECTION("Unsigned integer variants") {
-        const auto input{
-            "0b1010u 0b1010uz 0o17u 0o17uz 0O17u 42u 42UZ 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou"};
-        Lexer l{input};
+        Lexer l{"0b1010u 0b1010uz 0o17u 0o17uz 0O17u 42u 42UZ 0x2AU 0X2Au 123ufoo 0bu 0xu 0ou"};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::UINT_2, "0b1010u"},
@@ -221,14 +212,14 @@ TEST_CASE("Integer base variants") {
 }
 
 TEST_CASE("Iterator with other keywords") {
-    const auto input{"private extern export packed"};
-    Lexer      l{input};
+    Lexer l{"private extern export packed volatile"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::PRIVATE, "private"},
         {TokenType::EXTERN, "extern"},
         {TokenType::EXPORT, "export"},
         {TokenType::PACKED, "packed"},
+        {TokenType::VOLATILE, "volatile"},
     });
 
     size_t i = 0;
@@ -240,16 +231,15 @@ TEST_CASE("Iterator with other keywords") {
 }
 
 TEST_CASE("Comments") {
-    const auto input{"const five = 5;\n"
-                     "var ten_10 = 10;\n\n"
-                     "// BOL\n"
-                     "var add = fn(x, y) {\n"
-                     "   x + y;\n"
-                     "};\n\n"
-                     "var result = add(five, ten); // EOL\n"
-                     "var four_and_some = 4.2;\n"
-                     "work;"};
-    Lexer      l{input};
+    Lexer l{"const five = 5;\n"
+            "var ten_10 = 10;\n\n"
+            "// BOL\n"
+            "var add = fn(x, y) {\n"
+            "   x + y;\n"
+            "};\n\n"
+            "var result = add(five, ten); // EOL\n"
+            "var four_and_some = 4.2;\n"
+            "work;"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::CONST, "const"},  {TokenType::IDENT, "five"},
@@ -285,10 +275,9 @@ TEST_CASE("Comments") {
 }
 
 TEST_CASE("Character literals") {
-    const auto input{"if'e' else'\\'\nreturn'\\r' break'\\n'\n"
-                     "continue'\\0' for'\\'' while'\\\\' const''\n"
-                     "var'asd'"};
-    Lexer      l{input};
+    Lexer l{"if'e' else'\\'\nreturn'\\r' break'\\n'\n"
+            "continue'\\0' for'\\'' while'\\\\' const''\n"
+            "var'asd'"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::IF, "if"},
@@ -321,9 +310,8 @@ TEST_CASE("Character literals") {
 }
 
 TEST_CASE("String literals") {
-    const auto input{
+    Lexer l{
         R"("This is a string";const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)"};
-    Lexer l{input};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::STRING, R"("This is a string")"},
@@ -353,15 +341,14 @@ TEST_CASE("String literals") {
 }
 
 TEST_CASE("Multiline string literals") {
-    const auto input{"const five = \\\\Multiline stringing\n"
-                     ";\n"
-                     "var ten = \\\\Multiline stringing\n"
-                     "\\\\Continuation\n"
-                     ";\n"
-                     "const one = \\\\Nesting \" \' \\ [] const var\n"
-                     "\\\\\n"
-                     ";\n"};
-    Lexer      l{input};
+    Lexer l{"const five = \\\\Multiline stringing\n"
+            ";\n"
+            "var ten = \\\\Multiline stringing\n"
+            "\\\\Continuation\n"
+            ";\n"
+            "const one = \\\\Nesting \" \' \\ [] const var\n"
+            "\\\\\n"
+            ";\n"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::CONST, "const"},

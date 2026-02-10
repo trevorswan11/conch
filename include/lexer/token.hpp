@@ -140,6 +140,7 @@ enum class TokenType : u8 {
     EXTERN,
     EXPORT,
     PACKED,
+    VOLATILE,
 
     ILLEGAL,
 };
