@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <format>
 #include <ranges>
 
@@ -107,14 +108,14 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     case TokenType::CONST:
     case TokenType::PRIVATE:
     case TokenType::EXTERN:
-    case TokenType::EXPORT: return ast::DeclStatement::parse(*this);
+    case TokenType::EXPORT:     return ast::DeclStatement::parse(*this);
     case TokenType::BREAK:
     case TokenType::RETURN:
-    case TokenType::CONTINUE: return ast::JumpStatement::parse(*this);
-    case TokenType::IMPORT: return ast::ImportStatement::parse(*this);
-    case TokenType::LBRACE: return ast::BlockStatement::parse(*this);
+    case TokenType::CONTINUE:   return ast::JumpStatement::parse(*this);
+    case TokenType::IMPORT:     return ast::ImportStatement::parse(*this);
+    case TokenType::LBRACE:     return ast::BlockStatement::parse(*this);
     case TokenType::UNDERSCORE: return ast::DiscardStatement::parse(*this);
-    default: return ast::ExpressionStatement::parse(*this);
+    default:                    return ast::ExpressionStatement::parse(*this);
     }
 
     std::unreachable();
@@ -149,14 +150,139 @@ auto Parser::parse_expression(Precedence precedence)
     return lhs_expression;
 }
 
-auto Parser::poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&> {
-    const auto it = std::ranges::find(PREFIX_FNS, tt, &PrefixPair::first);
-    return it == PREFIX_FNS.end() ? nullopt : Optional<const PrefixFn&>{it->second};
+using PrefixPair          = std::pair<TokenType, Parser::PrefixFn>;
+constexpr auto PREFIX_FNS = []() {
+    constexpr auto initial_prefixes = std::to_array<PrefixPair>({
+        {TokenType::IDENT, ast::IdentifierExpression::parse},
+        {TokenType::INT_2, ast::SignedIntegerExpression::parse},
+        {TokenType::INT_8, ast::SignedIntegerExpression::parse},
+        {TokenType::INT_10, ast::SignedIntegerExpression::parse},
+        {TokenType::INT_16, ast::SignedIntegerExpression::parse},
+        {TokenType::LINT_2, ast::SignedLongIntegerExpression::parse},
+        {TokenType::LINT_8, ast::SignedLongIntegerExpression::parse},
+        {TokenType::LINT_10, ast::SignedLongIntegerExpression::parse},
+        {TokenType::LINT_16, ast::SignedLongIntegerExpression::parse},
+        {TokenType::ZINT_2, ast::ISizeIntegerExpression::parse},
+        {TokenType::ZINT_8, ast::ISizeIntegerExpression::parse},
+        {TokenType::ZINT_10, ast::ISizeIntegerExpression::parse},
+        {TokenType::ZINT_16, ast::ISizeIntegerExpression::parse},
+        {TokenType::UINT_2, ast::UnsignedIntegerExpression::parse},
+        {TokenType::UINT_8, ast::UnsignedIntegerExpression::parse},
+        {TokenType::UINT_10, ast::UnsignedIntegerExpression::parse},
+        {TokenType::UINT_16, ast::UnsignedIntegerExpression::parse},
+        {TokenType::ULINT_2, ast::UnsignedLongIntegerExpression::parse},
+        {TokenType::ULINT_8, ast::UnsignedLongIntegerExpression::parse},
+        {TokenType::ULINT_10, ast::UnsignedLongIntegerExpression::parse},
+        {TokenType::ULINT_16, ast::UnsignedLongIntegerExpression::parse},
+        {TokenType::UZINT_2, ast::USizeIntegerExpression::parse},
+        {TokenType::UZINT_8, ast::USizeIntegerExpression::parse},
+        {TokenType::UZINT_10, ast::USizeIntegerExpression::parse},
+        {TokenType::UZINT_16, ast::USizeIntegerExpression::parse},
+        {TokenType::BYTE, ast::ByteExpression::parse},
+        {TokenType::FLOAT, ast::FloatExpression::parse},
+        {TokenType::BANG, ast::PrefixExpression::parse},
+        {TokenType::NOT, ast::PrefixExpression::parse},
+        {TokenType::MINUS, ast::PrefixExpression::parse},
+        {TokenType::TRUE, ast::BoolExpression::parse},
+        {TokenType::FALSE, ast::BoolExpression::parse},
+        {TokenType::STRING, ast::StringExpression::parse},
+        {TokenType::MULTILINE_STRING, ast::StringExpression::parse},
+        {TokenType::LPAREN, ast::GroupedExpression::parse},
+        {TokenType::IF, ast::IfExpression::parse},
+        {TokenType::FUNCTION, ast::FunctionExpression::parse},
+        {TokenType::MUT, ast::FunctionExpression::parse},
+        {TokenType::PACKED, ast::StructExpression::parse},
+        {TokenType::STRUCT, ast::StructExpression::parse},
+        {TokenType::ENUM, ast::FunctionExpression::parse},
+        {TokenType::NIL, ast::NilExpression::parse},
+        {TokenType::MATCH, ast::MatchExpression::parse},
+        {TokenType::LBRACKET, ast::ArrayExpression::parse},
+        {TokenType::FOR, ast::ForLoopExpression::parse},
+        {TokenType::WHILE, ast::WhileLoopExpression::parse},
+        {TokenType::DO, ast::DoWhileLoopExpression::parse},
+        {TokenType::LOOP, ast::InfiniteLoopExpression::parse},
+    });
+
+    constexpr auto primitive_prefixes =
+        ALL_PRIMITIVES | std::views::transform([](TokenType tt) -> PrefixPair {
+            return {tt, ast::IdentifierExpression::parse};
+        });
+
+    constexpr auto materialized_primitives =
+        materialize_sized_view<ALL_PRIMITIVES.size()>(primitive_prefixes);
+
+    constexpr auto builtins_prefixes =
+        ALL_BUILTINS | std::views::transform([](const auto& builtin) -> PrefixPair {
+            return {builtin.second, ast::IdentifierExpression::parse};
+        });
+
+    constexpr auto materialized_builtins =
+        materialize_sized_view<ALL_BUILTINS.size()>(builtins_prefixes);
+
+    auto prefix_fns =
+        concat_arrays(initial_prefixes, materialized_primitives, materialized_builtins);
+    std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
+    return prefix_fns;
+}();
+
+constexpr auto Parser::poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&> {
+    const auto it = std::ranges::lower_bound(PREFIX_FNS, tt, {}, &PrefixPair::first);
+    if (it == PREFIX_FNS.end() || it->first != tt) { return nullopt; }
+    return Optional<const PrefixFn&>{it->second};
 }
 
-auto Parser::poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&> {
-    const auto it = std::ranges::find(INFIX_FNS, tt, &InfixPair::first);
-    return it == INFIX_FNS.end() ? nullopt : Optional<const InfixFn&>{it->second};
+using InfixPair          = std::pair<TokenType, Parser::InfixFn>;
+constexpr auto INFIX_FNS = []() {
+    auto infix_fns = std::to_array<InfixPair>({
+        {TokenType::PLUS, ast::BinaryExpression::parse},
+        {TokenType::MINUS, ast::BinaryExpression::parse},
+        {TokenType::STAR, ast::BinaryExpression::parse},
+        {TokenType::SLASH, ast::BinaryExpression::parse},
+        {TokenType::PERCENT, ast::BinaryExpression::parse},
+        {TokenType::STAR_STAR, ast::BinaryExpression::parse},
+        {TokenType::LT, ast::BinaryExpression::parse},
+        {TokenType::LTEQ, ast::BinaryExpression::parse},
+        {TokenType::GT, ast::BinaryExpression::parse},
+        {TokenType::GTEQ, ast::BinaryExpression::parse},
+        {TokenType::EQ, ast::BinaryExpression::parse},
+        {TokenType::NEQ, ast::BinaryExpression::parse},
+        {TokenType::BOOLEAN_AND, ast::BinaryExpression::parse},
+        {TokenType::BOOLEAN_OR, ast::BinaryExpression::parse},
+        {TokenType::AND, ast::BinaryExpression::parse},
+        {TokenType::OR, ast::BinaryExpression::parse},
+        {TokenType::XOR, ast::BinaryExpression::parse},
+        {TokenType::SHR, ast::BinaryExpression::parse},
+        {TokenType::SHL, ast::BinaryExpression::parse},
+        {TokenType::IS, ast::BinaryExpression::parse},
+        {TokenType::IN, ast::BinaryExpression::parse},
+        {TokenType::DOT_DOT, ast::RangeExpression::parse},
+        {TokenType::DOT_DOT_EQ, ast::RangeExpression::parse},
+        {TokenType::ORELSE, ast::BinaryExpression::parse},
+        {TokenType::LPAREN, ast::CallExpression::parse},
+        {TokenType::LBRACKET, ast::IndexExpression::parse},
+        {TokenType::ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::PLUS_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::MINUS_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::STAR_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::SLASH_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::PERCENT_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::AND_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::OR_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::SHL_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::SHR_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::NOT_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::XOR_ASSIGN, ast::AssignmentExpression::parse},
+        {TokenType::COLON_COLON, ast::ScopeResolutionExpression::parse},
+    });
+
+    std::ranges::sort(infix_fns, {}, &InfixPair::first);
+    return infix_fns;
+}();
+
+constexpr auto Parser::poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&> {
+    const auto it = std::ranges::lower_bound(INFIX_FNS, tt, {}, &InfixPair::first);
+    if (it == INFIX_FNS.end() || it->first != tt) { return nullopt; }
+    return Optional<const InfixFn&>{it->second};
 }
 
 auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic {
@@ -165,95 +291,5 @@ auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> Parse
         ParserError::UNEXPECTED_TOKEN,
         actual};
 }
-
-std::array<Parser::PrefixPair, 42> Parser::PREFIX_FNS = []() {
-    const auto initial_prefixes = std::array{
-        PrefixPair{TokenType::IDENT, ast::IdentifierExpression::parse},
-        PrefixPair{TokenType::INT_2, ast::SignedIntegerExpression::parse},
-        PrefixPair{TokenType::INT_8, ast::SignedIntegerExpression::parse},
-        PrefixPair{TokenType::INT_10, ast::SignedIntegerExpression::parse},
-        PrefixPair{TokenType::INT_16, ast::SignedIntegerExpression::parse},
-        PrefixPair{TokenType::UINT_2, ast::UnsignedIntegerExpression::parse},
-        PrefixPair{TokenType::UINT_8, ast::UnsignedIntegerExpression::parse},
-        PrefixPair{TokenType::UINT_10, ast::UnsignedIntegerExpression::parse},
-        PrefixPair{TokenType::UINT_16, ast::UnsignedIntegerExpression::parse},
-        PrefixPair{TokenType::UZINT_2, ast::SizeIntegerExpression::parse},
-        PrefixPair{TokenType::UZINT_8, ast::SizeIntegerExpression::parse},
-        PrefixPair{TokenType::UZINT_10, ast::SizeIntegerExpression::parse},
-        PrefixPair{TokenType::UZINT_16, ast::SizeIntegerExpression::parse},
-        PrefixPair{TokenType::BYTE, ast::ByteExpression::parse},
-        PrefixPair{TokenType::FLOAT, ast::FloatExpression::parse},
-        PrefixPair{TokenType::BANG, ast::PrefixExpression::parse},
-        PrefixPair{TokenType::NOT, ast::PrefixExpression::parse},
-        PrefixPair{TokenType::MINUS, ast::PrefixExpression::parse},
-        PrefixPair{TokenType::TRUE, ast::BoolExpression::parse},
-        PrefixPair{TokenType::FALSE, ast::BoolExpression::parse},
-        PrefixPair{TokenType::STRING, ast::StringExpression::parse},
-        PrefixPair{TokenType::MULTILINE_STRING, ast::StringExpression::parse},
-        PrefixPair{TokenType::LPAREN, ast::GroupedExpression::parse},
-        PrefixPair{TokenType::IF, ast::IfExpression::parse},
-        PrefixPair{TokenType::FUNCTION, ast::FunctionExpression::parse},
-        PrefixPair{TokenType::STRUCT, ast::StructExpression::parse},
-        PrefixPair{TokenType::ENUM, ast::FunctionExpression::parse},
-        PrefixPair{TokenType::NIL, ast::NilExpression::parse},
-        PrefixPair{TokenType::MATCH, ast::MatchExpression::parse},
-        PrefixPair{TokenType::LBRACKET, ast::ArrayExpression::parse},
-        PrefixPair{TokenType::FOR, ast::ForLoopExpression::parse},
-        PrefixPair{TokenType::WHILE, ast::WhileLoopExpression::parse},
-        PrefixPair{TokenType::DO, ast::DoWhileLoopExpression::parse},
-        PrefixPair{TokenType::LOOP, ast::InfiniteLoopExpression::parse},
-    };
-
-    constexpr auto keyword_prefixes = ALL_PRIMITIVES | std::views::transform([](TokenType tt) {
-                                          return PrefixPair{tt, ast::IdentifierExpression::parse};
-                                      });
-
-    std::array<Parser::PrefixPair, initial_prefixes.size() + keyword_prefixes.size()> prefix_fns{};
-    std::ranges::copy(initial_prefixes, prefix_fns.begin());
-    std::ranges::copy(keyword_prefixes, prefix_fns.begin() + initial_prefixes.size());
-    return prefix_fns;
-}();
-
-std::array<std::pair<TokenType, Parser::InfixFn>, 39> Parser::INFIX_FNS = {
-    InfixPair{TokenType::PLUS, ast::BinaryExpression::parse},
-    InfixPair{TokenType::MINUS, ast::BinaryExpression::parse},
-    InfixPair{TokenType::STAR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::SLASH, ast::BinaryExpression::parse},
-    InfixPair{TokenType::PERCENT, ast::BinaryExpression::parse},
-    InfixPair{TokenType::STAR_STAR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::LT, ast::BinaryExpression::parse},
-    InfixPair{TokenType::LTEQ, ast::BinaryExpression::parse},
-    InfixPair{TokenType::GT, ast::BinaryExpression::parse},
-    InfixPair{TokenType::GTEQ, ast::BinaryExpression::parse},
-    InfixPair{TokenType::EQ, ast::BinaryExpression::parse},
-    InfixPair{TokenType::NEQ, ast::BinaryExpression::parse},
-    InfixPair{TokenType::BOOLEAN_AND, ast::BinaryExpression::parse},
-    InfixPair{TokenType::BOOLEAN_OR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::AND, ast::BinaryExpression::parse},
-    InfixPair{TokenType::OR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::XOR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::SHR, ast::BinaryExpression::parse},
-    InfixPair{TokenType::SHL, ast::BinaryExpression::parse},
-    InfixPair{TokenType::IS, ast::BinaryExpression::parse},
-    InfixPair{TokenType::IN, ast::BinaryExpression::parse},
-    InfixPair{TokenType::DOT_DOT, ast::RangeExpression::parse},
-    InfixPair{TokenType::DOT_DOT_EQ, ast::RangeExpression::parse},
-    InfixPair{TokenType::ORELSE, ast::BinaryExpression::parse},
-    InfixPair{TokenType::LPAREN, ast::CallExpression::parse},
-    InfixPair{TokenType::LBRACKET, ast::IndexExpression::parse},
-    InfixPair{TokenType::ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::PLUS_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::MINUS_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::STAR_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::SLASH_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::PERCENT_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::AND_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::OR_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::SHL_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::SHR_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::NOT_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::XOR_ASSIGN, ast::AssignmentExpression::parse},
-    InfixPair{TokenType::COLON_COLON, ast::ScopeResolutionExpression::parse},
-};
 
 } // namespace conch

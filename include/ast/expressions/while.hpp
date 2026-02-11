@@ -12,7 +12,10 @@ namespace conch::ast {
 
 class BlockStatement;
 
-class WhileLoopExpression : public Expression {
+class WhileLoopExpression : public ExprBase<WhileLoopExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::WHILE_LOOP_EXPRESSION;
+
   public:
     explicit WhileLoopExpression(const Token&             start_token,
                                  Box<Expression>          condition,
@@ -21,10 +24,8 @@ class WhileLoopExpression : public Expression {
                                  Optional<Box<Statement>> non_break) noexcept;
     ~WhileLoopExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<WhileLoopExpression>, ParserDiagnostic>;
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }
     [[nodiscard]] auto get_continuation() const noexcept -> const Expression& {
@@ -36,6 +37,7 @@ class WhileLoopExpression : public Expression {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

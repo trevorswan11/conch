@@ -744,12 +744,12 @@ const LOCCounter = struct {
         pub fn logCXXFile(self: *LOCResult, lines: usize, group: enum { header, source }) void {
             switch (group) {
                 .header => {
-                    self.cxx_count += 1;
-                    self.cxx_line_count += lines;
-                },
-                .source => {
                     self.hxx_count += 1;
                     self.hxx_line_count += lines;
+                },
+                .source => {
+                    self.cxx_count += 1;
+                    self.cxx_line_count += lines;
                 },
             }
             self.file_count += 1;

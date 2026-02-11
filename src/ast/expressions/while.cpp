@@ -13,7 +13,7 @@ WhileLoopExpression::WhileLoopExpression(const Token&             start_token,
                                          Box<Expression>          continuation,
                                          Box<BlockStatement>      block,
                                          Optional<Box<Statement>> non_break) noexcept
-    : Expression{start_token, NodeKind::WHILE_LOOP_EXPRESSION}, condition_{std::move(condition)},
+    : ExprBase{start_token}, condition_{std::move(condition)},
       continuation_{std::move(continuation)}, block_{std::move(block)},
       non_break_{std::move(non_break)} {}
 
@@ -21,8 +21,7 @@ WhileLoopExpression::~WhileLoopExpression() = default;
 
 auto WhileLoopExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto WhileLoopExpression::parse(Parser& parser)
-    -> Expected<Box<WhileLoopExpression>, ParserDiagnostic> {
+auto WhileLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

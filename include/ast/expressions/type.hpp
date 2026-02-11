@@ -84,21 +84,24 @@ class ExplicitType {
     friend class TypeExpression;
 };
 
-class TypeExpression : public Expression {
+class TypeExpression : public ExprBase<TypeExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::TYPE_EXPRESSION;
+
   public:
     explicit TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept;
     ~TypeExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic>;
+        -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic>;
 
     [[nodiscard]] auto has_explicit_type() const noexcept -> bool { return explicit_.has_value(); }
     [[nodiscard]] auto get_explicit_type() const noexcept -> const Optional<ExplicitType>& {
         return explicit_;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

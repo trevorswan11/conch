@@ -3,54 +3,49 @@
 
 #include "ast/expressions/struct.hpp"
 
-#include "ast/expressions/function.hpp"
-#include "ast/expressions/identifier.hpp"
-#include "ast/expressions/type.hpp"
 #include "ast/statements/decl.hpp"
 
+#include "lexer/token.hpp"
+#include "parser/parser.hpp"
 #include "visitor/visitor.hpp"
 
 namespace conch::ast {
 
-StructMember::StructMember(bool                      priv,
-                           Box<IdentifierExpression> name,
-                           Box<TypeExpression>       type,
-                           Optional<Box<Expression>> default_value) noexcept
-    : private_{priv}, name_{std::move(name)}, type_{std::move(type)},
-      default_value_{std::move(default_value)} {}
-
-StructMember::~StructMember() = default;
-
-StructExpression::StructExpression(const Token&                         start_token,
-                                   bool                                 packed,
-                                   std::vector<Box<DeclStatement>>      declarations,
-                                   std::vector<StructMember>            members,
-                                   std::vector<Box<FunctionExpression>> functions) noexcept
-    : Expression{start_token, NodeKind::STRUCT_EXPRESSION}, packed_{packed},
-      declarations_{std::move(declarations)}, members_{std::move(members)},
-      functions_{std::move(functions)} {}
+StructExpression::StructExpression(const Token&                    start_token,
+                                   std::vector<Box<DeclStatement>> members) noexcept
+    : ExprBase{start_token}, members_{std::move(members)} {}
 
 StructExpression::~StructExpression() = default;
 
 auto StructExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto StructExpression::parse(Parser& parser) -> Expected<Box<StructExpression>, ParserDiagnostic> {
-    TODO(parser);
+auto StructExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    if (parser.current_token_is(TokenType::PACKED)) { TRY(parser.expect_peek(TokenType::STRUCT)); }
+
+    std::vector<Box<DeclStatement>> members;
+    TRY(parser.expect_peek(TokenType::LBRACE));
+    while (!parser.peek_token_is(TokenType::RBRACE)) {
+        parser.advance();
+        auto member = TRY(parser.parse_statement());
+        if (!member->is<DeclStatement>()) {
+            return make_parser_unexpected(ParserError::INVALID_STRUCT_MEMBER, member->get_token());
+        }
+
+        members.emplace_back(downcast<DeclStatement>(std::move(member)));
+    }
+
+    TRY(parser.expect_peek(TokenType::RBRACE));
+    if (members.empty()) { return make_parser_unexpected(ParserError::EMPTY_STRUCT, start_token); }
+    return make_box<StructExpression>(start_token, std::move(members));
 }
 
 auto StructExpression::is_equal(const Node& other) const noexcept -> bool {
-    const auto& casted          = as<StructExpression>(other);
-    const auto  declarations_eq = std::ranges::equal(
-        declarations_, casted.declarations_, [](const auto& a, const auto& b) { return *a == *b; });
-    const auto members_eq =
-        std::ranges::equal(members_, casted.members_, [](const auto& a, const auto& b) {
-            return a.private_ == b.private_ && a.name_ == b.name_ && a.type_ == b.type_ &&
-                   optional::unsafe_eq<Expression>(a.default_value_, b.default_value_);
-        });
-    const auto functions_eq = std::ranges::equal(
-        functions_, casted.functions_, [](const auto& a, const auto& b) { return *a == *b; });
+    const auto& casted     = as<StructExpression>(other);
+    const auto  members_eq = std::ranges::equal(
+        members_, casted.members_, [](const auto& a, const auto& b) { return *a == *b; });
 
-    return packed_ == casted.packed_ && declarations_eq && members_eq && functions_eq;
+    return is_packed() == casted.is_packed() && members_eq;
 }
 
 } // namespace conch::ast

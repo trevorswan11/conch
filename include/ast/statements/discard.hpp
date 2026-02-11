@@ -10,18 +10,20 @@
 
 namespace conch::ast {
 
-class DiscardStatement : public Statement {
+class DiscardStatement : public StmtBase<DiscardStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::DISCARD_STATEMENT;
+
   public:
     explicit DiscardStatement(const Token& start_token, Box<Expression> discarded) noexcept
-        : Statement{start_token, NodeKind::DISCARD_STATEMENT}, discarded_{std::move(discarded)} {}
+        : StmtBase{start_token}, discarded_{std::move(discarded)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<DiscardStatement>, ParserDiagnostic>;
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_discarded() const noexcept -> const Expression& { return *discarded_; }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<DiscardStatement>(other);
         return *discarded_ == *casted.discarded_;

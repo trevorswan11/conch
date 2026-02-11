@@ -28,35 +28,68 @@ TEST_CASE("Multi-line string parsing") {
 
 TEST_CASE("Signed integer parsing") {
     using N = ast::SignedIntegerExpression;
-    helpers::test_primitive<N>("0", TokenType::INT_10, 0LL);
-    helpers::test_primitive<N>("0b10011101101", TokenType::INT_2, 0b10011101101LL);
-    helpers::test_primitive<N>("0o1234567", TokenType::INT_8, 342391LL);
-    helpers::test_primitive<N>("0xFF8a91d", TokenType::INT_16, 0xFF8a91dLL);
+    helpers::test_primitive<N>("0", TokenType::INT_10, 0);
+    helpers::test_primitive<N>("0b10011101101", TokenType::INT_2, 0b10011101101);
+    helpers::test_primitive<N>("0o1234567", TokenType::INT_8, 342'391);
+    helpers::test_primitive<N>("0xFF8a91d", TokenType::INT_16, 0xFF8a91d);
 
     helpers::test_primitive<N>(
         "0xFFFFFFFFFFFFFFFFFFF", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
 }
 
-TEST_CASE("Unsigned integer parsing") {
-    using N = ast::UnsignedIntegerExpression;
-    helpers::test_primitive<N>("0u", TokenType::UINT_10, 0ULL);
-    helpers::test_primitive<N>("0b10011101101u", TokenType::UINT_2, 0b10011101101ULL);
-    helpers::test_primitive<N>("0o1234567u", TokenType::UINT_8, 342391ULL);
-    helpers::test_primitive<N>("0xFF8a91du", TokenType::UINT_16, 0xFF8a91dULL);
+TEST_CASE("Signed long integer parsing") {
+    using N = ast::SignedLongIntegerExpression;
+    helpers::test_primitive<N>("0l", TokenType::LINT_10, 0LL);
+    helpers::test_primitive<N>("0b10011101101l", TokenType::LINT_2, 0b10011101101LL);
+    helpers::test_primitive<N>("0o1234567l", TokenType::LINT_8, 342'391LL);
+    helpers::test_primitive<N>("0xFF8a91dl", TokenType::LINT_16, 0xFF8a91dLL);
 
     helpers::test_primitive<N>(
-        "0xFFFFFFFFFFFFFFFF", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
+        "0xFFFFFFFFFFFFFFFFFFFl", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
 }
 
-TEST_CASE("Size integer parsing") {
-    using N = ast::SizeIntegerExpression;
+TEST_CASE("Signed size integer parsing") {
+    using N = ast::ISizeIntegerExpression;
+    helpers::test_primitive<N>("0z", TokenType::ZINT_10, 0Z);
+    helpers::test_primitive<N>("0b10011101101z", TokenType::ZINT_2, 0b10011101101Z);
+    helpers::test_primitive<N>("0o1234567z", TokenType::ZINT_8, 342'391Z);
+    helpers::test_primitive<N>("0xFF8a91dz", TokenType::ZINT_16, 0xFF8a91dZ);
+
+    helpers::test_primitive<N>(
+        "0xFFFFFFFFFFFFFFFFz", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
+}
+
+TEST_CASE("Unsigned integer parsing") {
+    using N = ast::UnsignedIntegerExpression;
+    helpers::test_primitive<N>("0u", TokenType::UINT_10, 0U);
+    helpers::test_primitive<N>("0b10011101101u", TokenType::UINT_2, 0b10011101101U);
+    helpers::test_primitive<N>("0o1234567u", TokenType::UINT_8, 342'391U);
+    helpers::test_primitive<N>("0xFF8a91du", TokenType::UINT_16, 0xFF8a91dU);
+
+    helpers::test_primitive<N>(
+        "0xFFFFFFFFFFFFFFFFu", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
+}
+
+TEST_CASE("Unsigned long integer parsing") {
+    using N = ast::UnsignedLongIntegerExpression;
+    helpers::test_primitive<N>("0ul", TokenType::ULINT_10, 0ULL);
+    helpers::test_primitive<N>("0b10011101101ul", TokenType::ULINT_2, 0b10011101101ULL);
+    helpers::test_primitive<N>("0o1234567ul", TokenType::ULINT_8, 342'391ULL);
+    helpers::test_primitive<N>("0xFF8a91dul", TokenType::ULINT_16, 0xFF8a91dULL);
+
+    helpers::test_primitive<N>(
+        "0xFFFFFFFFFFFFFFFFFul", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
+}
+
+TEST_CASE("Unsigned size integer parsing") {
+    using N = ast::USizeIntegerExpression;
     helpers::test_primitive<N>("0uz", TokenType::UZINT_10, 0UZ);
     helpers::test_primitive<N>("0b10011101101uz", TokenType::UZINT_2, 0b10011101101UZ);
-    helpers::test_primitive<N>("0o1234567uz", TokenType::UZINT_8, 342391UZ);
+    helpers::test_primitive<N>("0o1234567uz", TokenType::UZINT_8, 342'391UZ);
     helpers::test_primitive<N>("0xFF8a91duz", TokenType::UZINT_16, 0xFF8a91dUZ);
 
     helpers::test_primitive<N>(
-        "0xFFFFFFFFFFFFFFFF", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
+        "0xFFFFFFFFFFFFFFFFFuz", nullopt, ParserDiagnostic{ParserError::INTEGER_OVERFLOW, 1, 1});
 }
 
 TEST_CASE("Byte parsing") {

@@ -23,9 +23,7 @@ auto Lexer::advance() noexcept -> Token {
 
     if (maybe_operator) {
         if (maybe_operator->type == TokenType::END) { return *maybe_operator; }
-        for (size_t i = 0; i < maybe_operator->slice.size(); ++i) {
-            read_character();
-        }
+        for (size_t i = 0; i < maybe_operator->slice.size(); ++i) { read_character(); }
 
         if (maybe_operator->type == TokenType::COMMENT) { return read_comment(); }
         if (maybe_operator->type == TokenType::MULTILINE_STRING) { return read_multiline_string(); }
@@ -37,8 +35,12 @@ auto Lexer::advance() noexcept -> Token {
     if (maybe_misc_token_type) {
         token.slice = input_.substr(pos_, 1);
         token.type  = *maybe_misc_token_type;
+    } else if (current_byte_ == '@') {
+        token.slice = read_ident(true);
+        token.type  = lu_builtin(token.slice);
+        return token;
     } else if (std::isalpha(current_byte_)) {
-        token.slice = read_ident();
+        token.slice = read_ident(false);
         token.type  = lu_ident(token.slice);
         return token;
     } else if (std::isdigit(current_byte_)) {
@@ -48,7 +50,8 @@ auto Lexer::advance() noexcept -> Token {
     } else if (current_byte_ == '\'') {
         return read_byte_literal();
     } else {
-        token = {TokenType::ILLEGAL, input_.substr(pos_, 1), start_line, start_col};
+        token.slice = input_.substr(pos_, 1);
+        token.type  = TokenType::ILLEGAL;
     }
 
     read_character();
@@ -59,17 +62,19 @@ auto Lexer::consume() -> std::vector<Token> {
     reset(input_);
 
     std::vector<Token> tokens;
-    do {
-        tokens.emplace_back(advance());
-    } while (tokens.back().type != TokenType::END);
+    do { tokens.emplace_back(advance()); } while (tokens.back().type != TokenType::END);
 
     return tokens;
 }
 
 auto Lexer::skip_whitespace() noexcept -> void {
-    while (std::isspace(current_byte_)) {
-        read_character();
-    }
+    while (std::isspace(current_byte_)) { read_character(); }
+}
+
+auto Lexer::lu_builtin(std::string_view ident) noexcept -> TokenType {
+    return get_builtin(ident)
+        .transform([](const auto& keyword) noexcept -> TokenType { return keyword.second; })
+        .value_or(TokenType::ILLEGAL);
 }
 
 auto Lexer::lu_ident(std::string_view ident) noexcept -> TokenType {
@@ -121,12 +126,12 @@ auto Lexer::read_operator() const noexcept -> Optional<Token> {
     return Token{matched_type, input_.substr(pos_, max_len), start_line, start_col};
 }
 
-auto Lexer::read_ident() noexcept -> std::string_view {
+auto Lexer::read_ident(bool builtin) noexcept -> std::string_view {
     const auto start = pos_;
 
     auto passed_first = false;
-    while (std::isalpha(current_byte_) || current_byte_ == '_' ||
-           (passed_first && std::isdigit(current_byte_))) {
+    while ((builtin && !passed_first && current_byte_ == '@') || std::isalpha(current_byte_) ||
+           current_byte_ == '_' || (passed_first && std::isdigit(current_byte_))) {
         read_character();
         passed_first = true;
     }
@@ -134,11 +139,24 @@ auto Lexer::read_ident() noexcept -> std::string_view {
     return input_.substr(start, pos_ - start);
 }
 
-enum class NumberSuffix {
-    NONE     = 0,
-    UNSIGNED = 1,
-    SIZE     = 2,
+enum class NumberSuffix : u8 {
+    UNSIGNED = 1 << 0,
+    WIDE     = 1 << 1,
+    SIZE     = 2 << 2,
 };
+
+constexpr auto operator|=(NumberSuffix& lhs, NumberSuffix rhs) noexcept -> NumberSuffix& {
+    lhs = static_cast<NumberSuffix>(std::to_underlying(lhs) | std::to_underlying(rhs));
+    return lhs;
+}
+
+constexpr auto operator&(NumberSuffix lhs, NumberSuffix rhs) noexcept -> NumberSuffix {
+    return static_cast<NumberSuffix>(std::to_underlying(lhs) & std::to_underlying(rhs));
+}
+
+constexpr auto suffix_has(NumberSuffix suffix, NumberSuffix flag) noexcept -> bool {
+    return static_cast<bool>(suffix & flag);
+}
 
 auto Lexer::read_number() noexcept -> Token {
     const auto start           = pos_;
@@ -186,9 +204,7 @@ auto Lexer::read_number() noexcept -> Token {
             read_character();
 
             if (current_byte_ == '+' || current_byte_ == '-') { read_character(); }
-            while (std::isdigit(current_byte_)) {
-                read_character();
-            }
+            while (std::isdigit(current_byte_)) { read_character(); }
 
             continue;
         }
@@ -217,18 +233,21 @@ auto Lexer::read_number() noexcept -> Token {
         return {TokenType::ILLEGAL, input_.substr(start, pos_ - start), start_line, start_col};
     }
 
-    auto suffix{NumberSuffix::NONE};
+    NumberSuffix suffix{};
     if (!(passed_decimal || passed_exponent) && pos_ < input_.size()) {
         auto c = current_byte_;
         if (c == 'u' || c == 'U') {
-            suffix = NumberSuffix::UNSIGNED;
+            suffix |= NumberSuffix::UNSIGNED;
             read_character();
+        }
 
-            c = current_byte_;
-            if (c == 'z' || c == 'Z') {
-                suffix = NumberSuffix::SIZE;
-                read_character();
-            }
+        c = current_byte_;
+        if (c == 'z' || c == 'Z') {
+            suffix |= NumberSuffix::SIZE;
+            read_character();
+        } else if (c == 'l' || c == 'L') {
+            suffix |= NumberSuffix::WIDE;
+            read_character();
         }
     }
 
@@ -249,12 +268,26 @@ auto Lexer::read_number() noexcept -> Token {
     if (passed_decimal || passed_exponent) {
         type = TokenType::FLOAT;
     } else {
-        switch (suffix) {
-        case NumberSuffix::NONE: type = TokenType::INT_2; break;
-        case NumberSuffix::UNSIGNED: type = TokenType::UINT_2; break;
-        case NumberSuffix::SIZE: type = TokenType::UZINT_2; break;
+        // Use an offset to increment the actual token type based on its base and width
+        auto offset = base_idx(base);
+        if (std::to_underlying(suffix) == 0) {
+            type = TokenType::INT_2;
+        } else {
+            if (suffix_has(suffix, NumberSuffix::WIDE)) {
+                type = TokenType::LINT_2;
+            } else if (suffix_has(suffix, NumberSuffix::SIZE)) {
+                type = TokenType::ZINT_2;
+            } else {
+                type = TokenType::INT_2;
+            }
+
+            // We can just bump the offset for unsigned
+            if (suffix_has(suffix, NumberSuffix::UNSIGNED)) {
+                offset +=
+                    std::to_underlying(TokenType::UINT_2) - std::to_underlying(TokenType::INT_2);
+            }
         }
-        type = static_cast<TokenType>(std::to_underlying(type) + base_idx(base));
+        type = static_cast<TokenType>(std::to_underlying(type) + offset);
     }
 
     return {type, input_.substr(start, length), start_line, start_col};
@@ -264,14 +297,14 @@ auto Lexer::read_escape() noexcept -> byte {
     read_character();
 
     switch (current_byte_) {
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 't': return '\t';
+    case 'n':  return '\n';
+    case 'r':  return '\r';
+    case 't':  return '\t';
     case '\\': return '\\';
     case '\'': return '\'';
-    case '"': return '"';
-    case '0': return '\0';
-    default: return current_byte_;
+    case '"':  return '"';
+    case '0':  return '\0';
+    default:   return current_byte_;
     }
 }
 
@@ -398,9 +431,7 @@ auto Lexer::read_comment() noexcept -> Token {
     const auto start      = pos_;
     const auto start_line = line_no_;
     const auto start_col  = col_no_;
-    while (current_byte_ != '\n' && current_byte_ != '\0') {
-        read_character();
-    }
+    while (current_byte_ != '\n' && current_byte_ != '\0') { read_character(); }
 
     return {TokenType::COMMENT, input_.substr(start, pos_ - start), start_line, start_col};
 }

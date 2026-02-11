@@ -6,7 +6,7 @@ namespace conch::ast {
 
 auto IfExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto IfExpression::parse(Parser& parser) -> Expected<Box<IfExpression>, ParserDiagnostic> {
+auto IfExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

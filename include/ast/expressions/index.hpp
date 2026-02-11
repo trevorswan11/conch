@@ -11,22 +11,24 @@
 
 namespace conch::ast {
 
-class IndexExpression : public Expression {
+class IndexExpression : public ExprBase<IndexExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::INDEX_EXPRESSION;
+
   public:
     explicit IndexExpression(const Token&    start_token,
                              Box<Expression> array,
                              Box<Expression> idx) noexcept
-        : Expression{start_token, NodeKind::INDEX_EXPRESSION}, array_{std::move(array)},
-          index_{std::move(idx)} {}
+        : ExprBase{start_token}, array_{std::move(array)}, index_{std::move(idx)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> array)
-        -> Expected<Box<IndexExpression>, ParserDiagnostic>;
+        -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_array() const noexcept -> const Expression& { return *array_; }
     [[nodiscard]] auto get_index() const noexcept -> const Expression& { return *index_; }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<IndexExpression>(other);
         return *array_ == *casted.array_ && *index_ == *casted.index_;

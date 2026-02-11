@@ -13,7 +13,10 @@
 
 namespace conch::ast {
 
-class BlockStatement : public Statement {
+class BlockStatement : public StmtBase<BlockStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::BLOCK_STATEMENT;
+
   public:
     using iterator       = typename std::vector<Box<Statement>>::iterator;
     using const_iterator = typename std::vector<Box<Statement>>::const_iterator;
@@ -21,12 +24,10 @@ class BlockStatement : public Statement {
   public:
     explicit BlockStatement(const Token&                start_token,
                             std::vector<Box<Statement>> statements) noexcept
-        : Statement{start_token, NodeKind::BLOCK_STATEMENT}, statements_{std::move(statements)} {}
+        : StmtBase{start_token}, statements_{std::move(statements)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<BlockStatement>, ParserDiagnostic>;
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto begin() noexcept -> iterator { return statements_.begin(); }
     [[nodiscard]] auto end() noexcept -> iterator { return statements_.end(); }
@@ -37,6 +38,7 @@ class BlockStatement : public Statement {
     [[nodiscard]] auto size() const noexcept -> std::size_t { return statements_.size(); }
     [[nodiscard]] auto empty() const noexcept -> bool { return statements_.empty(); }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<BlockStatement>(other);
         return std::ranges::equal(

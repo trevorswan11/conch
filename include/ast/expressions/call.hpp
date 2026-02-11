@@ -29,24 +29,26 @@ class CallArgument {
     friend class CallExpression;
 };
 
-class CallExpression : public Expression {
+class CallExpression : public ExprBase<CallExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::CALL_EXPRESSION;
+
   public:
     explicit CallExpression(const Token&              start_token,
                             Box<Expression>           function,
                             std::vector<CallArgument> arguments) noexcept
-        : Expression{start_token, NodeKind::CALL_EXPRESSION}, function_{std::move(function)},
-          arguments_{std::move(arguments)} {}
+        : ExprBase{start_token}, function_{std::move(function)}, arguments_{std::move(arguments)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> function)
-        -> Expected<Box<CallExpression>, ParserDiagnostic>;
+        -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_function() const noexcept -> const Expression& { return *function_; }
     [[nodiscard]] auto get_arguments() const noexcept -> std::span<const CallArgument> {
         return arguments_;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<CallExpression>(other);
         return *function_ == *casted.function_ &&

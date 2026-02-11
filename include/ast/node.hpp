@@ -1,10 +1,14 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <format>
 #include <string>
+#include <utility>
 
 #include "lexer/token.hpp"
+
+#include "util/common.hpp"
 
 namespace conch { class Visitor; } // namespace conch
 
@@ -28,8 +32,11 @@ enum class NodeKind : u8 {
     PREFIX_EXPRESSION,
     STRING_EXPRESSION,
     SIGNED_INTEGER_EXPRESSION,
+    SIGNED_LONG_INTEGER_EXPRESSION,
+    ISIZE_INTEGER_EXPRESSION,
     UNSIGNED_INTEGER_EXPRESSION,
-    SIZE_INTEGER_EXPRESSION,
+    UNSIGNED_LONG_INTEGER_EXPRESSION,
+    USIZE_INTEGER_EXPRESSION,
     BYTE_EXPRESSION,
     FLOAT_EXPRESSION,
     BOOL_EXPRESSION,
@@ -47,6 +54,18 @@ enum class NodeKind : u8 {
     EXPRESSION_STATEMENT,
     IMPORT_STATEMENT,
     JUMP_STATEMENT,
+};
+
+class Node;
+
+// A type that can be anything in the Node inheritance hierarchy
+template <typename N>
+concept NodeSubtype = std::derived_from<N, Node>;
+
+// A necessarily instantiable Node, meaning it has a NodeKind marker.
+template <typename T>
+concept LeafNode = NodeSubtype<T> && requires {
+    { T::KIND } -> std::convertible_to<NodeKind>;
 };
 
 class Node {
@@ -68,20 +87,36 @@ class Node {
         if (lhs.kind_ != rhs.kind_) { return false; }
         if (lhs.start_token_.type != rhs.start_token_.type) { return false; }
         if (lhs.start_token_.slice != rhs.start_token_.slice) { return false; }
-
         return lhs.is_equal(rhs);
     }
+
+    template <LeafNode T> auto is() const noexcept -> bool { return kind_ == T::KIND; }
 
   protected:
     explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}
 
     virtual auto is_equal(const Node& other) const noexcept -> bool = 0;
 
-    template <typename T> static const T& as(const Node& n) { return static_cast<const T&>(n); }
+    // A safe alternative to a raw static cast for nodes.
+    template <LeafNode T> static auto as(const Node& n) -> const T& {
+        assert(n.is<T>());
+        return static_cast<const T&>(n);
+    }
+
+    // Transfers ownership and downcasts a boxed node into the requested type.
+    template <LeafNode To, NodeSubtype From> static auto downcast(Box<From>&& from) -> Box<To> {
+        assert(from && from->template is<To>());
+        return box_into<To>(std::move(from));
+    }
 
   protected:
     const Token    start_token_;
     const NodeKind kind_;
+};
+
+template <typename Derived, typename Base> class NodeBase : public Base {
+  protected:
+    explicit NodeBase(const Token& tok) noexcept : Base{tok, Derived::KIND} {}
 };
 
 class Expression : public Node {
@@ -91,6 +126,11 @@ class Expression : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
+template <typename Derived> class ExprBase : public NodeBase<Derived, Expression> {
+  protected:
+    using NodeBase<Derived, Expression>::NodeBase;
+};
+
 class Statement : public Node {
   protected:
     using Node::Node;
@@ -98,11 +138,14 @@ class Statement : public Node {
     virtual auto is_equal(const Node& other) const noexcept -> bool override = 0;
 };
 
+template <typename Derived> class StmtBase : public NodeBase<Derived, Statement> {
+  protected:
+    using NodeBase<Derived, Statement>::NodeBase;
+};
+
 } // namespace conch::ast
 
-template <typename N>
-    requires std::derived_from<N, conch::ast::Node>
-struct std::formatter<N> : std::formatter<std::string> {
+template <conch::ast::LeafNode N> struct std::formatter<N> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const N& n, F& ctx) const {

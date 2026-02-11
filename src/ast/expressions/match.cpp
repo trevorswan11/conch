@@ -6,7 +6,7 @@ namespace conch::ast {
 
 auto MatchExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto MatchExpression::parse(Parser& parser) -> Expected<Box<MatchExpression>, ParserDiagnostic> {
+auto MatchExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     TODO(parser);
 }
 

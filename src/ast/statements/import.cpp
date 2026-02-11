@@ -10,27 +10,24 @@ namespace conch::ast {
 ImportStatement::ImportStatement(const Token&                           start_token,
                                  std::variant<ModuleImport, UserImport> imported,
                                  Optional<Box<IdentifierExpression>>    alias) noexcept
-    : Statement{start_token, NodeKind::IMPORT_STATEMENT}, imported_{std::move(imported)},
-      alias_{std::move(alias)} {}
+    : StmtBase{start_token}, imported_{std::move(imported)}, alias_{std::move(alias)} {}
 
 ImportStatement::~ImportStatement() = default;
 
 auto ImportStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ImportStatement::parse(Parser& parser) -> Expected<Box<ImportStatement>, ParserDiagnostic> {
+auto ImportStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
 
     std::variant<ModuleImport, UserImport> imported;
     if (parser.peek_token_is(TokenType::IDENT)) {
         TRY(parser.expect_peek(TokenType::IDENT));
-        auto identifier = TRY(IdentifierExpression::parse(parser));
-        imported        = std::move(identifier);
+        imported = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
     } else if (parser.peek_token_is(TokenType::STRING)) {
         TRY(parser.expect_peek(TokenType::STRING));
-        auto str = TRY(IdentifierExpression::parse(parser));
-        imported = std::move(str);
+        imported = downcast<StringExpression>(TRY(StringExpression::parse(parser)));
     } else {
-        return make_parser_unexpected(ParserError::EMPTY_IMPL_BLOCK, parser.peek_token());
+        return make_parser_unexpected(ParserError::ILLEGAL_IMPORT, parser.peek_token());
     }
 
     Optional<Box<IdentifierExpression>> imported_alias;
@@ -38,7 +35,7 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<ImportStatement>, Pa
         parser.advance();
         TRY(parser.expect_peek(TokenType::IDENT));
 
-        imported_alias = TRY(IdentifierExpression::parse(parser));
+        imported_alias = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
     } else if (std::holds_alternative<Box<StringExpression>>(imported)) {
         return make_parser_unexpected(ParserError::USER_IMPORT_MISSING_ALIAS, start_token);
     }
@@ -49,7 +46,7 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<ImportStatement>, Pa
 auto ImportStatement::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted         = as<ImportStatement>(other);
     const auto& other_imported = casted.imported_;
-    const auto  variant_eq     = std::visit(overloaded{
+    const auto  variant_eq     = std::visit(Overloaded{
                                            [&other_imported](const ModuleImport& v) {
                                                return *v == *std::get<ModuleImport>(other_imported);
                                            },

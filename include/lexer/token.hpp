@@ -21,18 +21,33 @@ enum class TokenType : u8 {
     END,
 
     IDENT,
+
     INT_2,
     INT_8,
     INT_10,
     INT_16,
+    LINT_2,
+    LINT_8,
+    LINT_10,
+    LINT_16,
+    ZINT_2,
+    ZINT_8,
+    ZINT_10,
+    ZINT_16,
+
     UINT_2,
     UINT_8,
     UINT_10,
     UINT_16,
+    ULINT_2,
+    ULINT_8,
+    ULINT_10,
+    ULINT_16,
     UZINT_2,
     UZINT_8,
     UZINT_10,
     UZINT_16,
+
     FLOAT,
     STRING,
     BYTE,
@@ -120,16 +135,18 @@ enum class TokenType : u8 {
     CONTINUE,
     BREAK,
     NIL,
-    TYPEOF,
     IMPORT,
-    TYPE,
+    TYPE_TYPE,
     ORELSE,
     DO,
     AS,
 
     INT_TYPE,
+    LONG_TYPE,
+    ISIZE_TYPE,
     UINT_TYPE,
-    SIZE_TYPE,
+    ULONG_TYPE,
+    USIZE_TYPE,
     BYTE_TYPE,
     FLOAT_TYPE,
     STRING_TYPE,
@@ -140,6 +157,32 @@ enum class TokenType : u8 {
     EXTERN,
     EXPORT,
     PACKED,
+    VOLATILE,
+    STATIC,
+    MUT,
+
+    TYPEOF,
+    SIZEOF,
+    ALIGNOF,
+    SIN,
+    COS,
+    TAN,
+    SQRT,
+    LOG,
+    LOG_10,
+    LOG_2,
+    MIN,
+    MAX,
+    MOD,
+    DIVMOD,
+    TRUNC,
+    CAST,
+    CEIL,
+    FLOOR,
+    EXP,
+    EXP_2,
+    CLZ, // Count leading zeroes
+    CTZ, // Count trailing zeroes
 
     ILLEGAL,
 };
@@ -157,12 +200,34 @@ auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Optional<Base>;
-auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
-auto is_signed_int(TokenType t) noexcept -> bool;
-auto is_unsigned_int(TokenType t) noexcept -> bool;
-auto is_size_int(TokenType t) noexcept -> bool;
-auto is_int(TokenType t) noexcept -> bool;
+auto to_base(TokenType tt) noexcept -> Optional<Base>;
+auto misc_from_char(byte b) noexcept -> Optional<TokenType>;
+
+constexpr auto is_signed_int(TokenType tt) noexcept -> bool {
+    return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;
+}
+
+constexpr auto is_signed_long_int(TokenType tt) noexcept -> bool {
+    return TokenType::LINT_2 <= tt && tt <= TokenType::LINT_16;
+}
+
+constexpr auto is_isize_int(TokenType tt) noexcept -> bool {
+    return TokenType::ZINT_2 <= tt && tt <= TokenType::ZINT_16;
+}
+
+constexpr auto is_unsigned_int(TokenType tt) noexcept -> bool {
+    return TokenType::UINT_2 <= tt && tt <= TokenType::UINT_16;
+}
+
+constexpr auto is_unsigned_long_int(TokenType tt) noexcept -> bool {
+    return TokenType::ULINT_2 <= tt && tt <= TokenType::ULINT_16;
+}
+
+constexpr auto is_usize_int(TokenType tt) noexcept -> bool {
+    return TokenType::UZINT_2 <= tt && tt <= TokenType::UZINT_16;
+}
+
+auto suffix_length(TokenType tt) noexcept -> usize;
 
 } // namespace token_type
 
@@ -183,7 +248,7 @@ struct Token {
     MinimalSourceLocation location{};
 
     Token() noexcept = default;
-    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {};
+    Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {}
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
         : type{tt}, slice{slice}, location{.line = line, .column = column} {}
 

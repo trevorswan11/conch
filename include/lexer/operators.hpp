@@ -62,57 +62,63 @@ constexpr Operator REF{"ref", TokenType::REF};
 
 } // namespace operators
 
-constexpr auto ALL_OPERATORS = std::array{
-    operators::ASSIGN,
-    operators::WALRUS,
-    operators::PLUS,
-    operators::PLUS_ASSIGN,
-    operators::MINUS,
-    operators::MINUS_ASSIGN,
-    operators::STAR,
-    operators::STAR_ASSIGN,
-    operators::STAR_STAR,
-    operators::SLASH,
-    operators::SLASH_ASSIGN,
-    operators::PERCENT,
-    operators::PERCENT_ASSIGN,
-    operators::BANG,
-    operators::WHAT,
-    operators::AND,
-    operators::AND_ASSIGN,
-    operators::OR,
-    operators::OR_ASSIGN,
-    operators::SHL,
-    operators::SHL_ASSIGN,
-    operators::SHR,
-    operators::SHR_ASSIGN,
-    operators::NOT,
-    operators::NOT_ASSIGN,
-    operators::XOR,
-    operators::XOR_ASSIGN,
-    operators::LT,
-    operators::LTEQ,
-    operators::GT,
-    operators::GTEQ,
-    operators::EQ,
-    operators::NEQ,
-    operators::COLON_COLON,
-    operators::DOT,
-    operators::DOT_DOT,
-    operators::DOT_DOT_EQ,
-    operators::FAT_ARROW,
-    operators::COMMENT,
-    operators::MULTILINE_STRING,
-    operators::REF,
-};
+constexpr auto ALL_OPERATORS = []() {
+    auto all_operators = std::array{
+        operators::ASSIGN,
+        operators::WALRUS,
+        operators::PLUS,
+        operators::PLUS_ASSIGN,
+        operators::MINUS,
+        operators::MINUS_ASSIGN,
+        operators::STAR,
+        operators::STAR_ASSIGN,
+        operators::STAR_STAR,
+        operators::SLASH,
+        operators::SLASH_ASSIGN,
+        operators::PERCENT,
+        operators::PERCENT_ASSIGN,
+        operators::BANG,
+        operators::WHAT,
+        operators::AND,
+        operators::AND_ASSIGN,
+        operators::OR,
+        operators::OR_ASSIGN,
+        operators::SHL,
+        operators::SHL_ASSIGN,
+        operators::SHR,
+        operators::SHR_ASSIGN,
+        operators::NOT,
+        operators::NOT_ASSIGN,
+        operators::XOR,
+        operators::XOR_ASSIGN,
+        operators::LT,
+        operators::LTEQ,
+        operators::GT,
+        operators::GTEQ,
+        operators::EQ,
+        operators::NEQ,
+        operators::COLON_COLON,
+        operators::DOT,
+        operators::DOT_DOT,
+        operators::DOT_DOT_EQ,
+        operators::FAT_ARROW,
+        operators::COMMENT,
+        operators::MULTILINE_STRING,
+        operators::REF,
+    };
+
+    std::ranges::sort(all_operators, {}, &Operator::first);
+    return all_operators;
+}();
 
 constexpr auto MAX_OPERATOR_LEN = std::ranges::max_element(ALL_OPERATORS, [](auto a, auto b) {
                                       return a.first.size() < b.first.size();
                                   })->first.size();
 
 constexpr auto get_operator(std::string_view sv) noexcept -> Optional<Operator> {
-    const auto it = std::ranges::find(ALL_OPERATORS, sv, &Operator::first);
-    return it == ALL_OPERATORS.end() ? nullopt : Optional<Operator>{*it};
+    const auto it = std::ranges::lower_bound(ALL_OPERATORS, sv, {}, &Operator::first);
+    if (it == ALL_OPERATORS.end() || it->first != sv) { return nullopt; }
+    return Optional<Operator>{*it};
 }
 
 } // namespace conch

@@ -15,26 +15,24 @@ DeclStatement::DeclStatement(const Token&              start_token,
                              Box<TypeExpression>       type,
                              Optional<Box<Expression>> value,
                              DeclModifiers             modifiers) noexcept
-    : Statement{start_token, NodeKind::DECL_STATEMENT}, ident_{std::move(ident)},
-      type_{std::move(type)}, value_{std::move(value)}, modifiers_{modifiers} {}
+    : StmtBase{start_token}, ident_{std::move(ident)}, type_{std::move(type)},
+      value_{std::move(value)}, modifiers_{modifiers} {}
 
 DeclStatement::~DeclStatement() = default;
 
 auto DeclStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto DeclStatement::parse(Parser& parser) -> Expected<Box<DeclStatement>, ParserDiagnostic> {
+auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
     const auto    start_token = parser.current_token();
     DeclModifiers modifiers   = token_to_modifier(start_token).value();
 
     Optional<DeclModifiers> current_modifier;
     while ((current_modifier = token_to_modifier(parser.peek_token()))) {
         parser.advance();
-        const auto& next_modifier = current_modifier.value();
-        if (modifiers_has(modifiers, next_modifier)) {
+        if (modifiers_has(modifiers, *current_modifier)) {
             return make_parser_unexpected(ParserError::DUPLICATE_DECL_MODIFIER, start_token);
         }
-
-        modifiers |= next_modifier;
+        modifiers |= *current_modifier;
     }
 
     if (!validate_modifiers(modifiers)) {
@@ -42,25 +40,26 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<DeclStatement>, Parser
     }
 
     TRY(parser.expect_peek(TokenType::IDENT));
-    auto decl_name                      = TRY(IdentifierExpression::parse(parser));
+    auto decl_name = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
     auto [decl_type, value_initialized] = TRY(TypeExpression::parse(parser));
+    auto decl_type_expr                 = downcast<TypeExpression>(std::move(decl_type));
 
     Optional<Box<Expression>> decl_value;
     if (value_initialized) {
-        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
-            return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
-        }
         decl_value = TRY(parser.parse_expression());
     } else {
         if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
-        } else if (!decl_type->has_explicit_type()) {
+        } else if (!decl_type_expr->has_explicit_type()) {
             return make_parser_unexpected(ParserError::FORWARD_VAR_DECL_MISSING_TYPE, start_token);
         }
     }
 
-    return make_box<DeclStatement>(
-        start_token, std::move(decl_name), std::move(decl_type), std::move(decl_value), modifiers);
+    return make_box<DeclStatement>(start_token,
+                                   std::move(decl_name),
+                                   std::move(decl_type_expr),
+                                   std::move(decl_value),
+                                   modifiers);
 }
 
 auto DeclStatement::is_equal(const Node& other) const noexcept -> bool {

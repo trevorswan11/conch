@@ -38,7 +38,10 @@ class ForLoopCapture {
     friend class ForLoopExpression;
 };
 
-class ForLoopExpression : public Expression {
+class ForLoopExpression : public ExprBase<ForLoopExpression> {
+  public:
+    static constexpr auto KIND = NodeKind::FOR_LOOP_EXPRESSION;
+
   public:
     explicit ForLoopExpression(const Token&                          start_token,
                                std::vector<Box<Expression>>          iterables,
@@ -47,10 +50,8 @@ class ForLoopExpression : public Expression {
                                Optional<Box<Statement>>              non_break) noexcept;
     ~ForLoopExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<ForLoopExpression>, ParserDiagnostic>;
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_iterables() const noexcept -> std::span<const Box<Expression>> {
         return iterables_;
@@ -66,6 +67,7 @@ class ForLoopExpression : public Expression {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

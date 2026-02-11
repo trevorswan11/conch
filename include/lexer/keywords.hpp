@@ -38,53 +38,127 @@ constexpr Keyword WHILE{"while", TokenType::WHILE};
 constexpr Keyword CONTINUE{"continue", TokenType::CONTINUE};
 constexpr Keyword BREAK{"break", TokenType::BREAK};
 constexpr Keyword NIL{"nil", TokenType::NIL};
-constexpr Keyword TYPEOF{"typeof", TokenType::TYPEOF};
 constexpr Keyword IMPORT{"import", TokenType::IMPORT};
 constexpr Keyword INT{"int", TokenType::INT_TYPE};
+constexpr Keyword LONG{"long", TokenType::LONG_TYPE};
+constexpr Keyword ISIZE{"isize", TokenType::ISIZE_TYPE};
 constexpr Keyword UINT{"uint", TokenType::UINT_TYPE};
-constexpr Keyword SIZE{"size", TokenType::SIZE_TYPE};
+constexpr Keyword ULONG{"ulong", TokenType::ULONG_TYPE};
+constexpr Keyword USIZE{"usize", TokenType::USIZE_TYPE};
 constexpr Keyword FLOAT{"float", TokenType::FLOAT_TYPE};
 constexpr Keyword BYTE{"byte", TokenType::BYTE_TYPE};
 constexpr Keyword STRING{"string", TokenType::STRING_TYPE};
 constexpr Keyword BOOL{"bool", TokenType::BOOL_TYPE};
 constexpr Keyword VOID{"void", TokenType::VOID_TYPE};
-constexpr Keyword TYPE{"type", TokenType::TYPE};
+constexpr Keyword TYPE{"type", TokenType::TYPE_TYPE};
 constexpr Keyword WITH{"with", TokenType::WITH};
 constexpr Keyword AS{"as", TokenType::AS};
 constexpr Keyword PRIVATE{"private", TokenType::PRIVATE};
 constexpr Keyword EXTERN{"extern", TokenType::EXTERN};
 constexpr Keyword EXPORT{"export", TokenType::EXPORT};
 constexpr Keyword PACKED{"packed", TokenType::PACKED};
+constexpr Keyword VOLATILE{"volatile", TokenType::VOLATILE};
+constexpr Keyword STATIC{"static", TokenType::STATIC};
+constexpr Keyword MUT{"mut", TokenType::MUT};
+
+namespace builtins {
+
+constexpr Keyword TYPEOF{"@typeOf", TokenType::TYPEOF};
+constexpr Keyword SIZEOF{"@sizeOf", TokenType::SIZEOF};
+constexpr Keyword ALIGNOF{"@alignOf", TokenType::ALIGNOF};
+constexpr Keyword SIN{"@sin", TokenType::SIN};
+constexpr Keyword COS{"@cos", TokenType::COS};
+constexpr Keyword TAN{"@tan", TokenType::TAN};
+constexpr Keyword SQRT{"@sqrt", TokenType::SQRT};
+constexpr Keyword LOG{"@log", TokenType::LOG};
+constexpr Keyword LOG_10{"@log10", TokenType::LOG_10};
+constexpr Keyword LOG_2{"@log2", TokenType::LOG_2};
+constexpr Keyword MIN{"@min", TokenType::MIN};
+constexpr Keyword MAX{"@max", TokenType::MAX};
+constexpr Keyword MOD{"@mod", TokenType::MOD};
+constexpr Keyword DIVMOD{"@divmod", TokenType::DIVMOD};
+constexpr Keyword TRUNC{"@trunc", TokenType::TRUNC};
+constexpr Keyword CAST{"@cast", TokenType::CAST};
+constexpr Keyword CEIL{"@ceil", TokenType::CEIL};
+constexpr Keyword FLOOR{"@floor", TokenType::FLOOR};
+constexpr Keyword EXP{"@exp", TokenType::EXP};
+constexpr Keyword EXP_2{"@exp2", TokenType::EXP_2};
+constexpr Keyword CLZ{"@clz", TokenType::CLZ};
+constexpr Keyword CTZ{"@ctz", TokenType::CTZ};
+
+} // namespace builtins
 
 } // namespace keywords
 
-constexpr auto ALL_KEYWORDS = std::array{
-    keywords::FN,         keywords::VAR,    keywords::CONST,  keywords::STRUCT,
-    keywords::ENUM,       keywords::TRUE,   keywords::FALSE,  keywords::BOOLEAN_AND,
-    keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,     keywords::IF,
-    keywords::ELSE,       keywords::ORELSE, keywords::DO,     keywords::MATCH,
-    keywords::RETURN,     keywords::LOOP,   keywords::FOR,    keywords::WHILE,
-    keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,    keywords::TYPEOF,
-    keywords::IMPORT,     keywords::INT,    keywords::UINT,   keywords::SIZE,
-    keywords::FLOAT,      keywords::BYTE,   keywords::STRING, keywords::BOOL,
-    keywords::VOID,       keywords::TYPE,   keywords::WITH,   keywords::AS,
-    keywords::PRIVATE,    keywords::EXTERN, keywords::EXPORT, keywords::PACKED,
-};
+constexpr auto ALL_KEYWORDS = []() {
+    auto all_keywords = std::array{
+        keywords::FN,         keywords::VAR,    keywords::CONST,    keywords::STRUCT,
+        keywords::ENUM,       keywords::TRUE,   keywords::FALSE,    keywords::BOOLEAN_AND,
+        keywords::BOOLEAN_OR, keywords::IS,     keywords::IN,       keywords::IF,
+        keywords::ELSE,       keywords::ORELSE, keywords::DO,       keywords::MATCH,
+        keywords::RETURN,     keywords::LOOP,   keywords::FOR,      keywords::WHILE,
+        keywords::CONTINUE,   keywords::BREAK,  keywords::NIL,      keywords::IMPORT,
+        keywords::INT,        keywords::LONG,   keywords::ISIZE,    keywords::UINT,
+        keywords::ULONG,      keywords::USIZE,  keywords::FLOAT,    keywords::BYTE,
+        keywords::STRING,     keywords::BOOL,   keywords::VOID,     keywords::TYPE,
+        keywords::WITH,       keywords::AS,     keywords::PRIVATE,  keywords::EXTERN,
+        keywords::EXPORT,     keywords::PACKED, keywords::VOLATILE, keywords::STATIC,
+        keywords::MUT,
+    };
+
+    std::ranges::sort(all_keywords, {}, &Keyword::first);
+    return all_keywords;
+}();
 
 constexpr auto get_keyword(std::string_view sv) noexcept -> Optional<Keyword> {
-    const auto it = std::ranges::find(ALL_KEYWORDS, sv, &Keyword::first);
-    return it == ALL_KEYWORDS.end() ? nullopt : Optional<Keyword>{*it};
+    const auto it = std::ranges::lower_bound(ALL_KEYWORDS, sv, {}, &Keyword::first);
+    if (it == ALL_KEYWORDS.end() || it->first != sv) { return nullopt; }
+    return Optional<Keyword>{*it};
 }
 
 constexpr auto ALL_PRIMITIVES = std::array{
     keywords::INT.second,
+    keywords::LONG.second,
+    keywords::ISIZE.second,
     keywords::UINT.second,
-    keywords::SIZE.second,
+    keywords::ULONG.second,
+    keywords::USIZE.second,
     keywords::FLOAT.second,
     keywords::BYTE.second,
     keywords::STRING.second,
     keywords::BOOL.second,
     keywords::VOID.second,
 };
+
+constexpr auto ALL_BUILTINS = []() {
+    using namespace keywords;
+    auto all_builtins = std::array{
+        builtins::TYPEOF, builtins::SIZEOF, builtins::ALIGNOF, builtins::SIN,    builtins::COS,
+        builtins::TAN,    builtins::SQRT,   builtins::LOG,     builtins::LOG_10, builtins::LOG_2,
+        builtins::MIN,    builtins::MAX,    builtins::MOD,     builtins::DIVMOD, builtins::TRUNC,
+        builtins::CAST,   builtins::CEIL,   builtins::FLOOR,   builtins::EXP,    builtins::EXP_2,
+        builtins::CLZ,    builtins::CTZ,
+    };
+
+    std::ranges::sort(all_builtins, {}, &Keyword::first);
+    return all_builtins;
+}();
+
+constexpr auto get_builtin(std::string_view sv) noexcept -> Optional<Keyword> {
+    const auto it = std::ranges::lower_bound(ALL_BUILTINS, sv, {}, &Keyword::first);
+    if (it == ALL_BUILTINS.end() || it->first != sv) { return nullopt; }
+    return Optional<Keyword>{*it};
+}
+
+constexpr auto is_builtin(TokenType tt) noexcept -> bool {
+    constexpr auto ALL_BUILTINS_BY_TT = [] {
+        auto arr = ALL_BUILTINS;
+        std::ranges::sort(arr, {}, &Keyword::second);
+        return arr;
+    }();
+
+    const auto it = std::ranges::lower_bound(ALL_BUILTINS_BY_TT, tt, {}, &Keyword::second);
+    return it != ALL_BUILTINS_BY_TT.end() && it->second == tt;
+}
 
 } // namespace conch

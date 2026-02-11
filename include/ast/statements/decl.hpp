@@ -18,11 +18,12 @@ class IdentifierExpression;
 class TypeExpression;
 
 enum class DeclModifiers : u8 {
-    MUTABLE  = 1 << 0,
+    VARIABLE = 1 << 0,
     CONSTANT = 1 << 1,
     PRIVATE  = 1 << 2,
     EXTERN   = 1 << 3,
     EXPORT   = 1 << 4,
+    STATIC   = 1 << 5,
 };
 
 constexpr auto operator|(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
@@ -42,7 +43,10 @@ constexpr auto operator|=(DeclModifiers& lhs, DeclModifiers rhs) -> DeclModifier
     return lhs;
 }
 
-class DeclStatement : public Statement {
+class DeclStatement : public StmtBase<DeclStatement> {
+  public:
+    static constexpr auto KIND = NodeKind::DECL_STATEMENT;
+
   public:
     explicit DeclStatement(const Token&              start_token,
                            Box<IdentifierExpression> ident,
@@ -51,10 +55,8 @@ class DeclStatement : public Statement {
                            DeclModifiers             modifiers) noexcept;
     ~DeclStatement() override;
 
-    auto accept(Visitor& v) const -> void override;
-
-    [[nodiscard]] static auto parse(Parser& parser)
-        -> Expected<Box<DeclStatement>, ParserDiagnostic>;
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_ident() const noexcept -> const IdentifierExpression& { return *ident_; }
     [[nodiscard]] auto get_type() const noexcept -> const TypeExpression& { return *type_; }
@@ -74,7 +76,7 @@ class DeclStatement : public Statement {
 
     static constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept -> bool {
         const auto unique_mut =
-            (modifiers & DeclModifiers::MUTABLE) ^ (modifiers & DeclModifiers::CONSTANT);
+            (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
         const auto unique_abi =
             (modifiers & DeclModifiers::EXTERN) ^ (modifiers & DeclModifiers::EXPORT);
         const auto unique_access =
@@ -88,17 +90,19 @@ class DeclStatement : public Statement {
         return it == LEGAL_MODIFIERS.end() ? nullopt : Optional<DeclModifiers>{it->second};
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
-    static constexpr auto LEGAL_MODIFIERS = std::array{
-        ModifierMapping{TokenType::VAR, DeclModifiers::MUTABLE},
-        ModifierMapping{TokenType::CONST, DeclModifiers::CONSTANT},
-        ModifierMapping{TokenType::PRIVATE, DeclModifiers::PRIVATE},
-        ModifierMapping{TokenType::EXTERN, DeclModifiers::EXTERN},
-        ModifierMapping{TokenType::EXPORT, DeclModifiers::EXPORT},
-    };
+    static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
+        {TokenType::VAR, DeclModifiers::VARIABLE},
+        {TokenType::CONST, DeclModifiers::CONSTANT},
+        {TokenType::PRIVATE, DeclModifiers::PRIVATE},
+        {TokenType::EXTERN, DeclModifiers::EXTERN},
+        {TokenType::EXPORT, DeclModifiers::EXPORT},
+        {TokenType::STATIC, DeclModifiers::STATIC},
+    });
 
   private:
     Box<IdentifierExpression> ident_;

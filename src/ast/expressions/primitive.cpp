@@ -1,7 +1,5 @@
-#include <charconv>
 #include <cmath>
 #include <limits>
-#include <utility>
 
 #include "ast/expressions/primitive.hpp"
 
@@ -9,11 +7,11 @@
 
 namespace conch::ast {
 
-// cppcheck-suppress-begin constParameterReference
+// cppcheck-suppress-begin [constParameterReference, duplInheritedMember]
 
 auto StringExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto StringExpression::parse(Parser& parser) -> Expected<Box<StringExpression>, ParserDiagnostic> {
+auto StringExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     const auto promoted    = start_token.promote();
     if (!promoted) { return make_parser_unexpected(ParserError::MALFORMED_STRING, start_token); }
@@ -21,66 +19,16 @@ auto StringExpression::parse(Parser& parser) -> Expected<Box<StringExpression>, 
     return make_box<StringExpression>(start_token, *promoted);
 }
 
-template <typename T>
-static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
-    using value_type                 = typename T::value_type;
-    constexpr auto is_floating_point = std::is_same_v<value_type, f64>;
-    const auto     start_token       = parser.current_token();
-    const auto     base              = token_type::to_base(start_token.type);
-
-    const auto trim_amount = [](TokenType tt) -> usize {
-        if (token_type::is_unsigned_int(tt)) { return 1; }
-        if (token_type::is_size_int(tt)) { return 2; }
-        return 0;
-    };
-
-    const auto* first = start_token.slice.cbegin() + (!base || *base == Base::DECIMAL ? 0 : 2);
-    const auto* last  = start_token.slice.cend() - trim_amount(start_token.type);
-
-    value_type             v;
-    std::from_chars_result result;
-    if constexpr (is_floating_point) {
-        result = std::from_chars(first, last, v);
-    } else {
-        result = std::from_chars(first, last, v, std::to_underlying(*base));
-    }
-    if (result.ec == std::errc{} && result.ptr == last) { return make_box<T>(start_token, v); }
-
-    if (result.ec == std::errc::result_out_of_range) {
-        const auto err =
-            is_floating_point ? ParserError::FLOAT_OVERFLOW : ParserError::INTEGER_OVERFLOW;
-        return make_parser_unexpected(err, start_token);
-    }
-
-    const auto err =
-        is_floating_point ? ParserError::MALFORMED_FLOAT : ParserError::MALFORMED_INTEGER;
-    return make_parser_unexpected(err, start_token);
-}
-
 auto SignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto SignedIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<SignedIntegerExpression>, ParserDiagnostic> {
-    return parse_number<SignedIntegerExpression>(parser);
-}
-
+auto SignedLongIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+auto ISizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 auto UnsignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto UnsignedIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<UnsignedIntegerExpression>, ParserDiagnostic> {
-    return parse_number<UnsignedIntegerExpression>(parser);
-}
-
-auto SizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto SizeIntegerExpression::parse(Parser& parser)
-    -> Expected<Box<SizeIntegerExpression>, ParserDiagnostic> {
-    return parse_number<SizeIntegerExpression>(parser);
-}
+auto UnsignedLongIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+auto USizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto ByteExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto ByteExpression::parse(Parser& parser) -> Expected<Box<ByteExpression>, ParserDiagnostic> {
+auto ByteExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
     const auto slice       = start_token.slice;
 
@@ -93,24 +41,20 @@ auto ByteExpression::parse(Parser& parser) -> Expected<Box<ByteExpression>, Pars
     const auto escaped = slice[2];
     byte       value;
     switch (escaped) {
-    case 'n': value = '\n'; break;
-    case 'r': value = '\r'; break;
-    case 't': value = '\t'; break;
+    case 'n':  value = '\n'; break;
+    case 'r':  value = '\r'; break;
+    case 't':  value = '\t'; break;
     case '\\': value = '\\'; break;
     case '\'': value = '\''; break;
-    case '"': value = '"'; break;
-    case '0': value = '\0'; break;
-    default: return make_parser_unexpected(ParserError::UNKNOWN_CHARACTER_ESCAPE, start_token);
+    case '"':  value = '"'; break;
+    case '0':  value = '\0'; break;
+    default:   return make_parser_unexpected(ParserError::UNKNOWN_CHARACTER_ESCAPE, start_token);
     }
 
     return make_box<ByteExpression>(start_token, value);
 }
 
 auto FloatExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto FloatExpression::parse(Parser& parser) -> Expected<Box<FloatExpression>, ParserDiagnostic> {
-    return parse_number<FloatExpression>(parser);
-}
 
 auto FloatExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<FloatExpression>(other);
@@ -125,17 +69,17 @@ auto FloatExpression::approx_eq(value_type a, value_type b) -> bool {
 
 auto BoolExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto BoolExpression::parse(Parser& parser) -> Expected<Box<BoolExpression>, ParserDiagnostic> {
+auto BoolExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto& start_token = parser.current_token();
     return make_box<BoolExpression>(start_token, start_token.type == TokenType::TRUE);
 }
 
 auto NilExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto NilExpression::parse(Parser& parser) -> Expected<Box<NilExpression>, ParserDiagnostic> {
+auto NilExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     return make_box<NilExpression>(parser.current_token(), std::monostate{});
 }
 
-// cppcheck-suppress-end constParameterReference
+// cppcheck-suppress-end [constParameterReference, duplInheritedMember]
 
 } // namespace conch::ast

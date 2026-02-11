@@ -59,11 +59,12 @@ class Lexer {
 
   private:
     auto        skip_whitespace() noexcept -> void;
+    static auto lu_builtin(std::string_view ident) noexcept -> TokenType;
     static auto lu_ident(std::string_view ident) noexcept -> TokenType;
 
     auto read_character(uint8_t n = 1) noexcept -> void;
     auto read_operator() const noexcept -> Optional<Token>;
-    auto read_ident() noexcept -> std::string_view;
+    auto read_ident(bool builtin) noexcept -> std::string_view;
     auto read_number() noexcept -> Token;
     auto read_escape() noexcept -> byte;
     auto read_string() noexcept -> Token;

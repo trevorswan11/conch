@@ -6,7 +6,7 @@ namespace conch::ast {
 
 auto JumpStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto JumpStatement::parse(Parser& parser) -> Expected<Box<JumpStatement>, ParserDiagnostic> {
+auto JumpStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
 
     Optional<Box<Expression>> value;

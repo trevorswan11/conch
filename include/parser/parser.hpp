@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -8,7 +7,6 @@
 #include <vector>
 
 #include "util/common.hpp"
-#include "util/functional.hpp"
 #include "util/optional.hpp"
 
 #include "parser/precedence.hpp"
@@ -38,7 +36,7 @@ enum class ParserError : u8 {
     END_OF_TOKEN_STREAM,
     CONST_DECL_MISSING_VALUE,
     FORWARD_VAR_DECL_MISSING_TYPE,
-    EMPTY_IMPL_BLOCK,
+    ILLEGAL_IMPORT,
     USER_IMPORT_MISSING_ALIAS,
     DUPLICATE_DECL_MODIFIER,
     ILLEGAL_DECL_MODIFIERS,
@@ -49,6 +47,12 @@ enum class ParserError : u8 {
     UNKNOWN_CHARACTER_ESCAPE,
     MALFORMED_CHARACTER,
     MALFORMED_STRING,
+    PREFIX_MISSING_OPERAND,
+    INDEX_MISSING_EXPRESSION,
+    EMPTY_LOOP,
+    WHILE_MISSING_CONDITION,
+    INVALID_STRUCT_MEMBER,
+    EMPTY_STRUCT,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;
@@ -60,9 +64,9 @@ auto make_parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
 
 class Parser {
   public:
-    using PrefixFn = Thunk<Expected<Box<ast::Expression>, ParserDiagnostic>(Parser&)>;
-    using InfixFn =
-        Thunk<Expected<Box<ast::Expression>, ParserDiagnostic>(Parser&, Box<ast::Expression>)>;
+    using PrefixFn = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&);
+    using InfixFn  = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&,
+                                                                         Box<ast::Expression>);
 
   public:
     Parser() noexcept = default;
@@ -83,6 +87,7 @@ class Parser {
     [[nodiscard]] auto current_error(TokenType expected) -> ParserDiagnostic {
         return tt_mismatch_error(expected, current_token_);
     }
+
     [[nodiscard]] auto expect_peek(TokenType expected)
         -> Expected<std::monostate, ParserDiagnostic>;
     [[nodiscard]] auto peek_error(TokenType expected) -> ParserDiagnostic {
@@ -96,17 +101,11 @@ class Parser {
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Expected<Box<ast::Expression>, ParserDiagnostic>;
 
-    static auto poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&>;
-    static auto poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&>;
+    static constexpr auto poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&>;
+    static constexpr auto poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&>;
 
   private:
     static auto tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic;
-
-    using PrefixPair = std::pair<TokenType, PrefixFn>;
-    static std::array<PrefixPair, 42> PREFIX_FNS;
-
-    using InfixPair = std::pair<TokenType, InfixFn>;
-    static std::array<InfixPair, 39> INFIX_FNS;
 
   private:
     std::string_view input_;
