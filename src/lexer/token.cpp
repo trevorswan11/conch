@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <string>
 #include <utility>
@@ -30,8 +31,8 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Optional<Base> {
-    switch (type) {
+auto to_base(TokenType tt) noexcept -> Optional<Base> {
+    switch (tt) {
     case TokenType::INT_2:
     case TokenType::LINT_2:
     case TokenType::ZINT_2:
@@ -76,34 +77,47 @@ auto misc_from_char(byte c) noexcept -> Optional<TokenType> {
     }
 }
 
-auto is_signed_int(TokenType t) noexcept -> bool {
-    return TokenType::INT_2 <= t && t <= TokenType::INT_16;
+auto is_signed_int(TokenType tt) noexcept -> bool {
+    return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;
 }
 
-auto is_signed_long_int(TokenType t) noexcept -> bool {
-    return TokenType::LINT_2 <= t && t <= TokenType::LINT_16;
+auto is_signed_long_int(TokenType tt) noexcept -> bool {
+    return TokenType::LINT_2 <= tt && tt <= TokenType::LINT_16;
 }
 
-auto is_isize_int(TokenType t) noexcept -> bool {
-    return TokenType::ZINT_2 <= t && t <= TokenType::ZINT_16;
+auto is_isize_int(TokenType tt) noexcept -> bool {
+    return TokenType::ZINT_2 <= tt && tt <= TokenType::ZINT_16;
 }
 
-auto is_unsigned_int(TokenType t) noexcept -> bool {
-    return TokenType::UINT_2 <= t && t <= TokenType::UINT_16;
+auto is_unsigned_int(TokenType tt) noexcept -> bool {
+    return TokenType::UINT_2 <= tt && tt <= TokenType::UINT_16;
 }
 
-auto is_unsigned_long_int(TokenType t) noexcept -> bool {
-    return TokenType::ULINT_2 <= t && t <= TokenType::ULINT_16;
+auto is_unsigned_long_int(TokenType tt) noexcept -> bool {
+    return TokenType::ULINT_2 <= tt && tt <= TokenType::ULINT_16;
 }
 
-auto is_usize_int(TokenType t) noexcept -> bool {
-    return TokenType::UZINT_2 <= t && t <= TokenType::UZINT_16;
+auto is_usize_int(TokenType tt) noexcept -> bool {
+    return TokenType::UZINT_2 <= tt && tt <= TokenType::UZINT_16;
 }
 
-auto is_size_int(TokenType t) noexcept -> bool { return is_isize_int(t) || is_usize_int(t); }
+using SuffixMapping                = std::pair<bool (*)(TokenType), usize>;
+constexpr auto INT_SUFFIX_MAPPINGS = std::to_array<SuffixMapping>({
+    {is_signed_int, 0},
+    {is_signed_long_int, 1},
+    {is_isize_int, 1},
+    {is_unsigned_int, 1},
+    {is_unsigned_long_int, 2},
+    {is_usize_int, 2},
+});
 
-auto is_int(TokenType t) noexcept -> bool {
-    return TokenType::INT_2 <= t && t <= TokenType::UZINT_16;
+auto suffix_length(TokenType tt) noexcept -> usize {
+    if (tt < TokenType::INT_2 || tt > TokenType::UZINT_16) { return 0; }
+    return std::ranges::find_if(
+               INT_SUFFIX_MAPPINGS,
+               [tt](auto in_range) { return in_range(tt); },
+               &SuffixMapping::first)
+        ->second;
 }
 
 } // namespace token_type

@@ -178,19 +178,18 @@ auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
 
-auto to_base(TokenType type) noexcept -> Optional<Base>;
-auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
+auto to_base(TokenType tt) noexcept -> Optional<Base>;
+auto misc_from_char(byte b) noexcept -> Optional<TokenType>;
 
-auto is_signed_int(TokenType t) noexcept -> bool;
-auto is_signed_long_int(TokenType t) noexcept -> bool;
-auto is_isize_int(TokenType t) noexcept -> bool;
+auto is_signed_int(TokenType tt) noexcept -> bool;
+auto is_signed_long_int(TokenType tt) noexcept -> bool;
+auto is_isize_int(TokenType tt) noexcept -> bool;
 
-auto is_unsigned_int(TokenType t) noexcept -> bool;
-auto is_unsigned_long_int(TokenType t) noexcept -> bool;
-auto is_usize_int(TokenType t) noexcept -> bool;
+auto is_unsigned_int(TokenType tt) noexcept -> bool;
+auto is_unsigned_long_int(TokenType tt) noexcept -> bool;
+auto is_usize_int(TokenType tt) noexcept -> bool;
 
-auto is_size_int(TokenType t) noexcept -> bool;
-auto is_int(TokenType t) noexcept -> bool;
+auto suffix_length(TokenType tt) noexcept -> usize;
 
 } // namespace token_type
 
