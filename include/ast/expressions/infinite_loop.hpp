@@ -19,11 +19,13 @@ class InfiniteLoopExpression : public ExprBase<InfiniteLoopExpression> {
     explicit InfiniteLoopExpression(const Token& start_token, Box<BlockStatement> block) noexcept;
     ~InfiniteLoopExpression() override;
 
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
-    auto               accept(Visitor& v) const -> void override;
     [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
-    auto               is_equal(const Node& other) const noexcept -> bool override;
+
+  protected:
+    auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
     Box<BlockStatement> block_;

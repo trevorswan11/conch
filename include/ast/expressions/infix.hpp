@@ -8,6 +8,8 @@
 
 #include "parser/parser.hpp"
 
+#include "visitor/visitor.hpp"
+
 namespace conch::ast {
 
 template <typename Derived> class InfixExpression : public ExprBase<Derived> {
@@ -22,10 +24,7 @@ template <typename Derived> class InfixExpression : public ExprBase<Derived> {
     auto               get_op() const noexcept -> TokenType { return op_; }
     [[nodiscard]] auto get_rhs() const noexcept -> const Expression& { return *rhs_; }
 
-    auto is_equal(const Node& other) const noexcept -> bool override {
-        const auto& casted = Node::as<Derived>(other);
-        return *lhs_ == *casted.lhs_ && op_ == casted.op_ && *rhs_ == *casted.rhs_;
-    }
+    auto accept(Visitor& v) const noexcept -> void override { v.visit(Node::as<Derived>(*this)); }
 
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lhs)
         -> Expected<Box<Expression>, ParserDiagnostic> {
@@ -35,6 +34,12 @@ template <typename Derived> class InfixExpression : public ExprBase<Derived> {
         parser.advance();
         auto rhs = TRY(parser.parse_expression(current_precedence));
         return make_box<Derived>(lhs->get_token(), std::move(lhs), op_token_type, std::move(rhs));
+    }
+
+  protected:
+    auto is_equal(const Node& other) const noexcept -> bool override {
+        const auto& casted = Node::as<Derived>(other);
+        return *lhs_ == *casted.lhs_ && op_ == casted.op_ && *rhs_ == *casted.rhs_;
     }
 
   protected:

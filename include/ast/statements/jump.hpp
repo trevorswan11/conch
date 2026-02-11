@@ -20,8 +20,7 @@ class JumpStatement : public StmtBase<JumpStatement> {
     explicit JumpStatement(const Token& start_token, Optional<Box<Expression>> expression) noexcept
         : StmtBase{start_token}, expression_{std::move(expression)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto has_expression() const noexcept -> bool { return expression_.has_value(); }
@@ -29,6 +28,7 @@ class JumpStatement : public StmtBase<JumpStatement> {
         return expression_ ? Optional<const Expression&>{**expression_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<JumpStatement>(other);
         return optional::unsafe_eq<Expression>(expression_, casted.expression_);

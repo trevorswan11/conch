@@ -39,8 +39,7 @@ class CallExpression : public ExprBase<CallExpression> {
                             std::vector<CallArgument> arguments) noexcept
         : ExprBase{start_token}, function_{std::move(function)}, arguments_{std::move(arguments)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> function)
         -> Expected<Box<Expression>, ParserDiagnostic>;
 
@@ -49,6 +48,7 @@ class CallExpression : public ExprBase<CallExpression> {
         return arguments_;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<CallExpression>(other);
         return *function_ == *casted.function_ &&

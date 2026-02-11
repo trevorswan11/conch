@@ -21,10 +21,11 @@ FunctionParameter::FunctionParameter(bool                      reference,
 FunctionParameter::~FunctionParameter() = default;
 
 FunctionExpression::FunctionExpression(const Token&                   start_token,
+                                       bool                           mut,
                                        std::vector<FunctionParameter> parameters,
                                        Box<TypeExpression>            return_type,
                                        Optional<Box<BlockStatement>>  body) noexcept
-    : ExprBase{start_token}, parameters_{std::move(parameters)},
+    : ExprBase{start_token}, mutable_{mut}, parameters_{std::move(parameters)},
       return_type_{std::move(return_type)}, body_{std::move(body)} {}
 
 FunctionExpression::~FunctionExpression() = default;

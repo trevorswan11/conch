@@ -11,9 +11,6 @@ class AssignmentExpression : public InfixExpression<AssignmentExpression> {
 
   public:
     using InfixExpression::InfixExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
     using InfixExpression::parse;
 };
 

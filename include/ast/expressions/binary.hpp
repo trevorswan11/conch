@@ -11,9 +11,6 @@ class BinaryExpression : public InfixExpression<BinaryExpression> {
 
   public:
     using InfixExpression::InfixExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
     using InfixExpression::parse;
 };
 

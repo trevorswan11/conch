@@ -50,8 +50,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
                                Optional<Box<Statement>>              non_break) noexcept;
     ~ForLoopExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_iterables() const noexcept -> std::span<const Box<Expression>> {
@@ -68,6 +67,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

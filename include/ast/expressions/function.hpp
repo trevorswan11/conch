@@ -56,15 +56,16 @@ class FunctionExpression : public ExprBase<FunctionExpression> {
 
   public:
     explicit FunctionExpression(const Token&                   start_token,
+                                bool                           mut,
                                 std::vector<FunctionParameter> parameters,
                                 Box<TypeExpression>            return_type,
                                 Optional<Box<BlockStatement>>  body) noexcept;
     ~FunctionExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
+    [[nodiscard]] auto is_mutable() const noexcept -> bool { return mutable_; }
     [[nodiscard]] auto get_parameters() const noexcept -> std::span<const FunctionParameter> {
         return parameters_;
     }
@@ -78,9 +79,11 @@ class FunctionExpression : public ExprBase<FunctionExpression> {
         return body_ ? Optional<const BlockStatement&>{**body_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
+    bool                           mutable_;
     std::vector<FunctionParameter> parameters_;
     Box<TypeExpression>            return_type_;
     Optional<Box<BlockStatement>>  body_;

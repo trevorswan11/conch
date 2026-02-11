@@ -141,6 +141,8 @@ enum class TokenType : u8 {
     EXPORT,
     PACKED,
     VOLATILE,
+    STATIC,
+    MUT,
 
     ILLEGAL,
 };

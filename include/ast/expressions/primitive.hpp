@@ -26,6 +26,8 @@ template <typename Derived, typename T> class PrimitiveExpression : public ExprB
         : ExprBase<Derived>{start_token}, value_{std::move(value)} {}
 
     auto get_value() const -> const value_type& { return value_; }
+
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = Node::as<Derived>(other);
         return value_ == casted.value_;

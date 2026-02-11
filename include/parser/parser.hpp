@@ -51,6 +51,8 @@ enum class ParserError : u8 {
     INDEX_MISSING_EXPRESSION,
     EMPTY_LOOP,
     WHILE_MISSING_CONDITION,
+    INVALID_STRUCT_MEMBER,
+    EMPTY_STRUCT,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;

@@ -51,6 +51,7 @@ class MatchExpression : public ExprBase<MatchExpression> {
         return catch_all_ ? Optional<const Statement&>{**catch_all_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<MatchExpression>(other);
         const auto  arms_eq =

@@ -23,6 +23,7 @@ enum class DeclModifiers : u8 {
     PRIVATE  = 1 << 2,
     EXTERN   = 1 << 3,
     EXPORT   = 1 << 4,
+    STATIC   = 1 << 5,
 };
 
 constexpr auto operator|(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
@@ -54,8 +55,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
                            DeclModifiers             modifiers) noexcept;
     ~DeclStatement() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_ident() const noexcept -> const IdentifierExpression& { return *ident_; }
@@ -90,6 +90,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
         return it == LEGAL_MODIFIERS.end() ? nullopt : Optional<DeclModifiers>{it->second};
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
@@ -100,6 +101,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
         {TokenType::PRIVATE, DeclModifiers::PRIVATE},
         {TokenType::EXTERN, DeclModifiers::EXTERN},
         {TokenType::EXPORT, DeclModifiers::EXPORT},
+        {TokenType::STATIC, DeclModifiers::STATIC},
     });
 
   private:

@@ -26,8 +26,7 @@ class BlockStatement : public StmtBase<BlockStatement> {
                             std::vector<Box<Statement>> statements) noexcept
         : StmtBase{start_token}, statements_{std::move(statements)} {}
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     [[nodiscard]] auto begin() noexcept -> iterator { return statements_.begin(); }
@@ -39,6 +38,7 @@ class BlockStatement : public StmtBase<BlockStatement> {
     [[nodiscard]] auto size() const noexcept -> std::size_t { return statements_.size(); }
     [[nodiscard]] auto empty() const noexcept -> bool { return statements_.empty(); }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<BlockStatement>(other);
         return std::ranges::equal(

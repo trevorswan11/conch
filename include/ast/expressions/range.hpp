@@ -11,9 +11,6 @@ class RangeExpression : public InfixExpression<RangeExpression> {
 
   public:
     using InfixExpression::InfixExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
     using InfixExpression::parse;
 };
 

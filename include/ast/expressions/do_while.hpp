@@ -21,13 +21,13 @@ class DoWhileLoopExpression : public ExprBase<DoWhileLoopExpression> {
                                    Box<Expression>     condition) noexcept;
     ~DoWhileLoopExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_block() const noexcept -> const BlockStatement& { return *block_; }
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

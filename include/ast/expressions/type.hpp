@@ -92,8 +92,7 @@ class TypeExpression : public ExprBase<TypeExpression> {
     explicit TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept;
     ~TypeExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser)
         -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic>;
 
@@ -102,6 +101,7 @@ class TypeExpression : public ExprBase<TypeExpression> {
         return explicit_;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

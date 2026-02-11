@@ -29,8 +29,7 @@ class ImportStatement : public StmtBase<ImportStatement> {
                              Optional<Box<IdentifierExpression>>    alias) noexcept;
     ~ImportStatement() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
     // UB if the import is not a module import.
@@ -60,6 +59,7 @@ class ImportStatement : public StmtBase<ImportStatement> {
         return alias_ ? Optional<const IdentifierExpression&>{**alias_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

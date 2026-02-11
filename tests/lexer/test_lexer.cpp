@@ -212,7 +212,7 @@ TEST_CASE("Integer base variants") {
 }
 
 TEST_CASE("Iterator with other keywords") {
-    Lexer l{"private extern export packed volatile"};
+    Lexer l{"private extern export packed volatile static"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::PRIVATE, "private"},
@@ -220,6 +220,7 @@ TEST_CASE("Iterator with other keywords") {
         {TokenType::EXPORT, "export"},
         {TokenType::PACKED, "packed"},
         {TokenType::VOLATILE, "volatile"},
+        {TokenType::STATIC, "static"},
     });
 
     size_t i = 0;
@@ -311,18 +312,20 @@ TEST_CASE("Character literals") {
 
 TEST_CASE("String literals") {
     Lexer l{
-        R"("This is a string";const five = "Hello, World!";var ten = "Hello\n, World!\0";var one := "Hello, World!;)"};
+        R"("This is a string";const five := "Hello, World!";var ten: string = "Hello\n, World!\0";var one := "Hello, World!;)"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::STRING, R"("This is a string")"},
         {TokenType::SEMICOLON, ";"},
         {TokenType::CONST, "const"},
         {TokenType::IDENT, "five"},
-        {TokenType::ASSIGN, "="},
+        {TokenType::WALRUS, ":="},
         {TokenType::STRING, R"("Hello, World!")"},
         {TokenType::SEMICOLON, ";"},
         {TokenType::VAR, "var"},
         {TokenType::IDENT, "ten"},
+        {TokenType::COLON, ":"},
+        {TokenType::STRING_TYPE, "string"},
         {TokenType::ASSIGN, "="},
         {TokenType::STRING, R"("Hello\n, World!\0")"},
         {TokenType::SEMICOLON, ";"},

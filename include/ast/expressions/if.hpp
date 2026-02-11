@@ -36,6 +36,7 @@ class IfExpression : public ExprBase<IfExpression> {
         return alternate_ ? Optional<const Statement&>{**alternate_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<IfExpression>(other);
         return *condition_ == *casted.condition_ && *consequence_ == *casted.consequence_ &&

@@ -11,9 +11,6 @@ class DotExpression : public InfixExpression<DotExpression> {
 
   public:
     using InfixExpression::InfixExpression;
-
-    auto accept(Visitor& v) const -> void override;
-
     using InfixExpression::parse;
 };
 

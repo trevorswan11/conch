@@ -51,8 +51,7 @@ class EnumExpression : public ExprBase<EnumExpression> {
                             std::vector<Enumeration>            enumerations) noexcept;
     ~EnumExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_underlying() const noexcept -> Optional<const IdentifierExpression&> {
@@ -63,6 +62,7 @@ class EnumExpression : public ExprBase<EnumExpression> {
         return enumerations_;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

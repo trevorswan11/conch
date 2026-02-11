@@ -24,8 +24,7 @@ class WhileLoopExpression : public ExprBase<WhileLoopExpression> {
                                  Optional<Box<Statement>> non_break) noexcept;
     ~WhileLoopExpression() override;
 
-    auto accept(Visitor& v) const -> void override;
-
+    auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 
     [[nodiscard]] auto get_condition() const noexcept -> const Expression& { return *condition_; }
@@ -38,6 +37,7 @@ class WhileLoopExpression : public ExprBase<WhileLoopExpression> {
         return non_break_ ? Optional<const Statement&>{**non_break_} : nullopt;
     }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:

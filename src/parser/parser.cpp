@@ -178,6 +178,8 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::LPAREN, ast::GroupedExpression::parse},
         {TokenType::IF, ast::IfExpression::parse},
         {TokenType::FUNCTION, ast::FunctionExpression::parse},
+        {TokenType::MUT, ast::FunctionExpression::parse},
+        {TokenType::PACKED, ast::StructExpression::parse},
         {TokenType::STRUCT, ast::StructExpression::parse},
         {TokenType::ENUM, ast::FunctionExpression::parse},
         {TokenType::NIL, ast::NilExpression::parse},
@@ -193,10 +195,10 @@ constexpr auto PREFIX_FNS = []() {
         ALL_PRIMITIVES | std::views::transform([](TokenType tt) -> PrefixPair {
             return {tt, ast::IdentifierExpression::parse};
         });
-    constexpr auto num_keywords = primitive_prefixes.size();
 
-    constexpr auto materialized_keywords = materialize_sized_view<num_keywords>(primitive_prefixes);
-    auto           prefix_fns            = concat_arrays(initial_prefixes, materialized_keywords);
+    constexpr auto materialized_keywords =
+        materialize_sized_view<ALL_PRIMITIVES.size()>(primitive_prefixes);
+    auto prefix_fns = concat_arrays(initial_prefixes, materialized_keywords);
     std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
     return prefix_fns;
 }();

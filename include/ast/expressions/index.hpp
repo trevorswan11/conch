@@ -28,6 +28,7 @@ class IndexExpression : public ExprBase<IndexExpression> {
     [[nodiscard]] auto get_array() const noexcept -> const Expression& { return *array_; }
     [[nodiscard]] auto get_index() const noexcept -> const Expression& { return *index_; }
 
+  protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<IndexExpression>(other);
         return *array_ == *casted.array_ && *index_ == *casted.index_;
