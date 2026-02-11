@@ -1,8 +1,10 @@
-#include <catch_amalgamated.hpp>
-
+#include <ranges>
 #include <string_view>
 #include <utility>
 
+#include <catch_amalgamated.hpp>
+
+#include "lexer/keywords.hpp"
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
@@ -123,9 +125,9 @@ TEST_CASE("Base-10 ints and floats") {
             {TokenType::END, ""},
         });
 
-        for (const auto& [expected_token, expected_slice] : expecteds) {
+        for (const auto& [expected_tt, expected_slice] : expecteds) {
             const auto token = l.advance();
-            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_tt == token.type);
             REQUIRE(expected_slice == token.slice);
         }
     }
@@ -147,9 +149,9 @@ TEST_CASE("Base-10 ints and floats") {
             {TokenType::END, ""},
         });
 
-        for (const auto& [expected_token, expected_slice] : expecteds) {
+        for (const auto& [expected_tt, expected_slice] : expecteds) {
             const auto token = l.advance();
-            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_tt == token.type);
             REQUIRE(expected_slice == token.slice);
         }
     }
@@ -172,9 +174,9 @@ TEST_CASE("Integer base variants") {
             {TokenType::END, ""},
         });
 
-        for (const auto& [expected_token, expected_slice] : expecteds) {
+        for (const auto& [expected_tt, expected_slice] : expecteds) {
             const auto token = l.advance();
-            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_tt == token.type);
             REQUIRE(expected_slice == token.slice);
         }
     }
@@ -203,9 +205,9 @@ TEST_CASE("Integer base variants") {
             {TokenType::END, ""},
         });
 
-        for (const auto& [expected_token, expected_slice] : expecteds) {
+        for (const auto& [expected_tt, expected_slice] : expecteds) {
             const auto token = l.advance();
-            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_tt == token.type);
             REQUIRE(expected_slice == token.slice);
         }
     }
@@ -222,9 +224,9 @@ TEST_CASE("Integer base variants") {
             {TokenType::UZINT_10, "2uz"},
         });
 
-        for (const auto& [expected_token, expected_slice] : expecteds) {
+        for (const auto& [expected_tt, expected_slice] : expecteds) {
             const auto token = l.advance();
-            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_tt == token.type);
             REQUIRE(expected_slice == token.slice);
         }
     }
@@ -300,9 +302,9 @@ TEST_CASE("Comments") {
         {TokenType::SEMICOLON, ";"},  {TokenType::END, ""},
     });
 
-    for (const auto& [expected_token, expected_slice] : expecteds) {
+    for (const auto& [expected_tt, expected_slice] : expecteds) {
         const auto token = l.advance();
-        REQUIRE(expected_token == token.type);
+        REQUIRE(expected_tt == token.type);
         REQUIRE(expected_slice == token.slice);
     }
 }
@@ -335,9 +337,9 @@ TEST_CASE("Character literals") {
         {TokenType::END, ""},
     });
 
-    for (const auto& [expected_token, expected_slice] : expecteds) {
+    for (const auto& [expected_tt, expected_slice] : expecteds) {
         const auto token = l.advance();
-        REQUIRE(expected_token == token.type);
+        REQUIRE(expected_tt == token.type);
         REQUIRE(expected_slice == token.slice);
     }
 }
@@ -368,9 +370,9 @@ TEST_CASE("String literals") {
         {TokenType::END, ""},
     });
 
-    for (const auto& [expected_token, expected_slice] : expecteds) {
+    for (const auto& [expected_tt, expected_slice] : expecteds) {
         const auto token = l.advance();
-        REQUIRE(expected_token == token.type);
+        REQUIRE(expected_tt == token.type);
         REQUIRE(expected_slice == token.slice);
     }
 }
@@ -404,9 +406,30 @@ TEST_CASE("Multiline string literals") {
         {TokenType::END, ""},
     });
 
-    for (const auto& [expected_token, expected_slice] : expecteds) {
+    for (const auto& [expected_tt, expected_slice] : expecteds) {
         const auto token = l.advance();
-        REQUIRE(expected_token == token.type);
+        REQUIRE(expected_tt == token.type);
         REQUIRE(expected_slice == token.slice);
+    }
+}
+
+TEST_CASE("Compiler builtins") {
+    const auto expecteds =
+        std::ranges::views::transform(ALL_BUILTINS, [](const auto& builtin) -> ExpectedLexeme {
+            return {builtin.second, builtin.first};
+        });
+
+    std::string input;
+    std::ranges::for_each(ALL_BUILTINS, [&input](const auto& builtin) -> void {
+        input.append(builtin.first);
+        input.push_back(' ');
+    });
+    Lexer l{input};
+
+    for (const auto& [expected_tt, expected_slice] : expecteds) {
+        const auto token = l.advance();
+        REQUIRE(expected_tt == token.type);
+        REQUIRE(expected_slice == token.slice);
+        if (expected_tt != TokenType::ILLEGAL) { REQUIRE(is_builtin(token.type)); }
     }
 }

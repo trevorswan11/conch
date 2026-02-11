@@ -77,30 +77,6 @@ auto misc_from_char(byte c) noexcept -> Optional<TokenType> {
     }
 }
 
-auto is_signed_int(TokenType tt) noexcept -> bool {
-    return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;
-}
-
-auto is_signed_long_int(TokenType tt) noexcept -> bool {
-    return TokenType::LINT_2 <= tt && tt <= TokenType::LINT_16;
-}
-
-auto is_isize_int(TokenType tt) noexcept -> bool {
-    return TokenType::ZINT_2 <= tt && tt <= TokenType::ZINT_16;
-}
-
-auto is_unsigned_int(TokenType tt) noexcept -> bool {
-    return TokenType::UINT_2 <= tt && tt <= TokenType::UINT_16;
-}
-
-auto is_unsigned_long_int(TokenType tt) noexcept -> bool {
-    return TokenType::ULINT_2 <= tt && tt <= TokenType::ULINT_16;
-}
-
-auto is_usize_int(TokenType tt) noexcept -> bool {
-    return TokenType::UZINT_2 <= tt && tt <= TokenType::UZINT_16;
-}
-
 using SuffixMapping                = std::pair<bool (*)(TokenType), usize>;
 constexpr auto INT_SUFFIX_MAPPINGS = std::to_array<SuffixMapping>({
     {is_signed_int, 0},

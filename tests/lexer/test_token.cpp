@@ -1,7 +1,7 @@
-#include <catch_amalgamated.hpp>
-
 #include <format>
 #include <string>
+
+#include <catch_amalgamated.hpp>
 
 #include "lexer/token.hpp"
 

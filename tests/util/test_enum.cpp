@@ -1,6 +1,6 @@
-#include <catch_amalgamated.hpp>
-
 #include <string>
+
+#include <catch_amalgamated.hpp>
 
 #include "util/enum.hpp"
 

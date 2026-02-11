@@ -35,8 +35,12 @@ auto Lexer::advance() noexcept -> Token {
     if (maybe_misc_token_type) {
         token.slice = input_.substr(pos_, 1);
         token.type  = *maybe_misc_token_type;
+    } else if (current_byte_ == '@') {
+        token.slice = read_ident(true);
+        token.type  = lu_builtin(token.slice);
+        return token;
     } else if (std::isalpha(current_byte_)) {
-        token.slice = read_ident();
+        token.slice = read_ident(false);
         token.type  = lu_ident(token.slice);
         return token;
     } else if (std::isdigit(current_byte_)) {
@@ -46,7 +50,8 @@ auto Lexer::advance() noexcept -> Token {
     } else if (current_byte_ == '\'') {
         return read_byte_literal();
     } else {
-        token = {TokenType::ILLEGAL, input_.substr(pos_, 1), start_line, start_col};
+        token.slice = input_.substr(pos_, 1);
+        token.type  = TokenType::ILLEGAL;
     }
 
     read_character();
@@ -64,6 +69,12 @@ auto Lexer::consume() -> std::vector<Token> {
 
 auto Lexer::skip_whitespace() noexcept -> void {
     while (std::isspace(current_byte_)) { read_character(); }
+}
+
+auto Lexer::lu_builtin(std::string_view ident) noexcept -> TokenType {
+    return get_builtin(ident)
+        .transform([](const auto& keyword) noexcept -> TokenType { return keyword.second; })
+        .value_or(TokenType::ILLEGAL);
 }
 
 auto Lexer::lu_ident(std::string_view ident) noexcept -> TokenType {
@@ -115,12 +126,12 @@ auto Lexer::read_operator() const noexcept -> Optional<Token> {
     return Token{matched_type, input_.substr(pos_, max_len), start_line, start_col};
 }
 
-auto Lexer::read_ident() noexcept -> std::string_view {
+auto Lexer::read_ident(bool builtin) noexcept -> std::string_view {
     const auto start = pos_;
 
     auto passed_first = false;
-    while (std::isalpha(current_byte_) || current_byte_ == '_' ||
-           (passed_first && std::isdigit(current_byte_))) {
+    while ((builtin && !passed_first && current_byte_ == '@') || std::isalpha(current_byte_) ||
+           current_byte_ == '_' || (passed_first && std::isdigit(current_byte_))) {
         read_character();
         passed_first = true;
     }

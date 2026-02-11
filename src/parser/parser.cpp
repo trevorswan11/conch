@@ -208,9 +208,19 @@ constexpr auto PREFIX_FNS = []() {
             return {tt, ast::IdentifierExpression::parse};
         });
 
-    constexpr auto materialized_keywords =
+    constexpr auto materialized_primitives =
         materialize_sized_view<ALL_PRIMITIVES.size()>(primitive_prefixes);
-    auto prefix_fns = concat_arrays(initial_prefixes, materialized_keywords);
+
+    constexpr auto builtins_prefixes =
+        ALL_BUILTINS | std::views::transform([](const auto& builtin) -> PrefixPair {
+            return {builtin.second, ast::IdentifierExpression::parse};
+        });
+
+    constexpr auto materialized_builtins =
+        materialize_sized_view<ALL_BUILTINS.size()>(builtins_prefixes);
+
+    auto prefix_fns =
+        concat_arrays(initial_prefixes, materialized_primitives, materialized_builtins);
     std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
     return prefix_fns;
 }();

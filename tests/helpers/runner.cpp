@@ -1,7 +1,7 @@
-#include <catch_amalgamated.hpp>
-
 #include <cstddef>
 #include <new>
+
+#include <catch_amalgamated.hpp>
 
 extern "C" {
 auto  launch(char* proc) -> int { return Catch::Session().run(1, &proc); }
