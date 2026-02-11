@@ -209,10 +209,30 @@ TEST_CASE("Integer base variants") {
             REQUIRE(expected_slice == token.slice);
         }
     }
+
+    SECTION("Different integer widths") {
+        Lexer l{"2 2l 2z 2u 2ul 2uz"};
+
+        const auto expecteds = std::to_array<ExpectedLexeme>({
+            {TokenType::INT_10, "2"},
+            {TokenType::LINT_10, "2l"},
+            {TokenType::ZINT_10, "2z"},
+            {TokenType::UINT_10, "2u"},
+            {TokenType::ULINT_10, "2ul"},
+            {TokenType::UZINT_10, "2uz"},
+        });
+
+        for (const auto& [expected_token, expected_slice] : expecteds) {
+            const auto token = l.advance();
+            REQUIRE(expected_token == token.type);
+            REQUIRE(expected_slice == token.slice);
+        }
+    }
 }
 
 TEST_CASE("Iterator with other keywords") {
-    Lexer l{"private extern export packed volatile static"};
+    Lexer l{"private extern export packed volatile static "
+            "int long isize uint ulong usize float byte string bool void type"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::PRIVATE, "private"},
@@ -221,6 +241,18 @@ TEST_CASE("Iterator with other keywords") {
         {TokenType::PACKED, "packed"},
         {TokenType::VOLATILE, "volatile"},
         {TokenType::STATIC, "static"},
+        {TokenType::INT_TYPE, "int"},
+        {TokenType::LONG_TYPE, "long"},
+        {TokenType::ISIZE_TYPE, "isize"},
+        {TokenType::UINT_TYPE, "uint"},
+        {TokenType::ULONG_TYPE, "ulong"},
+        {TokenType::USIZE_TYPE, "usize"},
+        {TokenType::FLOAT_TYPE, "float"},
+        {TokenType::BYTE_TYPE, "byte"},
+        {TokenType::STRING_TYPE, "string"},
+        {TokenType::BOOL_TYPE, "bool"},
+        {TokenType::VOID_TYPE, "void"},
+        {TokenType::TYPE_TYPE, "type"},
     });
 
     size_t i = 0;

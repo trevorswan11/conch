@@ -29,8 +29,11 @@ static auto parse_number(Parser& parser) -> Expected<Box<T>, ParserDiagnostic> {
     const auto     base              = token_type::to_base(start_token.type);
 
     const auto trim_amount = [](TokenType tt) -> usize {
-        if (token_type::is_unsigned_int(tt)) { return 1; }
-        if (token_type::is_size_int(tt)) { return 2; }
+        if (token_type::is_usize_int(tt) || token_type::is_unsigned_long_int(tt)) { return 2; }
+        if (token_type::is_isize_int(tt) || token_type::is_signed_long_int(tt) ||
+            token_type::is_unsigned_int(tt)) {
+            return 1;
+        }
         return 0;
     };
 
@@ -63,6 +66,19 @@ auto SignedIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>,
     return parse_number<SignedIntegerExpression>(parser);
 }
 
+auto SignedLongIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto SignedLongIntegerExpression::parse(Parser& parser)
+    -> Expected<Box<Expression>, ParserDiagnostic> {
+    return parse_number<SignedLongIntegerExpression>(parser);
+}
+
+auto ISizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto ISizeIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
+    return parse_number<ISizeIntegerExpression>(parser);
+}
+
 auto UnsignedIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto UnsignedIntegerExpression::parse(Parser& parser)
@@ -70,10 +86,17 @@ auto UnsignedIntegerExpression::parse(Parser& parser)
     return parse_number<UnsignedIntegerExpression>(parser);
 }
 
-auto SizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+auto UnsignedLongIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
-auto SizeIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
-    return parse_number<SizeIntegerExpression>(parser);
+auto UnsignedLongIntegerExpression::parse(Parser& parser)
+    -> Expected<Box<Expression>, ParserDiagnostic> {
+    return parse_number<UnsignedLongIntegerExpression>(parser);
+}
+
+auto USizeIntegerExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto USizeIntegerExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
+    return parse_number<USizeIntegerExpression>(parser);
 }
 
 auto ByteExpression::accept(Visitor& v) const -> void { v.visit(*this); }

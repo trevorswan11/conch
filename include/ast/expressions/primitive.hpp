@@ -48,7 +48,7 @@ class StringExpression : public PrimitiveExpression<StringExpression, std::strin
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 };
 
-class SignedIntegerExpression : public PrimitiveExpression<SignedIntegerExpression, i64> {
+class SignedIntegerExpression : public PrimitiveExpression<SignedIntegerExpression, i32> {
   public:
     static constexpr auto KIND = NodeKind::SIGNED_INTEGER_EXPRESSION;
 
@@ -59,7 +59,29 @@ class SignedIntegerExpression : public PrimitiveExpression<SignedIntegerExpressi
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 };
 
-class UnsignedIntegerExpression : public PrimitiveExpression<UnsignedIntegerExpression, u64> {
+class SignedLongIntegerExpression : public PrimitiveExpression<SignedLongIntegerExpression, i64> {
+  public:
+    static constexpr auto KIND = NodeKind::SIGNED_LONG_INTEGER_EXPRESSION;
+
+  public:
+    using PrimitiveExpression::PrimitiveExpression;
+
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
+};
+
+class ISizeIntegerExpression : public PrimitiveExpression<ISizeIntegerExpression, isize> {
+  public:
+    static constexpr auto KIND = NodeKind::ISIZE_INTEGER_EXPRESSION;
+
+  public:
+    using PrimitiveExpression::PrimitiveExpression;
+
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
+};
+
+class UnsignedIntegerExpression : public PrimitiveExpression<UnsignedIntegerExpression, u32> {
   public:
     static constexpr auto KIND = NodeKind::UNSIGNED_INTEGER_EXPRESSION;
 
@@ -70,9 +92,21 @@ class UnsignedIntegerExpression : public PrimitiveExpression<UnsignedIntegerExpr
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
 };
 
-class SizeIntegerExpression : public PrimitiveExpression<SizeIntegerExpression, usize> {
+class UnsignedLongIntegerExpression
+    : public PrimitiveExpression<UnsignedLongIntegerExpression, u64> {
   public:
-    static constexpr auto KIND = NodeKind::SIZE_INTEGER_EXPRESSION;
+    static constexpr auto KIND = NodeKind::UNSIGNED_LONG_INTEGER_EXPRESSION;
+
+  public:
+    using PrimitiveExpression::PrimitiveExpression;
+
+    auto                      accept(Visitor& v) const -> void override;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
+};
+
+class USizeIntegerExpression : public PrimitiveExpression<USizeIntegerExpression, usize> {
+  public:
+    static constexpr auto KIND = NodeKind::USIZE_INTEGER_EXPRESSION;
 
   public:
     using PrimitiveExpression::PrimitiveExpression;

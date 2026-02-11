@@ -33,16 +33,28 @@ namespace token_type {
 auto to_base(TokenType type) noexcept -> Optional<Base> {
     switch (type) {
     case TokenType::INT_2:
+    case TokenType::LINT_2:
+    case TokenType::ZINT_2:
     case TokenType::UINT_2:
+    case TokenType::ULINT_2:
     case TokenType::UZINT_2:  return Base::BINARY;
     case TokenType::INT_8:
+    case TokenType::LINT_8:
+    case TokenType::ZINT_8:
     case TokenType::UINT_8:
+    case TokenType::ULINT_8:
     case TokenType::UZINT_8:  return Base::OCTAL;
     case TokenType::INT_10:
+    case TokenType::LINT_10:
+    case TokenType::ZINT_10:
     case TokenType::UINT_10:
+    case TokenType::ULINT_10:
     case TokenType::UZINT_10: return Base::DECIMAL;
     case TokenType::INT_16:
+    case TokenType::LINT_16:
+    case TokenType::ZINT_16:
     case TokenType::UINT_16:
+    case TokenType::ULINT_16:
     case TokenType::UZINT_16: return Base::HEXADECIMAL;
     default:                  return nullopt;
     }
@@ -68,16 +80,30 @@ auto is_signed_int(TokenType t) noexcept -> bool {
     return TokenType::INT_2 <= t && t <= TokenType::INT_16;
 }
 
+auto is_signed_long_int(TokenType t) noexcept -> bool {
+    return TokenType::LINT_2 <= t && t <= TokenType::LINT_16;
+}
+
+auto is_isize_int(TokenType t) noexcept -> bool {
+    return TokenType::ZINT_2 <= t && t <= TokenType::ZINT_16;
+}
+
 auto is_unsigned_int(TokenType t) noexcept -> bool {
     return TokenType::UINT_2 <= t && t <= TokenType::UINT_16;
 }
 
-auto is_size_int(TokenType t) noexcept -> bool {
+auto is_unsigned_long_int(TokenType t) noexcept -> bool {
+    return TokenType::ULINT_2 <= t && t <= TokenType::ULINT_16;
+}
+
+auto is_usize_int(TokenType t) noexcept -> bool {
     return TokenType::UZINT_2 <= t && t <= TokenType::UZINT_16;
 }
 
+auto is_size_int(TokenType t) noexcept -> bool { return is_isize_int(t) || is_usize_int(t); }
+
 auto is_int(TokenType t) noexcept -> bool {
-    return is_signed_int(t) || is_unsigned_int(t) || is_size_int(t);
+    return TokenType::INT_2 <= t && t <= TokenType::UZINT_16;
 }
 
 } // namespace token_type

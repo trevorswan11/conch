@@ -24,7 +24,7 @@ using i32   = int32_t;
 using u64   = uint64_t;
 using i64   = int64_t;
 using usize = size_t;
-using isize = std::make_signed<usize>;
+using isize = std::make_signed_t<usize>;
 
 using f32 = float;
 using f64 = double;

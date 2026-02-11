@@ -21,18 +21,33 @@ enum class TokenType : u8 {
     END,
 
     IDENT,
+
     INT_2,
     INT_8,
     INT_10,
     INT_16,
+    LINT_2,
+    LINT_8,
+    LINT_10,
+    LINT_16,
+    ZINT_2,
+    ZINT_8,
+    ZINT_10,
+    ZINT_16,
+
     UINT_2,
     UINT_8,
     UINT_10,
     UINT_16,
+    ULINT_2,
+    ULINT_8,
+    ULINT_10,
+    ULINT_16,
     UZINT_2,
     UZINT_8,
     UZINT_10,
     UZINT_16,
+
     FLOAT,
     STRING,
     BYTE,
@@ -122,14 +137,17 @@ enum class TokenType : u8 {
     NIL,
     TYPEOF,
     IMPORT,
-    TYPE,
+    TYPE_TYPE,
     ORELSE,
     DO,
     AS,
 
     INT_TYPE,
+    LONG_TYPE,
+    ISIZE_TYPE,
     UINT_TYPE,
-    SIZE_TYPE,
+    ULONG_TYPE,
+    USIZE_TYPE,
     BYTE_TYPE,
     FLOAT_TYPE,
     STRING_TYPE,
@@ -162,8 +180,15 @@ namespace token_type {
 
 auto to_base(TokenType type) noexcept -> Optional<Base>;
 auto misc_from_char(byte c) noexcept -> Optional<TokenType>;
+
 auto is_signed_int(TokenType t) noexcept -> bool;
+auto is_signed_long_int(TokenType t) noexcept -> bool;
+auto is_isize_int(TokenType t) noexcept -> bool;
+
 auto is_unsigned_int(TokenType t) noexcept -> bool;
+auto is_unsigned_long_int(TokenType t) noexcept -> bool;
+auto is_usize_int(TokenType t) noexcept -> bool;
+
 auto is_size_int(TokenType t) noexcept -> bool;
 auto is_int(TokenType t) noexcept -> bool;
 

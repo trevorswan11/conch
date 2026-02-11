@@ -128,11 +128,24 @@ auto Lexer::read_ident() noexcept -> std::string_view {
     return input_.substr(start, pos_ - start);
 }
 
-enum class NumberSuffix {
-    NONE     = 0,
-    UNSIGNED = 1,
-    SIZE     = 2,
+enum class NumberSuffix : u8 {
+    UNSIGNED = 1 << 0,
+    WIDE     = 1 << 1,
+    SIZE     = 2 << 2,
 };
+
+constexpr auto operator|=(NumberSuffix& lhs, NumberSuffix rhs) noexcept -> NumberSuffix& {
+    lhs = static_cast<NumberSuffix>(std::to_underlying(lhs) | std::to_underlying(rhs));
+    return lhs;
+}
+
+constexpr auto operator&(NumberSuffix lhs, NumberSuffix rhs) noexcept -> NumberSuffix {
+    return static_cast<NumberSuffix>(std::to_underlying(lhs) & std::to_underlying(rhs));
+}
+
+constexpr auto suffix_has(NumberSuffix suffix, NumberSuffix flag) noexcept -> bool {
+    return static_cast<bool>(suffix & flag);
+}
 
 auto Lexer::read_number() noexcept -> Token {
     const auto start           = pos_;
@@ -209,18 +222,21 @@ auto Lexer::read_number() noexcept -> Token {
         return {TokenType::ILLEGAL, input_.substr(start, pos_ - start), start_line, start_col};
     }
 
-    auto suffix{NumberSuffix::NONE};
+    NumberSuffix suffix{};
     if (!(passed_decimal || passed_exponent) && pos_ < input_.size()) {
         auto c = current_byte_;
         if (c == 'u' || c == 'U') {
-            suffix = NumberSuffix::UNSIGNED;
+            suffix |= NumberSuffix::UNSIGNED;
             read_character();
+        }
 
-            c = current_byte_;
-            if (c == 'z' || c == 'Z') {
-                suffix = NumberSuffix::SIZE;
-                read_character();
-            }
+        c = current_byte_;
+        if (c == 'z' || c == 'Z') {
+            suffix |= NumberSuffix::SIZE;
+            read_character();
+        } else if (c == 'l' || c == 'L') {
+            suffix |= NumberSuffix::WIDE;
+            read_character();
         }
     }
 
@@ -241,12 +257,26 @@ auto Lexer::read_number() noexcept -> Token {
     if (passed_decimal || passed_exponent) {
         type = TokenType::FLOAT;
     } else {
-        switch (suffix) {
-        case NumberSuffix::NONE:     type = TokenType::INT_2; break;
-        case NumberSuffix::UNSIGNED: type = TokenType::UINT_2; break;
-        case NumberSuffix::SIZE:     type = TokenType::UZINT_2; break;
+        // Use an offset to increment the actual token type based on its base and width
+        auto offset = base_idx(base);
+        if (std::to_underlying(suffix) == 0) {
+            type = TokenType::INT_2;
+        } else {
+            if (suffix_has(suffix, NumberSuffix::WIDE)) {
+                type = TokenType::LINT_2;
+            } else if (suffix_has(suffix, NumberSuffix::SIZE)) {
+                type = TokenType::ZINT_2;
+            } else {
+                type = TokenType::INT_2;
+            }
+
+            // We can just bump the offset for unsigned
+            if (suffix_has(suffix, NumberSuffix::UNSIGNED)) {
+                offset +=
+                    std::to_underlying(TokenType::UINT_2) - std::to_underlying(TokenType::INT_2);
+            }
         }
-        type = static_cast<TokenType>(std::to_underlying(type) + base_idx(base));
+        type = static_cast<TokenType>(std::to_underlying(type) + offset);
     }
 
     return {type, input_.substr(start, length), start_line, start_col};
