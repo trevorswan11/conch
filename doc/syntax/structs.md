@@ -53,7 +53,8 @@ Foo::worker_three();                                // The same goes for functio
 
 - Structs can be marked `packed` to prevent the compiler from reordering members or from adding additional padding
 
-// Packed structs restrict the compiler from reordering members or adding padding to members
+```conch
 const Bar := packed struct {
     // ...
 };
+```
