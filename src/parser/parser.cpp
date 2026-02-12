@@ -44,7 +44,7 @@ auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{inp
 auto Parser::advance(uint8_t times) noexcept -> const Token& {
     for (uint8_t i = 0; i < times; ++i) {
         if (current_token_.type == TokenType::END &&
-            (input_.empty() && current_token_.location.at_start())) {
+            (input_.empty() && current_token_.location.is_at_start())) {
             break;
         }
 
@@ -90,13 +90,13 @@ auto Parser::expect_peek(TokenType expected) -> Expected<std::monostate, ParserD
     return Unexpected{peek_error(expected)};
 }
 
-auto Parser::current_precedence() const noexcept -> Precedence {
+auto Parser::poll_current_precedence() const noexcept -> Precedence {
     return get_binding(current_token_.type)
         .transform([](const auto& binding) { return binding.second; })
         .value_or(Precedence::LOWEST);
 }
 
-auto Parser::peek_precedence() const noexcept -> Precedence {
+auto Parser::poll_peek_precedence() const noexcept -> Precedence {
     return get_binding(peek_token_.type)
         .transform([](const auto& binding) { return binding.second; })
         .value_or(Precedence::LOWEST);
@@ -127,7 +127,7 @@ auto Parser::parse_expression(Precedence precedence)
         return make_parser_unexpected(ParserError::END_OF_TOKEN_STREAM, current_token_);
     }
 
-    const auto& prefix = poll_prefix(current_token_.type);
+    const auto& prefix = poll_prefix_fn(current_token_.type);
     if (!prefix) {
         return make_parser_unexpected(
             std::format("No prefix parse function for {} found", enum_name(current_token_.type)),
@@ -136,8 +136,8 @@ auto Parser::parse_expression(Precedence precedence)
     }
     auto lhs_expression = TRY((*prefix)(*this));
 
-    while (!peek_token_is(TokenType::SEMICOLON) && precedence < peek_precedence()) {
-        const auto& infix = poll_infix(peek_token_.type);
+    while (!peek_token_is(TokenType::SEMICOLON) && precedence < poll_peek_precedence()) {
+        const auto& infix = poll_infix_fn(peek_token_.type);
         if (!infix) { break; }
 
         if (advance().type == TokenType::END) {
@@ -225,7 +225,7 @@ constexpr auto PREFIX_FNS = []() {
     return prefix_fns;
 }();
 
-constexpr auto Parser::poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&> {
+constexpr auto Parser::poll_prefix_fn(TokenType tt) noexcept -> Optional<const PrefixFn&> {
     const auto it = std::ranges::lower_bound(PREFIX_FNS, tt, {}, &PrefixPair::first);
     if (it == PREFIX_FNS.end() || it->first != tt) { return nullopt; }
     return Optional<const PrefixFn&>{it->second};
@@ -279,7 +279,7 @@ constexpr auto INFIX_FNS = []() {
     return infix_fns;
 }();
 
-constexpr auto Parser::poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&> {
+constexpr auto Parser::poll_infix_fn(TokenType tt) noexcept -> Optional<const InfixFn&> {
     const auto it = std::ranges::lower_bound(INFIX_FNS, tt, {}, &InfixPair::first);
     if (it == INFIX_FNS.end() || it->first != tt) { return nullopt; }
     return Optional<const InfixFn&>{it->second};

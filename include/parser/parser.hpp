@@ -82,27 +82,33 @@ class Parser {
     auto current_token_is(TokenType t) const noexcept -> bool { return current_token_.type == t; }
     auto peek_token_is(TokenType t) const noexcept -> bool { return peek_token_.type == t; }
 
+    // Advances the cursor tokens only if the expected token type matches the actual current token.
     [[nodiscard]] auto expect_current(TokenType expected)
         -> Expected<std::monostate, ParserDiagnostic>;
+
+    // Indiscriminately returns an error citing the current token.
     [[nodiscard]] auto current_error(TokenType expected) -> ParserDiagnostic {
         return tt_mismatch_error(expected, current_token_);
     }
 
+    // Advances the cursor tokens only if the expected token type matches the actual peek token.
     [[nodiscard]] auto expect_peek(TokenType expected)
         -> Expected<std::monostate, ParserDiagnostic>;
+
+    // Indiscriminately returns an error citing the peek token.
     [[nodiscard]] auto peek_error(TokenType expected) -> ParserDiagnostic {
         return tt_mismatch_error(expected, peek_token_);
     }
 
-    auto current_precedence() const noexcept -> Precedence;
-    auto peek_precedence() const noexcept -> Precedence;
+    auto poll_current_precedence() const noexcept -> Precedence;
+    auto poll_peek_precedence() const noexcept -> Precedence;
 
     [[nodiscard]] auto parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Expected<Box<ast::Expression>, ParserDiagnostic>;
 
-    static constexpr auto poll_prefix(TokenType tt) noexcept -> Optional<const PrefixFn&>;
-    static constexpr auto poll_infix(TokenType tt) noexcept -> Optional<const InfixFn&>;
+    static constexpr auto poll_prefix_fn(TokenType tt) noexcept -> Optional<const PrefixFn&>;
+    static constexpr auto poll_infix_fn(TokenType tt) noexcept -> Optional<const InfixFn&>;
 
   private:
     static auto tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic;

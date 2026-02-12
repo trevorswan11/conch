@@ -239,7 +239,7 @@ struct MinimalSourceLocation {
         return line == other.line && column == other.column;
     }
 
-    [[nodiscard]] auto at_start() const noexcept -> bool { return line == 0 && column == 0; }
+    [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
 };
 
 struct Token {
@@ -250,7 +250,7 @@ struct Token {
     Token() noexcept = default;
     Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {}
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
-        : type{tt}, slice{slice}, location{.line = line, .column = column} {}
+        : type{tt}, slice{slice}, location{line, column} {}
 
     [[nodiscard]] auto get_line() const noexcept -> usize { return location.line; }
     [[nodiscard]] auto get_column() const noexcept -> usize { return location.column; }

@@ -11,7 +11,9 @@
     - Members can be declared in any order, the compiler is order independent and is free to reorder to optimize
 - Struct types are internal to the compiler and should never be written by hand (compile error)
     - Struct definitions must use the walrus operator `:=`
-    - The type of a struct can be retreiving by using the `@typeOf` builtin
+    - The type of a struct can be retrieving by using the `@typeOf` builtin
+- Static members are resolved using the `::` operator
+- Instance members are resolved using the `.` operator
 
 ```conch
 const Foo := struct {           // Standard declaration with type inference

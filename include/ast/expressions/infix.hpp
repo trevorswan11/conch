@@ -29,7 +29,7 @@ template <typename Derived> class InfixExpression : public ExprBase<Derived> {
     [[nodiscard]] static auto parse(Parser& parser, Box<Expression> lhs)
         -> Expected<Box<Expression>, ParserDiagnostic> {
         const auto op_token_type      = parser.current_token().type;
-        const auto current_precedence = parser.current_precedence();
+        const auto current_precedence = parser.poll_current_precedence();
 
         parser.advance();
         auto rhs = TRY(parser.parse_expression(current_precedence));
