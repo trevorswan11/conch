@@ -2,6 +2,7 @@
 #include <array>
 #include <format>
 #include <ranges>
+#include <utility>
 
 #include "parser/parser.hpp"
 #include "parser/precedence.hpp"
@@ -154,34 +155,13 @@ using PrefixPair          = std::pair<TokenType, Parser::PrefixFn>;
 constexpr auto PREFIX_FNS = []() {
     constexpr auto initial_prefixes = std::to_array<PrefixPair>({
         {TokenType::IDENT, ast::IdentifierExpression::parse},
-        {TokenType::INT_2, ast::SignedIntegerExpression::parse},
-        {TokenType::INT_8, ast::SignedIntegerExpression::parse},
-        {TokenType::INT_10, ast::SignedIntegerExpression::parse},
-        {TokenType::INT_16, ast::SignedIntegerExpression::parse},
-        {TokenType::LINT_2, ast::SignedLongIntegerExpression::parse},
-        {TokenType::LINT_8, ast::SignedLongIntegerExpression::parse},
-        {TokenType::LINT_10, ast::SignedLongIntegerExpression::parse},
-        {TokenType::LINT_16, ast::SignedLongIntegerExpression::parse},
-        {TokenType::ZINT_2, ast::ISizeIntegerExpression::parse},
-        {TokenType::ZINT_8, ast::ISizeIntegerExpression::parse},
-        {TokenType::ZINT_10, ast::ISizeIntegerExpression::parse},
-        {TokenType::ZINT_16, ast::ISizeIntegerExpression::parse},
-        {TokenType::UINT_2, ast::UnsignedIntegerExpression::parse},
-        {TokenType::UINT_8, ast::UnsignedIntegerExpression::parse},
-        {TokenType::UINT_10, ast::UnsignedIntegerExpression::parse},
-        {TokenType::UINT_16, ast::UnsignedIntegerExpression::parse},
-        {TokenType::ULINT_2, ast::UnsignedLongIntegerExpression::parse},
-        {TokenType::ULINT_8, ast::UnsignedLongIntegerExpression::parse},
-        {TokenType::ULINT_10, ast::UnsignedLongIntegerExpression::parse},
-        {TokenType::ULINT_16, ast::UnsignedLongIntegerExpression::parse},
-        {TokenType::UZINT_2, ast::USizeIntegerExpression::parse},
-        {TokenType::UZINT_8, ast::USizeIntegerExpression::parse},
-        {TokenType::UZINT_10, ast::USizeIntegerExpression::parse},
-        {TokenType::UZINT_16, ast::USizeIntegerExpression::parse},
         {TokenType::BYTE, ast::ByteExpression::parse},
         {TokenType::FLOAT, ast::FloatExpression::parse},
         {TokenType::BANG, ast::PrefixExpression::parse},
         {TokenType::NOT, ast::PrefixExpression::parse},
+        {TokenType::MINUS, ast::PrefixExpression::parse},
+        {TokenType::AND, ast::PrefixExpression::parse},
+        {TokenType::REF, ast::PrefixExpression::parse},
         {TokenType::MINUS, ast::PrefixExpression::parse},
         {TokenType::TRUE, ast::BoolExpression::parse},
         {TokenType::FALSE, ast::BoolExpression::parse},
@@ -203,6 +183,37 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::LOOP, ast::InfiniteLoopExpression::parse},
     });
 
+    constexpr auto total_ints =
+        static_cast<usize>(TokenType::UZINT_16) - static_cast<usize>(TokenType::INT_2) + 1;
+    std::array<PrefixPair, total_ints> int_prefixes;
+    usize                              cursor = 0;
+    for (auto i = std::to_underlying(TokenType::INT_2);
+         i <= std::to_underlying(TokenType::UZINT_16);
+         i++, cursor++) {
+        const auto tt = static_cast<TokenType>(i);
+        using namespace token_type;
+        switch (to_int_category(tt)) {
+        case IntegerCategory::SIGNED_BASE:
+            int_prefixes[cursor] = {tt, ast::SignedIntegerExpression::parse};
+            break;
+        case IntegerCategory::SIGNED_WIDE:
+            int_prefixes[cursor] = {tt, ast::SignedLongIntegerExpression::parse};
+            break;
+        case IntegerCategory::SIGNED_SIZE:
+            int_prefixes[cursor] = {tt, ast::ISizeIntegerExpression::parse};
+            break;
+        case IntegerCategory::UNSIGNED_BASE:
+            int_prefixes[cursor] = {tt, ast::UnsignedIntegerExpression::parse};
+            break;
+        case IntegerCategory::UNSIGNED_WIDE:
+            int_prefixes[cursor] = {tt, ast::UnsignedLongIntegerExpression::parse};
+            break;
+        case IntegerCategory::UNSIGNED_SIZE:
+            int_prefixes[cursor] = {tt, ast::USizeIntegerExpression::parse};
+            break;
+        }
+    }
+
     constexpr auto primitive_prefixes =
         ALL_PRIMITIVES | std::views::transform([](TokenType tt) -> PrefixPair {
             return {tt, ast::IdentifierExpression::parse};
@@ -219,8 +230,8 @@ constexpr auto PREFIX_FNS = []() {
     constexpr auto materialized_builtins =
         materialize_sized_view<ALL_BUILTINS.size()>(builtins_prefixes);
 
-    auto prefix_fns =
-        concat_arrays(initial_prefixes, materialized_primitives, materialized_builtins);
+    auto prefix_fns = concat_arrays(
+        initial_prefixes, materialized_primitives, materialized_builtins, int_prefixes);
     std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
     return prefix_fns;
 }();

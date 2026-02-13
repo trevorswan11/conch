@@ -58,7 +58,6 @@ constexpr Operator DOT_DOT_EQ{"..=", TokenType::DOT_DOT_EQ};
 constexpr Operator FAT_ARROW{"=>", TokenType::FAT_ARROW};
 constexpr Operator COMMENT{"//", TokenType::COMMENT};
 constexpr Operator MULTILINE_STRING{"\\\\", TokenType::MULTILINE_STRING};
-constexpr Operator REF{"ref", TokenType::REF};
 
 } // namespace operators
 
@@ -104,7 +103,6 @@ constexpr auto ALL_OPERATORS = []() {
         operators::FAT_ARROW,
         operators::COMMENT,
         operators::MULTILINE_STRING,
-        operators::REF,
     };
 
     std::ranges::sort(all_operators, {}, &Operator::first);

@@ -1,5 +1,4 @@
 # Structs
-## Standard Structs
 - Structs are defined using the standard declaration syntax
 - Struct definitions must be `const`
 - Struct members are simply declarations
@@ -58,3 +57,6 @@ const Bar := packed struct {
     // ...
 };
 ```
+
+- There is no inheritance
+- Interfaces are not natively supported

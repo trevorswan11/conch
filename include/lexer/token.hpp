@@ -3,6 +3,7 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "util/common.hpp"
 #include "util/diagnostic.hpp"
@@ -200,6 +201,45 @@ auto digit_in_base(byte c, Base base) noexcept -> bool;
 
 namespace token_type {
 
+enum class IntegerCategory : u8 {
+    SIGNED_BASE,
+    SIGNED_WIDE,
+    SIGNED_SIZE,
+    UNSIGNED_BASE,
+    UNSIGNED_WIDE,
+    UNSIGNED_SIZE,
+};
+
+consteval auto to_int_category(TokenType tt) noexcept -> IntegerCategory {
+    switch (tt) {
+    case TokenType::INT_2:
+    case TokenType::INT_8:
+    case TokenType::INT_10:
+    case TokenType::INT_16:   return IntegerCategory::SIGNED_BASE;
+    case TokenType::LINT_2:
+    case TokenType::LINT_8:
+    case TokenType::LINT_10:
+    case TokenType::LINT_16:  return IntegerCategory::SIGNED_WIDE;
+    case TokenType::ZINT_2:
+    case TokenType::ZINT_8:
+    case TokenType::ZINT_10:
+    case TokenType::ZINT_16:  return IntegerCategory::SIGNED_SIZE;
+    case TokenType::UINT_2:
+    case TokenType::UINT_8:
+    case TokenType::UINT_10:
+    case TokenType::UINT_16:  return IntegerCategory::UNSIGNED_BASE;
+    case TokenType::ULINT_2:
+    case TokenType::ULINT_8:
+    case TokenType::ULINT_10:
+    case TokenType::ULINT_16: return IntegerCategory::UNSIGNED_WIDE;
+    case TokenType::UZINT_2:
+    case TokenType::UZINT_8:
+    case TokenType::UZINT_10:
+    case TokenType::UZINT_16: return IntegerCategory::UNSIGNED_SIZE;
+    default:                  std::unreachable();
+    }
+}
+
 auto to_base(TokenType tt) noexcept -> Optional<Base>;
 auto misc_from_char(byte b) noexcept -> Optional<TokenType>;
 
@@ -225,6 +265,10 @@ constexpr auto is_unsigned_long_int(TokenType tt) noexcept -> bool {
 
 constexpr auto is_usize_int(TokenType tt) noexcept -> bool {
     return TokenType::UZINT_2 <= tt && tt <= TokenType::UZINT_16;
+}
+
+constexpr auto is_int(TokenType tt) noexcept -> bool {
+    return TokenType::INT_2 <= tt && tt <= TokenType::UZINT_16;
 }
 
 auto suffix_length(TokenType tt) noexcept -> usize;

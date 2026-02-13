@@ -50,5 +50,6 @@ const foo := fn(a: int, b: uint): ulong {
 ```
 
 - There is no function overloading
+    - This includes operators. There is no operator overloading
 - Top-level functions cannot be marked variable and must be `const`
     - This is because of how top-level functions behave with the resulting assembly
