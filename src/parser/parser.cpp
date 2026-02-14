@@ -162,7 +162,7 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::MINUS, ast::PrefixExpression::parse},
         {TokenType::AND, ast::PrefixExpression::parse},
         {TokenType::REF, ast::PrefixExpression::parse},
-        {TokenType::MINUS, ast::PrefixExpression::parse},
+        {TokenType::MUT, ast::PrefixExpression::parse},
         {TokenType::TRUE, ast::BoolExpression::parse},
         {TokenType::FALSE, ast::BoolExpression::parse},
         {TokenType::STRING, ast::StringExpression::parse},
