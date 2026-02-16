@@ -31,11 +31,11 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
     Box<IdentifierExpression> underlying;
     if (parser.peek_token_is(TokenType::COLON)) {
         parser.advance();
-        TRY(parser.expect_peek(TokenType ::IDENT));
+        TRY(parser.expect_peek(TokenType::IDENT));
         underlying = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
     }
 
-    TRY(parser.expect_peek(TokenType ::LBRACE));
+    TRY(parser.expect_peek(TokenType::LBRACE));
     if (parser.peek_token_is(TokenType::RBRACE)) {
         parser.advance();
         return make_parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, std::move(start_token));
@@ -43,7 +43,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
 
     std::vector<Enumeration> enumeration;
     while (!parser.peek_token_is(TokenType::RBRACE) && !parser.peek_token_is(TokenType::END)) {
-        TRY(parser.expect_peek(TokenType ::IDENT));
+        TRY(parser.expect_peek(TokenType::IDENT));
         auto ident = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
 
         Optional<Box<Expression>> value = nullopt;
@@ -53,11 +53,7 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
         }
         enumeration.emplace_back(std::move(ident), std::move(value));
 
-        // All variants require a trailing comma!
-        auto peek = parser.expect_peek(TokenType::COMMA);
-        if (!peek.has_value()) {
-            return make_parser_unexpected(peek.error(), ParserError::MISSING_TRAILING_COMMA);
-        }
+        if (!parser.peek_token_is(TokenType::RBRACE)) { TRY(parser.expect_peek(TokenType::COMMA)); }
     }
 
     TRY(parser.expect_peek(TokenType::RBRACE));

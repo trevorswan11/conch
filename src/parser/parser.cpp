@@ -151,6 +151,28 @@ auto Parser::parse_expression(Precedence precedence)
     return lhs_expression;
 }
 
+[[nodiscard]] auto Parser::parse_restricted_statement(ParserError error)
+    -> Expected<Box<ast::Statement>, ParserDiagnostic> {
+    using namespace ast;
+    auto clause = TRY(parse_statement());
+
+    // The clause can only be a jump, block, or expression statement
+    if (!clause->any<ExpressionStatement, JumpStatement, BlockStatement>()) {
+        return make_parser_unexpected(error, clause->get_token());
+    }
+    return clause;
+}
+
+[[nodiscard]] auto Parser::try_parse_restricted_alternate(ParserError error)
+    -> Expected<Optional<Box<ast::Statement>>, ParserDiagnostic> {
+    if (peek_token_is(TokenType::ELSE)) {
+        // Advance twice to actually look at the statement's first token
+        advance(2);
+        return TRY(parse_restricted_statement(error));
+    }
+    return nullopt;
+}
+
 using PrefixPair          = std::pair<TokenType, Parser::PrefixFn>;
 constexpr auto PREFIX_FNS = []() {
     constexpr auto initial_prefixes = std::to_array<PrefixPair>({
@@ -161,8 +183,7 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::NOT, ast::PrefixExpression::parse},
         {TokenType::MINUS, ast::PrefixExpression::parse},
         {TokenType::AND, ast::PrefixExpression::parse},
-        {TokenType::REF, ast::PrefixExpression::parse},
-        {TokenType::MUT, ast::PrefixExpression::parse},
+        {TokenType::AND_MUT, ast::PrefixExpression::parse},
         {TokenType::TRUE, ast::BoolExpression::parse},
         {TokenType::FALSE, ast::BoolExpression::parse},
         {TokenType::STRING, ast::StringExpression::parse},

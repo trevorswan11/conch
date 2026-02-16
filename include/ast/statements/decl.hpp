@@ -79,8 +79,9 @@ class DeclStatement : public StmtBase<DeclStatement> {
             (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
         const auto unique_abi =
             (modifiers & DeclModifiers::EXTERN) ^ (modifiers & DeclModifiers::EXPORT);
-        const auto unique_access =
-            (modifiers & DeclModifiers::PRIVATE) ^ (modifiers & DeclModifiers::EXTERN);
+        const auto unique_access = (modifiers & DeclModifiers::PRIVATE) ^
+                                   (modifiers & DeclModifiers::EXTERN) ^
+                                   (modifiers & DeclModifiers::EXPORT);
 
         return static_cast<bool>(unique_mut & unique_abi & unique_access);
     }

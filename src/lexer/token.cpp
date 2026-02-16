@@ -11,7 +11,6 @@ namespace conch {
 
 auto base_idx(Base base) noexcept -> int {
     switch (base) {
-    case Base::UNKNOWN:     return -1;
     case Base::BINARY:      return 0;
     case Base::OCTAL:       return 1;
     case Base::DECIMAL:     return 2;

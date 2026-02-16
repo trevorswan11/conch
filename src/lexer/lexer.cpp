@@ -182,7 +182,6 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     // Consume digits and handle dot/range rules
-    assert(base != Base::UNKNOWN);
     while (true) {
         const auto c = current_byte_;
 

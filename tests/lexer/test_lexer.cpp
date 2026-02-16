@@ -53,24 +53,24 @@ TEST_CASE("Basic next token and lexer consuming") {
         }
     }
 
-    SECTION("Basic Language Snippet") {
-        const std::string_view input{"const five = 5;\n"
-                                     "var ten = 10;\n\n"
-                                     "var add = fn(x, y) {\n"
+    SECTION("Naive language snippet") {
+        const std::string_view input{"const five := 5;\n"
+                                     "var ten := 10;\n\n"
+                                     "var add := fn(x, y) {\n"
                                      "   x + y;\n"
                                      "};\n\n"
-                                     "var result = add(five, ten);\n"
-                                     "var four_and_some = 4.2;"};
+                                     "var result := add(five, ten);\n"
+                                     "var four_and_some := 4.2;"};
         Lexer                  l{input};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::CONST, "const"}, {TokenType::IDENT, "five"},
-            {TokenType::ASSIGN, "="},    {TokenType::INT_10, "5"},
+            {TokenType::WALRUS, ":="},   {TokenType::INT_10, "5"},
             {TokenType::SEMICOLON, ";"}, {TokenType::VAR, "var"},
-            {TokenType::IDENT, "ten"},   {TokenType::ASSIGN, "="},
+            {TokenType::IDENT, "ten"},   {TokenType::WALRUS, ":="},
             {TokenType::INT_10, "10"},   {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},     {TokenType::IDENT, "add"},
-            {TokenType::ASSIGN, "="},    {TokenType::FUNCTION, "fn"},
+            {TokenType::WALRUS, ":="},   {TokenType::FUNCTION, "fn"},
             {TokenType::LPAREN, "("},    {TokenType::IDENT, "x"},
             {TokenType::COMMA, ","},     {TokenType::IDENT, "y"},
             {TokenType::RPAREN, ")"},    {TokenType::LBRACE, "{"},
@@ -78,12 +78,12 @@ TEST_CASE("Basic next token and lexer consuming") {
             {TokenType::IDENT, "y"},     {TokenType::SEMICOLON, ";"},
             {TokenType::RBRACE, "}"},    {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},     {TokenType::IDENT, "result"},
-            {TokenType::ASSIGN, "="},    {TokenType::IDENT, "add"},
+            {TokenType::WALRUS, ":="},   {TokenType::IDENT, "add"},
             {TokenType::LPAREN, "("},    {TokenType::IDENT, "five"},
             {TokenType::COMMA, ","},     {TokenType::IDENT, "ten"},
             {TokenType::RPAREN, ")"},    {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},     {TokenType::IDENT, "four_and_some"},
-            {TokenType::ASSIGN, "="},    {TokenType::FLOAT, "4.2"},
+            {TokenType::WALRUS, ":="},   {TokenType::FLOAT, "4.2"},
             {TokenType::SEMICOLON, ";"}, {TokenType::END, ""},
         });
 
@@ -266,24 +266,24 @@ TEST_CASE("Iterator with other keywords") {
 }
 
 TEST_CASE("Comments") {
-    Lexer l{"const five = 5;\n"
-            "var ten_10 = 10;\n\n"
+    Lexer l{"const five := 5;\n"
+            "var ten_10 := 10;\n\n"
             "// BOL\n"
-            "var add = fn(x, y) {\n"
+            "var add := fn(x, y) {\n"
             "   x + y;\n"
             "};\n\n"
-            "var result = add(five, ten); // EOL\n"
-            "var four_and_some = 4.2;\n"
+            "var result := add(five, ten); // EOL\n"
+            "var four_and_some := 4.2;\n"
             "work;"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::CONST, "const"},  {TokenType::IDENT, "five"},
-        {TokenType::ASSIGN, "="},     {TokenType::INT_10, "5"},
+        {TokenType::WALRUS, ":="},    {TokenType::INT_10, "5"},
         {TokenType::SEMICOLON, ";"},  {TokenType::VAR, "var"},
-        {TokenType::IDENT, "ten_10"}, {TokenType::ASSIGN, "="},
+        {TokenType::IDENT, "ten_10"}, {TokenType::WALRUS, ":="},
         {TokenType::INT_10, "10"},    {TokenType::SEMICOLON, ";"},
         {TokenType::COMMENT, " BOL"}, {TokenType::VAR, "var"},
-        {TokenType::IDENT, "add"},    {TokenType::ASSIGN, "="},
+        {TokenType::IDENT, "add"},    {TokenType::WALRUS, ":="},
         {TokenType::FUNCTION, "fn"},  {TokenType::LPAREN, "("},
         {TokenType::IDENT, "x"},      {TokenType::COMMA, ","},
         {TokenType::IDENT, "y"},      {TokenType::RPAREN, ")"},
@@ -291,13 +291,13 @@ TEST_CASE("Comments") {
         {TokenType::PLUS, "+"},       {TokenType::IDENT, "y"},
         {TokenType::SEMICOLON, ";"},  {TokenType::RBRACE, "}"},
         {TokenType::SEMICOLON, ";"},  {TokenType::VAR, "var"},
-        {TokenType::IDENT, "result"}, {TokenType::ASSIGN, "="},
+        {TokenType::IDENT, "result"}, {TokenType::WALRUS, ":="},
         {TokenType::IDENT, "add"},    {TokenType::LPAREN, "("},
         {TokenType::IDENT, "five"},   {TokenType::COMMA, ","},
         {TokenType::IDENT, "ten"},    {TokenType::RPAREN, ")"},
         {TokenType::SEMICOLON, ";"},  {TokenType::COMMENT, " EOL"},
         {TokenType::VAR, "var"},      {TokenType::IDENT, "four_and_some"},
-        {TokenType::ASSIGN, "="},     {TokenType::FLOAT, "4.2"},
+        {TokenType::WALRUS, ":="},    {TokenType::FLOAT, "4.2"},
         {TokenType::SEMICOLON, ";"},  {TokenType::IDENT, "work"},
         {TokenType::SEMICOLON, ";"},  {TokenType::END, ""},
     });
@@ -378,29 +378,29 @@ TEST_CASE("String literals") {
 }
 
 TEST_CASE("Multiline string literals") {
-    Lexer l{"const five = \\\\Multiline stringing\n"
+    Lexer l{"const five := \\\\Multiline stringing\n"
             ";\n"
-            "var ten = \\\\Multiline stringing\n"
+            "var ten := \\\\Multiline stringing\n"
             "\\\\Continuation\n"
             ";\n"
-            "const one = \\\\Nesting \" \' \\ [] const var\n"
+            "const one := \\\\Nesting \" \' \\ [] const var\n"
             "\\\\\n"
             ";\n"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::CONST, "const"},
         {TokenType::IDENT, "five"},
-        {TokenType::ASSIGN, "="},
+        {TokenType::WALRUS, ":="},
         {TokenType::MULTILINE_STRING, "Multiline stringing"},
         {TokenType::SEMICOLON, ";"},
         {TokenType::VAR, "var"},
         {TokenType::IDENT, "ten"},
-        {TokenType::ASSIGN, "="},
+        {TokenType::WALRUS, ":="},
         {TokenType::MULTILINE_STRING, "Multiline stringing\n\\\\Continuation"},
         {TokenType::SEMICOLON, ";"},
         {TokenType::CONST, "const"},
         {TokenType::IDENT, "one"},
-        {TokenType::ASSIGN, "="},
+        {TokenType::WALRUS, ":="},
         {TokenType::MULTILINE_STRING, "Nesting \" \' \\ [] const var\n\\\\"},
         {TokenType::SEMICOLON, ";"},
         {TokenType::END, ""},

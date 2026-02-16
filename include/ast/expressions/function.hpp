@@ -18,8 +18,7 @@ class BlockStatement;
 
 class FunctionParameter {
   public:
-    explicit FunctionParameter(bool                      reference,
-                               Box<IdentifierExpression> name,
+    explicit FunctionParameter(Box<IdentifierExpression> name,
                                Box<TypeExpression>       type,
                                Optional<Box<Expression>> default_value) noexcept;
     ~FunctionParameter();
@@ -29,7 +28,6 @@ class FunctionParameter {
     FunctionParameter(FunctionParameter&&) noexcept                    = default;
     auto operator=(FunctionParameter&&) noexcept -> FunctionParameter& = default;
 
-    [[nodiscard]] auto is_reference() const noexcept -> bool { return reference_; }
     [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
     [[nodiscard]] auto get_type() const noexcept -> const TypeExpression& { return *type_; }
 
@@ -42,7 +40,6 @@ class FunctionParameter {
     }
 
   private:
-    bool                      reference_;
     Box<IdentifierExpression> name_;
     Box<TypeExpression>       type_;
     Optional<Box<Expression>> default_value_;

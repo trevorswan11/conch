@@ -11,12 +11,10 @@
 
 namespace conch::ast {
 
-FunctionParameter::FunctionParameter(bool                      reference,
-                                     Box<IdentifierExpression> name,
+FunctionParameter::FunctionParameter(Box<IdentifierExpression> name,
                                      Box<TypeExpression>       type,
                                      Optional<Box<Expression>> default_value) noexcept
-    : reference_{reference}, name_{std::move(name)}, type_{std::move(type)},
-      default_value_{std::move(default_value)} {}
+    : name_{std::move(name)}, type_{std::move(type)}, default_value_{std::move(default_value)} {}
 
 FunctionParameter::~FunctionParameter() = default;
 
@@ -40,7 +38,7 @@ auto FunctionExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<FunctionExpression>(other);
     const auto  parameters_eq =
         std::ranges::equal(parameters_, casted.parameters_, [](const auto& a, const auto& b) {
-            return a.reference_ == b.reference_ && *a.name_ == *b.name_ && *a.type_ == *b.type_ &&
+            return *a.name_ == *b.name_ && *a.type_ == *b.type_ &&
                    optional::unsafe_eq<Expression>(a.default_value_, b.default_value_);
         });
     return parameters_eq && *return_type_ == *casted.return_type_ &&

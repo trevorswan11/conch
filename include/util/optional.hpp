@@ -40,6 +40,7 @@ using std::nullopt;
 
 namespace optional {
 
+// Compares two values, forwarding safety concerns to the comparator.
 template <typename T>
 auto safe_eq(const Optional<T>& a, const Optional<T>& b, bool (*cmp)(const T&, const T&)) noexcept
     -> bool {
@@ -48,6 +49,7 @@ auto safe_eq(const Optional<T>& a, const Optional<T>& b, bool (*cmp)(const T&, c
     return cmp(*a, *b);
 }
 
+// Compares two unique pointers by assuming that both are valid.
 template <typename T>
 auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
                const Optional<std::unique_ptr<T>>& b,
@@ -57,6 +59,8 @@ auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
     return cmp(**a, **b);
 }
 
+// Compares two unique pointers by assuming that both are valid, using the default equality
+// operator.
 template <typename T>
 auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,
                const Optional<std::unique_ptr<T>>& b) noexcept -> bool {

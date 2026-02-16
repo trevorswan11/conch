@@ -45,7 +45,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
   public:
     explicit ForLoopExpression(const Token&                          start_token,
                                std::vector<Box<Expression>>          iterables,
-                               std::vector<Optional<ForLoopCapture>> captures,
+                               Optional<std::vector<ForLoopCapture>> captures,
                                Box<BlockStatement>                   block,
                                Optional<Box<Statement>>              non_break) noexcept;
     ~ForLoopExpression() override;
@@ -57,7 +57,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
         return iterables_;
     }
 
-    [[nodiscard]] auto get_captures() const noexcept -> std::span<const Optional<ForLoopCapture>> {
+    [[nodiscard]] auto get_captures() const noexcept -> Optional<std::span<const ForLoopCapture>> {
         return captures_;
     }
 
@@ -72,7 +72,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
 
   private:
     std::vector<Box<Expression>>          iterables_;
-    std::vector<Optional<ForLoopCapture>> captures_;
+    Optional<std::vector<ForLoopCapture>> captures_;
     Box<BlockStatement>                   block_;
     Optional<Box<Statement>>              non_break_;
 };

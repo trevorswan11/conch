@@ -113,7 +113,7 @@ enum class TokenType : u8 {
     SINGLE_QUOTE,
     UNDERSCORE,
     REF,
-    WITH,
+    AND_MUT,
 
     FUNCTION,
     VAR,
@@ -161,6 +161,7 @@ enum class TokenType : u8 {
     VOLATILE,
     STATIC,
     MUT,
+    NORETURN,
 
     TYPEOF,
     SIZEOF,
@@ -189,7 +190,6 @@ enum class TokenType : u8 {
 };
 
 enum class Base : u8 {
-    UNKNOWN     = 0,
     BINARY      = 2,
     OCTAL       = 8,
     DECIMAL     = 10,

@@ -53,6 +53,23 @@ enum class ParserError : u8 {
     WHILE_MISSING_CONDITION,
     INVALID_STRUCT_MEMBER,
     EMPTY_STRUCT,
+    EXTERN_VALUE_INITIALIZED,
+    EXTERN_MISSING_TYPE,
+    ILLEGAL_LOOP_NON_BREAK,
+    ILLEGAL_FOR_LOOP_CAPTURE,
+    EMPTY_FOR_LOOP,
+    FOR_ITERABLE_CAPTURE_MISMATCH,
+    IMPROPER_WHILE_CONTINUATION,
+    EMPTY_WHILE_LOOP,
+    ILLEGAL_IF_BRANCH,
+    MISSING_ARRAY_SIZE_TOKEN,
+    UNEXPECTED_ARRAY_SIZE_TOKEN,
+    INCORRECT_EXPLICIT_ARRAY_SIZE,
+    EMPTY_ARRAY,
+    MATCH_EXPR_MISSING_CONDITION,
+    ARMLESS_MATCH_EXPR,
+    ILLEGAL_MATCH_ARM,
+    ILLEGAL_MATCH_CATCH_ALL,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;
@@ -106,6 +123,15 @@ class Parser {
     [[nodiscard]] auto parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Expected<Box<ast::Expression>, ParserDiagnostic>;
+
+    // Assumes that the current token is looking at the start of the expression.
+    // The resulting statement can only be a jump, block, or expression statement.
+    [[nodiscard]] auto parse_restricted_statement(ParserError error)
+        -> Expected<Box<ast::Statement>, ParserDiagnostic>;
+
+    // Parses a restricted statement only if an else token is currently looked at.
+    [[nodiscard]] auto try_parse_restricted_alternate(ParserError error)
+        -> Expected<Optional<Box<ast::Statement>>, ParserDiagnostic>;
 
     static constexpr auto poll_prefix_fn(TokenType tt) noexcept -> Optional<const PrefixFn&>;
     static constexpr auto poll_infix_fn(TokenType tt) noexcept -> Optional<const InfixFn&>;

@@ -90,7 +90,10 @@ class Node {
         return lhs.is_equal(rhs);
     }
 
-    template <LeafNode T> auto is() const noexcept -> bool { return kind_ == T::KIND; }
+    template <LeafNode T> auto     is() const noexcept -> bool { return kind_ == T::KIND; }
+    template <LeafNode... Ts> auto any() const noexcept -> bool {
+        return ((kind_ == Ts::KIND) || ...);
+    }
 
   protected:
     explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}

@@ -47,10 +47,24 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
     Optional<Box<Expression>> decl_value;
     if (value_initialized) {
         decl_value = TRY(parser.parse_expression());
+        // If there is a value, then there cannot be an extern keyword
+        if (modifiers_has(modifiers, DeclModifiers::EXTERN)) {
+            return make_parser_unexpected(ParserError::EXTERN_VALUE_INITIALIZED, start_token);
+        }
     } else {
+        // Extern decls must have a type and not have a value
+        if (modifiers_has(modifiers, DeclModifiers::EXTERN) &&
+            !decl_type_expr->has_explicit_type()) {
+            return make_parser_unexpected(ParserError::EXTERN_MISSING_TYPE, start_token);
+        }
+
+        // Constant decls must be declared with a value
         if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
-        } else if (!decl_type_expr->has_explicit_type()) {
+        }
+
+        // Forward declarations must be declared with a type
+        if (!decl_type_expr->has_explicit_type()) {
             return make_parser_unexpected(ParserError::FORWARD_VAR_DECL_MISSING_TYPE, start_token);
         }
     }

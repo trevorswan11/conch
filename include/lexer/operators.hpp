@@ -30,6 +30,7 @@ constexpr Operator PERCENT{"%", TokenType::PERCENT};
 constexpr Operator PERCENT_ASSIGN{"%=", TokenType::PERCENT_ASSIGN};
 constexpr Operator BANG{"!", TokenType::BANG};
 constexpr Operator WHAT{"?", TokenType::WHAT};
+constexpr Operator AND_MUT{"&mut", TokenType::AND_MUT};
 
 constexpr Operator AND{"&", TokenType::AND};
 constexpr Operator AND_ASSIGN{"&=", TokenType::AND_ASSIGN};
@@ -78,6 +79,7 @@ constexpr auto ALL_OPERATORS = []() {
         operators::PERCENT_ASSIGN,
         operators::BANG,
         operators::WHAT,
+        operators::AND_MUT,
         operators::AND,
         operators::AND_ASSIGN,
         operators::OR,
