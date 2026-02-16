@@ -25,6 +25,7 @@ const bar := mut fn(): ulong {
 - A parameter may be passed by mutable reference by marking it as `mut`
     - To call such a function, the call site must also indicate with the `&mut` operator
     - The mut keyword implicitly implies a reference is being taken, though you cannot use `ref` and `mut` together (e.g. ref mut int is illegal because it's ugly)
+- There are no default parameters due to lifetime concerns
 ```conch
 const foo := fn(a: ref int): ulong {
     // ...

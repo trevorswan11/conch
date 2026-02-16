@@ -22,6 +22,20 @@ ExplicitType::ExplicitType(ExplicitTypeVariant              type,
 
 ExplicitType::~ExplicitType() = default;
 
+[[nodiscard]] auto ExplicitType::parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    const auto nullable    = [&parser]() {
+        if (parser.peek_token_is(TokenType::WHAT)) {
+            parser.advance();
+            return true;
+        }
+        return false;
+    }();
+
+    // Arrays are a little weird especially with the function signature
+    TODO(start_token, nullable);
+}
+
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
     : ExprBase{start_token}, explicit_{std::move(exp)} {}
 
@@ -31,7 +45,31 @@ auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
     -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic> {
-    TODO(parser);
+    const auto start_token = parser.current_token();
+
+    auto [type, initialized] =
+        TRY(([&]() -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic> {
+            if (parser.peek_token_is(TokenType::WALRUS)) {
+                auto type = make_box<TypeExpression>(start_token, nullopt);
+                parser.advance();
+                return std::pair{std::move(type), true};
+            } else if (parser.peek_token_is(TokenType::COLON)) {
+                parser.advance();
+                auto explicit_type = TRY(ExplicitType::parse(parser));
+                auto type = make_box<TypeExpression>(start_token, std::move(explicit_type));
+                if (parser.peek_token_is(TokenType::ASSIGN)) {
+                    parser.advance();
+                    return std::pair{std::move(type), true};
+                }
+                return std::pair{std::move(type), false};
+            } else {
+                return Unexpected{parser.peek_error(TokenType::COLON)};
+            }
+        }()));
+
+    // Advance again to prepare for rhs
+    parser.advance();
+    return std::pair{box_into<Expression>(std::move(type)), initialized};
 }
 
 auto TypeExpression::is_equal(const Node& other) const noexcept -> bool {

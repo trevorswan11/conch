@@ -18,9 +18,7 @@ class BlockStatement;
 
 class FunctionParameter {
   public:
-    explicit FunctionParameter(Box<IdentifierExpression> name,
-                               Box<TypeExpression>       type,
-                               Optional<Box<Expression>> default_value) noexcept;
+    explicit FunctionParameter(Box<IdentifierExpression> name, Box<TypeExpression> type) noexcept;
     ~FunctionParameter();
 
     FunctionParameter(const FunctionParameter&)                        = delete;
@@ -31,18 +29,9 @@ class FunctionParameter {
     [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
     [[nodiscard]] auto get_type() const noexcept -> const TypeExpression& { return *type_; }
 
-    [[nodiscard]] auto has_default_value() const noexcept -> bool {
-        return default_value_.has_value();
-    }
-
-    [[nodiscard]] auto get_default_value() const noexcept -> Optional<const Expression&> {
-        return default_value_ ? Optional<const Expression&>{**default_value_} : nullopt;
-    }
-
   private:
     Box<IdentifierExpression> name_;
     Box<TypeExpression>       type_;
-    Optional<Box<Expression>> default_value_;
 
     friend class FunctionExpression;
 };

@@ -38,12 +38,12 @@ template <typename T, typename... Args> constexpr Box<T> make_box(Args&&... args
 }
 
 // Makes a new box from an existing pointer
-template <typename T, typename P> constexpr Box<T> box_from(P* ptr) {
+template <typename T, typename P> constexpr auto box_from(P* ptr) -> Box<T> {
     return std::unique_ptr<T>(static_cast<T*>(ptr));
 }
 
 // Makes a new box from an existing box, changing the type as requested
-template <typename T, typename P> constexpr Box<T> box_into(Box<P>&& ptr) {
+template <typename T, typename P> constexpr auto box_into(Box<P>&& ptr) -> Box<T> {
     return std::unique_ptr<T>(static_cast<T*>(ptr.release()));
 }
 

@@ -69,6 +69,8 @@ class ExplicitType {
     ExplicitType(ExplicitType&&) noexcept                    = default;
     auto operator=(ExplicitType&&) noexcept -> ExplicitType& = default;
 
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic>;
+
     [[nodiscard]] auto get_type() const noexcept -> const ExplicitTypeVariant& { return type_; }
     [[nodiscard]] auto is_nullable() const noexcept -> bool { return nullable_; }
     [[nodiscard]] auto has_constraint() const noexcept -> bool { return constraint_.has_value(); }
