@@ -3,6 +3,7 @@
 #include "ast/expressions/function.hpp"
 
 #include "ast/expressions/identifier.hpp"
+#include "ast/expressions/primitive.hpp" // IWYU pragma: keep
 #include "ast/expressions/type.hpp"
 #include "ast/statements/block.hpp"
 

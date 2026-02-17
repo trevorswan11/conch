@@ -73,6 +73,8 @@ enum class ParserError : u8 {
     ILLEGAL_FUNCTION_PARAMETER_TYPE,
     ILLEGAL_FUNCTION_DEFINITION,
     ILLEGAL_TYPE_MODIFIERS,
+    ILLEGAL_EXPLICIT_TYPE,
+    EXPLICIT_FN_TYPE_HAS_BODY,
 };
 
 using ParserDiagnostic = Diagnostic<ParserError>;

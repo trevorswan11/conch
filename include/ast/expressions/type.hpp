@@ -20,15 +20,15 @@ namespace conch::ast {
 class IdentifierExpression;
 class TypeExpression;
 class FunctionExpression;
+class USizeIntegerExpression;
 
 using ExplicitIdentType    = Box<IdentifierExpression>;
-using ExplicitReferredType = Box<Expression>;
 using ExplicitFunctionType = Box<FunctionExpression>;
 
 class ExplicitArrayType {
   public:
-    explicit ExplicitArrayType(std::vector<usize>  dimensions,
-                               Box<TypeExpression> inner_type) noexcept;
+    explicit ExplicitArrayType(std::vector<Box<USizeIntegerExpression>> dimensions,
+                               Box<TypeExpression>                      inner_type) noexcept;
     ~ExplicitArrayType();
 
     ExplicitArrayType(const ExplicitArrayType&)                        = delete;
@@ -36,7 +36,8 @@ class ExplicitArrayType {
     ExplicitArrayType(ExplicitArrayType&&) noexcept                    = default;
     auto operator=(ExplicitArrayType&&) noexcept -> ExplicitArrayType& = default;
 
-    [[nodiscard]] auto get_dimensions() const noexcept -> std::span<const usize> {
+    [[nodiscard]] auto get_dimensions() const noexcept
+        -> std::span<const Box<USizeIntegerExpression>> {
         return dimensions_;
     }
 
@@ -45,20 +46,15 @@ class ExplicitArrayType {
     }
 
   private:
-    std::vector<usize>  dimensions_;
-    Box<TypeExpression> inner_type_;
+    std::vector<Box<USizeIntegerExpression>> dimensions_;
+    Box<TypeExpression>                      inner_type_;
 
     friend class ExplicitType;
     friend class TypeExpression;
 };
 
-enum class ExplicitTypeConstraint : u8 {
-    PRIMITIVE,
-    GENERIC_TYPE,
-};
-
 using ExplicitTypeVariant =
-    std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>;
+    std::variant<ExplicitIdentType, ExplicitFunctionType, ExplicitArrayType>;
 
 enum class TypeModifiers : u8 {
     MUT = 1 << 1,
@@ -72,8 +68,9 @@ constexpr auto operator|=(TypeModifiers& lhs, TypeModifiers rhs) -> TypeModifier
 
 class ExplicitType {
   public:
-    explicit ExplicitType(ExplicitTypeVariant              type,
-                          Optional<ExplicitTypeConstraint> constraint) noexcept;
+    explicit ExplicitType(const Optional<TypeModifiers>& modifiers,
+                          ExplicitTypeVariant            type,
+                          bool                           primitive) noexcept;
     ~ExplicitType();
 
     ExplicitType(const ExplicitType&)                        = delete;
@@ -84,9 +81,39 @@ class ExplicitType {
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic>;
 
     [[nodiscard]] auto get_type() const noexcept -> const ExplicitTypeVariant& { return type_; }
-    [[nodiscard]] auto has_constraint() const noexcept -> bool { return constraint_.has_value(); }
-    [[nodiscard]] auto get_constraint() const noexcept -> const Optional<ExplicitTypeConstraint>& {
-        return constraint_;
+    [[nodiscard]] auto is_primitive() const noexcept -> bool { return primitive_; }
+
+    // UB if the import is not a module import.
+    [[nodiscard]] auto get_ident_type() const noexcept -> const IdentifierExpression& {
+        try {
+            return *std::get<ExplicitIdentType>(type_);
+        } catch (...) { std::unreachable(); }
+    }
+
+    [[nodiscard]] auto is_mident_type() const noexcept -> bool {
+        return std::holds_alternative<ExplicitIdentType>(type_);
+    }
+
+    // UB if the import is not a function type.
+    [[nodiscard]] auto get_function_type() const noexcept -> const FunctionExpression& {
+        try {
+            return *std::get<ExplicitFunctionType>(type_);
+        } catch (...) { std::unreachable(); }
+    }
+
+    [[nodiscard]] auto is_function_type() const noexcept -> bool {
+        return std::holds_alternative<ExplicitFunctionType>(type_);
+    }
+
+    // UB if the import is not a array type.
+    [[nodiscard]] auto get_array_type() const noexcept -> const ExplicitArrayType& {
+        try {
+            return std::get<ExplicitArrayType>(type_);
+        } catch (...) { std::unreachable(); }
+    }
+
+    [[nodiscard]] auto is_array_type() const noexcept -> bool {
+        return std::holds_alternative<ExplicitArrayType>(type_);
     }
 
     // Whether or not the type is a 'value' type, mutually exclusive result.
@@ -125,9 +152,9 @@ class ExplicitType {
     }
 
   private:
-    Optional<TypeModifiers>          modifiers_;
-    ExplicitTypeVariant              type_;
-    Optional<ExplicitTypeConstraint> constraint_;
+    Optional<TypeModifiers> modifiers_;
+    ExplicitTypeVariant     type_;
+    bool                    primitive_;
 
     friend class TypeExpression;
 };

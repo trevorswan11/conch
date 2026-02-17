@@ -114,6 +114,8 @@ class Node {
   protected:
     const Token    start_token_;
     const NodeKind kind_;
+
+    friend class ExplicitType;
 };
 
 template <typename Derived, typename Base> class NodeBase : public Base {
