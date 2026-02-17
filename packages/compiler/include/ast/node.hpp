@@ -10,9 +10,9 @@
 
 #include "core/common.hpp"
 
-namespace conch { class Visitor; } // namespace conch
-
 namespace conch::ast {
+
+class Visitor;
 
 enum class NodeKind : u8 {
     ARRAY_EXPRESSION,
