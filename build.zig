@@ -49,7 +49,7 @@ pub fn build(b: *std.Build) !void {
 
     try addTooling(b, .{
         .cdb_gen = cdb_gen,
-        .conch = artifacts.conch,
+        .cli = artifacts.cli,
         .tests = artifacts.tests,
         .cppcheck = artifacts.cppcheck,
         .clean_cache = flag_opts.clean_cache,
@@ -60,6 +60,17 @@ pub fn build(b: *std.Build) !void {
         .compile_only = flag_opts.compile_only,
     });
 }
+
+const ProjectPaths = struct {
+    const compiler_inc = "packages/compiler/include/";
+    const compiler_src = "packages/compiler/src/";
+    const compiler_tests = "packages/compiler/tests/";
+    const cli_inc = "apps/cli/include/";
+    const cli_src = "apps/cli/src/";
+    const cli_tests = "apps/cli/tests/";
+    const stdlib = "packages/stdlib/";
+    const test_runner = "packages/test_runner/";
+};
 
 fn addFlagOptions(b: *std.Build) struct {
     compile_only: bool,
@@ -108,6 +119,12 @@ const ExecutableBehavior = union(enum) {
     standalone: void,
 };
 
+const TestArtifacts = struct {
+    libcatch2: *std.Build.Step.Compile = undefined,
+    compiler_tests: *std.Build.Step.Compile = undefined,
+    cli_tests: *std.Build.Step.Compile = undefined,
+};
+
 fn addArtifacts(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -118,30 +135,51 @@ fn addArtifacts(b: *std.Build, config: struct {
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
 }) !struct {
-    libconch: *std.Build.Step.Compile,
-    conch: *std.Build.Step.Compile,
-    libcatch2: ?*std.Build.Step.Compile,
-    tests: ?*std.Build.Step.Compile,
+    libcompiler: *std.Build.Step.Compile,
+    libcli: *std.Build.Step.Compile,
+    cli: *std.Build.Step.Compile,
+    tests: ?TestArtifacts,
     cppcheck: ?*std.Build.Step.Compile,
 } {
-    const libconch = createLibrary(b, .{
-        .name = "conch",
+    // The actual compiler static library
+    const libcompiler = createLibrary(b, .{
+        .name = "compiler",
         .target = config.target,
         .optimize = config.optimize,
-        .include_path = b.path("include"),
-        .cxx_files = try collectFiles(b, "src", .{ .dropped_files = &.{"main.cpp"} }),
+        .include_paths = &.{b.path(ProjectPaths.compiler_inc)},
+        .cxx_files = try collectFiles(b, ProjectPaths.compiler_src, .{}),
         .flags = config.cxx_flags,
     });
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libconch.step);
+    if (config.auto_install) b.installArtifact(libcompiler);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcompiler.step);
 
-    const conch = createExecutable(b, .{
+    // The CLI library is stripped of main
+    const libcli = createLibrary(b, .{
+        .name = "cli",
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_paths = &.{
+            b.path(ProjectPaths.cli_inc),
+            b.path(ProjectPaths.compiler_inc),
+        },
+        .cxx_files = try collectFiles(b, ProjectPaths.cli_src, .{
+            .dropped_files = &.{"main.cpp"},
+        }),
+        .link_libraries = &.{libcompiler},
+        .flags = config.cxx_flags,
+    });
+    if (config.auto_install) b.installArtifact(libcli);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcli.step);
+
+    // The shippable executable, links only against libcli which has a transitive dep of the compiler
+    const cli = createExecutable(b, .{
         .name = "conch",
         .target = config.target,
         .optimize = config.optimize,
-        .include_paths = &.{b.path("include")},
-        .cxx_files = &.{"src/main.cpp"},
+        .include_paths = &.{b.path(ProjectPaths.cli_inc)},
+        .cxx_files = &.{ProjectPaths.cli_src ++ "main.cpp"},
         .cxx_flags = config.cxx_flags,
-        .link_libraries = &.{libconch},
+        .link_libraries = &.{libcli},
         .behavior = config.behavior orelse .{
             .runnable = .{
                 .cmd_name = "run",
@@ -150,52 +188,89 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
         },
     });
-    if (config.auto_install) b.installArtifact(conch);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &conch.step);
+    if (config.auto_install) b.installArtifact(cli);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &cli.step);
 
-    var libcatch2: ?*std.Build.Step.Compile = null;
-    var tests: ?*std.Build.Step.Compile = null;
+    var tests: ?TestArtifacts = null;
     if (!config.skip_tests) {
+        tests = .{};
         const catch2 = b.dependency("catch2", .{});
-        libcatch2 = createLibrary(b, .{
+        tests.?.libcatch2 = createLibrary(b, .{
             .name = "catch2",
             .target = config.target,
             .optimize = .ReleaseSafe,
-            .include_path = catch2.path("extras"),
+            .include_paths = &.{catch2.path("extras")},
             .source_root = catch2.path("."),
             .cxx_files = &.{"extras/catch_amalgamated.cpp"},
             .flags = config.cxx_flags,
         });
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcatch2.?.step);
 
-        tests = createExecutable(b, .{
-            .name = "tests",
-            .zig_main = b.path("tests/main.zig"),
+        if (config.auto_install) b.installArtifact(tests.?.libcatch2);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.libcatch2.step);
+
+        // Compiler tests depend on the test runner
+        tests.?.compiler_tests = createExecutable(b, .{
+            .name = "compiler_tests",
+            .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{ b.path("include"), catch2.path("extras"), b.path("tests/helpers") },
-            .cxx_files = try collectFiles(b, "tests", .{}),
+            .include_paths = &.{
+                b.path(ProjectPaths.compiler_inc),
+                catch2.path("extras"),
+                b.path(ProjectPaths.compiler_tests ++ "helpers"),
+            },
+            .cxx_files = try collectFiles(b, ProjectPaths.compiler_tests, .{
+                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+            }),
             .cxx_flags = config.cxx_flags,
-            .link_libraries = &.{ libconch, libcatch2.? },
+            .link_libraries = &.{ libcompiler, tests.?.libcatch2 },
             .behavior = config.behavior orelse .{
                 .runnable = .{
-                    .cmd_name = "test",
-                    .cmd_desc = "Run unit tests",
+                    .cmd_name = "test-compiler",
+                    .cmd_desc = "Run compiler unit tests",
                     .with_args = false,
                 },
             },
         });
 
-        if (config.auto_install) b.installArtifact(tests.?);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.step);
+        if (config.auto_install) b.installArtifact(tests.?.compiler_tests);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.compiler_tests.step);
+
+        // CLI tests depend on the test runner
+        tests.?.cli_tests = createExecutable(b, .{
+            .name = "cli_tests",
+            .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
+            .target = config.target,
+            .optimize = config.optimize,
+            .include_paths = &.{
+                b.path(ProjectPaths.compiler_inc),
+                b.path(ProjectPaths.cli_inc),
+                catch2.path("extras"),
+            },
+            .cxx_files = try collectFiles(b, ProjectPaths.cli_tests, .{
+                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+            }),
+            .cxx_flags = config.cxx_flags,
+            .link_libraries = &.{ libcompiler, libcli, tests.?.libcatch2 },
+            .behavior = config.behavior orelse .{
+                .runnable = .{
+                    .cmd_name = "test-cli",
+                    .cmd_desc = "Run CLI unit tests",
+                    .with_args = false,
+                },
+            },
+        });
+
+        if (config.auto_install) b.installArtifact(tests.?.cli_tests);
+        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.cli_tests.step);
     }
 
     const cppcheck = if (config.skip_cppcheck) null else try compileCppcheck(b, config.target);
 
     return .{
-        .libconch = libconch,
-        .conch = conch,
-        .libcatch2 = libcatch2,
+        .libcompiler = libcompiler,
+        .libcli = libcli,
+        .cli = cli,
         .tests = tests,
         .cppcheck = cppcheck,
     };
@@ -333,8 +408,9 @@ fn createLibrary(b: *std.Build, config: struct {
     name: []const u8,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    include_path: std.Build.LazyPath,
+    include_paths: []const std.Build.LazyPath,
     source_root: ?std.Build.LazyPath = null,
+    link_libraries: ?[]const *std.Build.Step.Compile = null,
     cxx_files: []const []const u8,
     flags: []const []const u8,
 }) *std.Build.Step.Compile {
@@ -343,7 +419,16 @@ fn createLibrary(b: *std.Build, config: struct {
         .optimize = config.optimize,
         .link_libcpp = true,
     });
-    mod.addIncludePath(config.include_path);
+
+    for (config.include_paths) |inc_path| {
+        mod.addIncludePath(inc_path);
+    }
+    if (config.link_libraries) |link_libraries| {
+        for (link_libraries) |lib| {
+            mod.linkLibrary(lib);
+        }
+    }
+
     mod.addCSourceFiles(.{
         .root = config.source_root,
         .files = config.cxx_files,
@@ -518,8 +603,8 @@ const CdbGenerator = struct {
 
 fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CdbGenerator,
-    conch: *std.Build.Step.Compile,
-    tests: ?*std.Build.Step.Compile,
+    cli: *std.Build.Step.Compile,
+    tests: ?TestArtifacts,
     cppcheck: ?*std.Build.Step.Compile,
     clean_cache: bool,
 }) !void {
@@ -545,16 +630,16 @@ fn addTooling(b: *std.Build, config: struct {
         check_step.dependOn(&config.cdb_gen.step);
     }
 
-    const cloc: *LOCCounter = .init(b, .base);
-    const cloc_step = b.step("cloc", "Count lines of code in the src and include directories");
+    const cloc: *LOCCounter = .init(b);
+    const cloc_step = b.step("cloc", "Count lines of code across the project");
     cloc_step.dependOn(&cloc.step);
-    const cloc_all: *LOCCounter = .init(b, .all);
-    const cloc_all_step = b.step("cloc-all", "Count lines of code in all project directories");
-    cloc_all_step.dependOn(&cloc_all.step);
 
     if (config.tests) |tests| {
-        try addCoverageStep(b, tests);
-        try addLLDBStep(b, config.conch, tests);
+        try addLLDBStep(b, .{
+            .cli = config.cli,
+            .cli_tests = tests.cli_tests,
+            .compiler_tests = tests.compiler_tests,
+        });
     }
 
     const clean_step = b.step("clean", "Remove all emitted artifacts");
@@ -570,7 +655,11 @@ fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const zig_paths: []const []const u8 = &.{ "build.zig", "build.zig.zon", "tests/main.zig" };
+    const zig_paths: []const []const u8 = &.{
+        "build.zig",
+        "build.zig.zon",
+        ProjectPaths.test_runner ++ "main.zig",
+    };
     const build_fmt = b.addFmt(.{ .paths = zig_paths });
     const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
@@ -631,64 +720,12 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     return check_step;
 }
 
-fn addCoverageStep(b: *std.Build, tests: *std.Build.Step.Compile) !void {
-    const error_msg =
-        \\Code coverage reporting requires kcov, a free FreeBSD/Linux/MacOS tool:
-        \\  https://github.com/SimonKagstrom/kcov
-        \\
-        \\It is also availble via homebrew with 'brew install kcov'
-    ;
-
-    const kcov_step = b.step("cov", "Use kcov to generate code coverage report");
-    switch (builtin.os.tag) {
-        .freebsd, .linux, .macos => {},
-        else => return kcov_step.addError(error_msg, .{}),
-    }
-
-    if (findProgram(b, "kcov")) |kcov| {
-        const kcov_command = b.addSystemCommand(&.{kcov});
-        const include_patterns = try std.mem.join(b.allocator, ",", &.{
-            try b.build_root.join(b.allocator, &.{"src"}),
-            try b.build_root.join(b.allocator, &.{"include"}),
-        });
-
-        kcov_command.addArg(try std.fmt.allocPrint(
-            b.allocator,
-            "--include-pattern={s}",
-            .{include_patterns},
-        ));
-
-        const coverage_dirname = CoverageParser.coverage_install_dirname;
-        const coverage_dir = getPrefixRelativePath(b, &.{coverage_dirname});
-        const cov_clean = b.addRemoveDirTree(b.path(coverage_dir));
-
-        kcov_command.addArg(coverage_dir);
-        kcov_command.addArtifactArg(tests);
-        kcov_step.dependOn(&cov_clean.step);
-        kcov_step.dependOn(&kcov_command.step);
-        kcov_step.dependOn(b.getInstallStep());
-
-        const coverage_parser: *CoverageParser = .init(b, tests);
-        coverage_parser.step.dependOn(&kcov_command.step);
-        kcov_step.dependOn(&coverage_parser.step);
-
-        const cov_ignore = b.addInstallFileWithDir(
-            b.path(".gitignore"),
-            .{ .custom = coverage_dirname },
-            ".gitignore",
-        );
-        cov_ignore.step.dependOn(&kcov_command.step);
-        kcov_step.dependOn(&cov_ignore.step);
-    } else {
-        try kcov_step.addError(error_msg, .{});
-    }
-}
-
-fn addLLDBStep(b: *std.Build, conch: *std.Build.Step.Compile, tests: *std.Build.Step.Compile) !void {
+fn addLLDBStep(b: *std.Build, config: struct {
+    cli: *std.Build.Step.Compile,
+    compiler_tests: *std.Build.Step.Compile,
+    cli_tests: *std.Build.Step.Compile,
+}) !void {
     if (builtin.os.tag == .windows) return;
-
-    const rdbg_step = b.step("rdbg", "Debug the main executable with lldb");
-    const tdbg_step = b.step("tdbg", "Debug the test executable with lldb");
     const error_msg =
         \\LLDB is is LLVM's CLI debugger whose source code can be found here:
         \\  https://github.com/llvm/llvm-project
@@ -696,69 +733,71 @@ fn addLLDBStep(b: *std.Build, conch: *std.Build.Step.Compile, tests: *std.Build.
         \\It is available on most major platforms through their corresponding package managers.
     ;
 
-    if (findProgram(b, "lldb")) |lldb| {
-        var lrdbg: *std.Build.Step.Run = undefined;
-        var ltdbg: *std.Build.Step.Run = undefined;
+    const dbg = b.step("dbg", "Debug the main executable with lldb");
+    const dbg_cli = b.step("dbg_cli", "Debug the cli tests with lldb");
+    const dbg_compiler = b.step("dbg_compiler", "Debug the compiler tests with lldb");
+    const steps = [_]struct { *std.Build.Step, *std.Build.Step.Compile }{
+        .{ dbg, config.cli },
+        .{ dbg_cli, config.cli_tests },
+        .{ dbg_compiler, config.compiler_tests },
+    };
 
-        if (findProgram(b, "coreutils")) |coreutils| {
-            lrdbg = b.addSystemCommand(&.{coreutils});
-            lrdbg.addArgs(&.{ "--coreutils-prog=env", "-i", lldb });
+    for (steps) |step| {
+        if (findProgram(b, "lldb")) |lldb| {
+            var debugger: *std.Build.Step.Run = undefined;
 
-            ltdbg = b.addSystemCommand(&.{coreutils});
-            ltdbg.addArgs(&.{ "--coreutils-prog=env", "-i", lldb });
-        } else if (findProgram(b, "env")) |env| {
-            lrdbg = b.addSystemCommand(&.{env});
-            lrdbg.addArgs(&.{ "-i", lldb });
+            if (findProgram(b, "coreutils")) |coreutils| {
+                debugger = b.addSystemCommand(&.{coreutils});
+                debugger.addArgs(&.{ "--coreutils-prog=env", "-i", lldb });
+            } else if (findProgram(b, "env")) |env| {
+                debugger = b.addSystemCommand(&.{env});
+                debugger.addArgs(&.{ "-i", lldb });
+            } else {
+                debugger = b.addSystemCommand(&.{lldb});
+                debugger = b.addSystemCommand(&.{lldb});
+            }
 
-            ltdbg = b.addSystemCommand(&.{env});
-            ltdbg.addArgs(&.{ "-i", lldb });
+            debugger.addArtifactArg(step.@"1");
+            step.@"0".dependOn(&debugger.step);
         } else {
-            lrdbg = b.addSystemCommand(&.{lldb});
-            ltdbg = b.addSystemCommand(&.{lldb});
+            try step.@"0".addError(error_msg, .{});
         }
-
-        lrdbg.addArtifactArg(conch);
-        rdbg_step.dependOn(&lrdbg.step);
-
-        ltdbg.addArtifactArg(tests);
-        tdbg_step.dependOn(&ltdbg.step);
-    } else {
-        try rdbg_step.addError(error_msg, .{});
-        try tdbg_step.addError(error_msg, .{});
     }
 }
 
 const LOCCounter = struct {
-    const LOCType = enum { base, all };
-
     const LOCResult = struct {
-        cxx_count: usize = 0,
-        cxx_line_count: usize = 0,
-        hxx_count: usize = 0,
-        hxx_line_count: usize = 0,
-        zig_count: usize = 0,
-        zig_line_count: usize = 0,
+        counts: std.StringHashMap(struct {
+            line_count: usize,
+            frequency: usize,
+        }),
+        total_line_count: usize,
+        file_count: usize,
 
-        file_count: usize = 0,
-
-        pub fn logCXXFile(self: *LOCResult, lines: usize, group: enum { header, source }) void {
-            switch (group) {
-                .header => {
-                    self.hxx_count += 1;
-                    self.hxx_line_count += lines;
-                },
-                .source => {
-                    self.cxx_count += 1;
-                    self.cxx_line_count += lines;
-                },
-            }
-            self.file_count += 1;
+        pub fn init(allocator: std.mem.Allocator) LOCResult {
+            return .{
+                .counts = .init(allocator),
+                .total_line_count = 0,
+                .file_count = 0,
+            };
         }
 
-        pub fn logZigFile(self: *LOCResult, lines: usize) void {
-            self.zig_count += 1;
-            self.zig_line_count += lines;
+        // Adds a file to the counts, grouping by un-dotted extension
+        pub fn logFile(self: *LOCResult, file_path: []const u8, line_count: usize) !void {
+            const ext = std.fs.path.extension(file_path)[1..];
+            const gop = try self.counts.getOrPut(ext);
+
+            if (gop.found_existing) {
+                gop.value_ptr.line_count += line_count;
+                gop.value_ptr.frequency += 1;
+            } else {
+                gop.value_ptr.* = .{
+                    .line_count = line_count,
+                    .frequency = 1,
+                };
+            }
             self.file_count += 1;
+            self.total_line_count += line_count;
         }
 
         pub fn print(self: *const LOCResult) !void {
@@ -768,69 +807,60 @@ const LOCCounter = struct {
             const stdout = &stdout_writer.interface;
 
             try stdout.print("Scanned {d} total files:\n", .{self.file_count});
-            try stdout.print("  {d} total Zig files: {d} LOC\n", .{ self.zig_count, self.zig_line_count });
-            try stdout.print("  {d} total C++ files:\n", .{self.cxx_count + self.hxx_count});
-            try stdout.print("    {d} total header files: {d} LOC\n", .{ self.hxx_count, self.hxx_line_count });
-            try stdout.print("    {d} total source files: {d} LOC\n\n", .{ self.cxx_count, self.cxx_line_count });
-            try stdout.print("Total: {d} LOC\n", .{self.cxx_line_count + self.hxx_line_count + self.zig_line_count});
+
+            var count_iter = self.counts.iterator();
+            while (count_iter.next()) |entry| {
+                try stdout.print("  {d} total {s} files: {d} LOC\n", .{
+                    entry.value_ptr.frequency,
+                    entry.key_ptr.*,
+                    entry.value_ptr.line_count,
+                });
+            }
+            try stdout.print("Total: {d} LOC\n", .{self.total_line_count});
 
             try stdout.flush();
         }
     };
 
     step: std.Build.Step,
-    loc_type: LOCType,
 
     pub fn init(
         b: *std.Build,
-        loc_type: LOCType,
     ) *LOCCounter {
         const self = b.allocator.create(LOCCounter) catch @panic("OOM");
         self.* = .{
             .step = .init(.{
                 .id = .custom,
-                .name = if (loc_type == .base) "cloc" else "cloc-all",
+                .name = "cloc",
                 .owner = b,
                 .makeFn = count,
             }),
-            .loc_type = loc_type,
         };
         return self;
     }
 
     fn count(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
-        const self: *LOCCounter = @fieldParentPtr("step", step);
-
         const b = step.owner;
-        const allocator = b.allocator;
 
-        const extensions: []const []const u8 = switch (self.loc_type) {
-            .base => &.{ ".cpp", ".hpp" },
-            .all => &.{ ".cpp", ".hpp", ".zig" },
-        };
-
+        const extensions = [_][]const u8{ ".cpp", ".hpp", ".zig", ".conch" };
         var files: std.ArrayList([]const u8) = .empty;
+
         try files.appendSlice(
             b.allocator,
-            try collectFiles(b, "src", .{ .allowed_extensions = extensions }),
+            try collectFiles(b, "packages", .{
+                .allowed_extensions = &extensions,
+                .extra_files = &.{"build.zig"},
+            }),
         );
 
         try files.appendSlice(
             b.allocator,
-            try collectFiles(b, "include", .{ .allowed_extensions = extensions }),
+            try collectFiles(b, "apps", .{ .allowed_extensions = &extensions }),
         );
-
-        if (self.loc_type == .all) {
-            try files.appendSlice(
-                b.allocator,
-                try collectFiles(b, "tests", .{ .allowed_extensions = extensions }),
-            );
-            try files.append(b.allocator, "build.zig");
-        }
 
         const build_dir = b.build_root.handle;
-        const buffer = try allocator.alloc(u8, 100 * 1024);
-        var result: LOCResult = .{};
+        const buffer = try b.allocator.alloc(u8, 100 * 1024);
+        var result: LOCResult = .init(b.allocator);
 
         for (files.items) |file| {
             const contents = try build_dir.readFile(file, buffer);
@@ -844,92 +874,10 @@ const LOCCounter = struct {
                 }
             }
 
-            if (std.mem.endsWith(u8, file, ".zig")) {
-                result.logZigFile(lines);
-            } else if (std.mem.endsWith(u8, file, ".hpp")) {
-                result.logCXXFile(lines, .header);
-            } else if (std.mem.endsWith(u8, file, ".cpp")) {
-                result.logCXXFile(lines, .source);
-            }
+            try result.logFile(file, lines);
         }
 
         try result.print();
-    }
-};
-
-const CoverageParser = struct {
-    const coverage_install_dirname = "coverage";
-    const cov_json_filename = "coverage.json";
-    const cov_svg_filename = "coverage.svg";
-
-    const CoverageInfo = struct {
-        percent_covered: []const u8,
-    };
-    const ParsedCovInfo = std.json.Parsed(CoverageInfo);
-
-    step: std.Build.Step,
-    test_artifact: *std.Build.Step.Compile,
-
-    pub fn init(b: *std.Build, test_artifact: *std.Build.Step.Compile) *CoverageParser {
-        const self = b.allocator.create(CoverageParser) catch @panic("OOM");
-        self.* = .{
-            .step = .init(.{
-                .id = .custom,
-                .name = "coverage-parse",
-                .owner = b,
-                .makeFn = coverageParse,
-            }),
-            .test_artifact = test_artifact,
-        };
-        return self;
-    }
-
-    fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
-        const self: *CoverageParser = @fieldParentPtr("step", step);
-
-        const b = step.owner;
-        const allocator = b.allocator;
-
-        const installed_cov_json_path = getPrefixRelativePath(b, &.{
-            coverage_install_dirname,
-            self.test_artifact.name,
-            cov_json_filename,
-        });
-
-        const contents = try b.build_root.handle.readFileAlloc(
-            allocator,
-            installed_cov_json_path,
-            std.math.maxInt(usize),
-        );
-
-        const parsed: ParsedCovInfo = try std.json.parseFromSlice(
-            CoverageInfo,
-            allocator,
-            contents,
-            .{ .ignore_unknown_fields = true },
-        );
-
-        const precise_percentage = parsed.value.percent_covered;
-        const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
-        const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
-
-        const badge_path = getPrefixRelativePath(b, &.{ coverage_install_dirname, cov_svg_filename });
-        const url_str = try std.fmt.allocPrint(
-            allocator,
-            "https://img.shields.io/badge/Coverage-{s}%25-pink",
-            .{percentage},
-        );
-
-        const curl_bin = findProgram(b, "curl") orelse return error.CurlNotFound;
-        var child: std.process.Child = .init(&.{ curl_bin, "-o", badge_path, url_str }, allocator);
-        child.stderr_behavior = .Ignore;
-
-        const term = try child.spawnAndWait();
-        switch (term) {
-            .Exited => |code| if (code != 0) return error.CurlFailed,
-            else => return error.CurlTerminatedAbnormally,
-        }
-        std.log.info("Test Coverage: {s}%", .{percentage});
     }
 };
 
@@ -999,12 +947,10 @@ fn addPackageStep(b: *std.Build, config: struct {
             .auto_install = false,
         });
 
-        std.debug.assert(artifacts.libcatch2 == null);
         std.debug.assert(artifacts.tests == null);
-        std.debug.assert(artifacts.cppcheck == null);
 
         try configurePackArtifacts(b, .{
-            .artifacts = &.{ artifacts.libconch, artifacts.conch },
+            .artifacts = &.{ artifacts.libcompiler, artifacts.libcli, artifacts.cli },
             .target = resolved_target,
             .version = version,
         });
@@ -1017,7 +963,7 @@ fn addPackageStep(b: *std.Build, config: struct {
 
         const package_artifact_dir_path = b.pathJoin(uncompressed_package_dir ++ .{package_artifact_dirname});
         const platform = b.addInstallArtifact(
-            artifacts.conch,
+            artifacts.cli,
             .{
                 .dest_dir = .{
                     .override = .{ .custom = package_artifact_dir_path },
@@ -1143,6 +1089,7 @@ fn collectFiles(
     options: struct {
         allowed_extensions: []const []const u8 = &.{".cpp"},
         dropped_files: ?[]const [:0]const u8 = null,
+        extra_files: ?[]const []const u8 = null,
     },
 ) ![]const []const u8 {
     var dir = try b.build_root.handle.openDir(directory, .{ .iterate = true });
@@ -1166,14 +1113,21 @@ fn collectFiles(
         try paths.append(b.allocator, full_path);
     }
 
+    if (options.extra_files) |extra_files| {
+        try paths.appendSlice(b.allocator, extra_files);
+    }
     return paths.toOwnedSlice(b.allocator);
 }
 
 fn collectToolingFiles(b: *std.Build) ![]const []const u8 {
     return std.mem.concat(b.allocator, []const u8, &.{
-        try collectFiles(b, "src", .{}),
-        try collectFiles(b, "include", .{ .allowed_extensions = &.{".hpp"} }),
-        try collectFiles(b, "tests", .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
+        try collectFiles(b, ProjectPaths.compiler_src, .{}),
+        try collectFiles(b, ProjectPaths.compiler_inc, .{ .allowed_extensions = &.{".hpp"} }),
+        try collectFiles(b, ProjectPaths.compiler_tests, .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
+        try collectFiles(b, ProjectPaths.cli_src, .{}),
+        try collectFiles(b, ProjectPaths.cli_inc, .{ .allowed_extensions = &.{".hpp"} }),
+        try collectFiles(b, ProjectPaths.cli_tests, .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
+        try collectFiles(b, ProjectPaths.test_runner, .{ .allowed_extensions = &.{".cpp"} }),
     });
 }
 
