@@ -1,0 +1,16 @@
+#include "ast/statements/expression.hpp"
+
+#include "ast/visitor.hpp"
+
+namespace conch::ast {
+
+auto ExpressionStatement::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto ExpressionStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
+    const auto start_token = parser.current_token();
+    auto       expr        = TRY(parser.parse_expression());
+
+    return make_box<ExpressionStatement>(start_token, std::move(expr));
+}
+
+} // namespace conch::ast
