@@ -7,9 +7,9 @@
 
 #include "core/common.hpp"
 #include "core/diagnostic.hpp"
-#include "core/reflection.hpp"
 #include "core/expected.hpp"
 #include "core/optional.hpp"
+#include "core/reflection.hpp"
 
 namespace conch {
 
