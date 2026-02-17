@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-A programming language written in C++.
+A simple programming language.
 </p>
 
 # Motivation
