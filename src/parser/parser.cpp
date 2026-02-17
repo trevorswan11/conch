@@ -195,7 +195,6 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::PACKED, ast::StructExpression::parse},
         {TokenType::STRUCT, ast::StructExpression::parse},
         {TokenType::ENUM, ast::FunctionExpression::parse},
-        {TokenType::NIL, ast::NilExpression::parse},
         {TokenType::MATCH, ast::MatchExpression::parse},
         {TokenType::LBRACKET, ast::ArrayExpression::parse},
         {TokenType::FOR, ast::ForLoopExpression::parse},

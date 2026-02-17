@@ -111,9 +111,8 @@ TEST_CASE("Floating point parsing") {
         "1023.234612e234000", nullopt, ParserDiagnostic{ParserError::FLOAT_OVERFLOW, 1, 1});
 }
 
-TEST_CASE("Bool & nil parsing") {
+TEST_CASE("Bool parsing") {
     using N = ast::BoolExpression;
     helpers::test_primitive<N>("true", TokenType::TRUE, true);
     helpers::test_primitive<N>("false", TokenType::FALSE, false);
-    helpers::test_primitive<ast::NilExpression>("nil", TokenType::NIL, {});
 }

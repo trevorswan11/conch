@@ -74,12 +74,6 @@ auto BoolExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
     return make_box<BoolExpression>(start_token, start_token.type == TokenType::TRUE);
 }
 
-auto NilExpression::accept(Visitor& v) const -> void { v.visit(*this); }
-
-auto NilExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
-    return make_box<NilExpression>(parser.current_token(), std::monostate{});
-}
-
 // cppcheck-suppress-end [constParameterReference, duplInheritedMember]
 
 } // namespace conch::ast

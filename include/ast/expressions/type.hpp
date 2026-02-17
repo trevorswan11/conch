@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
+#include <bit>
 #include <span>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -57,10 +60,19 @@ enum class ExplicitTypeConstraint : u8 {
 using ExplicitTypeVariant =
     std::variant<ExplicitIdentType, ExplicitReferredType, ExplicitFunctionType, ExplicitArrayType>;
 
+enum class TypeModifiers : u8 {
+    MUT = 1 << 1,
+    REF = 1 << 2,
+};
+
+constexpr auto operator|=(TypeModifiers& lhs, TypeModifiers rhs) -> TypeModifiers& {
+    lhs = static_cast<TypeModifiers>(std::to_underlying(lhs) | std::to_underlying(rhs));
+    return lhs;
+}
+
 class ExplicitType {
   public:
     explicit ExplicitType(ExplicitTypeVariant              type,
-                          bool                             nullable,
                           Optional<ExplicitTypeConstraint> constraint) noexcept;
     ~ExplicitType();
 
@@ -72,15 +84,49 @@ class ExplicitType {
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic>;
 
     [[nodiscard]] auto get_type() const noexcept -> const ExplicitTypeVariant& { return type_; }
-    [[nodiscard]] auto is_nullable() const noexcept -> bool { return nullable_; }
     [[nodiscard]] auto has_constraint() const noexcept -> bool { return constraint_.has_value(); }
     [[nodiscard]] auto get_constraint() const noexcept -> const Optional<ExplicitTypeConstraint>& {
         return constraint_;
     }
 
+    // Whether or not the type is a 'value' type, mutually exclusive result.
+    [[nodiscard]] auto is_value() const noexcept -> bool { return !modifiers_.has_value(); }
+
+    // Whether or not the type is a mutable reference, mutually exclusive result.
+    [[nodiscard]] auto is_mutable() const noexcept -> bool {
+        if (is_value()) { return false; }
+        const auto bits = std::to_underlying(*modifiers_);
+        return bits & (std::to_underlying(TypeModifiers::MUT));
+    }
+
+    // Whether or not the type is a const reference, mutually exclusive result.
+    [[nodiscard]] auto is_reference() const noexcept -> bool {
+        if (is_value()) { return false; }
+        const auto bits = std::to_underlying(*modifiers_);
+        return bits & (std::to_underlying(TypeModifiers::REF));
+    }
+
   private:
+    using ModifierMapping                 = std::pair<TokenType, TypeModifiers>;
+    static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
+        {TokenType::MUT, TypeModifiers::MUT},
+        {TokenType::REF, TypeModifiers::REF},
+    });
+
+    // Only valid if exactly one modifier is set
+    static constexpr auto validate_modifiers(TypeModifiers modifiers) noexcept -> bool {
+        const auto bits = std::to_underlying(modifiers);
+        return std::popcount(bits) == 1;
+    }
+
+    static constexpr auto token_to_modifier(const Token& tok) -> Optional<TypeModifiers> {
+        const auto it = std::ranges::find(LEGAL_MODIFIERS, tok.type, &ModifierMapping::first);
+        return it == LEGAL_MODIFIERS.end() ? nullopt : Optional<TypeModifiers>{it->second};
+    }
+
+  private:
+    Optional<TypeModifiers>          modifiers_;
     ExplicitTypeVariant              type_;
-    bool                             nullable_;
     Optional<ExplicitTypeConstraint> constraint_;
 
     friend class TypeExpression;

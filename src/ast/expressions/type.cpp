@@ -16,24 +16,30 @@ ExplicitArrayType::ExplicitArrayType(std::vector<size_t> dimensions,
 ExplicitArrayType::~ExplicitArrayType() = default;
 
 ExplicitType::ExplicitType(ExplicitTypeVariant              type,
-                           bool                             nullable,
                            Optional<ExplicitTypeConstraint> constraint) noexcept
-    : type_{std::move(type)}, nullable_{nullable}, constraint_{std::move(constraint)} {}
+    : type_{std::move(type)}, constraint_{std::move(constraint)} {}
 
 ExplicitType::~ExplicitType() = default;
 
 [[nodiscard]] auto ExplicitType::parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic> {
     const auto start_token = parser.current_token();
-    const auto nullable    = [&parser]() {
-        if (parser.peek_token_is(TokenType::WHAT)) {
-            parser.advance();
-            return true;
-        }
-        return false;
-    }();
+
+    // The modifiers are initialized only if the first token is one
+    Optional<TypeModifiers> modifiers;
+    if (token_to_modifier(start_token)) { modifiers.emplace(); }
+    while (const auto modifier = token_to_modifier(parser.current_token())) {
+        parser.advance();
+        *modifiers |= *modifier;
+    }
+
+    // The modifiers are invalid if they were initialized and are not unique
+    if (modifiers && !validate_modifiers(*modifiers)) {
+        return make_parser_unexpected(ParserError::ILLEGAL_TYPE_MODIFIERS, start_token);
+    }
 
     // Arrays are a little weird especially with the function signature
-    TODO(start_token, nullable);
+    std::vector<usize> dimensional_array;
+    TODO();
 }
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
@@ -98,7 +104,7 @@ auto TypeExpression::is_equal(const Node& other) const noexcept -> bool {
                            },
                            a.type_);
 
-            return variant_eq && a.nullable_ == b.nullable_ && a.constraint_ == b.constraint_;
+            return variant_eq && a.constraint_ == b.constraint_;
         });
 }
 

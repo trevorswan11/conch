@@ -3,7 +3,6 @@
 #include <charconv>
 #include <string>
 #include <utility>
-#include <variant>
 
 #include "util/common.hpp"
 #include "util/expected.hpp"
@@ -187,18 +186,6 @@ class BoolExpression : public PrimitiveExpression<BoolExpression, bool> {
     operator bool() const noexcept { return value_; }
 };
 template <> struct disable_default_parse<BoolExpression> : std::true_type {};
-
-class NilExpression : public PrimitiveExpression<NilExpression, std::monostate> {
-  public:
-    static constexpr auto KIND = NodeKind::NIL_EXPRESSION;
-
-  public:
-    using PrimitiveExpression::PrimitiveExpression;
-
-    auto                      accept(Visitor& v) const -> void override;
-    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
-};
-template <> struct disable_default_parse<NilExpression> : std::true_type {};
 
 // cppcheck-suppress-end [constParameterReference, duplInheritedMember]
 

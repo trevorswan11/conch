@@ -74,6 +74,20 @@ class DeclStatement : public StmtBase<DeclStatement> {
         return static_cast<bool>(modifiers & flag);
     }
 
+  protected:
+    auto is_equal(const Node& other) const noexcept -> bool override;
+
+  private:
+    using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
+    static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
+        {TokenType::VAR, DeclModifiers::VARIABLE},
+        {TokenType::CONST, DeclModifiers::CONSTANT},
+        {TokenType::PRIVATE, DeclModifiers::PRIVATE},
+        {TokenType::EXTERN, DeclModifiers::EXTERN},
+        {TokenType::EXPORT, DeclModifiers::EXPORT},
+        {TokenType::STATIC, DeclModifiers::STATIC},
+    });
+
     static constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept -> bool {
         const auto unique_mut =
             (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
@@ -90,20 +104,6 @@ class DeclStatement : public StmtBase<DeclStatement> {
         const auto it = std::ranges::find(LEGAL_MODIFIERS, tok.type, &ModifierMapping::first);
         return it == LEGAL_MODIFIERS.end() ? nullopt : Optional<DeclModifiers>{it->second};
     }
-
-  protected:
-    auto is_equal(const Node& other) const noexcept -> bool override;
-
-  private:
-    using ModifierMapping                 = std::pair<TokenType, DeclModifiers>;
-    static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
-        {TokenType::VAR, DeclModifiers::VARIABLE},
-        {TokenType::CONST, DeclModifiers::CONSTANT},
-        {TokenType::PRIVATE, DeclModifiers::PRIVATE},
-        {TokenType::EXTERN, DeclModifiers::EXTERN},
-        {TokenType::EXPORT, DeclModifiers::EXPORT},
-        {TokenType::STATIC, DeclModifiers::STATIC},
-    });
 
   private:
     Box<IdentifierExpression> ident_;

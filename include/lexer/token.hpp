@@ -62,7 +62,6 @@ enum class TokenType : u8 {
     SLASH,
     PERCENT,
     BANG,
-    WHAT,
 
     AND,
     OR,
@@ -135,7 +134,6 @@ enum class TokenType : u8 {
     WHILE,
     CONTINUE,
     BREAK,
-    NIL,
     IMPORT,
     TYPE_TYPE,
     ORELSE,

@@ -27,7 +27,6 @@ class USizeIntegerExpression;
 class ByteExpression;
 class FloatExpression;
 class BoolExpression;
-class NilExpression;
 class RangeExpression;
 class ScopeResolutionExpression;
 class StructExpression;
@@ -73,7 +72,6 @@ class Visitor {
     virtual auto visit(const ast::ByteExpression&) -> void                = 0;
     virtual auto visit(const ast::FloatExpression&) -> void               = 0;
     virtual auto visit(const ast::BoolExpression&) -> void                = 0;
-    virtual auto visit(const ast::NilExpression&) -> void                 = 0;
     virtual auto visit(const ast::RangeExpression&) -> void               = 0;
     virtual auto visit(const ast::ScopeResolutionExpression&) -> void     = 0;
     virtual auto visit(const ast::StructExpression&) -> void              = 0;
