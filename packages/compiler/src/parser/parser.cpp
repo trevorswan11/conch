@@ -92,8 +92,6 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     case TokenType::UNDERSCORE: return ast::DiscardStatement::parse(*this);
     default:                    return ast::ExpressionStatement::parse(*this);
     }
-
-    std::unreachable();
 }
 
 auto Parser::parse_expression(Precedence precedence)
