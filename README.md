@@ -22,6 +22,7 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 ## Other dependencies:
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
 2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
+3. [magic_enum](https://github.com/Neargye/magic_enum) is used as a utility to reflect on enum values. Is is licensed under the permissible MIT license.
 
 These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh

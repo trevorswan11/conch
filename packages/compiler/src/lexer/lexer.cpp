@@ -1,7 +1,6 @@
 #include <cassert>
 #include <cctype>
 #include <string_view>
-#include <utility>
 
 #include "lexer/keywords.hpp"
 #include "lexer/lexer.hpp"

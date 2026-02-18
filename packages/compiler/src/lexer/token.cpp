@@ -1,8 +1,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
-#include <string>
-#include <utility>
 
 #include "lexer/keywords.hpp"
 #include "lexer/token.hpp"

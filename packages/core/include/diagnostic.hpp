@@ -1,14 +1,24 @@
 #pragma once
 
 #include <format>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
-#include "core/common.hpp"
-#include "core/optional.hpp"
-#include "core/source_loc.hpp"
+#include <magic_enum/magic_enum.hpp>
+
+#include "source_loc.hpp"
+#include "types.hpp"
 
 namespace conch {
+
+namespace detail {
+
+[[nodiscard]] auto format_diagnostic(const std::optional<std::string>&    message,
+                                     std::string_view                     error_name,
+                                     const std::optional<SourceLocation>& location) -> std::string;
+
+} // namespace detail
 
 template <typename E>
     requires std::is_scoped_enum_v<E>
@@ -31,18 +41,22 @@ class Diagnostic {
     explicit Diagnostic(Diagnostic& other, E err) noexcept
         : message_{std::move(other.message_)}, error_{err}, loc_{std::move(other.loc_)} {}
 
-    auto message() const noexcept -> const std::string& { return message_; }
+    auto has_msg() const noexcept -> bool { return message_.has_value(); }
     auto error() const noexcept -> E { return error_; }
     auto set_err(E err) noexcept -> void { error_ = err; }
+
+    [[nodiscard]] auto to_string() const noexcept -> std::string {
+        return detail::format_diagnostic(message_, magic_enum::enum_name(error_), loc_);
+    }
 
     auto operator==(const Diagnostic& other) const noexcept -> bool {
         return message_ == other.message_ && error_ == other.error_ && loc_ == other.loc_;
     }
 
   private:
-    std::string              message_{};
-    E                        error_;
-    Optional<SourceLocation> loc_{};
+    std::optional<std::string>    message_{};
+    E                             error_;
+    std::optional<SourceLocation> loc_{};
 
     friend struct std::formatter<Diagnostic>;
 };
@@ -53,16 +67,6 @@ template <typename E> struct std::formatter<conch::Diagnostic<E>> : std::formatt
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const conch::Diagnostic<E>& d, F& ctx) const {
-        if (d.loc_) {
-            return std::formatter<std::string>::format(
-                std::format("{} [{}, {}]",
-                            d.message_.empty() ? enum_name(d.error_) : d.message_,
-                            d.loc_->line,
-                            d.loc_->column),
-                ctx);
-        }
-
-        return std::formatter<std::string>::format(
-            std::format("{}", d.message_.empty() ? enum_name(d.error_) : d.message_), ctx);
+        return std::formatter<std::string>::format(d.to_string(), ctx);
     }
 };

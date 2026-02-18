@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <utility>
 
 #include "ast/expressions/array.hpp"
 

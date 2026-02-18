@@ -1,11 +1,14 @@
-#include <utility>
+#include <algorithm>
 
 #include "ast/expressions/type.hpp"
 
 #include "ast/expressions/function.hpp"
 #include "ast/expressions/identifier.hpp"
 #include "ast/expressions/primitive.hpp"
+
 #include "ast/visitor.hpp"
+
+#include "common.hpp"
 
 namespace conch::ast {
 

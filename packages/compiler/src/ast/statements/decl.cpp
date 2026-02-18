@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "ast/statements/decl.hpp"
 
 #include "ast/expressions/function.hpp"

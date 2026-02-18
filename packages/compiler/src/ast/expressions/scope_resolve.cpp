@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "ast/expressions/scope_resolve.hpp"
 
 #include "ast/expressions/identifier.hpp"

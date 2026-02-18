@@ -7,8 +7,8 @@
 
 #include "lexer/token.hpp"
 
-#include "core/common.hpp"
-#include "core/optional.hpp"
+#include "types.hpp"
+#include "optional.hpp"
 
 namespace conch {
 

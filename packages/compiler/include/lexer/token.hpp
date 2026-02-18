@@ -5,12 +5,13 @@
 #include <string_view>
 #include <utility>
 
-#include "core/common.hpp"
-#include "core/diagnostic.hpp"
-#include "core/expected.hpp"
-#include "core/optional.hpp"
-#include "core/reflection.hpp"
-#include "core/source_loc.hpp"
+#include <magic_enum/magic_enum.hpp>
+
+#include "diagnostic.hpp"
+#include "expected.hpp"
+#include "optional.hpp"
+#include "source_loc.hpp"
+#include "types.hpp"
 
 namespace conch {
 
@@ -306,6 +307,8 @@ template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
 
     template <typename F> auto format(const conch::Token& t, F& ctx) const {
         return std::formatter<std::string>::format(
-            std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line, t.column), ctx);
+            std::format(
+                "{}({}) [{}, {}]", magic_enum::enum_name(t.type), t.slice, t.line, t.column),
+            ctx);
     }
 };

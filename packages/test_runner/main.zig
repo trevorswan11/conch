@@ -2,6 +2,22 @@ const std = @import("std");
 
 extern fn launch([*c]u8) i32;
 
+var instrumentor: Instrumentor = undefined;
+var instrumentor_once = std.once(Instrumentor.initOnce);
+
+pub fn main() !void {
+    instrumentor_once.call();
+    defer instrumentor.deinit();
+
+    const args = try instrumentor.manageProcessArgs();
+    const process_name = args[0];
+    const proc = launch(@ptrCast(process_name.ptr));
+
+    const result: u8 = @intCast(@intFromBool(instrumentor.tryDumpLeaks()) | proc);
+    instrumentor.report();
+    std.process.exit(result);
+}
+
 const Instrumentor = struct {
     const internal_allocator = std.heap.c_allocator;
 
@@ -16,7 +32,7 @@ const Instrumentor = struct {
         }
     };
 
-    const header_magic = 0xdeadbeef;
+    const header_magic = 0xDEADBEEF;
     const header_size = @sizeOf(AllocHeader);
 
     gpa: std.heap.DebugAllocator(.{
@@ -109,22 +125,6 @@ const Instrumentor = struct {
         return .{ bytes, "bytes" };
     }
 };
-
-var instrumentor: Instrumentor = undefined;
-var instrumentor_once = std.once(Instrumentor.initOnce);
-
-pub fn main() !void {
-    instrumentor_once.call();
-    defer instrumentor.deinit();
-
-    const args = try instrumentor.manageProcessArgs();
-    const process_name = args[0];
-    const proc = launch(@ptrCast(process_name.ptr));
-
-    const result: u8 = @intCast(@intFromBool(instrumentor.tryDumpLeaks()) | proc);
-    instrumentor.report();
-    std.process.exit(result);
-}
 
 export fn alloc(size: usize) callconv(.c) ?*anyopaque {
     instrumentor_once.call();

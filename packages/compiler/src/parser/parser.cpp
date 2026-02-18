@@ -1,8 +1,11 @@
 #include <algorithm>
-#include <array>
 #include <format>
 #include <ranges>
 #include <utility>
+
+#include <magic_enum/magic_enum.hpp>
+
+#include "array.hpp"
 
 #include "parser/parser.hpp"
 #include "parser/precedence.hpp"
@@ -102,10 +105,10 @@ auto Parser::parse_expression(Precedence precedence)
 
     const auto& prefix = poll_prefix_fn(current_token_.type);
     if (!prefix) {
-        return make_parser_unexpected(
-            std::format("No prefix parse function for {} found", enum_name(current_token_.type)),
-            ParserError::MISSING_PREFIX_PARSER,
-            current_token_);
+        return make_parser_unexpected(std::format("No prefix parse function for {} found",
+                                                  magic_enum::enum_name(current_token_.type)),
+                                      ParserError::MISSING_PREFIX_PARSER,
+                                      current_token_);
     }
     auto lhs_expression = TRY((*prefix)(*this));
 
@@ -289,10 +292,11 @@ constexpr auto Parser::poll_infix_fn(TokenType tt) noexcept -> Optional<const In
 }
 
 auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic {
-    return ParserDiagnostic{
-        std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
-        ParserError::UNEXPECTED_TOKEN,
-        actual};
+    return ParserDiagnostic{std::format("Expected token {}, found {}",
+                                        magic_enum::enum_name(expected),
+                                        magic_enum::enum_name(actual.type)),
+                            ParserError::UNEXPECTED_TOKEN,
+                            actual};
 }
 
 } // namespace conch
