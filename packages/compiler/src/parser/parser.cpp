@@ -19,7 +19,7 @@ auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{inp
 auto Parser::advance(uint8_t times) noexcept -> const Token& {
     for (uint8_t i = 0; i < times; ++i) {
         if (current_token_.type == TokenType::END &&
-            (input_.empty() && current_token_.location.is_at_start())) {
+            (input_.empty() && current_token_.is_at_start())) {
             break;
         }
 

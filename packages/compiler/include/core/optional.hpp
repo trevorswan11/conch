@@ -16,7 +16,7 @@ template <typename T> class OptionalRef {
     OptionalRef(T&&)                                            = delete;
     auto operator=(const OptionalRef&) noexcept -> OptionalRef& = default;
 
-    [[nodiscard]] bool     has_value() const noexcept { return ptr_ != nullptr; }
+    [[nodiscard]] auto     has_value() const noexcept -> bool { return ptr_ != nullptr; }
     [[nodiscard]] explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
     auto value() const -> T& {

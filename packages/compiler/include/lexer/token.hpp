@@ -10,6 +10,7 @@
 #include "core/expected.hpp"
 #include "core/optional.hpp"
 #include "core/reflection.hpp"
+#include "core/source_loc.hpp"
 
 namespace conch {
 
@@ -273,36 +274,29 @@ auto suffix_length(TokenType tt) noexcept -> usize;
 
 } // namespace token_type
 
-struct MinimalSourceLocation {
-    usize line   = 0;
-    usize column = 0;
-
-    auto operator==(const MinimalSourceLocation& other) const noexcept -> bool {
-        return line == other.line && column == other.column;
-    }
-
-    [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
-};
-
 struct Token {
-    TokenType             type{};
-    std::string_view      slice{};
-    MinimalSourceLocation location{};
+    TokenType        type{};
+    std::string_view slice{};
+    usize            line{};
+    usize            column{};
 
     Token() noexcept = default;
     Token(TokenType tt, std::string_view tok) noexcept : type{tt}, slice{tok} {}
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
-        : type{tt}, slice{slice}, location{line, column} {}
+        : type{tt}, slice{slice}, line{line}, column{column} {}
 
-    [[nodiscard]] auto get_line() const noexcept -> usize { return location.line; }
-    [[nodiscard]] auto get_column() const noexcept -> usize { return location.column; }
-
+    [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
     auto               is_primitive() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {
-        return type == other.type && slice == other.slice && location == other.location;
+        return type == other.type && slice == other.slice && line == other.line &&
+               column == other.column;
     }
+};
+
+template <> struct SourceInfo<Token> {
+    static auto get(const Token& t) -> SourceLocation { return {t.line, t.column}; }
 };
 
 } // namespace conch
@@ -312,8 +306,6 @@ template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
 
     template <typename F> auto format(const conch::Token& t, F& ctx) const {
         return std::formatter<std::string>::format(
-            std::format(
-                "{}({}) [{}, {}]", enum_name(t.type), t.slice, t.get_line(), t.get_column()),
-            ctx);
+            std::format("{}({}) [{}, {}]", enum_name(t.type), t.slice, t.line, t.column), ctx);
     }
 };

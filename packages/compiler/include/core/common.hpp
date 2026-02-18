@@ -33,7 +33,7 @@ using byte = std::string_view::value_type;
 static_assert(std::is_same_v<std::string::value_type, byte>);
 
 template <typename T> using Box = std::unique_ptr<T>;
-template <typename T, typename... Args> constexpr Box<T> make_box(Args&&... args) {
+template <typename T, typename... Args> constexpr auto make_box(Args&&... args) -> Box<T> {
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
@@ -48,7 +48,7 @@ template <typename T, typename P> constexpr auto box_into(Box<P>&& ptr) -> Box<T
 }
 
 template <typename T> using Rc = std::shared_ptr<T>;
-template <typename T, typename... Args> constexpr Rc<T> make_rc(Args&&... args) {
+template <typename T, typename... Args> constexpr auto make_rc(Args&&... args) -> Rc<T> {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
 

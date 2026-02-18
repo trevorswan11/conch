@@ -98,15 +98,14 @@ auto suffix_length(TokenType tt) noexcept -> usize {
 } // namespace token_type
 
 auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
-    const auto [ln, col] = location;
     if (type != TokenType::STRING && type != TokenType::MULTILINE_STRING) {
-        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, ln, col}};
+        return Unexpected{Diagnostic{TokenError::NON_STRING_TOKEN, line, column}};
     }
 
     // Here we can just trim off the start and finish of the string
     if (type == TokenType::STRING) {
         if (slice.size() < 2) {
-            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, ln, col}};
+            return Unexpected{Diagnostic{TokenError::UNEXPECTED_CHAR, line, column}};
         }
         return std::string{slice.begin() + 1, slice.end() - 1};
     }

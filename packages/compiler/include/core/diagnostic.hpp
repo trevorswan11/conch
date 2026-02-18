@@ -6,14 +6,9 @@
 
 #include "core/common.hpp"
 #include "core/optional.hpp"
+#include "core/source_loc.hpp"
 
 namespace conch {
-
-template <typename T>
-concept TokenLike = requires(T t) {
-    t.get_line();
-    t.get_column();
-};
 
 template <typename E>
     requires std::is_scoped_enum_v<E>
@@ -21,35 +16,33 @@ class Diagnostic {
   public:
     Diagnostic() = delete;
     explicit Diagnostic(E err) : error_{err} {}
-    explicit Diagnostic(E err, usize ln, usize col) : error_{err}, line_{ln}, column_{col} {}
-    explicit Diagnostic(std::string msg, E err, usize ln, usize col)
-        : message_{std::move(msg)}, error_{err}, line_{ln}, column_{col} {}
+    explicit Diagnostic(E err, usize line, usize column)
+        : error_{err}, loc_{SourceLocation{line, column}} {}
+    explicit Diagnostic(std::string msg, E err, usize line, usize column)
+        : message_{std::move(msg)}, error_{err}, loc_{SourceLocation{line, column}} {}
 
-    template <TokenLike T>
-    explicit Diagnostic(std::string msg, E err, T t)
-        : message_{std::move(msg)}, error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
+    template <Locateable T>
+    explicit Diagnostic(std::string msg, E err, const T& t)
+        : message_{std::move(msg)}, error_{err}, loc_{SourceInfo<T>::get(t)} {}
 
-    template <TokenLike T>
-    explicit Diagnostic(E err, T t) : error_{err}, line_{t.get_line()}, column_{t.get_column()} {}
+    template <Locateable T>
+    explicit Diagnostic(E err, T t) : error_{err}, loc_{SourceInfo<T>::get(t)} {}
 
     explicit Diagnostic(Diagnostic& other, E err) noexcept
-        : message_{std::move(other.message_)}, error_{err}, line_{other.line_},
-          column_{other.column_} {}
+        : message_{std::move(other.message_)}, error_{err}, loc_{std::move(other.loc_)} {}
 
     auto message() const noexcept -> const std::string& { return message_; }
     auto error() const noexcept -> E { return error_; }
     auto set_err(E err) noexcept -> void { error_ = err; }
 
     auto operator==(const Diagnostic& other) const noexcept -> bool {
-        return message_ == other.message_ && error_ == other.error_ && line_ == other.line_ &&
-               column_ == other.column_;
+        return message_ == other.message_ && error_ == other.error_ && loc_ == other.loc_;
     }
 
   private:
-    std::string     message_{};
-    E               error_;
-    Optional<usize> line_{};
-    Optional<usize> column_{};
+    std::string              message_{};
+    E                        error_;
+    Optional<SourceLocation> loc_{};
 
     friend struct std::formatter<Diagnostic>;
 };
@@ -60,12 +53,12 @@ template <typename E> struct std::formatter<conch::Diagnostic<E>> : std::formatt
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const conch::Diagnostic<E>& d, F& ctx) const {
-        if (d.line_ && d.column_) {
+        if (d.loc_) {
             return std::formatter<std::string>::format(
                 std::format("{} [{}, {}]",
                             d.message_.empty() ? enum_name(d.error_) : d.message_,
-                            *d.line_,
-                            *d.column_),
+                            d.loc_->line,
+                            d.loc_->column),
                 ctx);
         }
 
