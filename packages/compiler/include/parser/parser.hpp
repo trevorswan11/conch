@@ -6,8 +6,10 @@
 #include <variant>
 #include <vector>
 
-#include "core/common.hpp"
-#include "core/optional.hpp"
+#include "memory.hpp"
+#include "expected.hpp"
+#include "optional.hpp"
+#include "types.hpp"
 
 #include "parser/precedence.hpp"
 

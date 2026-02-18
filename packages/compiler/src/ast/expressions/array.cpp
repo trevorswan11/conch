@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <utility>
 
 #include "ast/expressions/array.hpp"
 
@@ -40,7 +39,10 @@ auto ArrayExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserD
     TRY(parser.expect_peek(TokenType::LBRACE));
 
     std::vector<Box<Expression>> items;
-    items.reserve(size.transform([](const auto& sz) { return sz->get_value(); }).value_or(4));
+    size.and_then([&items](const auto& sz) -> decltype(size) {
+        items.resize(sz->get_value());
+        return nullopt;
+    });
 
     // Current token is either the LBRACE at the start or a comma before parsing
     while (!parser.peek_token_is(TokenType::RBRACE) && !parser.peek_token_is(TokenType::END)) {
@@ -58,7 +60,6 @@ auto ArrayExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserD
     if (items.empty() || (size && (*size)->get_value() == 0)) {
         return make_parser_unexpected(ParserError::EMPTY_ARRAY, start_token);
     }
-
     return make_box<ArrayExpression>(start_token, std::move(size), std::move(items));
 }
 

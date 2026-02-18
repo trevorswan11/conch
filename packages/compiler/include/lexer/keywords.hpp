@@ -5,7 +5,7 @@
 #include <string_view>
 #include <utility>
 
-#include "core/optional.hpp"
+#include "optional.hpp"
 
 #include "lexer/token.hpp"
 

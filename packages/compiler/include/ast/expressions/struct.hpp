@@ -2,8 +2,7 @@
 
 #include <span>
 
-#include "core/common.hpp"
-#include "core/expected.hpp"
+#include "expected.hpp"
 
 #include "ast/node.hpp"
 

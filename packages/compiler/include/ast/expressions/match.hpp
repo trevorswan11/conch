@@ -4,9 +4,8 @@
 #include <span>
 #include <utility>
 
-#include "core/common.hpp"
-#include "core/expected.hpp"
-#include "core/optional.hpp"
+#include "expected.hpp"
+#include "optional.hpp"
 
 #include "ast/node.hpp"
 

@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "ast/expressions/infinite_loop.hpp"
 
 #include "ast/statements/block.hpp"

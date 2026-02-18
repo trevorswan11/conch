@@ -48,9 +48,5 @@ jobs:
 
             - name: Run tests
               run: |
-                  zig build
-                  zig build --release=fast
-                  zig build test-compiler
-                  zig build test-compiler --release=fast
-                  zig build test-cli
-                  zig build test-cli --release=fast
+                  zig build test
+                  zig build test --release=fast

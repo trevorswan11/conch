@@ -40,49 +40,45 @@ class ExpressionStatement;
 class ImportStatement;
 class JumpStatement;
 
-} // namespace conch::ast
-
-namespace conch {
-
 class Visitor {
   public:
-    virtual ~Visitor()                                                    = default;
-    virtual auto visit(const ast::ArrayExpression&) -> void               = 0;
-    virtual auto visit(const ast::AssignmentExpression&) -> void          = 0;
-    virtual auto visit(const ast::BinaryExpression&) -> void              = 0;
-    virtual auto visit(const ast::CallExpression&) -> void                = 0;
-    virtual auto visit(const ast::DoWhileLoopExpression&) -> void         = 0;
-    virtual auto visit(const ast::DotExpression&) -> void                 = 0;
-    virtual auto visit(const ast::EnumExpression&) -> void                = 0;
-    virtual auto visit(const ast::ForLoopExpression&) -> void             = 0;
-    virtual auto visit(const ast::FunctionExpression&) -> void            = 0;
-    virtual auto visit(const ast::IdentifierExpression&) -> void          = 0;
-    virtual auto visit(const ast::IfExpression&) -> void                  = 0;
-    virtual auto visit(const ast::IndexExpression&) -> void               = 0;
-    virtual auto visit(const ast::InfiniteLoopExpression&) -> void        = 0;
-    virtual auto visit(const ast::MatchExpression&) -> void               = 0;
-    virtual auto visit(const ast::PrefixExpression&) -> void              = 0;
-    virtual auto visit(const ast::StringExpression&) -> void              = 0;
-    virtual auto visit(const ast::SignedIntegerExpression&) -> void       = 0;
-    virtual auto visit(const ast::SignedLongIntegerExpression&) -> void   = 0;
-    virtual auto visit(const ast::ISizeIntegerExpression&) -> void        = 0;
-    virtual auto visit(const ast::UnsignedIntegerExpression&) -> void     = 0;
-    virtual auto visit(const ast::UnsignedLongIntegerExpression&) -> void = 0;
-    virtual auto visit(const ast::USizeIntegerExpression&) -> void        = 0;
-    virtual auto visit(const ast::ByteExpression&) -> void                = 0;
-    virtual auto visit(const ast::FloatExpression&) -> void               = 0;
-    virtual auto visit(const ast::BoolExpression&) -> void                = 0;
-    virtual auto visit(const ast::RangeExpression&) -> void               = 0;
-    virtual auto visit(const ast::ScopeResolutionExpression&) -> void     = 0;
-    virtual auto visit(const ast::StructExpression&) -> void              = 0;
-    virtual auto visit(const ast::TypeExpression&) -> void                = 0;
-    virtual auto visit(const ast::WhileLoopExpression&) -> void           = 0;
-    virtual auto visit(const ast::BlockStatement&) -> void                = 0;
-    virtual auto visit(const ast::DeclStatement&) -> void                 = 0;
-    virtual auto visit(const ast::DiscardStatement&) -> void              = 0;
-    virtual auto visit(const ast::ExpressionStatement&) -> void           = 0;
-    virtual auto visit(const ast::ImportStatement&) -> void               = 0;
-    virtual auto visit(const ast::JumpStatement&) -> void                 = 0;
+    virtual ~Visitor()                                               = default;
+    virtual auto visit(const ArrayExpression&) -> void               = 0;
+    virtual auto visit(const AssignmentExpression&) -> void          = 0;
+    virtual auto visit(const BinaryExpression&) -> void              = 0;
+    virtual auto visit(const CallExpression&) -> void                = 0;
+    virtual auto visit(const DoWhileLoopExpression&) -> void         = 0;
+    virtual auto visit(const DotExpression&) -> void                 = 0;
+    virtual auto visit(const EnumExpression&) -> void                = 0;
+    virtual auto visit(const ForLoopExpression&) -> void             = 0;
+    virtual auto visit(const FunctionExpression&) -> void            = 0;
+    virtual auto visit(const IdentifierExpression&) -> void          = 0;
+    virtual auto visit(const IfExpression&) -> void                  = 0;
+    virtual auto visit(const IndexExpression&) -> void               = 0;
+    virtual auto visit(const InfiniteLoopExpression&) -> void        = 0;
+    virtual auto visit(const MatchExpression&) -> void               = 0;
+    virtual auto visit(const PrefixExpression&) -> void              = 0;
+    virtual auto visit(const StringExpression&) -> void              = 0;
+    virtual auto visit(const SignedIntegerExpression&) -> void       = 0;
+    virtual auto visit(const SignedLongIntegerExpression&) -> void   = 0;
+    virtual auto visit(const ISizeIntegerExpression&) -> void        = 0;
+    virtual auto visit(const UnsignedIntegerExpression&) -> void     = 0;
+    virtual auto visit(const UnsignedLongIntegerExpression&) -> void = 0;
+    virtual auto visit(const USizeIntegerExpression&) -> void        = 0;
+    virtual auto visit(const ByteExpression&) -> void                = 0;
+    virtual auto visit(const FloatExpression&) -> void               = 0;
+    virtual auto visit(const BoolExpression&) -> void                = 0;
+    virtual auto visit(const RangeExpression&) -> void               = 0;
+    virtual auto visit(const ScopeResolutionExpression&) -> void     = 0;
+    virtual auto visit(const StructExpression&) -> void              = 0;
+    virtual auto visit(const TypeExpression&) -> void                = 0;
+    virtual auto visit(const WhileLoopExpression&) -> void           = 0;
+    virtual auto visit(const BlockStatement&) -> void                = 0;
+    virtual auto visit(const DeclStatement&) -> void                 = 0;
+    virtual auto visit(const DiscardStatement&) -> void              = 0;
+    virtual auto visit(const ExpressionStatement&) -> void           = 0;
+    virtual auto visit(const ImportStatement&) -> void               = 0;
+    virtual auto visit(const JumpStatement&) -> void                 = 0;
 };
 
-} // namespace conch
+} // namespace conch::ast

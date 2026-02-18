@@ -4,7 +4,8 @@
 #include <array>
 #include <utility>
 
-#include "core/optional.hpp"
+#include "optional.hpp"
+#include "types.hpp"
 
 #include "lexer/token.hpp"
 

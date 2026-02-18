@@ -6,13 +6,16 @@
 #include <string>
 #include <utility>
 
+#include <magic_enum/magic_enum.hpp>
+
 #include "lexer/token.hpp"
 
-#include "core/common.hpp"
-
-namespace conch { class Visitor; } // namespace conch
+#include "memory.hpp"
+#include "types.hpp"
 
 namespace conch::ast {
+
+class Visitor;
 
 enum class NodeKind : u8 {
     ARRAY_EXPRESSION,
@@ -94,16 +97,16 @@ class Node {
         return ((kind_ == Ts::KIND) || ...);
     }
 
-  protected:
-    explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}
-
-    virtual auto is_equal(const Node& other) const noexcept -> bool = 0;
-
-    // A safe alternative to a raw static cast for nodes.
+    // A 'safe' alternative to a raw static cast for nodes. Assertion > UB
     template <LeafNode T> static auto as(const Node& n) -> const T& {
         assert(n.is<T>());
         return static_cast<const T&>(n);
     }
+
+  protected:
+    explicit Node(const Token& tok, NodeKind kind) noexcept : start_token_{tok}, kind_{kind} {}
+
+    virtual auto is_equal(const Node& other) const noexcept -> bool = 0;
 
     // Transfers ownership and downcasts a boxed node into the requested type.
     template <LeafNode To, NodeSubtype From> static auto downcast(Box<From>&& from) -> Box<To> {
@@ -154,6 +157,6 @@ template <conch::ast::LeafNode N> struct std::formatter<N> : std::formatter<std:
 
     template <typename F> auto format(const N& n, F& ctx) const {
         return std::formatter<std::string>::format(
-            std::format("{}: {}", conch::enum_name(n.get_kind()), n.get_token()), ctx);
+            std::format("{}: {}", magic_enum::enum_name(n.get_kind()), n.get_token()), ctx);
     }
 };

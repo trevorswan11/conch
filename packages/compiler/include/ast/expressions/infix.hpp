@@ -2,8 +2,6 @@
 
 #include <utility>
 
-#include "core/common.hpp"
-
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"

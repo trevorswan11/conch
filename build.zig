@@ -62,12 +62,38 @@ pub fn build(b: *std.Build) !void {
 }
 
 const ProjectPaths = struct {
-    const compiler_inc = "packages/compiler/include/";
-    const compiler_src = "packages/compiler/src/";
-    const compiler_tests = "packages/compiler/tests/";
-    const cli_inc = "apps/cli/include/";
-    const cli_src = "apps/cli/src/";
-    const cli_tests = "apps/cli/tests/";
+    const Project = struct {
+        inc: []const u8,
+        src: []const u8,
+        tests: []const u8,
+
+        pub fn files(self: *const Project, b: *std.Build) ![][]const u8 {
+            return std.mem.concat(b.allocator, []const u8, &.{
+                try collectFiles(b, self.inc, .{}),
+                try collectFiles(b, self.src, .{ .allowed_extensions = &.{".hpp"} }),
+                try collectFiles(b, self.tests, .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
+            });
+        }
+    };
+
+    const compiler: Project = .{
+        .inc = "packages/compiler/include/",
+        .src = "packages/compiler/src/",
+        .tests = "packages/compiler/tests/",
+    };
+
+    const cli: Project = .{
+        .inc = "apps/cli/include/",
+        .src = "apps/cli/src/",
+        .tests = "apps/cli/tests/",
+    };
+
+    const core: Project = .{
+        .inc = "packages/core/include/",
+        .src = "packages/core/src/",
+        .tests = "packages/core/tests/",
+    };
+
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
 };
@@ -121,8 +147,42 @@ const ExecutableBehavior = union(enum) {
 
 const TestArtifacts = struct {
     libcatch2: *std.Build.Step.Compile = undefined,
+    core_tests: *std.Build.Step.Compile = undefined,
     compiler_tests: *std.Build.Step.Compile = undefined,
     cli_tests: *std.Build.Step.Compile = undefined,
+
+    pub fn configure(
+        self: *const TestArtifacts,
+        b: *std.Build,
+        install: bool,
+        cdb_steps: ?*std.ArrayList(*std.Build.Step),
+    ) !void {
+        if (install) {
+            b.installArtifact(self.libcatch2);
+            b.installArtifact(self.core_tests);
+            b.installArtifact(self.compiler_tests);
+            b.installArtifact(self.cli_tests);
+        }
+
+        if (cdb_steps) |cdb| {
+            try cdb.append(b.allocator, &self.libcatch2.step);
+            try cdb.append(b.allocator, &self.core_tests.step);
+            try cdb.append(b.allocator, &self.compiler_tests.step);
+            try cdb.append(b.allocator, &self.cli_tests.step);
+        }
+
+        const runners = [_]*std.Build.Step.Run{
+            b.addRunArtifact(self.core_tests),
+            b.addRunArtifact(self.compiler_tests),
+            b.addRunArtifact(self.cli_tests),
+        };
+
+        const test_step = b.step("test", "Run all unit tests");
+        for (runners) |runner| {
+            runner.step.dependOn(b.getInstallStep());
+            test_step.dependOn(&runner.step);
+        }
+    }
 };
 
 fn addArtifacts(b: *std.Build, config: struct {
@@ -135,19 +195,40 @@ fn addArtifacts(b: *std.Build, config: struct {
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
 }) !struct {
+    libcore: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
     libcli: *std.Build.Step.Compile,
     cli: *std.Build.Step.Compile,
     tests: ?TestArtifacts,
     cppcheck: ?*std.Build.Step.Compile,
 } {
+    const magic_enum = b.dependency("magic_enum", .{});
+    const magic_enum_inc = magic_enum.path("include");
+
+    // Shared core functionality
+    const libcore = createLibrary(b, .{
+        .name = "core",
+        .target = config.target,
+        .optimize = config.optimize,
+        .include_paths = &.{ b.path(ProjectPaths.core.inc), magic_enum_inc },
+        .cxx_files = try collectFiles(b, ProjectPaths.core.src, .{}),
+        .flags = config.cxx_flags,
+    });
+    if (config.auto_install) b.installArtifact(libcore);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
+
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
         .name = "compiler",
         .target = config.target,
         .optimize = config.optimize,
-        .include_paths = &.{b.path(ProjectPaths.compiler_inc)},
-        .cxx_files = try collectFiles(b, ProjectPaths.compiler_src, .{}),
+        .include_paths = &.{
+            b.path(ProjectPaths.compiler.inc),
+            b.path(ProjectPaths.core.inc),
+            magic_enum_inc,
+        },
+        .link_libraries = &.{libcore},
+        .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
         .flags = config.cxx_flags,
     });
     if (config.auto_install) b.installArtifact(libcompiler);
@@ -159,10 +240,12 @@ fn addArtifacts(b: *std.Build, config: struct {
         .target = config.target,
         .optimize = config.optimize,
         .include_paths = &.{
-            b.path(ProjectPaths.cli_inc),
-            b.path(ProjectPaths.compiler_inc),
+            b.path(ProjectPaths.cli.inc),
+            b.path(ProjectPaths.compiler.inc),
+            b.path(ProjectPaths.core.inc),
+            magic_enum_inc,
         },
-        .cxx_files = try collectFiles(b, ProjectPaths.cli_src, .{
+        .cxx_files = try collectFiles(b, ProjectPaths.cli.src, .{
             .dropped_files = &.{"main.cpp"},
         }),
         .link_libraries = &.{libcompiler},
@@ -171,13 +254,13 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.auto_install) b.installArtifact(libcli);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcli.step);
 
-    // The shippable executable, links only against libcli which has a transitive dep of the compiler
+    // The shippable executable links only against libcli which has a transitive dep of the compiler
     const cli = createExecutable(b, .{
         .name = "conch",
         .target = config.target,
         .optimize = config.optimize,
-        .include_paths = &.{b.path(ProjectPaths.cli_inc)},
-        .cxx_files = &.{ProjectPaths.cli_src ++ "main.cpp"},
+        .include_paths = &.{b.path(ProjectPaths.cli.inc)},
+        .cxx_files = &.{ProjectPaths.cli.src ++ "main.cpp"},
         .cxx_flags = config.cxx_flags,
         .link_libraries = &.{libcli},
         .behavior = config.behavior orelse .{
@@ -205,21 +288,40 @@ fn addArtifacts(b: *std.Build, config: struct {
             .flags = config.cxx_flags,
         });
 
-        if (config.auto_install) b.installArtifact(tests.?.libcatch2);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.libcatch2.step);
+        // Core tests depend on the test runner
+        tests.?.core_tests = createExecutable(b, .{
+            .name = "core_tests",
+            .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
+            .target = config.target,
+            .optimize = config.optimize,
+            .include_paths = &.{
+                b.path(ProjectPaths.core.inc),
+                b.path(ProjectPaths.core.tests),
+                catch2.path("extras"),
+                magic_enum_inc,
+            },
+            .cxx_files = try collectFiles(b, ProjectPaths.core.tests, .{
+                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+            }),
+            .cxx_flags = config.cxx_flags,
+            .link_libraries = &.{ tests.?.libcatch2, libcore },
+            .behavior = config.behavior orelse .{
+                .runnable = .{
+                    .cmd_name = "test-core",
+                    .cmd_desc = "Run core unit tests",
+                    .with_args = false,
+                },
+            },
+        });
 
-        // Compiler tests depend on the test runner
+        // Compiler tests can pull in core helpers
         tests.?.compiler_tests = createExecutable(b, .{
             .name = "compiler_tests",
             .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{
-                b.path(ProjectPaths.compiler_inc),
-                catch2.path("extras"),
-                b.path(ProjectPaths.compiler_tests ++ "helpers"),
-            },
-            .cxx_files = try collectFiles(b, ProjectPaths.compiler_tests, .{
+            .include_paths = &.{ b.path(ProjectPaths.compiler.inc), b.path(ProjectPaths.core.inc), b.path(ProjectPaths.compiler.tests), catch2.path("extras"), magic_enum_inc },
+            .cxx_files = try collectFiles(b, ProjectPaths.compiler.tests, .{
                 .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
             }),
             .cxx_flags = config.cxx_flags,
@@ -233,21 +335,21 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
         });
 
-        if (config.auto_install) b.installArtifact(tests.?.compiler_tests);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.compiler_tests.step);
-
-        // CLI tests depend on the test runner
+        // CLI tests can pull in core helpers
         tests.?.cli_tests = createExecutable(b, .{
             .name = "cli_tests",
             .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
             .target = config.target,
             .optimize = config.optimize,
             .include_paths = &.{
-                b.path(ProjectPaths.compiler_inc),
-                b.path(ProjectPaths.cli_inc),
+                b.path(ProjectPaths.compiler.inc),
+                b.path(ProjectPaths.cli.inc),
+                b.path(ProjectPaths.core.inc),
+                b.path(ProjectPaths.cli.tests),
                 catch2.path("extras"),
+                magic_enum_inc,
             },
-            .cxx_files = try collectFiles(b, ProjectPaths.cli_tests, .{
+            .cxx_files = try collectFiles(b, ProjectPaths.cli.tests, .{
                 .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
             }),
             .cxx_flags = config.cxx_flags,
@@ -261,13 +363,13 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
         });
 
-        if (config.auto_install) b.installArtifact(tests.?.cli_tests);
-        if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &tests.?.cli_tests.step);
+        try tests.?.configure(b, config.auto_install, config.cdb_steps);
     }
 
     const cppcheck = if (config.skip_cppcheck) null else try compileCppcheck(b, config.target);
 
     return .{
+        .libcore = libcore,
         .libcompiler = libcompiler,
         .libcli = libcli,
         .cli = cli,
@@ -637,8 +739,7 @@ fn addTooling(b: *std.Build, config: struct {
     if (config.tests) |tests| {
         try addLLDBStep(b, .{
             .cli = config.cli,
-            .cli_tests = tests.cli_tests,
-            .compiler_tests = tests.compiler_tests,
+            .tests = tests,
         });
     }
 
@@ -695,7 +796,11 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     );
     cppcheck.addArg("--check-level=exhaustive");
     cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
-    cppcheck.addArgs(&.{ "-icatch_amalgamated.cpp", "--suppress=*:catch_amalgamated.hpp" });
+    cppcheck.addArgs(&.{
+        "-icatch_amalgamated.cpp",
+        "--suppress=*:catch_amalgamated.hpp",
+        "--suppress=*:magic_enum.hpp",
+    });
 
     const suppressions: []const []const u8 = &.{
         "checkersReport",
@@ -722,8 +827,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
 
 fn addLLDBStep(b: *std.Build, config: struct {
     cli: *std.Build.Step.Compile,
-    compiler_tests: *std.Build.Step.Compile,
-    cli_tests: *std.Build.Step.Compile,
+    tests: TestArtifacts,
 }) !void {
     if (builtin.os.tag == .windows) return;
     const error_msg =
@@ -736,10 +840,12 @@ fn addLLDBStep(b: *std.Build, config: struct {
     const dbg = b.step("dbg", "Debug the main executable with lldb");
     const dbg_cli = b.step("dbg_cli", "Debug the cli tests with lldb");
     const dbg_compiler = b.step("dbg_compiler", "Debug the compiler tests with lldb");
+    const dbg_core = b.step("dbg_core", "Debug the core tests with lldb");
     const steps = [_]struct { *std.Build.Step, *std.Build.Step.Compile }{
         .{ dbg, config.cli },
-        .{ dbg_cli, config.cli_tests },
-        .{ dbg_compiler, config.compiler_tests },
+        .{ dbg_cli, config.tests.cli_tests },
+        .{ dbg_compiler, config.tests.compiler_tests },
+        .{ dbg_core, config.tests.core_tests },
     };
 
     for (steps) |step| {
@@ -1121,12 +1227,9 @@ fn collectFiles(
 
 fn collectToolingFiles(b: *std.Build) ![]const []const u8 {
     return std.mem.concat(b.allocator, []const u8, &.{
-        try collectFiles(b, ProjectPaths.compiler_src, .{}),
-        try collectFiles(b, ProjectPaths.compiler_inc, .{ .allowed_extensions = &.{".hpp"} }),
-        try collectFiles(b, ProjectPaths.compiler_tests, .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
-        try collectFiles(b, ProjectPaths.cli_src, .{}),
-        try collectFiles(b, ProjectPaths.cli_inc, .{ .allowed_extensions = &.{".hpp"} }),
-        try collectFiles(b, ProjectPaths.cli_tests, .{ .allowed_extensions = &.{ ".hpp", ".cpp" } }),
+        try ProjectPaths.compiler.files(b),
+        try ProjectPaths.cli.files(b),
+        try ProjectPaths.core.files(b),
         try collectFiles(b, ProjectPaths.test_runner, .{ .allowed_extensions = &.{".cpp"} }),
     });
 }

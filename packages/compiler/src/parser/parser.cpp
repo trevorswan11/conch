@@ -1,8 +1,11 @@
 #include <algorithm>
-#include <array>
 #include <format>
 #include <ranges>
 #include <utility>
+
+#include <magic_enum/magic_enum.hpp>
+
+#include "array.hpp"
 
 #include "parser/parser.hpp"
 #include "parser/precedence.hpp"
@@ -10,33 +13,7 @@
 #include "lexer/keywords.hpp"
 #include "lexer/token.hpp"
 
-#include "ast/node.hpp"
-#include "ast/statements/block.hpp"
-#include "ast/statements/decl.hpp"
-#include "ast/statements/discard.hpp"
-#include "ast/statements/expression.hpp"
-#include "ast/statements/import.hpp"
-#include "ast/statements/jump.hpp"
-
-#include "ast/expressions/array.hpp"
-#include "ast/expressions/assignment.hpp"
-#include "ast/expressions/binary.hpp"
-#include "ast/expressions/call.hpp"
-#include "ast/expressions/do_while.hpp"
-#include "ast/expressions/for.hpp"
-#include "ast/expressions/function.hpp"
-#include "ast/expressions/group.hpp"
-#include "ast/expressions/identifier.hpp"
-#include "ast/expressions/if.hpp"
-#include "ast/expressions/index.hpp"
-#include "ast/expressions/infinite_loop.hpp"
-#include "ast/expressions/match.hpp"
-#include "ast/expressions/prefix.hpp"
-#include "ast/expressions/primitive.hpp"
-#include "ast/expressions/range.hpp"
-#include "ast/expressions/scope_resolve.hpp"
-#include "ast/expressions/struct.hpp"
-#include "ast/expressions/while.hpp"
+#include "ast/ast.hpp"
 
 namespace conch {
 
@@ -45,7 +22,7 @@ auto Parser::reset(std::string_view input) noexcept -> void { *this = Parser{inp
 auto Parser::advance(uint8_t times) noexcept -> const Token& {
     for (uint8_t i = 0; i < times; ++i) {
         if (current_token_.type == TokenType::END &&
-            (input_.empty() && current_token_.location.is_at_start())) {
+            (input_.empty() && current_token_.is_at_start())) {
             break;
         }
 
@@ -118,8 +95,6 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     case TokenType::UNDERSCORE: return ast::DiscardStatement::parse(*this);
     default:                    return ast::ExpressionStatement::parse(*this);
     }
-
-    std::unreachable();
 }
 
 auto Parser::parse_expression(Precedence precedence)
@@ -130,10 +105,10 @@ auto Parser::parse_expression(Precedence precedence)
 
     const auto& prefix = poll_prefix_fn(current_token_.type);
     if (!prefix) {
-        return make_parser_unexpected(
-            std::format("No prefix parse function for {} found", enum_name(current_token_.type)),
-            ParserError::MISSING_PREFIX_PARSER,
-            current_token_);
+        return make_parser_unexpected(std::format("No prefix parse function for {} found",
+                                                  magic_enum::enum_name(current_token_.type)),
+                                      ParserError::MISSING_PREFIX_PARSER,
+                                      current_token_);
     }
     auto lhs_expression = TRY((*prefix)(*this));
 
@@ -317,10 +292,11 @@ constexpr auto Parser::poll_infix_fn(TokenType tt) noexcept -> Optional<const In
 }
 
 auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic {
-    return ParserDiagnostic{
-        std::format("Expected token {}, found {}", enum_name(expected), enum_name(actual.type)),
-        ParserError::UNEXPECTED_TOKEN,
-        actual};
+    return ParserDiagnostic{std::format("Expected token {}, found {}",
+                                        magic_enum::enum_name(expected),
+                                        magic_enum::enum_name(actual.type)),
+                            ParserError::UNEXPECTED_TOKEN,
+                            actual};
 }
 
 } // namespace conch

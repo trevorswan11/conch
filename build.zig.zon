@@ -12,6 +12,10 @@
             .url = "https://github.com/danmar/cppcheck/archive/refs/tags/2.19.0.tar.gz",
             .hash = "N-V-__8AANXzZwG73ht_C8YDOphyBzqoNj12jpctC8cyIhQK",
         },
+        .magic_enum = .{
+            .url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.9.7.tar.gz",
+            .hash = "N-V-__8AAG0CEAClLikJpJ7Cg3LFZxHR_xfy6ddADO6AKqq2",
+        },
     },
     .paths = .{
         "apps",
