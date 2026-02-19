@@ -289,6 +289,10 @@ struct Token {
     [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
     auto               is_primitive() const noexcept -> bool;
+    auto               is_builtin() const noexcept -> bool;
+
+    // Check whether the token is an ident, primitive type, or builtin function.
+    auto is_valid_ident() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && line == other.line &&

@@ -10,7 +10,7 @@
 #include "ast/expressions/primitive.hpp"
 #include "ast/statements/expression.hpp"
 
-namespace conch::tests {
+namespace conch::tests::helpers {
 
 template <ast::PrimitiveNode N>
 auto primitive(std::string_view                                       input,
@@ -47,4 +47,4 @@ auto primitive(std::string_view                                       input,
     primitive<N>(input, input, expected_type, expected_value);
 }
 
-} // namespace conch::tests
+} // namespace conch::tests::helpers

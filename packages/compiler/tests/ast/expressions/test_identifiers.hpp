@@ -6,9 +6,9 @@
 
 #include "lexer/token.hpp"
 
-namespace conch::tests {
+namespace conch::tests::helpers {
 
 auto test_ident(std::string_view input, Optional<TokenType> expected_type = TokenType::IDENT)
     -> void;
 
-} // namespace conch::tests
+} // namespace conch::tests::helpers
