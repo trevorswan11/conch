@@ -11,7 +11,16 @@ pub fn build(b: *std.Build) !void {
     const cdb_gen: *CdbGenerator = .init(b);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
-    try compiler_flags.appendSlice(b.allocator, &.{ "-std=c++23", "-Wall", "-Wextra", "-Werror", "-Wpedantic", "-Wno-gnu-statement-expression", "-Wno-gnu-statement-expression-from-macro-expansion", "-DMAGIC_ENUM_RANGE_MAX=255" });
+    try compiler_flags.appendSlice(b.allocator, &.{
+        "-std=c++23",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wpedantic",
+        "-Wno-gnu-statement-expression",
+        "-Wno-gnu-statement-expression-from-macro-expansion",
+        "-DMAGIC_ENUM_RANGE_MAX=255",
+    });
 
     var package_flags = try compiler_flags.clone(b.allocator);
     const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
