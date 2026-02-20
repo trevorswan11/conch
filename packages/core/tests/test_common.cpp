@@ -1,9 +1,11 @@
-#include <catch_amalgamated.hpp>
-
 #include <numbers>
 #include <variant>
 
+#include <catch_amalgamated.hpp>
+
 #include "common.hpp"
+
+namespace conch::tests {
 
 TEST_CASE("Variant visitor") {
     std::variant<std::string, int, double> one_of_many;
@@ -24,3 +26,5 @@ TEST_CASE("Variant visitor") {
     one_of_many = expected_double;
     REQUIRE(std::visit(visitor, one_of_many));
 }
+
+} // namespace conch::tests

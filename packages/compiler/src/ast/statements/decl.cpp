@@ -75,7 +75,7 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
 
 auto DeclStatement::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<DeclStatement>(other);
-    return ident_ == casted.ident_ && type_ == casted.type_ &&
+    return *ident_ == *casted.ident_ && *type_ == *casted.type_ &&
            optional::unsafe_eq<Expression>(value_, casted.value_) &&
            modifiers_ == casted.modifiers_;
 }

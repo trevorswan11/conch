@@ -286,6 +286,11 @@ struct Token {
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
         : type{tt}, slice{slice}, line{line}, column{column} {}
 
+    explicit Token(std::pair<TokenType, std::string_view> tok) noexcept
+        : type{tok.first}, slice{tok.second} {}
+    explicit Token(std::pair<std::string_view, TokenType> tok) noexcept
+        : type{tok.second}, slice{tok.first} {}
+
     [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
     auto               is_primitive() const noexcept -> bool;

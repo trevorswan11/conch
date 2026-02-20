@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 
 #include "expected.hpp"
 #include "optional.hpp"
@@ -87,15 +88,21 @@ class DeclStatement : public StmtBase<DeclStatement> {
     });
 
     static constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept -> bool {
-        const auto unique_mut =
-            (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
-        const auto unique_abi =
-            (modifiers & DeclModifiers::EXTERN) ^ (modifiers & DeclModifiers::EXPORT);
-        const auto unique_access = (modifiers & DeclModifiers::PRIVATE) ^
-                                   (modifiers & DeclModifiers::EXTERN) ^
-                                   (modifiers & DeclModifiers::EXPORT);
+        // Exactly one mutability flag must be set
+        const bool valid_mut =
+            std::popcount(std::to_underlying(
+                modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT))) == 1;
 
-        return static_cast<bool>(unique_mut & unique_abi & unique_access);
+        // At most one ABI flag can be set
+        const bool valid_abi =
+            std::popcount(std::to_underlying(modifiers &
+                                             (DeclModifiers::EXTERN | DeclModifiers::EXPORT))) <= 1;
+
+        // At most one access flag can be set
+        const bool valid_access = std::popcount(std::to_underlying(
+                                      modifiers & (DeclModifiers::PRIVATE | DeclModifiers::EXTERN |
+                                                   DeclModifiers::EXPORT))) <= 1;
+        return valid_mut && valid_abi && valid_access;
     }
 
     static constexpr auto token_to_modifier(const Token& tok) -> Optional<DeclModifiers> {

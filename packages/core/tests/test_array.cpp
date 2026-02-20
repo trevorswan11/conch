@@ -1,7 +1,10 @@
-#include <catch_amalgamated.hpp>
 #include <ranges>
 
+#include <catch_amalgamated.hpp>
+
 #include "array.hpp"
+
+namespace conch::tests {
 
 TEST_CASE("View materialization") {
     constexpr auto nums         = std::ranges::views::iota(0, 100);
@@ -15,5 +18,7 @@ TEST_CASE("Array concatenation") {
     constexpr std::array<int, 0> C = {};
 
     constexpr auto combined = conch::concat_arrays(A, B, C);
-    for (auto i = 0uz; i < combined.size(); i++) { REQUIRE(combined[i] == static_cast<int>(i)); }
+    for (usize i = 0; i < combined.size(); i++) { REQUIRE(combined[i] == static_cast<int>(i)); }
 }
+
+} // namespace conch::tests

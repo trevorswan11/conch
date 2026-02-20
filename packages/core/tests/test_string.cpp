@@ -2,7 +2,7 @@
 
 #include "string.hpp"
 
-using namespace conch;
+namespace conch::tests {
 
 TEST_CASE("Is space") {
     REQUIRE(string::is_space(' '));
@@ -36,3 +36,5 @@ TEST_CASE("Trim") {
     REQUIRE(string::trim("    the    ") == "the");
     REQUIRE(string::trim("        ") == "");
 }
+
+} // namespace conch::tests

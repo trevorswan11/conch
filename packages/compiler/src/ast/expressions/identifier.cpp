@@ -13,7 +13,7 @@ auto IdentifierExpression::parse(Parser& parser) // cppcheck-suppress constParam
         return make_parser_unexpected(ParserError::ILLEGAL_IDENTIFIER, start_token);
     }
 
-    return make_box<IdentifierExpression>(start_token, start_token.slice);
+    return make_box<IdentifierExpression>(start_token);
 }
 
 } // namespace conch::ast

@@ -141,7 +141,8 @@ auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
     -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic> {
-    const auto start_token = parser.current_token();
+    // The start start token is always offset as this is called irregularly
+    const auto start_token = parser.peek_token();
 
     auto [type, initialized] =
         TRY(([&]() -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic> {
