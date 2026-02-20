@@ -5,7 +5,7 @@
 
 #include "lexer/token.hpp"
 
-namespace conch {
+namespace conch::tests {
 
 TEST_CASE("Promotion of invalid tokens") {
     const auto  input{"1"};
@@ -97,4 +97,4 @@ TEST_CASE("Token formatting") {
     REQUIRE(expected == actual);
 }
 
-} // namespace conch
+} // namespace conch::tests

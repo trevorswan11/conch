@@ -4,7 +4,8 @@
 #include <catch_amalgamated.hpp>
 
 extern "C" {
-auto launch(char* proc) -> int { return Catch::Session().run(1, &proc); }
+auto launch(int argc, char** proc) -> int { return Catch::Session().run(argc, proc); }
+
 auto alloc(size_t size) -> void*;
 auto dealloc(void* ptr) -> void;
 }

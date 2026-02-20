@@ -141,13 +141,13 @@ const ExecutableBehavior = union(enum) {
     runnable: struct {
         cmd_name: []const u8,
         cmd_desc: []const u8,
-        with_args: bool,
     },
     standalone: void,
 };
 
 const TestArtifacts = struct {
     libcatch2: *std.Build.Step.Compile = undefined,
+    runner_tests: *std.Build.Step.Compile = undefined,
     core_tests: *std.Build.Step.Compile = undefined,
     compiler_tests: *std.Build.Step.Compile = undefined,
     cli_tests: *std.Build.Step.Compile = undefined,
@@ -160,6 +160,7 @@ const TestArtifacts = struct {
     ) !void {
         if (install) {
             b.installArtifact(self.libcatch2);
+            b.installArtifact(self.runner_tests);
             b.installArtifact(self.core_tests);
             b.installArtifact(self.compiler_tests);
             b.installArtifact(self.cli_tests);
@@ -173,6 +174,7 @@ const TestArtifacts = struct {
         }
 
         const runners = [_]*std.Build.Step.Run{
+            b.addRunArtifact(self.runner_tests),
             b.addRunArtifact(self.core_tests),
             b.addRunArtifact(self.compiler_tests),
             b.addRunArtifact(self.cli_tests),
@@ -268,7 +270,6 @@ fn addArtifacts(b: *std.Build, config: struct {
             .runnable = .{
                 .cmd_name = "run",
                 .cmd_desc = "Run conch with provided command line arguments",
-                .with_args = true,
             },
         },
     });
@@ -278,6 +279,8 @@ fn addArtifacts(b: *std.Build, config: struct {
     var tests: ?TestArtifacts = null;
     if (!config.skip_tests) {
         tests = .{};
+        const test_runner = b.path(ProjectPaths.test_runner ++ "main.zig");
+
         const catch2 = b.dependency("catch2", .{});
         tests.?.libcatch2 = createLibrary(b, .{
             .name = "catch2",
@@ -289,10 +292,25 @@ fn addArtifacts(b: *std.Build, config: struct {
             .flags = config.cxx_flags,
         });
 
+        // The runner has standalone tests
+        tests.?.runner_tests = b.addTest(.{
+            .name = "runner_tests",
+            .root_module = b.createModule(.{
+                .root_source_file = test_runner,
+                .optimize = config.optimize,
+                .target = config.target,
+                .link_libc = true,
+            }),
+        });
+
+        const runner_cmd = b.addRunArtifact(tests.?.runner_tests);
+        const runner_step = b.step("test-runner", "Run test instrumentation tests");
+        runner_step.dependOn(&runner_cmd.step);
+
         // Core tests depend on the test runner
         tests.?.core_tests = createExecutable(b, .{
             .name = "core_tests",
-            .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
+            .zig_main = test_runner,
             .target = config.target,
             .optimize = config.optimize,
             .include_paths = &.{
@@ -310,7 +328,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .runnable = .{
                     .cmd_name = "test-core",
                     .cmd_desc = "Run core unit tests",
-                    .with_args = false,
                 },
             },
         });
@@ -318,7 +335,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         // Compiler tests can pull in core helpers
         tests.?.compiler_tests = createExecutable(b, .{
             .name = "compiler_tests",
-            .zig_main = b.path(ProjectPaths.test_runner ++ "main.zig"),
+            .zig_main = test_runner,
             .target = config.target,
             .optimize = config.optimize,
             .include_paths = &.{ b.path(ProjectPaths.compiler.inc), b.path(ProjectPaths.core.inc), b.path(ProjectPaths.compiler.tests), catch2.path("extras"), magic_enum_inc },
@@ -331,7 +348,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .runnable = .{
                     .cmd_name = "test-compiler",
                     .cmd_desc = "Run compiler unit tests",
-                    .with_args = false,
                 },
             },
         });
@@ -359,7 +375,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .runnable = .{
                     .cmd_name = "test-cli",
                     .cmd_desc = "Run CLI unit tests",
-                    .with_args = false,
                 },
             },
         });
@@ -490,7 +505,7 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         break :blk raw_cfg_path;
     };
 
-    const files_dir_define = try std.fmt.allocPrint(
+    const files_dir = try std.fmt.allocPrint(
         b.allocator,
         "-DFILESDIR=\"{s}\"",
         .{cfg_path},
@@ -503,7 +518,7 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
         .include_paths = cppcheck_includes,
         .source_root = cppcheck.path("."),
         .cxx_files = &cppcheck_sources,
-        .cxx_flags = &.{ files_dir_define, "-Uunix", "-std=c++11" },
+        .cxx_flags = &.{ files_dir, "-Uunix", "-std=c++11" },
     });
 }
 
@@ -590,9 +605,9 @@ fn createExecutable(b: *std.Build, config: struct {
             const run_cmd = b.addRunArtifact(exe);
             run_cmd.step.dependOn(b.getInstallStep());
 
-            if (run.with_args) if (b.args) |args| {
+            if (b.args) |args| {
                 run_cmd.addArgs(args);
-            };
+            }
 
             const run_step = b.step(run.cmd_name, run.cmd_desc);
             run_step.dependOn(&run_cmd.step);
@@ -662,7 +677,10 @@ const CdbGenerator = struct {
             if (entry.kind != .file) continue;
             const entry_name = try allocator.dupe(u8, entry.name);
             const stat = try dir.statFile(entry_name);
-            const first_dot = std.mem.indexOf(u8, entry_name, ".") orelse continue;
+            const first_dot = std.mem.indexOf(u8, entry_name, ".") orelse {
+                try old_frags.append(allocator, entry_name);
+                continue;
+            };
             const base_name = entry_name[0 .. first_dot + 4];
 
             const entry_contents = try dir.readFile(entry_name, file_buf);
@@ -860,9 +878,9 @@ fn addLLDBStep(b: *std.Build, config: struct {
     ;
 
     const dbg = b.step("dbg", "Debug the main executable with lldb");
-    const dbg_cli = b.step("dbg_cli", "Debug the cli tests with lldb");
-    const dbg_compiler = b.step("dbg_compiler", "Debug the compiler tests with lldb");
-    const dbg_core = b.step("dbg_core", "Debug the core tests with lldb");
+    const dbg_cli = b.step("dbg-cli", "Debug the cli tests with lldb");
+    const dbg_compiler = b.step("dbg-compiler", "Debug the compiler tests with lldb");
+    const dbg_core = b.step("dbg-core", "Debug the core tests with lldb");
     const steps = [_]struct { *std.Build.Step, *std.Build.Step.Compile }{
         .{ dbg, config.cli },
         .{ dbg_cli, config.tests.cli_tests },
