@@ -18,7 +18,7 @@ TEST_CASE("Array concatenation") {
     constexpr std::array<int, 0> C = {};
 
     constexpr auto combined = array::concat(A, B, C);
-    for (usize i = 0; i < combined.size(); i++) { REQUIRE(combined[i] == static_cast<int>(i)); }
+    for (usize i = 0; i < combined.size(); ++i) { REQUIRE(combined[i] == static_cast<int>(i)); }
 }
 
 TEST_CASE("Array combinations") {

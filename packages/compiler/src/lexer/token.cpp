@@ -112,7 +112,7 @@ auto Token::promote() const -> Expected<std::string, Diagnostic<TokenError>> {
     builder.reserve(slice.size());
 
     auto at_line_start = true;
-    for (size_t i = 0; i < slice.size(); i++) {
+    for (size_t i = 0; i < slice.size(); ++i) {
         const auto c = slice[i];
 
         // Skip a double backslash at start of line to clean the string

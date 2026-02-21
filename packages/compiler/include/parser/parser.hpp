@@ -1,13 +1,12 @@
 #pragma once
 
-#include <span>
 #include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "memory.hpp"
 #include "expected.hpp"
+#include "memory.hpp"
 #include "optional.hpp"
 #include "types.hpp"
 
@@ -87,8 +86,9 @@ auto make_parser_unexpected(Args&&... args) -> Unexpected<ParserDiagnostic> {
 
 class Parser {
   public:
-    using PrefixFn = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&);
-    using InfixFn  = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&,
+    using Diagnostics = std::vector<ParserDiagnostic>;
+    using PrefixFn    = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&);
+    using InfixFn     = Expected<Box<ast::Expression>, ParserDiagnostic> (*)(Parser&,
                                                                          Box<ast::Expression>);
 
   public:
@@ -96,8 +96,11 @@ class Parser {
     explicit Parser(std::string_view input) noexcept : input_{input}, lexer_{input} { advance(2); }
 
     auto reset(std::string_view input = {}) noexcept -> void;
+
+    // Advances the parser, returning the resulting current token.
+    // This is a no-op at end of stream.
     auto advance(uint8_t times = 1) noexcept -> const Token&;
-    auto consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>;
+    auto consume() -> std::pair<ast::AST, Diagnostics>;
 
     auto current_token() const noexcept -> const Token& { return current_token_; }
     auto peek_token() const noexcept -> const Token& { return peek_token_; }
@@ -150,8 +153,6 @@ class Parser {
     Lexer            lexer_{};
     Token            current_token_{};
     Token            peek_token_{};
-
-    std::vector<ParserDiagnostic> diagnostics_{};
 };
 
 } // namespace conch

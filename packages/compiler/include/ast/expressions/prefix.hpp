@@ -2,31 +2,37 @@
 
 #include <utility>
 
-#include "expected.hpp"
-
 #include "ast/node.hpp"
+#include "ast/visitor.hpp"
 
 #include "parser/parser.hpp"
 
 namespace conch::ast {
 
-class PrefixExpression : public ExprBase<PrefixExpression> {
+template <typename Derived> class PrefixExpression : public ExprBase<Derived> {
   public:
-    static constexpr auto KIND = NodeKind::PREFIX_EXPRESSION;
+    explicit PrefixExpression(const Token& start_token, Box<Expression> rhs) noexcept
+        : ExprBase<Derived>{start_token}, rhs_{std::move(rhs)} {}
 
-  public:
-    explicit PrefixExpression(const Token& op, Box<Expression> rhs) noexcept
-        : ExprBase{op}, rhs_{std::move(rhs)} {}
+    auto accept(Visitor& v) const noexcept -> void override { v.visit(Node::as<Derived>(*this)); }
 
-    auto                      accept(Visitor& v) const -> void override;
-    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>;
+    [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
+        const auto prefix_token = parser.current_token();
+        if (parser.peek_token_is(TokenType::END)) {
+            return make_parser_unexpected(ParserError::PREFIX_MISSING_OPERAND, prefix_token);
+        }
+        parser.advance();
 
-    auto               get_op() const noexcept -> TokenType { return start_token_.type; }
+        auto operand = TRY(parser.parse_expression(Precedence::PREFIX));
+        return make_box<Derived>(prefix_token, std::move(operand));
+    }
+
+    auto               get_op() const noexcept -> TokenType { return this->start_token_.type; }
     [[nodiscard]] auto get_rhs() const noexcept -> const Expression& { return *rhs_; }
 
   protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
-        const auto& casted = as<PrefixExpression>(other);
+        const auto& casted = Node::as<Derived>(other);
         return *rhs_ == *casted.rhs_;
     }
 

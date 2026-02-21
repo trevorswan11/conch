@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-A simple programming language.
+A programming language.
 </p>
 
 # Motivation
@@ -18,6 +18,9 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 # Getting Started
 ## System dependencies:
 1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and project tooling.
+2. [LLVM 21.x](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as Conch's compilation backend. It is required for building Conch from scratch, but its libraries are statically linked in resulting executables. `llvm-config` must be available in the system's PATH so that the build system knows where to find library includes and compiled artifacts.
+
+The easiest way to get started with development is with [nix](https://nixos.org/). Just run `nix develop` to get started. Otherwise, you must manually install required dependencies in a way that fits your specific system.
 
 ## Other dependencies:
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
@@ -34,7 +37,7 @@ zig build --release
 This builds the `ReleaseFast` configuration. You can read about Zig's different optimization levels [here](https://ziglang.org/documentation/master/#Build-Mode).
 
 ## Tooling Dependencies
-1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter is used on all development platforms.
+1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. If you have LLVM installed on your system (specifically the LLVM version required by Conch), then this is a trivial dependency. LLVM 21's formatter is used on all development platforms.
 5. [zip](https://infozip.sourceforge.net/Zip.html) and [tar](https://www.gnu.org/software/tar/tar.html) are both used for packaging releases, but this is automated by GitHub actions runners.
 
 Note that these dependencies are purely optional for users simply building the project from source!

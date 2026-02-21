@@ -1,8 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <utility>
 #include <array>
+#include <utility>
 
 #include "types.hpp"
 

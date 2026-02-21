@@ -3,8 +3,6 @@
 #include <string>
 #include <string_view>
 
-#include "expected.hpp"
-
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
