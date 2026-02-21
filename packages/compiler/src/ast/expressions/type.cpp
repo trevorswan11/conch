@@ -4,7 +4,6 @@
 
 #include "ast/expressions/function.hpp"
 #include "ast/expressions/identifier.hpp"
-#include "ast/expressions/primitive.hpp"
 
 #include "ast/visitor.hpp"
 
@@ -12,8 +11,8 @@
 
 namespace conch::ast {
 
-ExplicitArrayType::ExplicitArrayType(std::vector<Box<USizeIntegerExpression>> dimensions,
-                                     Box<TypeExpression>                      inner_type) noexcept
+ExplicitArrayType::ExplicitArrayType(std::vector<Box<Expression>> dimensions,
+                                     Box<TypeExpression>          inner_type) noexcept
     : dimensions_{std::move(dimensions)}, inner_type_{std::move(inner_type)} {}
 
 ExplicitArrayType::~ExplicitArrayType() = default;
@@ -49,30 +48,18 @@ ExplicitType::~ExplicitType() = default;
     const auto outer_modifiers = TRY(parse_modifiers());
 
     // The array dimensions of a type are only present conditionally
-    auto opt_array_dims = TRY(
-        ([&]() -> Expected<Optional<std::vector<Box<USizeIntegerExpression>>>, ParserDiagnostic> {
+    auto opt_array_dims =
+        TRY(([&]() -> Expected<Optional<std::vector<Box<Expression>>>, ParserDiagnostic> {
             if (!parser.peek_token_is(TokenType::LBRACKET)) { return nullopt; }
 
             // Arrays are a little weird especially with the function signature
             parser.advance();
-            std::vector<Box<USizeIntegerExpression>> dimensions;
+            std::vector<Box<Expression>> dimensions;
 
             while (!parser.peek_token_is(TokenType::RBRACKET) &&
                    !parser.peek_token_is(TokenType::END)) {
                 parser.advance();
-                const auto integer_token = parser.current_token();
-                if (!token_type::is_usize_int(integer_token.type)) {
-                    return make_parser_unexpected(ParserError::UNEXPECTED_ARRAY_SIZE_TOKEN,
-                                                  integer_token);
-                }
-
-                auto dim = Node::downcast<USizeIntegerExpression>(
-                    TRY(USizeIntegerExpression::parse(parser)));
-                if (dim->get_value() == 0) {
-                    return make_parser_unexpected(ParserError::EMPTY_ARRAY, integer_token);
-                }
-
-                dimensions.emplace_back(std::move(dim));
+                dimensions.emplace_back(TRY(parser.parse_expression()));
                 if (!parser.peek_token_is(TokenType::RBRACKET)) {
                     TRY(parser.expect_peek(TokenType::COMMA));
                 }
@@ -141,7 +128,8 @@ auto TypeExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto TypeExpression::parse(Parser& parser)
     -> Expected<std::pair<Box<Expression>, bool>, ParserDiagnostic> {
-    const auto start_token = parser.current_token();
+    // The start start token is always offset as this is called irregularly
+    const auto start_token = parser.peek_token();
 
     auto [type, initialized] =
         TRY(([&]() -> Expected<std::pair<Box<TypeExpression>, bool>, ParserDiagnostic> {
@@ -164,7 +152,7 @@ auto TypeExpression::parse(Parser& parser)
         }()));
 
     // Advance again to prepare for rhs
-    parser.advance();
+    if (initialized) { parser.advance(); }
     return std::pair{box_into<Expression>(std::move(type)), initialized};
 }
 
@@ -174,22 +162,26 @@ auto TypeExpression::is_equal(const Node& other) const noexcept -> bool {
         explicit_, casted.explicit_, [](const auto& a, const auto& b) {
             if (a.type_.index() != b.type_.index()) { return false; }
 
-            const auto& btype = b.type_;
-            const auto  variant_eq =
-                std::visit(Overloaded{
-                               [&btype](const ExplicitIdentType& v) {
-                                   return *v == *std::get<ExplicitIdentType>(btype);
-                               },
-                               [&btype](const ExplicitFunctionType& v) {
-                                   return *v == *std::get<ExplicitFunctionType>(btype);
-                               },
-                               [&btype](const ExplicitArrayType& v1) {
-                                   const auto& v2 = std::get<ExplicitArrayType>(btype);
-                                   return std::ranges::equal(v1.dimensions_, v2.dimensions_) &&
-                                          *v1.inner_type_ == *v2.inner_type_;
-                               },
-                           },
-                           a.type_);
+            const auto& btype      = b.type_;
+            const auto  variant_eq = std::visit(
+                Overloaded{
+                    [&btype](const ExplicitIdentType& v) {
+                        return *v == *std::get<ExplicitIdentType>(btype);
+                    },
+                    [&btype](const ExplicitFunctionType& v) {
+                        return *v == *std::get<ExplicitFunctionType>(btype);
+                    },
+                    [&btype](const ExplicitArrayType& v1) {
+                        const auto& v2 = std::get<ExplicitArrayType>(btype);
+                        return std::ranges::equal(v1.dimensions_,
+                                                  v2.dimensions_,
+                                                  [](const auto& dim1, const auto& dim2) {
+                                                      return *dim1 == *dim2;
+                                                  }) &&
+                               *v1.inner_type_ == *v2.inner_type_;
+                    },
+                },
+                a.type_);
 
             return variant_eq && a.primitive_ == b.primitive_;
         });

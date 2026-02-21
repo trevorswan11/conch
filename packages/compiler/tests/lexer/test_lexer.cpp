@@ -8,7 +8,7 @@
 #include "lexer/lexer.hpp"
 #include "lexer/token.hpp"
 
-using namespace conch;
+namespace conch::tests {
 
 using ExpectedLexeme = std::pair<TokenType, std::string_view>;
 
@@ -430,6 +430,16 @@ TEST_CASE("Compiler builtins") {
         const auto token = l.advance();
         REQUIRE(expected_tt == token.type);
         REQUIRE(expected_slice == token.slice);
-        if (expected_tt != TokenType::ILLEGAL) { REQUIRE(is_builtin(token.type)); }
+        REQUIRE(is_builtin(token.type));
     }
 }
+
+TEST_CASE("Illegal builtins") {
+    const std::string_view input{"@run"};
+    Lexer                  l{input};
+    const auto             illegal = l.advance();
+    REQUIRE(TokenType::ILLEGAL == illegal.type);
+    REQUIRE(input == illegal.slice);
+}
+
+} // namespace conch::tests

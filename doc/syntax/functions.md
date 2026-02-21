@@ -45,7 +45,7 @@ _ = bar(a);         // Allowed, passed by value
 _ = baz(&mut a);    // Allowed, passed by mutable reference
 
 const b := 1;
-_ = foo(&a);        // Allowed, passed by const reference
+_ = foo(&b);        // Allowed, passed by const reference
 _ = bar(b);         // Allowed, passed by value
 _ = baz(&mut b);    // Illegal, cannot mutate const
 ```

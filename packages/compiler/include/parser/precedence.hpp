@@ -43,8 +43,6 @@ constexpr auto ALL_BINDINGS = []() {
         {TokenType::NEQ, Precedence::BOOL_EQUIV},
         {TokenType::BOOLEAN_AND, Precedence::BOOL_EQUIV},
         {TokenType::BOOLEAN_OR, Precedence::BOOL_EQUIV},
-        {TokenType::IS, Precedence::BOOL_EQUIV},
-        {TokenType::IN, Precedence::BOOL_EQUIV},
         {TokenType::AND, Precedence::MUL_DIV},
         {TokenType::OR, Precedence::ADD_SUB},
         {TokenType::XOR, Precedence::ADD_SUB},
@@ -69,7 +67,6 @@ constexpr auto ALL_BINDINGS = []() {
         {TokenType::XOR_ASSIGN, Precedence::ASSIGNMENT},
         {TokenType::DOT, Precedence::SCOPE_RESOLUTION},
         {TokenType::COLON_COLON, Precedence::SCOPE_RESOLUTION},
-        {TokenType::ORELSE, Precedence::ASSIGNMENT},
     });
 
     std::ranges::sort(all_bindings, {}, &Binding::first);

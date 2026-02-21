@@ -26,8 +26,8 @@ using ExplicitFunctionType = Box<FunctionExpression>;
 
 class ExplicitArrayType {
   public:
-    explicit ExplicitArrayType(std::vector<Box<USizeIntegerExpression>> dimensions,
-                               Box<TypeExpression>                      inner_type) noexcept;
+    explicit ExplicitArrayType(std::vector<Box<Expression>> dimensions,
+                               Box<TypeExpression>          inner_type) noexcept;
     ~ExplicitArrayType();
 
     ExplicitArrayType(const ExplicitArrayType&)                        = delete;
@@ -35,8 +35,7 @@ class ExplicitArrayType {
     ExplicitArrayType(ExplicitArrayType&&) noexcept                    = default;
     auto operator=(ExplicitArrayType&&) noexcept -> ExplicitArrayType& = default;
 
-    [[nodiscard]] auto get_dimensions() const noexcept
-        -> std::span<const Box<USizeIntegerExpression>> {
+    [[nodiscard]] auto get_dimensions() const noexcept -> std::span<const Box<Expression>> {
         return dimensions_;
     }
 
@@ -45,8 +44,8 @@ class ExplicitArrayType {
     }
 
   private:
-    std::vector<Box<USizeIntegerExpression>> dimensions_;
-    Box<TypeExpression>                      inner_type_;
+    std::vector<Box<Expression>> dimensions_;
+    Box<TypeExpression>          inner_type_;
 
     friend class ExplicitType;
     friend class TypeExpression;

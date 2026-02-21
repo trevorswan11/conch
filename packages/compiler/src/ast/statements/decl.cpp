@@ -20,8 +20,8 @@ DeclStatement::~DeclStatement() = default;
 auto DeclStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
-    const auto    start_token = parser.current_token();
-    DeclModifiers modifiers   = token_to_modifier(start_token).value();
+    const auto start_token = parser.current_token();
+    auto       modifiers   = token_to_modifier(start_token).value();
 
     Optional<DeclModifiers> current_modifier;
     while ((current_modifier = token_to_modifier(parser.peek_token()))) {
@@ -55,8 +55,10 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
             return make_parser_unexpected(ParserError::EXTERN_MISSING_TYPE, start_token);
         }
 
-        // Constant decls must be declared with a value
-        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
+        // Constant decls must be declared with a value unless they are extern
+        if ((modifiers_has(modifiers, DeclModifiers::CONSTANT) &&
+             !modifiers_has(modifiers, DeclModifiers::EXTERN)) ||
+            modifiers_has(modifiers, DeclModifiers::COMPTIME)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         }
 
@@ -66,6 +68,7 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
         }
     }
 
+    TRY(parser.expect_peek(TokenType::SEMICOLON));
     return make_box<DeclStatement>(start_token,
                                    std::move(decl_name),
                                    std::move(decl_type_expr),
@@ -75,7 +78,7 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
 
 auto DeclStatement::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<DeclStatement>(other);
-    return ident_ == casted.ident_ && type_ == casted.type_ &&
+    return *ident_ == *casted.ident_ && *type_ == *casted.type_ &&
            optional::unsafe_eq<Expression>(value_, casted.value_) &&
            modifiers_ == casted.modifiers_;
 }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 
 #include "expected.hpp"
 #include "optional.hpp"
@@ -18,10 +19,11 @@ class TypeExpression;
 enum class DeclModifiers : u8 {
     VARIABLE = 1 << 0,
     CONSTANT = 1 << 1,
-    PRIVATE  = 1 << 2,
-    EXTERN   = 1 << 3,
-    EXPORT   = 1 << 4,
-    STATIC   = 1 << 5,
+    COMPTIME = 1 << 2,
+    PRIVATE  = 1 << 3,
+    EXTERN   = 1 << 4,
+    EXPORT   = 1 << 5,
+    STATIC   = 1 << 6,
 };
 
 constexpr auto operator|(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
@@ -80,6 +82,7 @@ class DeclStatement : public StmtBase<DeclStatement> {
     static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
         {TokenType::VAR, DeclModifiers::VARIABLE},
         {TokenType::CONST, DeclModifiers::CONSTANT},
+        {TokenType::COMPTIME, DeclModifiers::COMPTIME},
         {TokenType::PRIVATE, DeclModifiers::PRIVATE},
         {TokenType::EXTERN, DeclModifiers::EXTERN},
         {TokenType::EXPORT, DeclModifiers::EXPORT},
@@ -87,15 +90,26 @@ class DeclStatement : public StmtBase<DeclStatement> {
     });
 
     static constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept -> bool {
-        const auto unique_mut =
-            (modifiers & DeclModifiers::VARIABLE) ^ (modifiers & DeclModifiers::CONSTANT);
-        const auto unique_abi =
-            (modifiers & DeclModifiers::EXTERN) ^ (modifiers & DeclModifiers::EXPORT);
-        const auto unique_access = (modifiers & DeclModifiers::PRIVATE) ^
-                                   (modifiers & DeclModifiers::EXTERN) ^
-                                   (modifiers & DeclModifiers::EXPORT);
+        // Exactly one mutability flag must be set
+        const auto valid_mut = std::popcount(std::to_underlying(
+                                   modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT |
+                                                DeclModifiers::COMPTIME))) == 1;
 
-        return static_cast<bool>(unique_mut & unique_abi & unique_access);
+        // Comptime values cannot be known at link time, obviously
+        const auto valid_comptime =
+            std::popcount(std::to_underlying(
+                modifiers & (DeclModifiers::EXTERN | DeclModifiers::COMPTIME))) <= 1;
+
+        // At most one ABI flag can be set
+        const auto valid_abi =
+            std::popcount(std::to_underlying(modifiers &
+                                             (DeclModifiers::EXTERN | DeclModifiers::EXPORT))) <= 1;
+
+        // At most one access flag can be set
+        const auto valid_access = std::popcount(std::to_underlying(
+                                      modifiers & (DeclModifiers::PRIVATE | DeclModifiers::EXTERN |
+                                                   DeclModifiers::EXPORT))) <= 1;
+        return valid_mut && valid_comptime && valid_abi && valid_access;
     }
 
     static constexpr auto token_to_modifier(const Token& tok) -> Optional<DeclModifiers> {

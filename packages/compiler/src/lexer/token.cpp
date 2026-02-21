@@ -135,4 +135,12 @@ auto Token::is_primitive() const noexcept -> bool {
     return std::ranges::contains(ALL_PRIMITIVES, type);
 }
 
+auto Token::is_builtin() const noexcept -> bool {
+    return std::ranges::contains(ALL_BUILTINS, type, &Keyword::second);
+}
+
+auto Token::is_valid_ident() const noexcept -> bool {
+    return type == TokenType::IDENT || is_primitive() || is_builtin();
+}
+
 } // namespace conch

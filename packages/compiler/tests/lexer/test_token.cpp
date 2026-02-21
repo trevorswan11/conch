@@ -5,7 +5,7 @@
 
 #include "lexer/token.hpp"
 
-using namespace conch;
+namespace conch::tests {
 
 TEST_CASE("Promotion of invalid tokens") {
     const auto  input{"1"};
@@ -96,3 +96,5 @@ TEST_CASE("Token formatting") {
     const auto actual = std::format("{}", tok);
     REQUIRE(expected == actual);
 }
+
+} // namespace conch::tests

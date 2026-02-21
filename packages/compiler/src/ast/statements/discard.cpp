@@ -13,6 +13,7 @@ auto DiscardStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserD
     parser.advance();
     auto expr = TRY(parser.parse_expression());
 
+    TRY(parser.expect_peek(TokenType::SEMICOLON));
     return make_box<DiscardStatement>(start_token, std::move(expr));
 }
 

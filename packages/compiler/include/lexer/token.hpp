@@ -119,14 +119,13 @@ enum class TokenType : u8 {
     FUNCTION,
     VAR,
     CONST,
+    COMPTIME,
     STRUCT,
     ENUM,
     TRUE,
     FALSE,
     BOOLEAN_AND,
     BOOLEAN_OR,
-    IS,
-    IN,
     IF,
     ELSE,
     MATCH,
@@ -138,7 +137,6 @@ enum class TokenType : u8 {
     BREAK,
     IMPORT,
     TYPE_TYPE,
-    ORELSE,
     DO,
     AS,
 
@@ -286,9 +284,18 @@ struct Token {
     Token(TokenType tt, std::string_view slice, usize line, usize column) noexcept
         : type{tt}, slice{slice}, line{line}, column{column} {}
 
+    explicit Token(std::pair<TokenType, std::string_view> tok) noexcept
+        : type{tok.first}, slice{tok.second} {}
+    explicit Token(std::pair<std::string_view, TokenType> tok) noexcept
+        : type{tok.second}, slice{tok.first} {}
+
     [[nodiscard]] auto is_at_start() const noexcept -> bool { return line == 0 && column == 0; }
     [[nodiscard]] auto promote() const -> Expected<std::string, Diagnostic<TokenError>>;
     auto               is_primitive() const noexcept -> bool;
+    auto               is_builtin() const noexcept -> bool;
+
+    // Check whether the token is an ident, primitive type, or builtin function.
+    auto is_valid_ident() const noexcept -> bool;
 
     auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && line == other.line &&
