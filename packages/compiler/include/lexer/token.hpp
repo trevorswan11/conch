@@ -126,8 +126,6 @@ enum class TokenType : u8 {
     FALSE,
     BOOLEAN_AND,
     BOOLEAN_OR,
-    IS,
-    IN,
     IF,
     ELSE,
     MATCH,
@@ -139,7 +137,6 @@ enum class TokenType : u8 {
     BREAK,
     IMPORT,
     TYPE_TYPE,
-    ORELSE,
     DO,
     AS,
 

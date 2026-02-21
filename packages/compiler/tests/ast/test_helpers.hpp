@@ -2,8 +2,11 @@
 
 #include <print>
 #include <span>
+#include <string_view>
 
 #include <catch_amalgamated.hpp>
+
+#include "string.hpp"
 
 #include "ast/statements/expression.hpp"
 
@@ -29,6 +32,10 @@ auto check_errors(std::span<const E> actual, std::span<const E> expected = {}) {
     }
 
     REQUIRE(actual.size() == expected.size());
+}
+
+constexpr auto trim_semicolons(std::string_view str) {
+    return string::trim_right(str, [](byte b) { return b == ';'; });
 }
 
 } // namespace conch::tests::helpers

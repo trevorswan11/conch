@@ -20,8 +20,8 @@ DeclStatement::~DeclStatement() = default;
 auto DeclStatement::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {
-    const auto    start_token = parser.current_token();
-    DeclModifiers modifiers   = token_to_modifier(start_token).value();
+    const auto start_token = parser.current_token();
+    auto       modifiers   = token_to_modifier(start_token).value();
 
     Optional<DeclModifiers> current_modifier;
     while ((current_modifier = token_to_modifier(parser.peek_token()))) {

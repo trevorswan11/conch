@@ -20,10 +20,9 @@ auto test_ident(std::string_view input, Optional<TokenType> expected_type) -> vo
     helpers::check_errors(errors);
     REQUIRE(ast.size() == 1);
 
-    const auto  actual{std::move(ast[0])};
-    const auto& expr_stmt = helpers::into_expression_statement(*actual);
-
-    const ast::IdentifierExpression& expected{Token{*expected_type, input}};
+    const auto                       actual{std::move(ast[0])};
+    const auto&                      expr_stmt = helpers::into_expression_statement(*actual);
+    const ast::IdentifierExpression& expected{Token{*expected_type, trim_semicolons(input)}};
     REQUIRE(expected == expr_stmt.get_expression());
 }
 

@@ -13,7 +13,7 @@ TEST_CASE("Variant visitor") {
     const int                              expected_int{42};
     const double                           expected_double{std::numbers::pi};
 
-    const auto visitor = conch::Overloaded{
+    const auto visitor = Overloaded{
         [&expected_string](const std::string& s) { return s == expected_string; },
         [](int i) { return i == expected_int; },
         [&expected_double](double d) { return d == expected_double; },

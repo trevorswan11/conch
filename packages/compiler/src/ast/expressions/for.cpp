@@ -5,6 +5,7 @@
 #include "ast/expressions/identifier.hpp"
 #include "ast/statements/block.hpp"
 #include "ast/visitor.hpp"
+#include "parser/parser.hpp"
 
 namespace conch::ast {
 
@@ -13,11 +14,15 @@ ForLoopCapture::ForLoopCapture(bool reference, Box<IdentifierExpression> capture
 
 ForLoopCapture::~ForLoopCapture() = default;
 
-ForLoopExpression::ForLoopExpression(const Token&                          start_token,
-                                     std::vector<Box<Expression>>          iterables,
-                                     Optional<std::vector<ForLoopCapture>> captures,
-                                     Box<BlockStatement>                   block,
-                                     Optional<Box<Statement>>              non_break) noexcept
+auto ForLoopCapture::is_equal(const ForLoopCapture& other) const noexcept -> bool {
+    return reference_ == other.reference_ && *capture_ == *other.capture_;
+}
+
+ForLoopExpression::ForLoopExpression(const Token&                                    start_token,
+                                     std::vector<Box<Expression>>                    iterables,
+                                     Optional<std::vector<Optional<ForLoopCapture>>> captures,
+                                     Box<BlockStatement>                             block,
+                                     Optional<Box<Statement>> non_break) noexcept
     : ExprBase{start_token}, iterables_{std::move(iterables)}, captures_{std::move(captures)},
       block_{std::move(block)}, non_break_{std::move(non_break)} {}
 
@@ -48,7 +53,7 @@ auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Parse
     TRY(parser.expect_peek(TokenType::RPAREN));
 
     // Captures are entirely optional and take on the zig capture syntax
-    Optional<std::vector<ForLoopCapture>> captures;
+    Optional<std::vector<Optional<ForLoopCapture>>> captures;
     if (parser.peek_token_is(TokenType::OR)) {
         captures.emplace();
         parser.advance();
@@ -61,10 +66,20 @@ auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Parse
                 }
                 return false;
             }();
-            TRY(parser.expect_peek(TokenType::IDENT));
 
-            auto capture = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
-            captures->emplace_back(is_ref, std::move(capture));
+            if (parser.peek_token_is(TokenType::UNDERSCORE)) {
+                const auto peek = parser.advance();
+                if (is_ref) {
+                    return make_parser_unexpected(ParserError::ILLEGAL_FOR_LOOP_DISCARD, peek);
+                }
+                captures->emplace_back(nullopt);
+            } else {
+                TRY(parser.expect_peek(TokenType::IDENT));
+
+                auto capture =
+                    downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
+                captures->emplace_back(ForLoopCapture{is_ref, std::move(capture)});
+            }
 
             if (!parser.peek_token_is(TokenType::RPAREN)) {
                 TRY(parser.expect_peek(TokenType::COMMA));
@@ -96,11 +111,9 @@ auto ForLoopExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted       = as<ForLoopExpression>(other);
     const auto  iterables_eq = std::ranges::equal(
         iterables_, casted.iterables_, [](const auto& a, const auto& b) { return *a == *b; });
-    const auto captures_eq = optional::safe_eq<std::vector<ForLoopCapture>>(
+    const auto captures_eq = optional::safe_eq<std::vector<Optional<ForLoopCapture>>>(
         captures_, casted.captures_, [](const auto& a_captures, const auto& b_captures) {
-            return std::ranges::equal(a_captures, b_captures, [](const auto& ae, const auto& be) {
-                return ae.reference_ == be.reference_ && *ae.capture_ == *be.capture_;
-            });
+            return std::ranges::equal(a_captures, b_captures);
         });
     return iterables_eq && captures_eq && block_ == casted.block_ &&
            optional::unsafe_eq<Statement>(non_break_, casted.non_break_);

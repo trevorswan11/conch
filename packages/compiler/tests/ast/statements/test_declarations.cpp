@@ -4,6 +4,8 @@
 
 #include <catch_amalgamated.hpp>
 
+#include "array.hpp"
+
 #include "ast/statements/test_declarations.hpp"
 #include "ast/test_helpers.hpp"
 
@@ -83,7 +85,6 @@ TEST_CASE("Implicit comptime declaration") {
 }
 
 TEST_CASE("Correct declaration modifiers") {
-    SKIP();
     const auto test = [](std::initializer_list<Keyword> modifiers,
                          ast::DeclModifiers             flags,
                          bool                           initialized = true) {
@@ -142,28 +143,78 @@ TEST_CASE("Correct declaration modifiers") {
          false);
 }
 
-TEST_CASE("Incorrect declaration modifiers") {
-    SKIP();
-    const auto test_fail = [](std::initializer_list<Keyword> modifiers,
-                              ParserDiagnostic               expected_error,
-                              std::string_view               decl = " a := 2;") {
-        std::stringstream ss;
-        for (const auto& keyword : modifiers) { ss << keyword.first << " "; }
-        ss << decl;
+static auto test_decl_fail(std::initializer_list<Keyword> modifiers,
+                           ParserDiagnostic               expected_error,
+                           std::string_view               init = "a := 2;") -> void {
+    std::stringstream ss;
+    for (const auto& keyword : modifiers) { ss << keyword.first << " "; }
+    ss << init;
+    const auto str = ss.str();
 
-        Parser p{ss.str()};
-        auto [ast, errors] = p.consume();
-        for (const auto& n : ast) {
-            std::println("{}", *n);
-        }
-        REQUIRE(ast.empty());
+    Parser p{str};
+    auto [ast, errors] = p.consume();
+    for (const auto& n : ast) { std::println("{}", *n); }
+    REQUIRE(ast.empty());
 
-        REQUIRE(errors.size() == 1);
-        REQUIRE(errors[0] == expected_error);
-    };
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0] == expected_error);
+}
 
-    test_fail({keywords::VAR, keywords::CONST},
-              ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+TEST_CASE("Mutability restrictions") {
+    const auto contending_mut = std::array{keywords::COMPTIME, keywords::VAR, keywords::CONST};
+    for (const auto& mut : array::combinations(contending_mut)) {
+        test_decl_fail({mut.first, mut.second},
+                       ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+    }
+    test_decl_fail({keywords::COMPTIME, keywords::VAR, keywords::CONST},
+                   ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+}
+
+TEST_CASE("Comptime restrictions") {
+    const auto contending_mut = std::array{keywords::EXTERN, keywords::COMPTIME};
+    for (const auto& mut : array::combinations(contending_mut)) {
+        test_decl_fail({mut.first, mut.second},
+                       ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+    }
+    test_decl_fail({keywords::EXTERN, keywords::COMPTIME},
+                   ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+}
+
+TEST_CASE("ABI/Linkage restrictions") {
+    const auto contending_mut = std::array{keywords::EXTERN, keywords::EXPORT};
+    for (const auto& mut : array::combinations(contending_mut)) {
+        test_decl_fail({mut.first, mut.second},
+                       ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+    }
+    test_decl_fail({keywords::EXTERN, keywords::EXPORT},
+                   ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+}
+
+TEST_CASE("Access restrictions") {
+    const auto contending_access =
+        std::array{keywords::PRIVATE, keywords::EXTERN, keywords::EXPORT};
+    for (const auto& mut : array::combinations(contending_access)) {
+        test_decl_fail({mut.first, mut.second},
+                       ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+    }
+    test_decl_fail({keywords::PRIVATE, keywords::EXTERN, keywords::EXPORT},
+                   ParserDiagnostic{ParserError::ILLEGAL_DECL_MODIFIERS, 1, 1});
+}
+
+TEST_CASE("Extern requirements") {
+    test_decl_fail({keywords::EXTERN, keywords::CONST},
+                   ParserDiagnostic{ParserError::EXTERN_VALUE_INITIALIZED, 1, 1});
+    test_decl_fail({keywords::EXTERN, keywords::VAR},
+                   ParserDiagnostic{ParserError::EXTERN_VALUE_INITIALIZED, 1, 1});
+}
+
+TEST_CASE("Constant requirements") {
+    test_decl_fail({keywords::CONST},
+                   ParserDiagnostic{ParserError::CONST_DECL_MISSING_VALUE, 1, 1},
+                   "a: int;");
+    test_decl_fail({keywords::COMPTIME},
+                   ParserDiagnostic{ParserError::CONST_DECL_MISSING_VALUE, 1, 1},
+                   "a: int;");
 }
 
 } // namespace conch::tests

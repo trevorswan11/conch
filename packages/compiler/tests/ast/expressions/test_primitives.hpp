@@ -35,8 +35,8 @@ auto primitive(std::string_view                                       input,
 
     const auto  actual{std::move(ast[0])};
     const auto& expr_stmt = into_expression_statement(*actual);
-    const N     expected{Token{*expected_type, node_token_slice}, std::get<T>(expected_value)};
-    std::println("{}", magic_enum::enum_name(expr_stmt.get_expression().get_kind()));
+    const N     expected{Token{*expected_type, trim_semicolons(node_token_slice)},
+                     std::get<T>(expected_value)};
     REQUIRE(expected == expr_stmt.get_expression());
 }
 

@@ -8,9 +8,9 @@ namespace conch::tests {
 
 TEST_CASE("Single-line string parsing") {
     using N = ast::StringExpression;
-    helpers::primitive<N>(R"("This is a string")", TokenType::STRING, R"(This is a string)");
-    helpers::primitive<N>(R"("Hello, 'World'!")", TokenType::STRING, R"(Hello, 'World'!)");
-    helpers::primitive<N>(R"("")", TokenType::STRING, R"()");
+    helpers::primitive<N>(R"("This is a string";)", TokenType::STRING, R"(This is a string)");
+    helpers::primitive<N>(R"("Hello, 'World'!";)", TokenType::STRING, R"(Hello, 'World'!)");
+    helpers::primitive<N>(R"("";)", TokenType::STRING, R"()");
 }
 
 TEST_CASE("Multi-line string parsing") {
@@ -112,7 +112,6 @@ TEST_CASE("Floating point parsing") {
 }
 
 TEST_CASE("Bool parsing") {
-    SKIP();
     using N = ast::BoolExpression;
     helpers::primitive<N>("true;", TokenType::TRUE, true);
     helpers::primitive<N>("false;", TokenType::FALSE, false);

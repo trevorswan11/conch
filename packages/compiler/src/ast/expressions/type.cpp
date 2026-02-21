@@ -152,7 +152,7 @@ auto TypeExpression::parse(Parser& parser)
         }()));
 
     // Advance again to prepare for rhs
-    parser.advance();
+    if (initialized) { parser.advance(); }
     return std::pair{box_into<Expression>(std::move(type)), initialized};
 }
 

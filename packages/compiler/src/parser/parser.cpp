@@ -116,8 +116,9 @@ auto Parser::parse_expression(Precedence precedence)
 
     const auto& prefix = poll_prefix_fn(current_token_.type);
     if (!prefix) {
-        return make_parser_unexpected(std::format("No prefix parse function for {} found",
-                                                  magic_enum::enum_name(current_token_.type)),
+        return make_parser_unexpected(std::format("No prefix parse function for {}({}) found",
+                                                  magic_enum::enum_name(current_token_.type),
+                                                  current_token_.slice),
                                       ParserError::MISSING_PREFIX_PARSER,
                                       current_token_);
     }
@@ -226,7 +227,7 @@ constexpr auto PREFIX_FNS = []() {
         });
 
     constexpr auto materialized_primitives =
-        materialize_sized_view<ALL_PRIMITIVES.size()>(primitive_prefixes);
+        array::materialize_sized_view<ALL_PRIMITIVES.size()>(primitive_prefixes);
 
     constexpr auto builtins_prefixes =
         ALL_BUILTINS | std::views::transform([](const auto& builtin) -> PrefixPair {
@@ -234,9 +235,9 @@ constexpr auto PREFIX_FNS = []() {
         });
 
     constexpr auto materialized_builtins =
-        materialize_sized_view<ALL_BUILTINS.size()>(builtins_prefixes);
+        array::materialize_sized_view<ALL_BUILTINS.size()>(builtins_prefixes);
 
-    auto prefix_fns = concat_arrays(
+    auto prefix_fns = array::concat(
         initial_prefixes, materialized_primitives, materialized_builtins, int_prefixes);
     std::ranges::sort(prefix_fns, {}, &PrefixPair::first);
     return prefix_fns;
@@ -270,11 +271,8 @@ constexpr auto INFIX_FNS = []() {
         {TokenType::XOR, ast::BinaryExpression::parse},
         {TokenType::SHR, ast::BinaryExpression::parse},
         {TokenType::SHL, ast::BinaryExpression::parse},
-        {TokenType::IS, ast::BinaryExpression::parse},
-        {TokenType::IN, ast::BinaryExpression::parse},
         {TokenType::DOT_DOT, ast::RangeExpression::parse},
         {TokenType::DOT_DOT_EQ, ast::RangeExpression::parse},
-        {TokenType::ORELSE, ast::BinaryExpression::parse},
         {TokenType::LPAREN, ast::CallExpression::parse},
         {TokenType::LBRACKET, ast::IndexExpression::parse},
         {TokenType::ASSIGN, ast::AssignmentExpression::parse},
