@@ -41,6 +41,7 @@ auto ImportStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDi
         return make_parser_unexpected(ParserError::USER_IMPORT_MISSING_ALIAS, start_token);
     }
 
+    TRY(parser.expect_peek(TokenType::SEMICOLON));
     return make_box<ImportStatement>(start_token, std::move(imported), std::move(imported_alias));
 }
 

@@ -119,6 +119,7 @@ enum class TokenType : u8 {
     FUNCTION,
     VAR,
     CONST,
+    COMPTIME,
     STRUCT,
     ENUM,
     TRUE,

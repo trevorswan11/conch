@@ -23,6 +23,7 @@
         "build.zig",
         "build.zig.zon",
         "flake.nix",
+        "flake.lock",
         "LICENSE",
         "README.md",
     },

@@ -152,7 +152,7 @@ template <typename Derived> class StmtBase : public NodeBase<Derived, Statement>
 
 } // namespace conch::ast
 
-template <conch::ast::LeafNode N> struct std::formatter<N> : std::formatter<std::string> {
+template <conch::ast::NodeSubtype N> struct std::formatter<N> : std::formatter<std::string> {
     static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     template <typename F> auto format(const N& n, F& ctx) const {

@@ -1,4 +1,6 @@
 {
+  description = "Conch language development.";
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     utils.url = "github:numtide/flake-utils";
@@ -43,14 +45,22 @@
         in
         {
           devShells.default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [
-              zig
-              zls
-              curl
-              zip
-              clang-tools
-              lldb
-            ];
+            nativeBuildInputs =
+              with pkgs;
+              [
+                zig
+                zls
+                curl
+                zip
+              ]
+              ++ (with llvmPackages_21; [
+                clang
+                clang-unwrapped
+                lld
+                llvm
+                clang-tools
+                lldb
+              ]);
           };
         }
       );

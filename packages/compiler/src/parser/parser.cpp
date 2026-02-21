@@ -39,11 +39,21 @@ auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>
     while (!current_token_is(TokenType::END)) {
         if (!current_token_is(TokenType::COMMENT)) {
             auto stmt = parse_statement();
-            if (peek_token_is(TokenType::SEMICOLON)) { advance(); }
             if (stmt) {
                 ast.emplace_back(std::move(*stmt));
             } else {
                 diagnostics_.emplace_back(std::move(stmt.error()));
+
+                // Errors should advance up to next logical end to prevent useless errors
+                const auto stop_condition = [](TokenType tt) {
+                    switch (tt) {
+                    case TokenType::RBRACE:
+                    case TokenType::SEMICOLON:
+                    case TokenType::END:       return true;
+                    default:                   return false;
+                    }
+                };
+                while (!stop_condition(advance().type));
             }
         }
         advance();
@@ -84,6 +94,7 @@ auto Parser::parse_statement() -> Expected<Box<ast::Statement>, ParserDiagnostic
     switch (current_token_.type) {
     case TokenType::VAR:
     case TokenType::CONST:
+    case TokenType::COMPTIME:
     case TokenType::PRIVATE:
     case TokenType::EXTERN:
     case TokenType::EXPORT:     return ast::DeclStatement::parse(*this);

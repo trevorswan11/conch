@@ -55,8 +55,10 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
             return make_parser_unexpected(ParserError::EXTERN_MISSING_TYPE, start_token);
         }
 
-        // Constant decls must be declared with a value
-        if (modifiers_has(modifiers, DeclModifiers::CONSTANT)) {
+        // Constant decls must be declared with a value unless they are extern
+        if ((modifiers_has(modifiers, DeclModifiers::CONSTANT) &&
+             !modifiers_has(modifiers, DeclModifiers::EXTERN)) ||
+            modifiers_has(modifiers, DeclModifiers::COMPTIME)) {
             return make_parser_unexpected(ParserError::CONST_DECL_MISSING_VALUE, start_token);
         }
 
@@ -66,6 +68,7 @@ auto DeclStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiag
         }
     }
 
+    TRY(parser.expect_peek(TokenType::SEMICOLON));
     return make_box<DeclStatement>(start_token,
                                    std::move(decl_name),
                                    std::move(decl_type_expr),

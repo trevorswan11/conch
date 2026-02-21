@@ -9,6 +9,7 @@
 
 namespace conch::tests::helpers {
 
+// Thin wrapper around Node is/as pattern with test assertion.
 template <ast::LeafNode To, typename From> auto try_into(const From& node) -> const To& {
     REQUIRE(node.template is<To>());
     return ast::Node::as<To>(node);

@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-extern fn launch(c_int, [*c][*c]u8) i32;
+extern fn launch(c_int, [*c][*c]u8) c_int;
 
 var instrumentor: Instrumentor = undefined;
 

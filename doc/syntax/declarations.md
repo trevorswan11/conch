@@ -12,13 +12,19 @@ const d :=;             // Illegal, walrus needs a value!
 var e: string;          // Allowed, e is forward declared and future assignments must be a string
 ```
 
-## Constants
+## Runtime Constants
 - Constants are declared with the `const` keyword
 - A constant must be initialized with a value
     - This is true unless it is a value that is marked `extern`
 - A constant's value does not have to be compile-time known
 - Constness cannot be casted away (for now)
 - A mutable reference cannot be taken from a constant
+
+## Compile-time Constants
+- Compile-time-known constants are declared with the `comptime` keyword
+- In most cases, `comptime` values behave identically to `const` constants
+    - The only difference is that `comptime` values can be used as array sizes, assuming their underlying type is `usize`
+- A `comptime` declaration can not be declared `extern`
 
 ## Variables
 - Variables are declared with the `var keyword
@@ -37,7 +43,7 @@ var c := &mut a;    // Illegal, cannot take mutable reference of constant
 ## Modifiers
 - Declarations have many different modifiers that affect linkage, access, and ownership
     - `private`: When used inside of a struct, this restricts access to struct-local functions (i.e. member functions) only. When used on a top-level declaration, this prohibits importing files from accessing the declaration. The presence of this keyword correctly implies that all declarations are `public` unless explicitly stated otherwise. This keyword is not valid with the `extern` or `export` modifiers.
-    - `extern`: Denotes a declaration as relating to a symbol yet-to-be defined (i.e. external linkage). This currently supports only C symbols. This keyword cannot be combined with the `export` modifier.
+    - `extern`: Denotes a declaration as relating to a symbol yet-to-be defined (i.e. external linkage). This currently supports only C symbols. This keyword cannot be combined with the `export` modifier. 
     - `export`: Forwards the declaration to the 'outside world'. This means that the symbol is treated as a C symbol. This keyword cannot be combined with the `extern` modifier.
     - `static`: This keyword is only valid for struct members. It denotes a symbol as being owned (namespaced) by the struct itself, not by instances of said struct.
 
@@ -46,4 +52,5 @@ private var c := 2;     // Allowed, symbol can no longer be imported or exported
 extern const a: int;    // Allowed, externs must be explicitly typed without values
 export var b := 1;      // Allowed
 static var c := 33;     // Illegal, cannot use static on a non-struct member
+extern comptime a: int; // Illegal, inherently contradictory
 ```
