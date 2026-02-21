@@ -93,7 +93,7 @@ TEST_CASE("Correct declaration modifiers") {
         if (initialized) {
             ss << " a := 2;";
             helpers::test_decl(
-                ss.str(),
+                ss.view(),
                 ast::DeclStatement{
                     Token{*modifiers.begin()},
                     make_box<ast::IdentifierExpression>(Token{TokenType::IDENT, "a"}),
@@ -104,7 +104,7 @@ TEST_CASE("Correct declaration modifiers") {
         } else {
             ss << " a: int;";
             helpers::test_decl(
-                ss.str(),
+                ss.view(),
                 ast::DeclStatement{
                     Token{*modifiers.begin()},
                     make_box<ast::IdentifierExpression>(Token{TokenType::IDENT, "a"}),
@@ -149,9 +149,8 @@ static auto test_decl_fail(std::initializer_list<Keyword> modifiers,
     std::stringstream ss;
     for (const auto& keyword : modifiers) { ss << keyword.first << " "; }
     ss << init;
-    const auto str = ss.str();
 
-    Parser p{str};
+    Parser p{ss.view()};
     auto [ast, errors] = p.consume();
     for (const auto& n : ast) { std::println("{}", *n); }
     REQUIRE(ast.empty());
