@@ -16,6 +16,14 @@
             .url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.9.7.tar.gz",
             .hash = "N-V-__8AAG0CEAClLikJpJ7Cg3LFZxHR_xfy6ddADO6AKqq2",
         },
+        .libxml2 = .{
+            .url = "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.1/libxml2-v2.15.1.tar.gz",
+            .hash = "N-V-__8AAGDwMQF2IHBGW-iuy3HD7ZCfVEALdBc3_ZVjfUV3",
+        },
+        .zlib = .{
+            .url = "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
+            .hash = "N-V-__8AAI4ANwDM8MWhHTUFLKfvLE_n2NQk6mh0sFDzhTqO",
+        },
     },
     .paths = .{
         "apps",

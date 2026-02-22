@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseFast,
     });
@@ -37,14 +36,17 @@ pub fn build(b: *std.Build) !void {
     }
     try compiler_flags.append(b.allocator, "-DCATCH_AMALGAMATED_CUSTOM_MAIN");
 
+    const llvm_config: LLVMConfig = try .init(b);
+
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{
-        .target = target,
+        .target = b.graph.host,
         .optimize = optimize,
         .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
         .skip_tests = flag_opts.skip_tests,
         .skip_cppcheck = flag_opts.skip_cppcheck,
+        .llvm_config = llvm_config,
     });
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
@@ -97,6 +99,275 @@ const ProjectPaths = struct {
 
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
+};
+
+const LLVMConfig = struct {
+    const whitespace = " \r\n\t";
+
+    const Dependency = struct {
+        dependency: *std.Build.Dependency,
+        artifact: *std.Build.Step.Compile,
+    };
+
+    b: *std.Build,
+
+    llvm_config_path: []const u8,
+    version: std.SemanticVersion,
+
+    pub fn init(b: *std.Build) !LLVMConfig {
+        const llvm_config_path = findProgram(b, "llvm-config") orelse return error.LLVMNotFound;
+
+        const version_str = b.run(&.{ llvm_config_path, "--version" });
+        const version: std.SemanticVersion = try .parse(trimWhitespace(version_str));
+        if (version.major != 21) {
+            return error.InvalidLLVMVersion;
+        }
+
+        return .{
+            .b = b,
+            .llvm_config_path = llvm_config_path,
+            .version = version,
+        };
+    }
+
+    pub fn getConfig(self: *const LLVMConfig) !struct {
+        include_dir: std.Build.LazyPath,
+        library_dir: std.Build.LazyPath,
+        cpp_flags: []const []const u8,
+        link_libraries: []const []const u8,
+        system_libraries: []const []const u8,
+    } {
+        const allocator = self.b.allocator;
+        const include_dir = self.run(&.{ "--link-static", "--includedir" });
+        const library_dir = self.run(&.{ "--link-static", "--libdir" });
+        if (std.mem.containsAtLeastScalar(u8, library_dir, 1, ' ')) {
+            return error.LLVMPathWithSpaces;
+        }
+
+        // C preprocessor flags
+        const cppflags = self.run(&.{ "--link-static", "--cppflags" });
+        var cpp_flags: std.ArrayList([]const u8) = .empty;
+        var it = tokenizeWhitespace(cppflags);
+        while (it.next()) |next| {
+            if (std.mem.startsWith(u8, next, "-D")) {
+                try cpp_flags.append(allocator, next);
+            }
+        }
+
+        // All static libraries to link against
+        const libs = self.run(&.{ "--link-static", "--libs" });
+        const link_libraries = try allocator.alloc([]const u8, std.mem.count(u8, libs, " ") + 1);
+        it = tokenizeWhitespace(libs);
+        var i: usize = 0;
+        while (it.next()) |next| : (i += 1) {
+            if (std.mem.startsWith(u8, next, "-l")) {
+                link_libraries[i] = next[2..];
+            }
+        }
+
+        // Required system libraries
+        const system_libs = self.run(&.{ "--link-static", "--system-libs" });
+        var system_libraries: std.ArrayList([]const u8) = .empty;
+        it = tokenizeWhitespace(system_libs);
+        i = 0;
+
+        const internally_managed = [_][]const u8{ "xml2", "z" };
+        outer: while (it.next()) |next| : (i += 1) {
+            const lib_name = next[2..];
+            for (internally_managed) |managed| {
+                if (std.mem.eql(u8, lib_name, managed)) {
+                    continue :outer;
+                }
+            }
+
+            if (std.mem.startsWith(u8, next, "-l")) {
+                try system_libraries.append(allocator, lib_name);
+            }
+        }
+
+        return .{
+            .include_dir = .{ .cwd_relative = trimWhitespace(include_dir) },
+            .library_dir = .{ .cwd_relative = trimWhitespace(library_dir) },
+            .cpp_flags = cpp_flags.items,
+            .link_libraries = link_libraries,
+            .system_libraries = system_libraries.items,
+        };
+    }
+
+    pub fn dependencies(self: *const LLVMConfig, config: struct {
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        auto_install: bool,
+    }) !struct {
+        libxml2: Dependency,
+        zlib: Dependency,
+    } {
+        const zlib = try self.compileZLib(.{
+            .target = config.target,
+            .optimize = config.optimize,
+        });
+
+        const libxml2 = self.compileLibXml2(.{
+            .target = config.target,
+            .optimize = config.optimize,
+            .zlib_include = zlib.dependency.path("."),
+        });
+
+        const b = self.b;
+        if (config.auto_install) {
+            b.installArtifact(zlib.artifact);
+            b.installArtifact(libxml2.artifact);
+        }
+
+        return .{
+            .libxml2 = libxml2,
+            .zlib = zlib,
+        };
+    }
+
+    /// Compiles zlib from source as a static library
+    fn compileZLib(self: *const LLVMConfig, config: struct {
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+    }) !Dependency {
+        const b = self.b;
+        const zlib = b.dependency("zlib", .{});
+        const mod = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+            .link_libc = true,
+        });
+
+        const src_files = [_][]const u8{
+            "adler32.c", "compress.c", "crc32.c",   "deflate.c",
+            "gzclose.c", "gzlib.c",    "gzread.c",  "gzwrite.c",
+            "infback.c", "inffast.c",  "inflate.c", "inftrees.c",
+            "trees.c",   "uncompr.c",  "zutil.c",
+        };
+
+        var flags: std.ArrayList([]const u8) = .empty;
+        try flags.appendSlice(b.allocator, &.{ "-std=c11", "-D_REENTRANT" });
+        if (config.target.result.os.tag != .windows) {
+            try flags.appendSlice(b.allocator, &.{ "-DHAVE_UNISTD_H", "-DHAVE_SYS_TYPES_H" });
+        } else {
+            try flags.append(b.allocator, "-DWIN32");
+        }
+
+        mod.addCSourceFiles(.{
+            .root = zlib.path("."),
+            .files = &src_files,
+            .flags = flags.items,
+        });
+        mod.addIncludePath(zlib.path("."));
+
+        return .{
+            .dependency = zlib,
+            .artifact = b.addLibrary(.{
+                .name = "z",
+                .root_module = mod,
+            }),
+        };
+    }
+
+    /// Compiles libxml2 from source as a static library
+    fn compileLibXml2(self: *const LLVMConfig, config: struct {
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        zlib_include: std.Build.LazyPath,
+    }) Dependency {
+        const b = self.b;
+        const libxml = b.dependency("libxml2", .{});
+        const mod = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+            .link_libc = true,
+        });
+
+        const xmlversion_header = b.addConfigHeader(.{
+            .style = .{
+                .autoconf_at = libxml.path("include/libxml/xmlversion.h.in"),
+            },
+            .include_path = "libxml/xmlversion.h",
+        }, .{
+            .VERSION = "2.15.1",
+            .LIBXML_VERSION_NUMBER = 21501,
+            .LIBXML_VERSION_EXTRA = "-conch-static",
+            .WITH_THREADS = 1,
+            .WITH_THREAD_ALLOC = 1,
+            .WITH_OUTPUT = 1,
+            .WITH_PUSH = 1,
+            .WITH_READER = 1,
+            .WITH_PATTERN = 1,
+            .WITH_WRITER = 1,
+            .WITH_SAX1 = 1,
+            .WITH_HTTP = 0,
+            .WITH_VALID = 1,
+            .WITH_HTML = 1,
+            .WITH_C14N = 0,
+            .WITH_CATALOG = 0,
+            .WITH_XPATH = 1,
+            .WITH_XPTR = 1,
+            .WITH_XINCLUDE = 1,
+            .WITH_ICONV = 1,
+            .WITH_ICU = 0,
+            .WITH_ISO8859X = 1,
+            .WITH_DEBUG = 1,
+            .WITH_REGEXPS = 1,
+            .WITH_RELAXNG = 0,
+            .WITH_SCHEMAS = 0,
+            .WITH_SCHEMATRON = 0,
+            .WITH_MODULES = 0,
+            .WITH_ZLIB = 1,
+            .MODULE_EXTENSION = ".so",
+        });
+        mod.addConfigHeader(xmlversion_header);
+
+        const config_header = b.addConfigHeader(.{
+            .style = .blank,
+            .include_path = "config.h",
+        }, .{
+            .HAVE_STAT = 1,
+            .HAVE_FSTAT = 1,
+            .HAVE_STDLIB_H = 1,
+        });
+        mod.addConfigHeader(config_header);
+
+        mod.addCSourceFiles(.{
+            .root = libxml.path("."),
+            .files = &.{
+                "buf.c",       "dict.c",      "entities.c", "error.c",           "globals.c",
+                "hash.c",      "list.c",      "parser.c",   "parserInternals.c", "SAX2.c",
+                "threads.c",   "tree.c",      "uri.c",      "valid.c",           "xmlIO.c",
+                "xmlmemory.c", "xmlstring.c",
+            },
+            .flags = &.{ "-std=c11", "-D_REENTRANT" },
+        });
+        mod.addIncludePath(libxml.path("include"));
+        mod.addIncludePath(config.zlib_include);
+
+        const lib = b.addLibrary(.{
+            .name = "xml2",
+            .root_module = mod,
+        });
+
+        return .{
+            .dependency = libxml,
+            .artifact = lib,
+        };
+    }
+
+    fn trimWhitespace(str: []const u8) []const u8 {
+        return std.mem.trim(u8, str, whitespace);
+    }
+
+    fn tokenizeWhitespace(str: []const u8) std.mem.TokenIterator(u8, .any) {
+        return std.mem.tokenizeAny(u8, str, whitespace);
+    }
+
+    // Runs llvm-config with the provided args. The result is owned by the build.
+    fn run(self: *const LLVMConfig, comptime args: []const []const u8) []u8 {
+        return self.b.run(.{self.llvm_config_path} ++ args);
+    }
 };
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -195,6 +466,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     cdb_steps: ?*std.ArrayList(*std.Build.Step),
     skip_tests: bool,
     skip_cppcheck: bool,
+    llvm_config: LLVMConfig,
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
 }) !struct {
@@ -220,6 +492,14 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.auto_install) b.installArtifact(libcore);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
 
+    // LLVM is only used by the compiler but it has specific deps
+    const llvm_config = try config.llvm_config.getConfig();
+    const llvm_deps = try config.llvm_config.dependencies(.{
+        .optimize = config.optimize,
+        .target = config.target,
+        .auto_install = config.auto_install,
+    });
+
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
         .name = "compiler",
@@ -229,10 +509,25 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
             magic_enum_inc,
+            llvm_config.include_dir,
         },
-        .link_libraries = &.{libcore},
+        .link_libraries = &.{
+            libcore,
+            llvm_deps.libxml2.artifact,
+            llvm_deps.zlib.artifact,
+        },
+        .system_libraries = .{
+            .search_paths = &.{llvm_config.library_dir},
+            .libs = try std.mem.concat(b.allocator, []const u8, &.{
+                llvm_config.link_libraries,
+                llvm_config.system_libraries,
+            }),
+        },
         .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
-        .flags = config.cxx_flags,
+        .flags = try std.mem.concat(b.allocator, []const u8, &.{
+            config.cxx_flags,
+            llvm_config.cpp_flags,
+        }),
     });
     if (config.auto_install) b.installArtifact(libcompiler);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcompiler.step);
@@ -394,7 +689,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     };
 }
 
-/// Compiles cppcheck from source using the flags given by
+/// Compiles cppcheck from source using the flags given by:
 /// https://github.com/danmar/cppcheck#g-for-experts
 fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
     const cppcheck = b.dependency("cppcheck", .{});
@@ -529,6 +824,10 @@ fn createLibrary(b: *std.Build, config: struct {
     include_paths: []const std.Build.LazyPath,
     source_root: ?std.Build.LazyPath = null,
     link_libraries: ?[]const *std.Build.Step.Compile = null,
+    system_libraries: ?struct {
+        search_paths: []const std.Build.LazyPath,
+        libs: []const []const u8,
+    } = null,
     cxx_files: []const []const u8,
     flags: []const []const u8,
 }) *std.Build.Step.Compile {
@@ -541,9 +840,25 @@ fn createLibrary(b: *std.Build, config: struct {
     for (config.include_paths) |inc_path| {
         mod.addIncludePath(inc_path);
     }
+
     if (config.link_libraries) |link_libraries| {
         for (link_libraries) |lib| {
             mod.linkLibrary(lib);
+        }
+    }
+
+    if (config.system_libraries) |system_libraries| {
+        for (system_libraries.search_paths) |path| {
+            mod.addLibraryPath(path);
+        }
+
+        for (system_libraries.libs) |lib| {
+            mod.linkSystemLibrary(lib, .{
+                .preferred_link_mode = .static,
+                .needed = true,
+                .weak = true,
+                .search_strategy = .paths_first,
+            });
         }
     }
 
@@ -675,7 +990,7 @@ const CdbGenerator = struct {
         const file_buf = try allocator.alloc(u8, 64 * 1024);
         while (try dir_iter.next()) |entry| {
             if (entry.kind != .file) continue;
-            const entry_name = try allocator.dupe(u8, entry.name);
+            const entry_name = b.dupe(entry.name);
             const stat = try dir.statFile(entry_name);
             const first_dot = std.mem.indexOf(u8, entry_name, ".") orelse {
                 try old_frags.append(allocator, entry_name);
@@ -706,7 +1021,7 @@ const CdbGenerator = struct {
             const gop = try newest_frags.getOrPut(base_name);
             if (!gop.found_existing) {
                 gop.value_ptr.* = .{
-                    .name = try allocator.dupe(u8, entry_name),
+                    .name = entry_name,
                     .mtime = stat.mtime,
                 };
             } else {
@@ -881,11 +1196,13 @@ fn addLLDBStep(b: *std.Build, config: struct {
     const dbg_cli = b.step("dbg-cli", "Debug the cli tests with lldb");
     const dbg_compiler = b.step("dbg-compiler", "Debug the compiler tests with lldb");
     const dbg_core = b.step("dbg-core", "Debug the core tests with lldb");
+    const dbg_runner = b.step("dbg-runner", "Debug the runner tests with lldb");
     const steps = [_]struct { *std.Build.Step, *std.Build.Step.Compile }{
         .{ dbg, config.cli },
         .{ dbg_cli, config.tests.cli_tests },
         .{ dbg_compiler, config.tests.compiler_tests },
         .{ dbg_core, config.tests.core_tests },
+        .{ dbg_runner, config.tests.runner_tests },
     };
 
     for (steps) |step| {
@@ -1061,7 +1378,11 @@ fn addPackageStep(b: *std.Build, config: struct {
     compile_only: bool,
     cxx_flags: []const []const u8,
 }) !void {
+    // TODO, support packaging correctly with LLVM
     const package_step = b.step("package", "Build the artifacts for packaging");
+    if (true) {
+        return package_step.addError("Packing is currently unsupported as LLVM integration is a WIP", .{});
+    }
 
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
@@ -1262,7 +1583,7 @@ fn collectFiles(
     if (options.extra_files) |extra_files| {
         try paths.appendSlice(b.allocator, extra_files);
     }
-    return paths.toOwnedSlice(b.allocator);
+    return paths.items;
 }
 
 fn collectToolingFiles(b: *std.Build) ![]const []const u8 {

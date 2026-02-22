@@ -5,10 +5,7 @@
 #include <variant>
 #include <vector>
 
-#include "expected.hpp"
 #include "memory.hpp"
-#include "optional.hpp"
-#include "types.hpp"
 
 #include "parser/precedence.hpp"
 
