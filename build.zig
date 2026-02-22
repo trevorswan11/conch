@@ -900,8 +900,6 @@ fn createLibrary(b: *std.Build, config: struct {
         for (libs.libs) |lib| {
             mod.linkSystemLibrary(lib, .{
                 .preferred_link_mode = .static,
-                .needed = true,
-                .search_strategy = .paths_first,
             });
         }
     }
@@ -956,8 +954,6 @@ fn createExecutable(b: *std.Build, config: struct {
         for (libs.libs) |lib| {
             mod.linkSystemLibrary(lib, .{
                 .preferred_link_mode = .static,
-                .needed = true,
-                .search_strategy = .paths_first,
             });
         }
     }
