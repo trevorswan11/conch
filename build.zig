@@ -553,7 +553,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                 llvm_config.link_libraries,
                 llvm_config.system_libraries,
             }),
-            .windows_only = true,
         },
         .flags = config.cxx_flags,
     });
@@ -575,7 +574,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                 llvm_config.link_libraries,
                 llvm_config.system_libraries,
             }),
-            .windows_only = true,
         },
         .behavior = config.behavior orelse .{
             .runnable = .{
@@ -641,7 +639,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                     llvm_config.link_libraries,
                     llvm_config.system_libraries,
                 }),
-                .windows_only = true,
             },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -669,7 +666,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                     llvm_config.link_libraries,
                     llvm_config.system_libraries,
                 }),
-                .windows_only = true,
             },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -704,7 +700,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                     llvm_config.link_libraries,
                     llvm_config.system_libraries,
                 }),
-                .windows_only = true,
             },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -860,7 +855,6 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
 const SystemLibraries = struct {
     search_paths: []const std.Build.LazyPath,
     libs: []const []const u8,
-    windows_only: bool = false,
 };
 
 fn createLibrary(b: *std.Build, config: struct {
@@ -891,16 +885,26 @@ fn createLibrary(b: *std.Build, config: struct {
         }
     }
 
-    if (config.system_libraries) |libs| {
-        linkLibraries(mod, libs);
-    }
-
     mod.addCSourceFiles(.{
         .root = config.source_root,
         .files = config.cxx_files,
         .flags = config.flags,
         .language = .cpp,
     });
+
+    if (config.system_libraries) |libs| {
+        for (libs.search_paths) |path| {
+            mod.addLibraryPath(path);
+        }
+
+        for (libs.libs) |lib| {
+            mod.linkSystemLibrary(lib, .{
+                .preferred_link_mode = .static,
+                .needed = true,
+                .search_strategy = .paths_first,
+            });
+        }
+    }
 
     return b.addLibrary(.{
         .name = config.name,
@@ -945,7 +949,17 @@ fn createExecutable(b: *std.Build, config: struct {
     });
 
     if (config.system_libraries) |libs| {
-        linkLibraries(mod, libs);
+        for (libs.search_paths) |path| {
+            mod.addLibraryPath(path);
+        }
+
+        for (libs.libs) |lib| {
+            mod.linkSystemLibrary(lib, .{
+                .preferred_link_mode = .static,
+                .needed = true,
+                .search_strategy = .paths_first,
+            });
+        }
     }
 
     const exe = b.addExecutable(.{
@@ -969,21 +983,6 @@ fn createExecutable(b: *std.Build, config: struct {
     }
 
     return exe;
-}
-
-fn linkLibraries(mod: *std.Build.Module, libs: SystemLibraries) void {
-    if (libs.windows_only and builtin.target.os.tag != .windows) return;
-    for (libs.search_paths) |path| {
-        mod.addLibraryPath(path);
-    }
-
-    for (libs.libs) |lib| {
-        mod.linkSystemLibrary(lib, .{
-            .preferred_link_mode = .static,
-            .needed = true,
-            .search_strategy = .paths_first,
-        });
-    }
 }
 
 const CdbGenerator = struct {
