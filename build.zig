@@ -155,11 +155,7 @@ const LLVMConfig = struct {
         }
 
         // All static libraries to link against
-        const libs = self.run(&.{
-            "--link-static", "--libs",      "core",
-            "analysis",      "bitwriter",   "executionengine",
-            "target",        "all-targets",
-        });
+        const libs = self.run(&.{ "--link-static", "--libs" });
         const link_libraries = try allocator.alloc([]const u8, std.mem.count(u8, libs, " ") + 1);
         it = tokenizeWhitespace(libs);
         var i: usize = 0;
@@ -508,7 +504,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         .optimize = config.optimize,
         .include_paths = &.{ b.path(ProjectPaths.core.inc), magic_enum_inc },
         .cxx_files = try collectFiles(b, ProjectPaths.core.src, .{}),
-        .flags = config.cxx_flags,
+        .cxx_flags = config.cxx_flags,
     });
     if (config.auto_install) b.installArtifact(libcore);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
@@ -519,6 +515,17 @@ fn addArtifacts(b: *std.Build, config: struct {
         .optimize = config.optimize,
         .target = config.target,
         .auto_install = config.auto_install,
+    });
+
+    // The libs must only be linked to executable (leaf-node) artifacts
+    const llvm_libs = try std.mem.concat(b.allocator, []const u8, &.{
+        llvm_config.link_libraries,
+        llvm_config.system_libraries,
+    });
+
+    const full_llvm_flags = try std.mem.concat(b.allocator, []const u8, &.{
+        config.cxx_flags,
+        llvm_config.cpp_flags,
     });
 
     // The actual compiler static library
@@ -532,23 +539,9 @@ fn addArtifacts(b: *std.Build, config: struct {
             magic_enum_inc,
             llvm_config.include_dir,
         },
-        .link_libraries = &.{
-            libcore,
-            llvm_deps.libxml2.artifact,
-            llvm_deps.zlib.artifact,
-        },
-        .system_libraries = .{
-            .search_paths = &.{llvm_config.library_dir},
-            .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                llvm_config.link_libraries,
-                llvm_config.system_libraries,
-            }),
-        },
+        .link_libraries = &.{libcore},
         .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
-        .flags = try std.mem.concat(b.allocator, []const u8, &.{
-            config.cxx_flags,
-            llvm_config.cpp_flags,
-        }),
+        .cxx_flags = full_llvm_flags,
     });
     if (config.auto_install) b.installArtifact(libcompiler);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcompiler.step);
@@ -563,19 +556,13 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
             magic_enum_inc,
+            llvm_config.include_dir,
         },
+        .link_libraries = &.{libcompiler},
         .cxx_files = try collectFiles(b, ProjectPaths.cli.src, .{
             .dropped_files = &.{"main.cpp"},
         }),
-        .link_libraries = &.{libcompiler},
-        .system_libraries = .{
-            .search_paths = &.{llvm_config.library_dir},
-            .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                llvm_config.link_libraries,
-                llvm_config.system_libraries,
-            }),
-        },
-        .flags = config.cxx_flags,
+        .cxx_flags = full_llvm_flags,
     });
     if (config.auto_install) b.installArtifact(libcli);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcli.step);
@@ -588,13 +575,14 @@ fn addArtifacts(b: *std.Build, config: struct {
         .include_paths = &.{b.path(ProjectPaths.cli.inc)},
         .cxx_files = &.{ProjectPaths.cli.src ++ "main.cpp"},
         .cxx_flags = config.cxx_flags,
-        .link_libraries = &.{libcli},
+        .link_libraries = &.{
+            libcli,
+            llvm_deps.libxml2.artifact,
+            llvm_deps.zlib.artifact,
+        },
         .system_libraries = .{
             .search_paths = &.{llvm_config.library_dir},
-            .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                llvm_config.link_libraries,
-                llvm_config.system_libraries,
-            }),
+            .libs = llvm_libs,
         },
         .behavior = config.behavior orelse .{
             .runnable = .{
@@ -619,7 +607,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .include_paths = &.{catch2.path("extras")},
             .source_root = catch2.path("."),
             .cxx_files = &.{"extras/catch_amalgamated.cpp"},
-            .flags = config.cxx_flags,
+            .cxx_flags = config.cxx_flags,
         });
 
         // The runner has standalone tests
@@ -637,7 +625,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         const runner_step = b.step("test-runner", "Run test instrumentation tests");
         runner_step.dependOn(&runner_cmd.step);
 
-        // Core tests depend on the test runner
+        // Core tests depend on the test runner but not LLVM
         tests.?.core_tests = createExecutable(b, .{
             .name = "core_tests",
             .zig_main = test_runner,
@@ -654,13 +642,6 @@ fn addArtifacts(b: *std.Build, config: struct {
             }),
             .cxx_flags = config.cxx_flags,
             .link_libraries = &.{ tests.?.libcatch2, libcore },
-            .system_libraries = .{
-                .search_paths = &.{llvm_config.library_dir},
-                .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                    llvm_config.link_libraries,
-                    llvm_config.system_libraries,
-                }),
-            },
             .behavior = config.behavior orelse .{
                 .runnable = .{
                     .cmd_name = "test-core",
@@ -675,18 +656,26 @@ fn addArtifacts(b: *std.Build, config: struct {
             .zig_main = test_runner,
             .target = config.target,
             .optimize = config.optimize,
-            .include_paths = &.{ b.path(ProjectPaths.compiler.inc), b.path(ProjectPaths.core.inc), b.path(ProjectPaths.compiler.tests), catch2.path("extras"), magic_enum_inc },
+            .include_paths = &.{
+                b.path(ProjectPaths.compiler.inc),
+                b.path(ProjectPaths.core.inc),
+                b.path(ProjectPaths.compiler.tests),
+                catch2.path("extras"),
+                magic_enum_inc,
+            },
             .cxx_files = try collectFiles(b, ProjectPaths.compiler.tests, .{
                 .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
             }),
             .cxx_flags = config.cxx_flags,
-            .link_libraries = &.{ libcompiler, tests.?.libcatch2 },
+            .link_libraries = &.{
+                libcompiler,
+                tests.?.libcatch2,
+                llvm_deps.libxml2.artifact,
+                llvm_deps.zlib.artifact,
+            },
             .system_libraries = .{
                 .search_paths = &.{llvm_config.library_dir},
-                .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                    llvm_config.link_libraries,
-                    llvm_config.system_libraries,
-                }),
+                .libs = llvm_libs,
             },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -714,13 +703,16 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
             }),
             .cxx_flags = config.cxx_flags,
-            .link_libraries = &.{ libcompiler, libcli, tests.?.libcatch2 },
+            .link_libraries = &.{
+                libcompiler,
+                libcli,
+                tests.?.libcatch2,
+                llvm_deps.libxml2.artifact,
+                llvm_deps.zlib.artifact,
+            },
             .system_libraries = .{
                 .search_paths = &.{llvm_config.library_dir},
-                .libs = try std.mem.concat(b.allocator, []const u8, &.{
-                    llvm_config.link_libraries,
-                    llvm_config.system_libraries,
-                }),
+                .libs = llvm_libs,
             },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -843,7 +835,7 @@ fn createLibrary(b: *std.Build, config: struct {
     link_libraries: ?[]const *std.Build.Step.Compile = null,
     system_libraries: ?SystemLibraries = null,
     cxx_files: []const []const u8,
-    flags: []const []const u8,
+    cxx_flags: []const []const u8,
 }) *std.Build.Step.Compile {
     const mod = b.createModule(.{
         .target = config.target,
@@ -865,7 +857,7 @@ fn createLibrary(b: *std.Build, config: struct {
     mod.addCSourceFiles(.{
         .root = config.source_root,
         .files = config.cxx_files,
-        .flags = config.flags,
+        .flags = config.cxx_flags,
         .language = .cpp,
     });
 

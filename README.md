@@ -21,7 +21,7 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 2. [LLVM 21.x](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as Conch's compilation backend. It is required for building Conch from scratch, but its libraries are statically linked in resulting executables. `llvm-config` must be available in the system's PATH so that the build system knows where to find library includes and compiled artifacts. It is licensed under the permissible Apache License 2.0.
     - On MacOS, I use the nix package manager to manage LLVM. You will likely find success using homebrew, though I cannot personally verify this.
     - On Windows, I use MSYS2 to manage the UCRT LLVM package, found [here](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-llvm). I do not recommend taking another path than this, but you may find another installation method works.
-    - On Linux, I am currently working out some link errors/build system misconfiguration, but it should be trivial for you to install LLVM on your system, either with [precompiled releases](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) or through your package manager.
+    - On Linux, it should be trivial for you to install LLVM on your system, either with [precompiled releases](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) or through your package manager.
 
 The easiest way to get started with development is with [nix](https://nixos.org/). Just run `nix develop` to get started. Otherwise, you must manually install required dependencies in a way that fits your specific system.
 
