@@ -19,7 +19,6 @@
         .llvm = .{
             .url = "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-21.1.8.tar.gz",
             .hash = "N-V-__8AABpqQW-SXByMsTbdc-Sm0xuxtXzfQBvflhYdUshy",
-            .lazy = true,
         },
         .libxml2 = .{
             .url = "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.1/libxml2-v2.15.1.tar.gz",

@@ -44,7 +44,7 @@ jobs:
               with:
                   version: 0.15.2
 
-            - name: Get zig global cache path
+            - name: Get Zig global cache path
               id: zig-cache-path
               shell: bash
               run: |
