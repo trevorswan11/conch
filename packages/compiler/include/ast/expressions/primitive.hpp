@@ -4,8 +4,6 @@
 #include <string>
 #include <utility>
 
-#include "expected.hpp"
-
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"

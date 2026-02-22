@@ -5,18 +5,16 @@ on:
         branches: [main]
         paths:
             - ".github/workflows/format.yml"
-            - "src/**"
-            - "include/**"
-            - "tests/**"
+            - "apps/**"
+            - "packages/**"
             - "build.zig"
             - "build.zig.zon"
     pull_request:
         branches: [main]
         paths:
             - ".github/workflows/format.yml"
-            - "src/**"
-            - "include/**"
-            - "tests/**"
+            - "apps/**"
+            - "packages/**"
             - "build.zig"
             - "build.zig.zon"
 
@@ -39,6 +37,21 @@ jobs:
             - uses: mlugg/setup-zig@v2
               with:
                   version: 0.15.2
+                  
+            - name: Get Zig global cache path
+              id: zig-cache-path
+              shell: bash
+              run: echo "path=~/.cache/zig" >> $GITHUB_OUTPUT
+              
+            - name: Cache Zig Folders
+              uses: actions/cache@v4
+              with:
+                path: |
+                  .zig-cache
+                  ${{ steps.zig-cache-path.outputs.path }}
+                key: ${{ runner.os }}-zig-${{ hashFiles('build.zig.zon') }}
+                restore-keys: |
+                  ${{ runner.os }}-zig-
 
             - name: Install dependencies
               run: |

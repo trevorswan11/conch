@@ -112,7 +112,7 @@ auto Lexer::read_operator() const noexcept -> Optional<Token> {
     auto   matched_type = TokenType::ILLEGAL;
 
     // Try extending from length 1 up to the max operator size
-    for (size_t len = 1; len <= MAX_OPERATOR_LEN && pos_ + len <= input_.size(); len++) {
+    for (size_t len = 1; len <= MAX_OPERATOR_LEN && pos_ + len <= input_.size(); ++len) {
         const auto op = get_operator(input_.substr(pos_, len));
         if (op) {
             matched_type = op->second;

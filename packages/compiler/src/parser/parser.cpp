@@ -32,9 +32,10 @@ auto Parser::advance(uint8_t times) noexcept -> const Token& {
     return current_token_;
 }
 
-auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>> {
+auto Parser::consume() -> std::pair<ast::AST, Diagnostics> {
     reset(input_);
-    ast::AST ast;
+    ast::AST    ast;
+    Diagnostics diagnostics;
 
     while (!current_token_is(TokenType::END)) {
         if (!current_token_is(TokenType::COMMENT)) {
@@ -42,7 +43,7 @@ auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>
             if (stmt) {
                 ast.emplace_back(std::move(*stmt));
             } else {
-                diagnostics_.emplace_back(std::move(stmt.error()));
+                diagnostics.emplace_back(std::move(stmt.error()));
 
                 // Errors should advance up to next logical end to prevent useless errors
                 const auto stop_condition = [](TokenType tt) {
@@ -59,7 +60,7 @@ auto Parser::consume() -> std::pair<ast::AST, std::span<const ParserDiagnostic>>
         advance();
     }
 
-    return {std::move(ast), diagnostics_};
+    return {std::move(ast), std::move(diagnostics)};
 }
 
 auto Parser::expect_current(TokenType expected) -> Expected<std::monostate, ParserDiagnostic> {
@@ -166,11 +167,14 @@ constexpr auto PREFIX_FNS = []() {
         {TokenType::IDENT, ast::IdentifierExpression::parse},
         {TokenType::BYTE, ast::ByteExpression::parse},
         {TokenType::FLOAT, ast::FloatExpression::parse},
-        {TokenType::BANG, ast::PrefixExpression::parse},
-        {TokenType::NOT, ast::PrefixExpression::parse},
-        {TokenType::MINUS, ast::PrefixExpression::parse},
-        {TokenType::AND, ast::PrefixExpression::parse},
-        {TokenType::AND_MUT, ast::PrefixExpression::parse},
+        {TokenType::BANG, ast::UnaryExpression::parse},
+        {TokenType::NOT, ast::UnaryExpression::parse},
+        {TokenType::MINUS, ast::UnaryExpression::parse},
+        {TokenType::PLUS, ast::UnaryExpression::parse},
+        {TokenType::STAR, ast::PointerExpression::parse},
+        {TokenType::AND, ast::PointerExpression::parse},
+        {TokenType::AND_MUT, ast::PointerExpression::parse},
+        {TokenType::DOT, ast::ImplicitAccessExpression::parse},
         {TokenType::TRUE, ast::BoolExpression::parse},
         {TokenType::FALSE, ast::BoolExpression::parse},
         {TokenType::STRING, ast::StringExpression::parse},
@@ -196,7 +200,7 @@ constexpr auto PREFIX_FNS = []() {
     usize                              cursor = 0;
     for (auto i = std::to_underlying(TokenType::INT_2);
          i <= std::to_underlying(TokenType::UZINT_16);
-         i++, cursor++) {
+         ++i, ++cursor) {
         const auto tt = static_cast<TokenType>(i);
         using namespace token_type;
         switch (to_int_category(tt)) {

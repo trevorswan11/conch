@@ -47,12 +47,12 @@ const Instrumentor = struct {
         c_conv: [][*c]u8,
     } = null,
 
-    total_nodes: std.atomic.Value(u64),
-    total_alloc: std.atomic.Value(u64),
-    node_counter: std.atomic.Value(u64),
-    byte_counter: std.atomic.Value(u64),
+    total_nodes: std.atomic.Value(u64) = .init(0),
+    total_alloc: std.atomic.Value(u64) = .init(0),
+    node_counter: std.atomic.Value(u64) = .init(0),
+    byte_counter: std.atomic.Value(u64) = .init(0),
 
-    live_lock: std.Thread.Mutex,
+    live_lock: std.Thread.Mutex = .{},
     live_allocations: std.AutoHashMap(usize, void),
 
     pub fn initOnce() void {
@@ -62,13 +62,6 @@ const Instrumentor = struct {
     pub fn init() Instrumentor {
         return .{
             .gpa = .init,
-
-            .total_nodes = .init(0),
-            .total_alloc = .init(0),
-            .node_counter = .init(0),
-            .byte_counter = .init(0),
-
-            .live_lock = .{},
             .live_allocations = .init(internal_allocator),
         };
     }
@@ -175,6 +168,7 @@ fn allocImpl(size: usize) !*anyopaque {
 
     const allocator = instrumentor.allocator();
     const mem = allocator.alloc(u8, total) catch return error.AllocationFailed;
+    errdefer allocator.free(mem);
     const base_ptr = mem.ptr;
 
     const aligned_ptr = blk: {
@@ -184,10 +178,7 @@ fn allocImpl(size: usize) !*anyopaque {
             alignment,
         );
 
-        break :blk instrumentor.putKey(ptr) orelse {
-            allocator.free(mem);
-            return error.PtrStoreFailed;
-        };
+        break :blk instrumentor.putKey(ptr) orelse return error.PtrStoreFailed;
     };
 
     const header = @as(

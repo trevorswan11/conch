@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-A simple programming language.
+A programming language.
 </p>
 
 # Motivation
@@ -19,10 +19,16 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 ## System dependencies:
 1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and project tooling.
 
+The easiest way to get started with development is with [nix](https://nixos.org/). Just run `nix develop` to get started. Otherwise, you must manually install required dependencies in a way that fits your specific system.
+
 ## Other dependencies:
+The following are "standalone" dependencies, only required by conch itself.
 1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
 2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
 3. [magic_enum](https://github.com/Neargye/magic_enum) is used as a utility to reflect on enum values. Is is licensed under the permissible MIT license.
+4. [LLVM 21.x](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as Conch's compilation backend. It is manually compiled and statically linked against conch through the build system. It is licensed under the permissible Apache License 2.0, and has the following dependencies:
+    - [libxml2](https://gitlab.gnome.org/GNOME/libxml2)
+    - [zlib](https://github.com/madler/zlib)
 
 These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh
@@ -34,7 +40,7 @@ zig build --release
 This builds the `ReleaseFast` configuration. You can read about Zig's different optimization levels [here](https://ziglang.org/documentation/master/#Build-Mode).
 
 ## Tooling Dependencies
-1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter is used on all development platforms.
+1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. If you have LLVM installed on your system (specifically the LLVM version required by Conch), then this is a trivial dependency. LLVM 21's formatter is used on all development platforms.
 5. [zip](https://infozip.sourceforge.net/Zip.html) and [tar](https://www.gnu.org/software/tar/tar.html) are both used for packaging releases, but this is automated by GitHub actions runners.
 
 Note that these dependencies are purely optional for users simply building the project from source!

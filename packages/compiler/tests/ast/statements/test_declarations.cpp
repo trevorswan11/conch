@@ -26,7 +26,7 @@ auto test_decl(std::string_view input, const ast::DeclStatement& expected) -> vo
     Parser p{input};
     auto [ast, errors] = p.consume();
 
-    helpers::check_errors(errors);
+    helpers::check_errors<ParserDiagnostic>(errors);
     REQUIRE(ast.size() == 1);
 
     const auto  actual{std::move(ast[0])};

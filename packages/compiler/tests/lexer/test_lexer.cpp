@@ -92,7 +92,7 @@ TEST_CASE("Basic next token and lexer consuming") {
         l_accumulator.reset(input);
         const auto reset_acc = l_accumulator.consume();
 
-        for (size_t i = 0; i < expecteds.size(); i++) {
+        for (size_t i = 0; i < expecteds.size(); ++i) {
             const auto& [expected_tok, expected_slice] = expecteds[i];
             const auto token                           = l.advance();
             const auto accumulated_token               = accumulated_tokens[i];

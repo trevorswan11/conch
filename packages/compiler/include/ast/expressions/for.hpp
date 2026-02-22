@@ -3,57 +3,24 @@
 #include <span>
 #include <vector>
 
-#include "expected.hpp"
-#include "optional.hpp"
-
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
 
 namespace conch::ast {
 
-class IdentifierExpression;
 class BlockStatement;
-
-class ForLoopCapture {
-  public:
-    explicit ForLoopCapture(bool reference, Box<IdentifierExpression> capture) noexcept;
-    ~ForLoopCapture();
-
-    ForLoopCapture(const ForLoopCapture&)                        = delete;
-    auto operator=(const ForLoopCapture&) -> ForLoopCapture&     = delete;
-    ForLoopCapture(ForLoopCapture&&) noexcept                    = default;
-    auto operator=(ForLoopCapture&&) noexcept -> ForLoopCapture& = default;
-
-    [[nodiscard]] auto is_reference() const noexcept -> bool { return reference_; }
-    [[nodiscard]] auto get_capture() const noexcept -> const IdentifierExpression& {
-        return *capture_;
-    }
-
-    friend auto operator==(const ForLoopCapture& lhs, const ForLoopCapture& rhs) noexcept -> bool {
-        return lhs.is_equal(rhs);
-    }
-
-  private:
-    auto is_equal(const ForLoopCapture& other) const noexcept -> bool;
-
-  private:
-    bool                      reference_;
-    Box<IdentifierExpression> capture_;
-
-    friend class ForLoopExpression;
-};
 
 class ForLoopExpression : public ExprBase<ForLoopExpression> {
   public:
     static constexpr auto KIND = NodeKind::FOR_LOOP_EXPRESSION;
 
   public:
-    explicit ForLoopExpression(const Token&                                    start_token,
-                               std::vector<Box<Expression>>                    iterables,
-                               Optional<std::vector<Optional<ForLoopCapture>>> captures,
-                               Box<BlockStatement>                             block,
-                               Optional<Box<Statement>>                        non_break) noexcept;
+    explicit ForLoopExpression(const Token&                                     start_token,
+                               std::vector<Box<Expression>>                     iterables,
+                               Optional<std::vector<Optional<Box<Expression>>>> captures,
+                               Box<BlockStatement>                              block,
+                               Optional<Box<Statement>>                         non_break) noexcept;
     ~ForLoopExpression() override;
 
     auto                      accept(Visitor& v) const -> void override;
@@ -64,7 +31,7 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
     }
 
     [[nodiscard]] auto get_captures() const noexcept
-        -> Optional<std::span<const Optional<ForLoopCapture>>> {
+        -> Optional<std::span<const Optional<Box<Expression>>>> {
         return captures_;
     }
 
@@ -78,10 +45,10 @@ class ForLoopExpression : public ExprBase<ForLoopExpression> {
     auto is_equal(const Node& other) const noexcept -> bool override;
 
   private:
-    std::vector<Box<Expression>>                    iterables_;
-    Optional<std::vector<Optional<ForLoopCapture>>> captures_;
-    Box<BlockStatement>                             block_;
-    Optional<Box<Statement>>                        non_break_;
+    std::vector<Box<Expression>>                     iterables_;
+    Optional<std::vector<Optional<Box<Expression>>>> captures_;
+    Box<BlockStatement>                              block_;
+    Optional<Box<Statement>>                         non_break_;
 };
 
 } // namespace conch::ast

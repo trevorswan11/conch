@@ -3,10 +3,9 @@
 #include <utility>
 
 #include "ast/node.hpp"
+#include "ast/visitor.hpp"
 
 #include "parser/parser.hpp"
-
-#include "ast/visitor.hpp"
 
 namespace conch::ast {
 

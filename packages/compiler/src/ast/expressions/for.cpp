@@ -3,25 +3,16 @@
 #include "ast/expressions/for.hpp"
 
 #include "ast/expressions/identifier.hpp"
+#include "ast/expressions/pointer.hpp"
 #include "ast/statements/block.hpp"
 #include "ast/visitor.hpp"
-#include "parser/parser.hpp"
 
 namespace conch::ast {
 
-ForLoopCapture::ForLoopCapture(bool reference, Box<IdentifierExpression> capture) noexcept
-    : reference_{reference}, capture_{std::move(capture)} {}
-
-ForLoopCapture::~ForLoopCapture() = default;
-
-auto ForLoopCapture::is_equal(const ForLoopCapture& other) const noexcept -> bool {
-    return reference_ == other.reference_ && *capture_ == *other.capture_;
-}
-
-ForLoopExpression::ForLoopExpression(const Token&                                    start_token,
-                                     std::vector<Box<Expression>>                    iterables,
-                                     Optional<std::vector<Optional<ForLoopCapture>>> captures,
-                                     Box<BlockStatement>                             block,
+ForLoopExpression::ForLoopExpression(const Token&                                     start_token,
+                                     std::vector<Box<Expression>>                     iterables,
+                                     Optional<std::vector<Optional<Box<Expression>>>> captures,
+                                     Box<BlockStatement>                              block,
                                      Optional<Box<Statement>> non_break) noexcept
     : ExprBase{start_token}, iterables_{std::move(iterables)}, captures_{std::move(captures)},
       block_{std::move(block)}, non_break_{std::move(non_break)} {}
@@ -53,32 +44,22 @@ auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Parse
     TRY(parser.expect_peek(TokenType::RPAREN));
 
     // Captures are entirely optional and take on the zig capture syntax
-    Optional<std::vector<Optional<ForLoopCapture>>> captures;
+    Optional<std::vector<Optional<Box<Expression>>>> captures;
     if (parser.peek_token_is(TokenType::OR)) {
         captures.emplace();
         parser.advance();
 
         while (!parser.peek_token_is(TokenType::OR) && !parser.peek_token_is(TokenType::END)) {
-            const auto is_ref = [&parser]() {
-                if (parser.peek_token_is(TokenType::REF)) {
-                    parser.advance();
-                    return true;
-                }
-                return false;
-            }();
-
-            if (parser.peek_token_is(TokenType::UNDERSCORE)) {
-                const auto peek = parser.advance();
-                if (is_ref) {
-                    return make_parser_unexpected(ParserError::ILLEGAL_FOR_LOOP_DISCARD, peek);
-                }
+            parser.advance();
+            if (parser.current_token_is(TokenType::UNDERSCORE)) {
                 captures->emplace_back(nullopt);
             } else {
-                TRY(parser.expect_peek(TokenType::IDENT));
-
-                auto capture =
-                    downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
-                captures->emplace_back(ForLoopCapture{is_ref, std::move(capture)});
+                auto capture = TRY(parser.parse_expression());
+                if (!capture->any<IdentifierExpression, PointerExpression>()) {
+                    return make_parser_unexpected(ParserError::ILLEGAL_FOR_LOOP_CAPTURE,
+                                                  capture->get_token());
+                }
+                captures->emplace_back(std::move(capture));
             }
 
             if (!parser.peek_token_is(TokenType::RPAREN)) {
@@ -111,9 +92,12 @@ auto ForLoopExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted       = as<ForLoopExpression>(other);
     const auto  iterables_eq = std::ranges::equal(
         iterables_, casted.iterables_, [](const auto& a, const auto& b) { return *a == *b; });
-    const auto captures_eq = optional::safe_eq<std::vector<Optional<ForLoopCapture>>>(
+    const auto captures_eq = optional::safe_eq<std::vector<Optional<Box<Expression>>>>(
         captures_, casted.captures_, [](const auto& a_captures, const auto& b_captures) {
-            return std::ranges::equal(a_captures, b_captures);
+            return std::ranges::equal(
+                a_captures, b_captures, [](const auto& a_capture, const auto& b_capture) {
+                    return optional::unsafe_eq<Expression>(a_capture, b_capture);
+                });
         });
     return iterables_eq && captures_eq && block_ == casted.block_ &&
            optional::unsafe_eq<Statement>(non_break_, casted.non_break_);

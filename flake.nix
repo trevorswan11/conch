@@ -54,13 +54,15 @@
                 zip
               ]
               ++ (with llvmPackages_21; [
-                clang
-                clang-unwrapped
-                lld
-                llvm
                 clang-tools
                 lldb
               ]);
+
+            # Without this hook, Zig freaks out over unknown flags
+            shellHook = ''
+              export NIX_CFLAGS_COMPILE=$(echo $NIX_CFLAGS_COMPILE | sed 's/-fmacro-prefix-map=[^ ]*//g')
+              export NIX_LDFLAGS=$(echo $NIX_LDFLAGS | sed 's/-fmacro-prefix-map=[^ ]*//g')
+            '';
           };
         }
       );

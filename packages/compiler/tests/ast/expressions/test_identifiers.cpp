@@ -17,7 +17,7 @@ auto test_ident(std::string_view input, Optional<TokenType> expected_type) -> vo
     Parser p{input};
     auto [ast, errors] = p.consume();
 
-    helpers::check_errors(errors);
+    helpers::check_errors<ParserDiagnostic>(errors);
     REQUIRE(ast.size() == 1);
 
     const auto                       actual{std::move(ast[0])};
