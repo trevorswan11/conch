@@ -5,16 +5,16 @@ on:
         branches: [main]
         paths:
             - ".github/workflows/ci.yml"
-            - "packages/**"
             - "apps/**"
+            - "packages/**"
             - "build.zig"
             - "build.zig.zon"
     pull_request:
         branches: [main]
         paths:
             - ".github/workflows/ci.yml"
-            - "packages/**"
             - "apps/**"
+            - "packages/**"
             - "build.zig"
             - "build.zig.zon"
 
@@ -44,33 +44,27 @@ jobs:
               with:
                   version: 0.15.2
 
-            - name: Install LLVM (Linux)
-              if: runner.os == 'Linux'
+            - name: Get zig global cache path
+              id: zig-cache-path
+              shell: bash
               run: |
-                wget https://apt.llvm.org/llvm.sh
-                chmod +x llvm.sh
-                sudo ./llvm.sh 21
-                sudo apt-get install -y llvm-21-dev libclang-21-dev
-                sudo ln -s /usr/bin/llvm-config-21 /usr/bin/llvm-config
+                if [ "${{ runner.os }}" == "Windows" ]; then
+                    echo "path=$LOCALAPPDATA/zig" >> $GITHUB_OUTPUT
+                else
+                    echo "path=~/.cache/zig" >> $GITHUB_OUTPUT
+                fi
 
-            - name: Install LLVM (macOS)
-              if: runner.os == 'macOS'
-              run: |
-                brew install llvm@21
-                echo "$(brew --prefix llvm@21)/bin" >> $GITHUB_PATH
-
-            - name: Install LLVM (Windows)
-              if: runner.os == 'Windows'
-              uses: msys2/setup-msys2@v2
+            - name: Cache Zig Folders
+              uses: actions/cache@v4
               with:
-                update: true
-                path-type: inherit
-                msystem: UCRT64
-                install: >-
-                    mingw-w64-ucrt-x86_64-llvm
+                path: |
+                  .zig-cache
+                  ${{ steps.zig-cache-path.outputs.path }}
+                key: ${{ runner.os }}-zig-${{ hashFiles('build.zig.zon') }}
+                restore-keys: |
+                  ${{ runner.os }}-zig-
 
             - name: Run tests
               run: |
                   zig build test
                   zig build test --release=fast
-              shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}

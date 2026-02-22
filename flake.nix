@@ -44,7 +44,7 @@
           };
         in
         {
-          devShells.default = pkgs.mkShellNoCC {
+          devShells.default = pkgs.mkShell {
             nativeBuildInputs =
               with pkgs;
               [
