@@ -1077,6 +1077,9 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
         cppcheck.addArg("--suppress=" ++ suppression);
     }
 
+    const catch2 = b.dependency("catch2", .{});
+    cppcheck.addPrefixedDirectoryArg("-I", catch2.path("extras"));
+
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
         .install_dir = .{ .custom = ".." },
