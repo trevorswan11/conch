@@ -418,7 +418,10 @@ fn addArtifacts(b: *std.Build, config: struct {
         .name = "core",
         .target = config.target,
         .optimize = config.optimize,
-        .include_paths = &.{ b.path(ProjectPaths.core.inc), magic_enum_inc },
+        .include_paths = &.{
+            b.path(ProjectPaths.core.inc),
+            magic_enum_inc,
+        },
         .cxx_files = try collectFiles(b, ProjectPaths.core.src, .{}),
         .cxx_flags = config.cxx_flags,
     });
@@ -433,8 +436,8 @@ fn addArtifacts(b: *std.Build, config: struct {
         .include_paths = &.{
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
+            magic_enum_inc,
         },
-        .system_include_paths = &.{magic_enum_inc},
         .link_libraries = &.{libcore},
         .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
         .cxx_flags = config.cxx_flags,
@@ -451,8 +454,8 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.cli.inc),
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
+            magic_enum_inc,
         },
-        .system_include_paths = &.{magic_enum_inc},
         .link_libraries = &.{libcompiler},
         .cxx_files = try collectFiles(b, ProjectPaths.cli.src, .{
             .dropped_files = &.{"main.cpp"},
@@ -487,11 +490,12 @@ fn addArtifacts(b: *std.Build, config: struct {
         const test_runner = b.path(ProjectPaths.test_runner ++ "main.zig");
 
         const catch2 = b.dependency("catch2", .{});
+        const catch2_inc = catch2.path("extras");
         tests.?.libcatch2 = createLibrary(b, .{
             .name = "catch2",
             .target = config.target,
             .optimize = .ReleaseSafe,
-            .include_paths = &.{catch2.path("extras")},
+            .include_paths = &.{catch2_inc},
             .source_root = catch2.path("."),
             .cxx_files = &.{"extras/catch_amalgamated.cpp"},
             .cxx_flags = config.cxx_flags,
@@ -521,9 +525,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .include_paths = &.{
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.core.tests),
-            },
-            .system_include_paths = &.{
-                catch2.path("extras"),
+                catch2_inc,
                 magic_enum_inc,
             },
             .cxx_files = try collectFiles(b, ProjectPaths.core.tests, .{
@@ -549,9 +551,7 @@ fn addArtifacts(b: *std.Build, config: struct {
                 b.path(ProjectPaths.compiler.inc),
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.compiler.tests),
-            },
-            .system_include_paths = &.{
-                catch2.path("extras"),
+                catch2_inc,
                 magic_enum_inc,
             },
             .cxx_files = try collectFiles(b, ProjectPaths.compiler.tests, .{
@@ -578,9 +578,7 @@ fn addArtifacts(b: *std.Build, config: struct {
                 b.path(ProjectPaths.cli.inc),
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.cli.tests),
-            },
-            .system_include_paths = &.{
-                catch2.path("extras"),
+                catch2_inc,
                 magic_enum_inc,
             },
             .cxx_files = try collectFiles(b, ProjectPaths.cli.tests, .{
@@ -1076,9 +1074,6 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     inline for (suppressions) |suppression| {
         cppcheck.addArg("--suppress=" ++ suppression);
     }
-
-    const catch2 = b.dependency("catch2", .{});
-    cppcheck.addPrefixedDirectoryArg("-I", catch2.path("extras"));
 
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
