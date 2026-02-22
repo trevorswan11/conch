@@ -30,7 +30,7 @@ The following are "standalone" dependencies, only required by conch itself.
     - [libxml2](https://gitlab.gnome.org/GNOME/libxml2)
     - [zlib](https://github.com/madler/zlib)
 
-These are automatically downloaded by the zig build system, so once you're system dependencies are properly configured, building conch is as easy as running:
+These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh
 git clone https://github.com/trevorswan11/conch
 cd conch
