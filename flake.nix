@@ -44,7 +44,7 @@
           };
         in
         {
-          devShells.default = pkgs.mkShell {
+          devShells.default = pkgs.mkShellNoCC {
             nativeBuildInputs =
               with pkgs;
               [
@@ -54,10 +54,6 @@
                 zip
               ]
               ++ (with llvmPackages_21; [
-                clang
-                clang-unwrapped
-                lld
-                llvm
                 clang-tools
                 lldb
               ]);

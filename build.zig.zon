@@ -16,6 +16,10 @@
             .url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.9.7.tar.gz",
             .hash = "N-V-__8AAG0CEAClLikJpJ7Cg3LFZxHR_xfy6ddADO6AKqq2",
         },
+        .llvm = .{
+            .url = "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-21.1.8.tar.gz",
+            .hash = "N-V-__8AABpqQW-SXByMsTbdc-Sm0xuxtXzfQBvflhYdUshy",
+        },
         .libxml2 = .{
             .url = "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.1/libxml2-v2.15.1.tar.gz",
             .hash = "N-V-__8AAGDwMQF2IHBGW-iuy3HD7ZCfVEALdBc3_ZVjfUV3",
