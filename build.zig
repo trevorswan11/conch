@@ -155,7 +155,11 @@ const LLVMConfig = struct {
         }
 
         // All static libraries to link against
-        const libs = self.run(&.{ "--link-static", "--libs" });
+        const libs = self.run(&.{
+            "--link-static", "--libs",      "core",
+            "analysis",      "bitwriter",   "executionengine",
+            "target",        "all-targets",
+        });
         const link_libraries = try allocator.alloc([]const u8, std.mem.count(u8, libs, " ") + 1);
         it = tokenizeWhitespace(libs);
         var i: usize = 0;
