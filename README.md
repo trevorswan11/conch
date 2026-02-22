@@ -18,7 +18,7 @@ ZLX was a fun project and got me into Low-Level programming, but its design choi
 # Getting Started
 ## System dependencies:
 1. [Zig 0.15.2](https://ziglang.org/download/) drives the build system, including artifact compilation, libcpp includes, and project tooling.
-2. [LLVM 21.x](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as Conch's compilation backend. It is required for building Conch from scratch, but its libraries are statically linked in resulting executables. `llvm-config` must be available in the system's PATH so that the build system knows where to find library includes and compiled artifacts. It is licensed under the permissible Apache License 2.0.
+2. [LLVM 21.x](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as Conch's compilation backend. It is required for building Conch from scratch, but its libraries are statically linked in resulting executables. `llvm-config` must be available in the system's PATH so that the build system knows where to find library includes and compiled artifacts.
     - On MacOS, I use the nix package manager to manage LLVM. You will likely find success using homebrew, though I cannot personally verify this.
     - On Windows, I use MSYS2 to manage the UCRT LLVM package, found [here](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-llvm). I do not recommend taking another path than this, but you may find another installation method works.
     - On Linux, it should be trivial for you to install LLVM on your system, either with [precompiled releases](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) or through your package manager.
@@ -33,7 +33,7 @@ The following are "standalone" dependencies, only required by conch itself.
 3. [magic_enum](https://github.com/Neargye/magic_enum) is used as a utility to reflect on enum values. Is is licensed under the permissible MIT license.
 
 ### LLVM-Specific
-The following are dependencies of LLVM and are compiled from source. They are linked statically against conch and comply with the project's license.
+The following are dependencies of LLVM and are compiled from source. They are linked statically against conch and comply with the project's license. LLVM itself is licensed under the permissible Apache License 2.0.
 1. [libxml2](https://gitlab.gnome.org/GNOME/libxml2)
 2. [zlib](https://github.com/madler/zlib)
 

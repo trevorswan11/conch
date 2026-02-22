@@ -536,6 +536,8 @@ fn addArtifacts(b: *std.Build, config: struct {
         .include_paths = &.{
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
+        },
+        .system_include_paths = &.{
             magic_enum_inc,
             llvm_config.include_dir,
         },
@@ -555,6 +557,8 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.cli.inc),
             b.path(ProjectPaths.compiler.inc),
             b.path(ProjectPaths.core.inc),
+        },
+        .system_include_paths = &.{
             magic_enum_inc,
             llvm_config.include_dir,
         },
@@ -634,6 +638,8 @@ fn addArtifacts(b: *std.Build, config: struct {
             .include_paths = &.{
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.core.tests),
+            },
+            .system_include_paths = &.{
                 catch2.path("extras"),
                 magic_enum_inc,
             },
@@ -660,6 +666,8 @@ fn addArtifacts(b: *std.Build, config: struct {
                 b.path(ProjectPaths.compiler.inc),
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.compiler.tests),
+            },
+            .system_include_paths = &.{
                 catch2.path("extras"),
                 magic_enum_inc,
             },
@@ -696,6 +704,8 @@ fn addArtifacts(b: *std.Build, config: struct {
                 b.path(ProjectPaths.cli.inc),
                 b.path(ProjectPaths.core.inc),
                 b.path(ProjectPaths.cli.tests),
+            },
+            .system_include_paths = &.{
                 catch2.path("extras"),
                 magic_enum_inc,
             },
@@ -831,6 +841,7 @@ fn createLibrary(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     include_paths: []const std.Build.LazyPath,
+    system_include_paths: ?[]const std.Build.LazyPath = null,
     source_root: ?std.Build.LazyPath = null,
     link_libraries: ?[]const *std.Build.Step.Compile = null,
     system_libraries: ?SystemLibraries = null,
@@ -846,6 +857,12 @@ fn createLibrary(b: *std.Build, config: struct {
 
     for (config.include_paths) |inc_path| {
         mod.addIncludePath(inc_path);
+    }
+
+    if (config.system_include_paths) |system_includes| {
+        for (system_includes) |inc_path| {
+            mod.addSystemIncludePath(inc_path);
+        }
     }
 
     if (config.link_libraries) |link_libraries| {
@@ -885,6 +902,7 @@ fn createExecutable(b: *std.Build, config: struct {
     target: ?std.Build.ResolvedTarget,
     optimize: ?std.builtin.OptimizeMode,
     include_paths: []const std.Build.LazyPath,
+    system_include_paths: ?[]const std.Build.LazyPath = null,
     source_root: ?std.Build.LazyPath = null,
     cxx_files: []const []const u8,
     cxx_flags: []const []const u8,
@@ -902,6 +920,12 @@ fn createExecutable(b: *std.Build, config: struct {
 
     for (config.include_paths) |include| {
         mod.addIncludePath(include);
+    }
+
+    if (config.system_include_paths) |system_includes| {
+        for (system_includes) |inc_path| {
+            mod.addSystemIncludePath(inc_path);
+        }
     }
 
     for (config.link_libraries) |library| {
