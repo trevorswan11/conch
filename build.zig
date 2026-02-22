@@ -188,6 +188,7 @@ const LLVMConfig = struct {
     }
 
     /// Compiles libxml2 from source as a static library
+    /// Reference: https://github.com/allyourcodebase/libxml2
     fn compileLibXml2(self: *const LLVMConfig, config: struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
