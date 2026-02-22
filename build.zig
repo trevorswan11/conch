@@ -226,6 +226,7 @@ const LLVMConfig = struct {
     }
 
     /// Compiles zlib from source as a static library
+    /// Reference: https://github.com/allyourcodebase/zlib
     fn compileZLib(self: *const LLVMConfig, config: struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
@@ -283,6 +284,32 @@ const LLVMConfig = struct {
             .link_libc = true,
         });
 
+        // CMake generates this required file usually
+        const config_header = b.addConfigHeader(.{
+            .style = .{
+                .cmake = libxml.path("config.h.cmake.in"),
+            },
+            .include_path = "config.h",
+        }, .{
+            .HAVE_STDLIB_H = 1,
+            .HAVE_STDINT_H = 1,
+            .HAVE_STAT = 1,
+            .HAVE_FSTAT = 1,
+            .HAVE_FUNC_ATTRIBUTE_DESTRUCTOR = 1,
+            .HAVE_LIBHISTORY = 0,
+            .HAVE_LIBREADLINE = 0,
+            .XML_SYSCONFDIR = 0,
+
+            // Platform-specific logic
+            .HAVE_DLOPEN = @intFromBool(config.target.result.os.tag != .windows),
+            .XML_THREAD_LOCAL = switch (config.target.result.os.tag) {
+                .windows => "__declspec(thread)",
+                else => "_Thread_local",
+            },
+        });
+        mod.addConfigHeader(config_header);
+
+        // Autotools generates this required file usually
         const xmlversion_header = b.addConfigHeader(.{
             .style = .{
                 .autoconf_at = libxml.path("include/libxml/xmlversion.h.in"),
@@ -318,19 +345,9 @@ const LLVMConfig = struct {
             .WITH_SCHEMATRON = 0,
             .WITH_MODULES = 0,
             .WITH_ZLIB = 1,
-            .MODULE_EXTENSION = ".so",
+            .MODULE_EXTENSION = config.target.result.dynamicLibSuffix(),
         });
         mod.addConfigHeader(xmlversion_header);
-
-        const config_header = b.addConfigHeader(.{
-            .style = .blank,
-            .include_path = "config.h",
-        }, .{
-            .HAVE_STAT = 1,
-            .HAVE_FSTAT = 1,
-            .HAVE_STDLIB_H = 1,
-        });
-        mod.addConfigHeader(config_header);
 
         mod.addCSourceFiles(.{
             .root = libxml.path("."),
@@ -738,92 +755,48 @@ fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.
     };
 
     const cppcheck_sources = [_][]const u8{
-        "externals/simplecpp/simplecpp.cpp",
-        "externals/tinyxml2/tinyxml2.cpp",
-        "frontend/frontend.cpp",
-
-        "cli/cmdlineparser.cpp",
-        "cli/cppcheckexecutor.cpp",
-        "cli/executor.cpp",
-        "cli/filelister.cpp",
-        "cli/main.cpp",
-        "cli/processexecutor.cpp",
-        "cli/sehwrapper.cpp",
-        "cli/signalhandler.cpp",
-        "cli/singleexecutor.cpp",
-        "cli/stacktrace.cpp",
-        "cli/threadexecutor.cpp",
-
-        "lib/addoninfo.cpp",
-        "lib/analyzerinfo.cpp",
-        "lib/astutils.cpp",
-        "lib/check.cpp",
-        "lib/check64bit.cpp",
-        "lib/checkassert.cpp",
-        "lib/checkautovariables.cpp",
-        "lib/checkbool.cpp",
-        "lib/checkbufferoverrun.cpp",
-        "lib/checkclass.cpp",
-        "lib/checkcondition.cpp",
-        "lib/checkers.cpp",
-        "lib/checkersidmapping.cpp",
-        "lib/checkersreport.cpp",
-        "lib/checkexceptionsafety.cpp",
-        "lib/checkfunctions.cpp",
-        "lib/checkinternal.cpp",
-        "lib/checkio.cpp",
-        "lib/checkleakautovar.cpp",
-        "lib/checkmemoryleak.cpp",
-        "lib/checknullpointer.cpp",
-        "lib/checkother.cpp",
-        "lib/checkpostfixoperator.cpp",
-        "lib/checksizeof.cpp",
-        "lib/checkstl.cpp",
-        "lib/checkstring.cpp",
-        "lib/checktype.cpp",
-        "lib/checkuninitvar.cpp",
-        "lib/checkunusedfunctions.cpp",
-        "lib/checkunusedvar.cpp",
-        "lib/checkvaarg.cpp",
-        "lib/clangimport.cpp",
-        "lib/color.cpp",
-        "lib/cppcheck.cpp",
-        "lib/ctu.cpp",
-        "lib/errorlogger.cpp",
-        "lib/errortypes.cpp",
-        "lib/findtoken.cpp",
-        "lib/forwardanalyzer.cpp",
-        "lib/fwdanalysis.cpp",
-        "lib/importproject.cpp",
-        "lib/infer.cpp",
-        "lib/keywords.cpp",
-        "lib/library.cpp",
-        "lib/mathlib.cpp",
-        "lib/path.cpp",
-        "lib/pathanalysis.cpp",
-        "lib/pathmatch.cpp",
-        "lib/platform.cpp",
-        "lib/preprocessor.cpp",
-        "lib/programmemory.cpp",
-        "lib/regex.cpp",
-        "lib/reverseanalyzer.cpp",
-        "lib/sarifreport.cpp",
-        "lib/settings.cpp",
-        "lib/standards.cpp",
-        "lib/summaries.cpp",
-        "lib/suppressions.cpp",
-        "lib/symboldatabase.cpp",
-        "lib/templatesimplifier.cpp",
-        "lib/timer.cpp",
-        "lib/token.cpp",
-        "lib/tokenize.cpp",
-        "lib/tokenlist.cpp",
-        "lib/utils.cpp",
-        "lib/valueflow.cpp",
-        "lib/vf_analyzers.cpp",
-        "lib/vf_common.cpp",
-        "lib/vf_settokenvalue.cpp",
-        "lib/vfvalue.cpp",
+        "externals/simplecpp/simplecpp.cpp", "externals/tinyxml2/tinyxml2.cpp",
+        "frontend/frontend.cpp",             "cli/cmdlineparser.cpp",
+        "cli/cppcheckexecutor.cpp",          "cli/executor.cpp",
+        "cli/filelister.cpp",                "cli/main.cpp",
+        "cli/processexecutor.cpp",           "cli/sehwrapper.cpp",
+        "cli/signalhandler.cpp",             "cli/singleexecutor.cpp",
+        "cli/stacktrace.cpp",                "cli/threadexecutor.cpp",
+        "lib/addoninfo.cpp",                 "lib/analyzerinfo.cpp",
+        "lib/astutils.cpp",                  "lib/check.cpp",
+        "lib/check64bit.cpp",                "lib/checkassert.cpp",
+        "lib/checkautovariables.cpp",        "lib/checkbool.cpp",
+        "lib/checkbufferoverrun.cpp",        "lib/checkclass.cpp",
+        "lib/checkcondition.cpp",            "lib/checkers.cpp",
+        "lib/checkersidmapping.cpp",         "lib/checkersreport.cpp",
+        "lib/checkexceptionsafety.cpp",      "lib/checkfunctions.cpp",
+        "lib/checkinternal.cpp",             "lib/checkio.cpp",
+        "lib/checkleakautovar.cpp",          "lib/checkmemoryleak.cpp",
+        "lib/checknullpointer.cpp",          "lib/checkother.cpp",
+        "lib/checkpostfixoperator.cpp",      "lib/checksizeof.cpp",
+        "lib/checkstl.cpp",                  "lib/checkstring.cpp",
+        "lib/checktype.cpp",                 "lib/checkuninitvar.cpp",
+        "lib/checkunusedfunctions.cpp",      "lib/checkunusedvar.cpp",
+        "lib/checkvaarg.cpp",                "lib/clangimport.cpp",
+        "lib/color.cpp",                     "lib/cppcheck.cpp",
+        "lib/ctu.cpp",                       "lib/errorlogger.cpp",
+        "lib/errortypes.cpp",                "lib/findtoken.cpp",
+        "lib/forwardanalyzer.cpp",           "lib/fwdanalysis.cpp",
+        "lib/importproject.cpp",             "lib/infer.cpp",
+        "lib/keywords.cpp",                  "lib/library.cpp",
+        "lib/mathlib.cpp",                   "lib/path.cpp",
+        "lib/pathanalysis.cpp",              "lib/pathmatch.cpp",
+        "lib/platform.cpp",                  "lib/preprocessor.cpp",
+        "lib/programmemory.cpp",             "lib/regex.cpp",
+        "lib/reverseanalyzer.cpp",           "lib/sarifreport.cpp",
+        "lib/settings.cpp",                  "lib/standards.cpp",
+        "lib/summaries.cpp",                 "lib/suppressions.cpp",
+        "lib/symboldatabase.cpp",            "lib/templatesimplifier.cpp",
+        "lib/timer.cpp",                     "lib/token.cpp",
+        "lib/tokenize.cpp",                  "lib/tokenlist.cpp",
+        "lib/utils.cpp",                     "lib/valueflow.cpp",
+        "lib/vf_analyzers.cpp",              "lib/vf_common.cpp",
+        "lib/vf_settokenvalue.cpp",          "lib/vfvalue.cpp",
     };
 
     // The path needs to be fixed on windows due to cppcheck internals
