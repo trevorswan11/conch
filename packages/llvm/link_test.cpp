@@ -1,8 +1,8 @@
 #include <print>
 
-#include "llvm/Support/InitLLVM.h"
+#include <llvm/Support/InitLLVM.h>
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     llvm::InitLLVM test{argc, argv};
     std::println("Hello, World!");
 }

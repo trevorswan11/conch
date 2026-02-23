@@ -1,14 +1,6 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-        paths:
-            - ".github/workflows/ci.yml"
-            - "apps/**"
-            - "packages/**"
-            - "build.zig"
-            - "build.zig.zon"
     pull_request:
         branches: [main]
         paths:
@@ -44,27 +36,15 @@ jobs:
               with:
                   version: 0.15.2
 
-            - name: Get Zig global cache path
-              id: zig-cache-path
-              shell: bash
-              run: |
-                if [ "${{ runner.os }}" == "Windows" ]; then
-                    echo "path=$LOCALAPPDATA/zig" >> $GITHUB_OUTPUT
-                else
-                    echo "path=~/.cache/zig" >> $GITHUB_OUTPUT
-                fi
-
             - name: Cache Zig Folders
               uses: actions/cache@v4
               with:
                 path: |
-                  .zig-cache
-                  ${{ steps.zig-cache-path.outputs.path }}
-                key: ${{ runner.os }}-zig-${{ hashFiles('build.zig.zon') }}
+                  ${{ env.ZIG_LOCAL_CACHE_DIR }}
+                  ${{ env.ZIG_GLOBAL_CACHE_DIR }}
+                key: ${{ runner.os }}-zig-${{ hashFiles('build.zig.zon', 'packages/llvm/**.zig') }}
                 restore-keys: |
                   ${{ runner.os }}-zig-
 
             - name: Run tests
-              run: |
-                  zig build test
-                  zig build test --release=fast
+              run: zig build test

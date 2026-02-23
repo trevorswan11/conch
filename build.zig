@@ -229,6 +229,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         .auto_install = config.auto_install,
         .link_test_cxx_flags = config.cxx_flags,
     });
+    _ = llvm;
 
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
@@ -240,13 +241,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.core.inc),
         },
         .system_include_paths = &.{magic_enum_inc},
-        .link_libraries = &.{
-            libcore,
-            llvm.target_deps.libxml2.artifact,
-            llvm.target_deps.zlib.artifact,
-            llvm.target_deps.zstd.artifact,
-            llvm.host_support,
-        },
+        .link_libraries = &.{libcore},
         .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
         .cxx_flags = config.cxx_flags,
     });

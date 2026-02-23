@@ -1,9 +1,9 @@
 //! LLVM Source Compilation rules. All artifacts are compiled as ReleaseSafe.
 const std = @import("std");
 
-const support_sources = @import("support_sources.zig");
-const tablegen_sources = @import("tablegen_sources.zig");
-const td_files = @import("td_files.zig");
+const support_sources = @import("sources/support.zig");
+const tablegen_sources = @import("sources/tablegen.zig");
+const td_files = @import("sources/td.zig");
 
 const ThirdParty = struct {
     const siphash_inc = "third-party/siphash/include";
@@ -124,8 +124,12 @@ fn createLinkTest(self: *const Self, config: struct {
         .file = b.path("packages/llvm/link_test.cpp"),
         .flags = config.cxx_flags,
     });
-    mod.linkLibrary(self.host_support);
     mod.addSystemIncludePath(self.llvm_include);
+
+    mod.linkLibrary(self.host_support);
+    mod.linkLibrary(self.target_deps.libxml2.artifact);
+    mod.linkLibrary(self.target_deps.zlib.artifact);
+    mod.linkLibrary(self.target_deps.zstd.artifact);
 
     const exe = b.addExecutable(.{
         .name = "llvm_link_test",
@@ -263,7 +267,7 @@ fn createConfigHeaders(
         .HAVE_ICU = 0,
         .HAVE_ICONV = 0,
         .LLVM_SUPPORT_XCODE_SIGNPOSTS = @intFromBool(is_darwin),
-        .BACKTRACE_HEADER = if (is_darwin) "execinfo.h" else "link.h",
+        .BACKTRACE_HEADER = if (is_darwin or is_linux) "execinfo.h" else "link.h",
         .HOST_LINK_VERSION = "0",
         .LLVM_TARGET_TRIPLE_ENV = "",
         .LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO = 1,
