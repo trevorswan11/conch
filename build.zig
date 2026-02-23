@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const LLVM = @import("packages/llvm/LLVM.zig");
+
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseFast,
@@ -96,212 +98,7 @@ const ProjectPaths = struct {
 
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
-};
-
-const LLVMConfig = struct {
-    const whitespace = " \r\n\t";
-
-    const Dependency = struct {
-        dependency: *std.Build.Dependency,
-        artifact: *std.Build.Step.Compile,
-    };
-
-    b: *std.Build,
-
-    llvm_config_path: []const u8,
-    version: std.SemanticVersion,
-
-    pub fn dependencies(self: *const LLVMConfig, config: struct {
-        target: std.Build.ResolvedTarget,
-        optimize: std.builtin.OptimizeMode,
-        auto_install: bool,
-    }) !struct {
-        libxml2: Dependency,
-        zlib: Dependency,
-    } {
-        const zlib = try self.compileZLib(.{
-            .target = config.target,
-            .optimize = config.optimize,
-        });
-
-        const libxml2 = self.compileLibXml2(.{
-            .target = config.target,
-            .optimize = config.optimize,
-            .zlib_include = zlib.dependency.path("."),
-        });
-
-        const b = self.b;
-        if (config.auto_install) {
-            b.installArtifact(zlib.artifact);
-            b.installArtifact(libxml2.artifact);
-        }
-
-        return .{
-            .libxml2 = libxml2,
-            .zlib = zlib,
-        };
-    }
-
-    /// Compiles zlib from source as a static library
-    /// Reference: https://github.com/allyourcodebase/zlib
-    fn compileZLib(self: *const LLVMConfig, config: struct {
-        target: std.Build.ResolvedTarget,
-        optimize: std.builtin.OptimizeMode,
-    }) !Dependency {
-        const b = self.b;
-        const zlib = b.dependency("zlib", .{});
-        const mod = b.createModule(.{
-            .target = config.target,
-            .optimize = config.optimize,
-            .link_libc = true,
-        });
-
-        const src_files = [_][]const u8{
-            "adler32.c", "compress.c", "crc32.c",   "deflate.c",
-            "gzclose.c", "gzlib.c",    "gzread.c",  "gzwrite.c",
-            "infback.c", "inffast.c",  "inflate.c", "inftrees.c",
-            "trees.c",   "uncompr.c",  "zutil.c",
-        };
-
-        var flags: std.ArrayList([]const u8) = .empty;
-        try flags.appendSlice(b.allocator, &.{ "-std=c11", "-D_REENTRANT" });
-        if (config.target.result.os.tag != .windows) {
-            try flags.appendSlice(b.allocator, &.{ "-DHAVE_UNISTD_H", "-DHAVE_SYS_TYPES_H" });
-        } else {
-            try flags.append(b.allocator, "-DWIN32");
-        }
-
-        mod.addCSourceFiles(.{
-            .root = zlib.path("."),
-            .files = &src_files,
-            .flags = flags.items,
-        });
-        mod.addIncludePath(zlib.path("."));
-
-        return .{
-            .dependency = zlib,
-            .artifact = b.addLibrary(.{
-                .name = "z",
-                .root_module = mod,
-            }),
-        };
-    }
-
-    /// Compiles libxml2 from source as a static library
-    fn compileLibXml2(self: *const LLVMConfig, config: struct {
-        target: std.Build.ResolvedTarget,
-        optimize: std.builtin.OptimizeMode,
-        zlib_include: std.Build.LazyPath,
-    }) Dependency {
-        const b = self.b;
-        const libxml = b.dependency("libxml2", .{});
-        const mod = b.createModule(.{
-            .target = config.target,
-            .optimize = config.optimize,
-            .link_libc = true,
-        });
-
-        // CMake generates this required file usually
-        const config_header = b.addConfigHeader(.{
-            .style = .{
-                .cmake = libxml.path("config.h.cmake.in"),
-            },
-            .include_path = "config.h",
-        }, .{
-            .HAVE_STDLIB_H = 1,
-            .HAVE_STDINT_H = 1,
-            .HAVE_STAT = 1,
-            .HAVE_FSTAT = 1,
-            .HAVE_FUNC_ATTRIBUTE_DESTRUCTOR = 1,
-            .HAVE_LIBHISTORY = 0,
-            .HAVE_LIBREADLINE = 0,
-            .XML_SYSCONFDIR = 0,
-
-            // Platform-specific logic
-            .HAVE_DLOPEN = @intFromBool(config.target.result.os.tag != .windows),
-            .XML_THREAD_LOCAL = switch (config.target.result.os.tag) {
-                .windows => "__declspec(thread)",
-                else => "_Thread_local",
-            },
-        });
-        mod.addConfigHeader(config_header);
-
-        // Autotools generates this required file usually
-        const xmlversion_header = b.addConfigHeader(.{
-            .style = .{
-                .autoconf_at = libxml.path("include/libxml/xmlversion.h.in"),
-            },
-            .include_path = "libxml/xmlversion.h",
-        }, .{
-            .VERSION = "2.15.1",
-            .LIBXML_VERSION_NUMBER = 21501,
-            .LIBXML_VERSION_EXTRA = "-conch-static",
-            .WITH_THREADS = 1,
-            .WITH_THREAD_ALLOC = 1,
-            .WITH_OUTPUT = 1,
-            .WITH_PUSH = 1,
-            .WITH_READER = 1,
-            .WITH_PATTERN = 1,
-            .WITH_WRITER = 1,
-            .WITH_SAX1 = 1,
-            .WITH_HTTP = 0,
-            .WITH_VALID = 1,
-            .WITH_HTML = 1,
-            .WITH_C14N = 0,
-            .WITH_CATALOG = 0,
-            .WITH_XPATH = 1,
-            .WITH_XPTR = 1,
-            .WITH_XINCLUDE = 1,
-            .WITH_ICONV = 1,
-            .WITH_ICU = 0,
-            .WITH_ISO8859X = 1,
-            .WITH_DEBUG = 1,
-            .WITH_REGEXPS = 1,
-            .WITH_RELAXNG = 0,
-            .WITH_SCHEMAS = 0,
-            .WITH_SCHEMATRON = 0,
-            .WITH_MODULES = 0,
-            .WITH_ZLIB = 1,
-            .MODULE_EXTENSION = config.target.result.dynamicLibSuffix(),
-        });
-        mod.addConfigHeader(xmlversion_header);
-
-        mod.addCSourceFiles(.{
-            .root = libxml.path("."),
-            .files = &.{
-                "buf.c",       "dict.c",      "entities.c", "error.c",           "globals.c",
-                "hash.c",      "list.c",      "parser.c",   "parserInternals.c", "SAX2.c",
-                "threads.c",   "tree.c",      "uri.c",      "valid.c",           "xmlIO.c",
-                "xmlmemory.c", "xmlstring.c",
-            },
-            .flags = &.{ "-std=c11", "-D_REENTRANT" },
-        });
-        mod.addIncludePath(libxml.path("include"));
-        mod.addIncludePath(config.zlib_include);
-
-        const lib = b.addLibrary(.{
-            .name = "xml2",
-            .root_module = mod,
-        });
-
-        return .{
-            .dependency = libxml,
-            .artifact = lib,
-        };
-    }
-
-    fn trimWhitespace(str: []const u8) []const u8 {
-        return std.mem.trim(u8, str, whitespace);
-    }
-
-    fn tokenizeWhitespace(str: []const u8) std.mem.TokenIterator(u8, .any) {
-        return std.mem.tokenizeAny(u8, str, whitespace);
-    }
-
-    // Runs llvm-config with the provided args. The result is owned by the build.
-    fn run(self: *const LLVMConfig, comptime args: []const []const u8) []u8 {
-        return self.b.run(.{self.llvm_config_path} ++ args);
-    }
+    const llvm = "packages/llvm/";
 };
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -425,6 +222,14 @@ fn addArtifacts(b: *std.Build, config: struct {
     });
     if (config.auto_install) b.installArtifact(libcore);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
+
+    // LLVM is compiled from source because I like burning compute or something
+    const llvm: LLVM = try .build(b, .{
+        .target = config.target,
+        .auto_install = config.auto_install,
+        .link_test_cxx_flags = config.cxx_flags,
+    });
+    _ = llvm;
 
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
@@ -1024,6 +829,7 @@ fn addFmtStep(b: *std.Build, config: struct {
 }) !void {
     const zig_paths: []const []const u8 = &.{
         "build.zig",
+        ProjectPaths.llvm ++ "LLVM.zig",
         "build.zig.zon",
         ProjectPaths.test_runner ++ "main.zig",
     };
@@ -1082,6 +888,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.core.tests));
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.compiler.tests));
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.cli.tests));
+    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.llvm));
 
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
@@ -1228,6 +1035,11 @@ const LOCCounter = struct {
             try collectFiles(b, "packages", .{
                 .allowed_extensions = &extensions,
                 .extra_files = &.{"build.zig"},
+                .dropped_files = &.{
+                    "td_files.zig",
+                    "support_sources.zig",
+                    "tablegen_sources.zig",
+                },
             }),
         );
 
