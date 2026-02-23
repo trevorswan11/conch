@@ -45,6 +45,8 @@ target_support: *std.Build.Step.Compile = undefined,
 pub fn build(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     auto_install: bool,
+    /// Flags for the link test ONLY, not applied to LLVM artifacts!
+    cxx_flags: []const []const u8,
 }) !Self {
     const upstream = b.dependency("llvm", .{});
     var llvm: Self = .{
@@ -79,6 +81,24 @@ pub fn build(b: *std.Build, config: struct {
         .deps = llvm.target_deps,
         .auto_install = config.auto_install,
     });
+
+    // Test exe for linkage
+    const llvm_link_test_mod = b.createModule(.{
+        .optimize = .Debug,
+        .target = b.graph.host,
+        .link_libcpp = true,
+    });
+    llvm_link_test_mod.addCSourceFile(.{
+        .file = b.path("packages/llvm/link_test.cpp"),
+        .flags = config.cxx_flags,
+    });
+    llvm_link_test_mod.linkLibrary(llvm.host_support);
+    llvm_link_test_mod.addSystemIncludePath(llvm.llvm_include);
+    const llvm_link_test_exe = b.addExecutable(.{
+        .name = "llvm_link_test",
+        .root_module = llvm_link_test_mod,
+    });
+    b.installArtifact(llvm_link_test_exe);
 
     return llvm;
 }

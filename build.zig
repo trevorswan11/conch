@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const LLVM = @import("LLVM.zig");
+const LLVM = @import("packages/llvm/LLVM.zig");
 
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{
@@ -98,6 +98,7 @@ const ProjectPaths = struct {
 
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
+    const llvm = "packages/llvm/";
 };
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -226,24 +227,8 @@ fn addArtifacts(b: *std.Build, config: struct {
     const llvm: LLVM = try .build(b, .{
         .target = config.target,
         .auto_install = config.auto_install,
+        .cxx_flags = config.cxx_flags,
     });
-
-    const example_mod = b.createModule(.{
-        .optimize = .Debug,
-        .target = b.graph.host,
-        .link_libcpp = true,
-    });
-    example_mod.addCSourceFile(.{
-        .file = b.path("packages/llvm-example/main.cpp"),
-        .flags = config.cxx_flags,
-    });
-    example_mod.linkLibrary(llvm.host_support);
-    example_mod.addSystemIncludePath(llvm.llvm_include);
-    const example_exe = b.addExecutable(.{
-        .name = "example",
-        .root_module = example_mod,
-    });
-    b.installArtifact(example_exe);
 
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
@@ -849,7 +834,7 @@ fn addFmtStep(b: *std.Build, config: struct {
 }) !void {
     const zig_paths: []const []const u8 = &.{
         "build.zig",
-        "LLVM.zig",
+        ProjectPaths.llvm ++ "LLVM.zig",
         "build.zig.zon",
         ProjectPaths.test_runner ++ "main.zig",
     };
@@ -908,6 +893,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.core.tests));
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.compiler.tests));
     cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.cli.tests));
+    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.llvm));
 
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
@@ -1053,7 +1039,7 @@ const LOCCounter = struct {
             b.allocator,
             try collectFiles(b, "packages", .{
                 .allowed_extensions = &extensions,
-                .extra_files = &.{ "build.zig", "LLVM.zig" },
+                .extra_files = &.{"build.zig"},
             }),
         );
 
