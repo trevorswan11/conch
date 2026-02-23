@@ -227,7 +227,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     const llvm: LLVM = try .build(b, .{
         .target = config.target,
         .auto_install = config.auto_install,
-        .cxx_flags = config.cxx_flags,
+        .link_test_cxx_flags = config.cxx_flags,
     });
 
     // The actual compiler static library
@@ -1040,6 +1040,11 @@ const LOCCounter = struct {
             try collectFiles(b, "packages", .{
                 .allowed_extensions = &extensions,
                 .extra_files = &.{"build.zig"},
+                .dropped_files = &.{
+                    "td_files.zig",
+                    "support_sources.zig",
+                    "tablegen_sources.zig",
+                },
             }),
         );
 

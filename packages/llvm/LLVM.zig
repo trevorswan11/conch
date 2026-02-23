@@ -1,6 +1,14 @@
 //! LLVM Source Compilation rules. All artifacts are compiled as ReleaseSafe.
 const std = @import("std");
 
+const support_sources = @import("support_sources.zig");
+const tablegen_sources = @import("tablegen_sources.zig");
+const td_files = @import("td_files.zig");
+
+const ThirdParty = struct {
+    const siphash_inc = "third-party/siphash/include";
+};
+
 const Dependencies = struct {
     const Dependency = struct {
         dependency: *std.Build.Dependency,
@@ -29,6 +37,15 @@ const common_llvm_cxx_flags = [_][]const u8{
     "-fno-rtti",
 };
 
+const enabled_targets = &[_][]const u8{
+    "X86",
+    "AArch64",
+    "ARM",
+    "RISCV",
+    "WebAssembly",
+    "Xtensa",
+};
+
 const Self = @This();
 
 b: *std.Build,
@@ -46,7 +63,7 @@ pub fn build(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
     auto_install: bool,
     /// Flags for the link test ONLY, not applied to LLVM artifacts!
-    cxx_flags: []const []const u8,
+    link_test_cxx_flags: []const []const u8,
 }) !Self {
     const upstream = b.dependency("llvm", .{});
     var llvm: Self = .{
@@ -82,37 +99,85 @@ pub fn build(b: *std.Build, config: struct {
         .auto_install = config.auto_install,
     });
 
-    // Test exe for linkage
-    const llvm_link_test_mod = b.createModule(.{
-        .optimize = .Debug,
+    const llvm_link_test_exe = llvm.createLinkTest(.{
         .target = b.graph.host,
-        .link_libcpp = true,
+        .cxx_flags = config.link_test_cxx_flags,
     });
-    llvm_link_test_mod.addCSourceFile(.{
-        .file = b.path("packages/llvm/link_test.cpp"),
-        .flags = config.cxx_flags,
-    });
-    llvm_link_test_mod.linkLibrary(llvm.host_support);
-    llvm_link_test_mod.addSystemIncludePath(llvm.llvm_include);
-    const llvm_link_test_exe = b.addExecutable(.{
-        .name = "llvm_link_test",
-        .root_module = llvm_link_test_mod,
-    });
-    b.installArtifact(llvm_link_test_exe);
+    if (config.auto_install) b.installArtifact(llvm_link_test_exe);
 
     return llvm;
 }
 
-/// Need More, see https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/Targets.h.cmake
-/// and friends
-fn createConfigHeaders(
-    self: *const Self,
+/// Creates a custom runnable target to test LLVM linkage against a C++23 source file
+fn createLinkTest(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
-) !struct {
+    cxx_flags: []const []const u8,
+}) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .optimize = .Debug,
+        .target = config.target,
+        .link_libcpp = true,
+    });
+
+    mod.addCSourceFile(.{
+        .file = b.path("packages/llvm/link_test.cpp"),
+        .flags = config.cxx_flags,
+    });
+    mod.linkLibrary(self.host_support);
+    mod.addSystemIncludePath(self.llvm_include);
+
+    const exe = b.addExecutable(.{
+        .name = "llvm_link_test",
+        .root_module = mod,
+    });
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    const run_step = b.step("link-test", "Run the llvm link test executable");
+    run_step.dependOn(&run_cmd.step);
+
+    return exe;
+}
+
+const ConfigHeaders = struct {
     config_h: *std.Build.Step.ConfigHeader,
     llvm_config_h: *std.Build.Step.ConfigHeader,
     abi_breaking_h: *std.Build.Step.ConfigHeader,
-} {
+    targets_h: *std.Build.Step.ConfigHeader,
+    asm_parsers_def: *std.Build.Step.ConfigHeader,
+    asm_printers_def: *std.Build.Step.ConfigHeader,
+    disassemblers_def: *std.Build.Step.ConfigHeader,
+    target_exegesis_def: *std.Build.Step.ConfigHeader,
+    target_mcas_def: *std.Build.Step.ConfigHeader,
+    targets_def: *std.Build.Step.ConfigHeader,
+
+    pub fn array(self: *const ConfigHeaders) [10]*std.Build.Step.ConfigHeader {
+        return .{
+            self.config_h,
+            self.llvm_config_h,
+            self.abi_breaking_h,
+            self.targets_h,
+            self.asm_parsers_def,
+            self.asm_printers_def,
+            self.disassemblers_def,
+            self.target_exegesis_def,
+            self.target_mcas_def,
+            self.targets_def,
+        };
+    }
+};
+
+/// https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/llvm/include/llvm/Config
+fn createConfigHeaders(
+    self: *const Self,
+    target: std.Build.ResolvedTarget,
+) !ConfigHeaders {
     const b = self.b;
     const t = target.result;
     const is_darwin = t.os.tag.isDarwin();
@@ -127,7 +192,7 @@ fn createConfigHeaders(
     };
     const triple = try t.linuxTriple(b.allocator);
 
-    // https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/config.h.cmake
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/config.h.cmake
     const config = b.addConfigHeader(.{
         .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/config.h.cmake") },
         .include_path = "llvm/Config/config.h",
@@ -251,7 +316,7 @@ fn createConfigHeaders(
         .LLVM_PLUGIN_EXT = t.dynamicLibSuffix(),
     });
 
-    // https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/llvm-config.h.cmake
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/llvm-config.h.cmake
     const llvm_config = b.addConfigHeader(.{
         .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
         .include_path = "llvm/Config/llvm-config.h",
@@ -315,7 +380,7 @@ fn createConfigHeaders(
         .LLVM_ENABLE_ONDISK_CAS = 0,
     });
 
-    // https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/abi-breaking.h.cmake
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/abi-breaking.h.cmake
     const abi_breaking = b.addConfigHeader(.{
         .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/abi-breaking.h.cmake") },
         .include_path = "llvm/Config/abi-breaking.h",
@@ -324,11 +389,96 @@ fn createConfigHeaders(
         .LLVM_ENABLE_REVERSE_ITERATION = 0,
     });
 
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Targets.h.cmake
+    const targets_h = b.addConfigHeader(.{
+        .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/Targets.h.cmake") },
+        .include_path = "llvm/Config/Targets.h",
+    }, .{});
+
+    // Dynamically fill every single target check
+    inline for (enabled_targets) |enabled_target| {
+        var macro_buf: [enabled_target.len]u8 = undefined;
+        const macro_name = b.fmt("LLVM_HAS_{s}_TARGET", .{std.ascii.upperString(&macro_buf, enabled_target)});
+
+        // Check if current target is in our enabled list
+        const is_enabled: i32 = blk: for (enabled_targets) |enabled| {
+            if (std.mem.eql(u8, enabled_target, enabled)) {
+                break :blk 1;
+            }
+        } else 0;
+
+        targets_h.addValue(macro_name, i32, is_enabled);
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/AsmParsers.def.in
+    const asm_parsers = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/AsmParsers.def.in") },
+        .include_path = "llvm/Config/AsmParsers.def",
+    }, .{
+        .LLVM_ENUM_ASM_PARSERS = formatDef(b, enabled_targets, "LLVM_ASM_PARSER"),
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/AsmPrinters.def.in
+    const asm_printers = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/AsmPrinters.def.in") },
+        .include_path = "llvm/Config/AsmPrinters.def",
+    }, .{
+        .LLVM_ENUM_ASM_PRINTERS = formatDef(b, enabled_targets, "LLVM_ASM_PRINTER"),
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Disassemblers.def.in
+    const disassemblers = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/Disassemblers.def.in") },
+        .include_path = "llvm/Config/Disassemblers.def",
+    }, .{
+        .LLVM_ENUM_DISASSEMBLERS = formatDef(b, enabled_targets, "LLVM_DISASSEMBLER"),
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/TargetExegesis.def.in
+    const target_exegesis = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/TargetExegesis.def.in") },
+        .include_path = "llvm/Config/TargetExegesis.def",
+    }, .{
+        .LLVM_ENUM_EXEGESIS = formatDef(b, enabled_targets, "LLVM_EXEGESIS"),
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/TargetMCAs.def.in
+    const target_mcas = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/TargetMCAs.def.in") },
+        .include_path = "llvm/Config/TargetMCAs.def",
+    }, .{
+        .LLVM_ENUM_TARGETMCAS = formatDef(b, enabled_targets, "LLVM_TARGETMCA"),
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Targets.def.in
+    const targets_def = b.addConfigHeader(.{
+        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/Targets.def.in") },
+        .include_path = "llvm/Config/Targets.def",
+    }, .{
+        .LLVM_ENUM_TARGETS = formatDef(b, enabled_targets, "LLVM_TARGET"),
+    });
+
     return .{
         .config_h = config,
         .llvm_config_h = llvm_config,
         .abi_breaking_h = abi_breaking,
+        .targets_h = targets_h,
+        .asm_parsers_def = asm_parsers,
+        .asm_printers_def = asm_printers,
+        .disassemblers_def = disassemblers,
+        .target_exegesis_def = target_exegesis,
+        .target_mcas_def = target_mcas,
+        .targets_def = targets_def,
     };
+}
+
+// Creates "macro_name(target1) macro_name(target2)... "
+fn formatDef(b: *std.Build, targets: []const []const u8, macro_name: []const u8) []const u8 {
+    var list: std.ArrayList(u8) = .empty;
+    for (targets) |target| {
+        list.print(b.allocator, "{s}({s}) ", .{ macro_name, target }) catch unreachable;
+    }
+    return list.items;
 }
 
 fn support(self: *const Self, config: struct {
@@ -355,10 +505,12 @@ fn support(self: *const Self, config: struct {
     mod.linkLibrary(demangle_lib);
 
     const config_headers = try self.createConfigHeaders(config.target);
-    const support_root = self.llvm_root.path(b, SupportSources.common_path);
-    mod.addIncludePath(config_headers.config_h.getOutputDir());
-    mod.addIncludePath(config_headers.llvm_config_h.getOutputDir());
-    mod.addIncludePath(config_headers.abi_breaking_h.getOutputDir());
+    const config_header_array = config_headers.array();
+    for (config_header_array) |header| {
+        mod.addConfigHeader(header);
+    }
+
+    const support_root = self.llvm_root.path(b, support_sources.common_path);
     mod.addIncludePath(self.llvm_include);
     mod.addIncludePath(support_root);
     mod.addIncludePath(self.llvm_root.path(b, ThirdParty.siphash_inc));
@@ -366,23 +518,23 @@ fn support(self: *const Self, config: struct {
     // Compile sources
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &SupportSources.regex_c,
+        .files = &support_sources.regex_c,
         .flags = &.{"-std=c11"},
     });
     mod.addCSourceFiles(.{
-        .root = support_root.path(b, SupportSources.blake3_rel_path),
-        .files = &SupportSources.blake3,
+        .root = support_root.path(b, support_sources.blake3_rel_path),
+        .files = &support_sources.blake3,
         .flags = &.{"-std=c11"},
     });
 
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &SupportSources.common,
+        .files = &support_sources.common,
         .flags = &common_llvm_cxx_flags,
     });
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &SupportSources.common,
+        .files = &support_sources.common,
         .flags = &common_llvm_cxx_flags,
     });
 
@@ -392,7 +544,7 @@ fn support(self: *const Self, config: struct {
 
     // Specific windows compilation & linking
     if (t.os.tag == .windows) {
-        mod.addIncludePath(self.llvm_root.path(b, SupportSources.windows_rel_path));
+        mod.addIncludePath(self.llvm_root.path(b, support_sources.windows_rel_path));
         mod.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
         mod.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
         mod.addCMacro("_CRT_NONSTDC_NO_DEPRECATE", "");
@@ -409,7 +561,7 @@ fn support(self: *const Self, config: struct {
         mod.linkSystemLibrary("ws2_32", .{ .preferred_link_mode = .static });
         mod.linkSystemLibrary("ntdll", .{ .preferred_link_mode = .static });
     } else {
-        mod.addIncludePath(self.llvm_root.path(b, SupportSources.unix_rel_path));
+        mod.addIncludePath(self.llvm_root.path(b, support_sources.unix_rel_path));
         if (t.os.tag == .linux) {
             mod.linkSystemLibrary("rt", .{ .preferred_link_mode = .static });
             mod.linkSystemLibrary("dl", .{ .preferred_link_mode = .static });
@@ -423,15 +575,15 @@ fn support(self: *const Self, config: struct {
         .name = "LLVMSupport",
         .root_module = mod,
     });
-
-    lib.installConfigHeader(config_headers.config_h);
-    lib.installConfigHeader(config_headers.llvm_config_h);
-    lib.installConfigHeader(config_headers.abi_breaking_h);
+    for (config_header_array) |header| {
+        lib.installConfigHeader(header);
+    }
 
     if (config.auto_install) b.installArtifact(lib);
     return lib;
 }
 
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Demangle/CMakeLists.txt
 fn demangle(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -485,18 +637,18 @@ fn tablegen(
     };
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, TableGenSources.emitter_root),
-        .files = &TableGenSources.emitters,
+        .root = self.llvm_root.path(b, tablegen_sources.emitter_root),
+        .files = &tablegen_sources.emitters,
         .flags = &cpp_flags,
     });
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, TableGenSources.basic_root),
-        .files = &TableGenSources.basic,
+        .root = self.llvm_root.path(b, tablegen_sources.basic_root),
+        .files = &tablegen_sources.basic,
         .flags = &cpp_flags,
     });
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, TableGenSources.common_root),
-        .files = &TableGenSources.common,
+        .root = self.llvm_root.path(b, tablegen_sources.common_root),
+        .files = &tablegen_sources.common,
         .flags = &cpp_flags,
     });
 
@@ -510,6 +662,40 @@ fn tablegen(
     exe.linkLibrary(support_lib);
 
     return exe;
+}
+
+const BackendAction = struct {
+    name: []const u8,
+    flag: []const u8,
+};
+
+const backend_actions = [_]BackendAction{
+    .{ .name = "GenRegisterInfo", .flag = "-gen-register-info" },
+    .{ .name = "GenInstrInfo", .flag = "-gen-instr-info" },
+    .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
+    .{ .name = "GenAsmMatcher", .flag = "-gen-asm-matcher" },
+    .{ .name = "GenDAGISel", .flag = "-gen-dag-isel" },
+    .{ .name = "GenSubtargetInfo", .flag = "-gen-subtarget-info" },
+    .{ .name = "GenCallingConv", .flag = "-gen-callingconv" },
+};
+
+/// Uses tablegen to generate a build-time dependency for LLVM
+/// - name: The name of the generated .inc file
+/// - td_file: The .td file, relative to LLVM root
+/// - action: The tablegen action to run, e.g. "-gen-intrinsic-enums"
+fn addTableGen(
+    self: *const Self,
+    name: []const u8,
+    td_file: []const u8,
+    action: []const u8,
+) std.Build.LazyPath {
+    const b = self.b;
+    const run = b.addRunArtifact(self.host_tablegen);
+
+    run.addArg(action);
+    run.addDecoratedDirectoryArg("-I", self.llvm_include);
+    run.addFileArg(self.llvm_root.path(b, td_file));
+    return run.addOutputFileArg(b.fmt("{s}.inc", .{name}));
 }
 
 pub fn dependencies(self: *const Self, config: struct {
@@ -770,216 +956,3 @@ fn zstd(self: *const Self, config: struct {
         .artifact = lib,
     };
 }
-
-const ThirdParty = struct {
-    const siphash_inc = "third-party/siphash/include";
-};
-
-const TableGenSources = struct {
-    // https://github.com/llvm/llvm-project/blob/main/llvm/lib/TableGen/CMakeLists.txt
-    const basic_root = "llvm/lib/TableGen/";
-    const basic = [_][]const u8{
-        "DetailedRecordsBackend.cpp",
-        "Error.cpp",
-        "JSONBackend.cpp",
-        "Main.cpp",
-        "Parser.cpp",
-        "Record.cpp",
-        "SetTheory.cpp",
-        "StringMatcher.cpp",
-        "StringToOffsetTable.cpp",
-        "TableGenBackend.cpp",
-        "TableGenBackendSkeleton.cpp",
-        "TGLexer.cpp",
-        "TGParser.cpp",
-        "TGTimer.cpp",
-    };
-
-    // https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/Common/CMakeLists.txt
-    const common_root = emitter_root ++ "Common/";
-    const common = [_][]const u8{
-        "GlobalISel/CodeExpander.cpp",
-        "GlobalISel/CombinerUtils.cpp",
-        "GlobalISel/CXXPredicates.cpp",
-        "GlobalISel/GlobalISelMatchTable.cpp",
-        "GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp",
-        "GlobalISel/PatternParser.cpp",
-        "GlobalISel/Patterns.cpp",
-
-        "AsmWriterInst.cpp",
-        "CodeGenDAGPatterns.cpp",
-        "CodeGenHwModes.cpp",
-        "CodeGenInstAlias.cpp",
-        "CodeGenInstruction.cpp",
-        "CodeGenRegisters.cpp",
-        "CodeGenSchedule.cpp",
-        "CodeGenTarget.cpp",
-        "InfoByHwMode.cpp",
-        "InstructionEncoding.cpp",
-        "OptEmitter.cpp",
-        "PredicateExpander.cpp",
-        "SubtargetFeatureInfo.cpp",
-        "Types.cpp",
-        "Utils.cpp",
-        "VarLenCodeEmitterGen.cpp",
-    };
-
-    // https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/CMakeLists.txt
-    const emitter_root = "llvm/utils/TableGen/";
-    const emitters = [_][]const u8{
-        "AsmMatcherEmitter.cpp",            "AsmWriterEmitter.cpp",
-        "CallingConvEmitter.cpp",           "CodeEmitterGen.cpp",
-        "CodeGenMapTable.cpp",              "CompressInstEmitter.cpp",
-        "CTagsEmitter.cpp",                 "DAGISelEmitter.cpp",
-        "DAGISelMatcher.cpp",               "DAGISelMatcherEmitter.cpp",
-        "DAGISelMatcherGen.cpp",            "DAGISelMatcherOpt.cpp",
-        "DecoderEmitter.cpp",               "DecoderTableEmitter.cpp",
-        "DecoderTree.cpp",                  "DFAEmitter.cpp",
-        "DFAPacketizerEmitter.cpp",         "DisassemblerEmitter.cpp",
-        "DXILEmitter.cpp",                  "ExegesisEmitter.cpp",
-        "FastISelEmitter.cpp",              "GlobalISelCombinerEmitter.cpp",
-        "GlobalISelEmitter.cpp",            "InstrDocsEmitter.cpp",
-        "InstrInfoEmitter.cpp",             "llvm-tblgen.cpp",
-        "MacroFusionPredicatorEmitter.cpp", "OptionParserEmitter.cpp",
-        "OptionRSTEmitter.cpp",             "PseudoLoweringEmitter.cpp",
-        "RegisterBankEmitter.cpp",          "RegisterInfoEmitter.cpp",
-        "SDNodeInfoEmitter.cpp",            "SearchableTableEmitter.cpp",
-        "SubtargetEmitter.cpp",             "WebAssemblyDisassemblerEmitter.cpp",
-        "X86InstrMappingEmitter.cpp",       "X86DisassemblerTables.cpp",
-        "X86FoldTablesEmitter.cpp",         "X86MnemonicTables.cpp",
-        "X86ModRMFilters.cpp",              "X86RecognizableInstr.cpp",
-    };
-};
-
-/// https://github.com/llvm/llvm-project/blob/main/llvm/lib/Support/CMakeLists.txt
-const SupportSources = struct {
-    const common_path = "llvm/lib/Support/";
-    const common = [_][]const u8{
-        "ABIBreak.cpp",               "AMDGPUMetadata.cpp",
-        "APFixedPoint.cpp",           "APFloat.cpp",
-        "APInt.cpp",                  "APSInt.cpp",
-        "ARMBuildAttributes.cpp",     "AArch64AttributeParser.cpp",
-        "AArch64BuildAttributes.cpp", "ARMAttributeParser.cpp",
-        "ARMWinEH.cpp",               "Allocator.cpp",
-        "AutoConvert.cpp",            "Base64.cpp",
-        "BalancedPartitioning.cpp",   "BinaryStreamError.cpp",
-        "BinaryStreamReader.cpp",     "BinaryStreamRef.cpp",
-        "BinaryStreamWriter.cpp",     "BlockFrequency.cpp",
-        "BranchProbability.cpp",      "BuryPointer.cpp",
-        "CachePruning.cpp",           "Caching.cpp",
-        "circular_raw_ostream.cpp",   "Chrono.cpp",
-        "COM.cpp",                    "CodeGenCoverage.cpp",
-        "CommandLine.cpp",            "Compression.cpp",
-        "CRC.cpp",                    "ConvertUTF.cpp",
-        "ConvertEBCDIC.cpp",          "ConvertUTFWrapper.cpp",
-        "CrashRecoveryContext.cpp",   "CSKYAttributes.cpp",
-        "CSKYAttributeParser.cpp",    "DataExtractor.cpp",
-        "Debug.cpp",                  "DebugCounter.cpp",
-        "DeltaAlgorithm.cpp",         "DeltaTree.cpp",
-        "DivisionByConstantInfo.cpp", "DAGDeltaAlgorithm.cpp",
-        "DJB.cpp",                    "DynamicAPInt.cpp",
-        "ELFAttributes.cpp",          "ELFAttrParserCompact.cpp",
-        "ELFAttrParserExtended.cpp",  "Error.cpp",
-        "ErrorHandling.cpp",          "ExponentialBackoff.cpp",
-        "ExtensibleRTTI.cpp",         "FileCollector.cpp",
-        "FileUtilities.cpp",          "FileOutputBuffer.cpp",
-        "FloatingPointMode.cpp",      "FoldingSet.cpp",
-        "FormattedStream.cpp",        "FormatVariadic.cpp",
-        "GlobPattern.cpp",            "GraphWriter.cpp",
-        "HexagonAttributeParser.cpp", "HexagonAttributes.cpp",
-        "InitLLVM.cpp",               "InstructionCost.cpp",
-        "IntEqClasses.cpp",           "IntervalMap.cpp",
-        "JSON.cpp",                   "KnownBits.cpp",
-        "KnownFPClass.cpp",           "LEB128.cpp",
-        "LineIterator.cpp",           "Locale.cpp",
-        "LockFileManager.cpp",        "ManagedStatic.cpp",
-        "MathExtras.cpp",             "MemAlloc.cpp",
-        "MemoryBuffer.cpp",           "MemoryBufferRef.cpp",
-        "ModRef.cpp",                 "MD5.cpp",
-        "MSP430Attributes.cpp",       "MSP430AttributeParser.cpp",
-        "Mustache.cpp",               "NativeFormatting.cpp",
-        "OptimizedStructLayout.cpp",  "Optional.cpp",
-        "OptionStrCmp.cpp",           "PGOOptions.cpp",
-        "Parallel.cpp",               "PluginLoader.cpp",
-        "PrettyStackTrace.cpp",       "RandomNumberGenerator.cpp",
-        "Regex.cpp",                  "RewriteBuffer.cpp",
-        "RewriteRope.cpp",            "RISCVAttributes.cpp",
-        "RISCVAttributeParser.cpp",   "RISCVISAUtils.cpp",
-        "ScaledNumber.cpp",           "ScopedPrinter.cpp",
-        "SHA1.cpp",                   "SHA256.cpp",
-        "Signposts.cpp",              "SipHash.cpp",
-        "SlowDynamicAPInt.cpp",       "SmallPtrSet.cpp",
-        "SmallVector.cpp",            "SourceMgr.cpp",
-        "SpecialCaseList.cpp",        "Statistic.cpp",
-        "StringExtras.cpp",           "StringMap.cpp",
-        "StringSaver.cpp",            "StringRef.cpp",
-        "SuffixTreeNode.cpp",         "SuffixTree.cpp",
-        "SystemUtils.cpp",            "TarWriter.cpp",
-        "TextEncoding.cpp",           "ThreadPool.cpp",
-        "TimeProfiler.cpp",           "Timer.cpp",
-        "ToolOutputFile.cpp",         "TrieRawHashMap.cpp",
-        "Twine.cpp",                  "TypeSize.cpp",
-        "Unicode.cpp",                "UnicodeCaseFold.cpp",
-        "UnicodeNameToCodepoint.cpp", "UnicodeNameToCodepointGenerated.cpp",
-        "VersionTuple.cpp",           "VirtualFileSystem.cpp",
-        "WithColor.cpp",              "YAMLParser.cpp",
-        "YAMLTraits.cpp",             "raw_os_ostream.cpp",
-        "raw_ostream.cpp",            "raw_socket_stream.cpp",
-        "xxhash.cpp",                 "Z3Solver.cpp",
-
-        // System
-        "Atomic.cpp",                 "DynamicLibrary.cpp",
-        "Errno.cpp",                  "Memory.cpp",
-        "Path.cpp",                   "Process.cpp",
-        "Program.cpp",                "ProgramStack.cpp",
-        "RWMutex.cpp",                "Signals.cpp",
-        "Threading.cpp",              "Valgrind.cpp",
-        "Watchdog.cpp",
-    };
-
-    const regex_c = [_][]const u8{
-        "regcomp.c",
-        "regerror.c",
-        "regexec.c",
-        "regfree.c",
-        "regstrlcpy.c",
-    };
-
-    const blake3_rel_path = "BLAKE3";
-    const blake3 = [_][]const u8{
-        "blake3.c",
-        "blake3_dispatch.c",
-        "blake3_portable.c",
-    };
-
-    const unix_rel_path = "Unix";
-    const unix_specific = [_][]const u8{
-        "COM.inc",
-        "DynamicLibrary.inc",
-        "Jobserver.inc",
-        "Memory.inc",
-        "Path.inc",
-        "Process.inc",
-        "Program.inc",
-        "README.txt",
-        "Signals.inc",
-        "Threading.inc",
-        "Unix.h",
-        "Watchdog.inc",
-    };
-
-    const windows_rel_path = "Windows";
-    const windows_specific = [_][]const u8{
-        "COM.inc",
-        "DynamicLibrary.inc",
-        "Jobserver.inc",
-        "Memory.inc",
-        "Path.inc",
-        "Process.inc",
-        "Program.inc",
-        "Signals.inc",
-        "Threading.inc",
-        "Watchdog.inc",
-        "explicit_symbols.inc",
-    };
-};
