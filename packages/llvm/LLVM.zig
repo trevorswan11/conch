@@ -598,7 +598,7 @@ fn demangle(self: *const Self, config: struct {
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, "llvm/lib/demangle"),
+        .root = self.llvm_root.path(b, "llvm/lib/Demangle"),
         .files = &.{
             "DLangDemangle.cpp",
             "Demangle.cpp",
