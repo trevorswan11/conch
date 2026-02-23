@@ -28,6 +28,10 @@
             .url = "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
             .hash = "N-V-__8AAI4ANwDM8MWhHTUFLKfvLE_n2NQk6mh0sFDzhTqO",
         },
+        .zstd = .{
+            .url = "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz",
+            .hash = "N-V-__8AAPZ7fwBg4JoCzM_0o2A8wxH2hsUUeiU1iuZv53L5",
+        },
     },
     .paths = .{
         "apps",

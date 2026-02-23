@@ -98,58 +98,722 @@ const ProjectPaths = struct {
     const test_runner = "packages/test_runner/";
 };
 
-const LLVMConfig = struct {
-    const whitespace = " \r\n\t";
+const LibLLVM = struct {
+    const Dependencies = struct {
+        const Dependency = struct {
+            dependency: *std.Build.Dependency,
+            artifact: *std.Build.Step.Compile,
+        };
 
-    const Dependency = struct {
-        dependency: *std.Build.Dependency,
-        artifact: *std.Build.Step.Compile,
+        zlib: Dependency,
+        libxml2: Dependency,
+        zstd: Dependency,
+    };
+
+    const version: std.SemanticVersion = .{
+        .major = 21,
+        .minor = 1,
+        .patch = 8,
+    };
+    const version_str = std.fmt.comptimePrint(
+        "{}.{}.{}",
+        .{ version.major, version.minor, version.patch },
+    );
+
+    /// https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/CMakeLists.txt
+    const TableGenSources = struct {
+        const basic = [_][]const u8{
+            "llvm/lib/TableGen/Error.cpp",
+            "llvm/lib/TableGen/Main.cpp",
+            "llvm/lib/TableGen/Record.cpp",
+            "llvm/lib/TableGen/TGLexer.cpp",
+            "llvm/lib/TableGen/TGParser.cpp",
+            "llvm/lib/TableGen/TableGenBackend.cpp",
+            "llvm/lib/TableGen/DetailedRecordsBackend.cpp",
+        };
+
+        const common = [_][]const u8{
+            "llvm/utils/TableGen/Common/CodeGenDAGPatterns.cpp",
+            "llvm/utils/TableGen/Common/CodeGenHwModes.cpp",
+            "llvm/utils/TableGen/Common/CodeGenInstruction.cpp",
+            "llvm/utils/TableGen/Common/CodeGenRegisters.cpp",
+            "llvm/utils/TableGen/Common/CodeGenSchedule.cpp",
+            "llvm/utils/TableGen/Common/CodeGenTarget.cpp",
+            "llvm/utils/TableGen/Common/DAGISelMatcher.cpp",
+            "llvm/utils/TableGen/Common/GlobalISel/CXXPredicates.cpp",
+            "llvm/utils/TableGen/Common/GlobalISel/Patterns.cpp",
+            "llvm/utils/TableGen/Common/InfoByHwMode.cpp",
+            "llvm/utils/TableGen/Common/OptEmitter.cpp",
+            "llvm/utils/TableGen/Common/PredicateExpander.cpp",
+            "llvm/utils/TableGen/Common/SubtargetFeatureInfo.cpp",
+            "llvm/utils/TableGen/Common/VarLenCodeEmitterGen.cpp",
+        };
+
+        const emitters = [_][]const u8{
+            "llvm/utils/TableGen/AsmMatcherEmitter.cpp",
+            "llvm/utils/TableGen/AsmWriterEmitter.cpp",
+            "llvm/utils/TableGen/CallingConvEmitter.cpp",
+            "llvm/utils/TableGen/CodeEmitterGen.cpp",
+            "llvm/utils/TableGen/CodeGenMapTable.cpp",
+            "llvm/utils/TableGen/CompressInstEmitter.cpp",
+            "llvm/utils/TableGen/CTagsEmitter.cpp",
+            "llvm/utils/TableGen/DAGISelEmitter.cpp",
+            "llvm/utils/TableGen/DecoderEmitter.cpp",
+            "llvm/utils/TableGen/DecoderTableEmitter.cpp",
+            "llvm/utils/TableGen/DecoderTree.cpp",
+            "llvm/utils/TableGen/DFAEmitter.cpp",
+            "llvm/utils/TableGen/DFAPacketizerEmitter.cpp",
+            "llvm/utils/TableGen/DisassemblerEmitter.cpp",
+            "llvm/utils/TableGen/DXILEmitter.cpp",
+            "llvm/utils/TableGen/ExegesisEmitter.cpp",
+            "llvm/utils/TableGen/FastISelEmitter.cpp",
+            "llvm/utils/TableGen/GlobalISelCombinerEmitter.cpp",
+            "llvm/utils/TableGen/GlobalISelEmitter.cpp",
+            "llvm/utils/TableGen/InstrDocsEmitter.cpp",
+            "llvm/utils/TableGen/InstrInfoEmitter.cpp",
+            "llvm/utils/TableGen/llvm-tblgen.cpp",
+            "llvm/utils/TableGen/MacroFusionPredicatorEmitter.cpp",
+            "llvm/utils/TableGen/OptionParserEmitter.cpp",
+            "llvm/utils/TableGen/OptionRSTEmitter.cpp",
+            "llvm/utils/TableGen/PseudoLoweringEmitter.cpp",
+            "llvm/utils/TableGen/RegisterBankEmitter.cpp",
+            "llvm/utils/TableGen/RegisterInfoEmitter.cpp",
+            "llvm/utils/TableGen/SDNodeInfoEmitter.cpp",
+            "llvm/utils/TableGen/SearchableTableEmitter.cpp",
+            "llvm/utils/TableGen/SubtargetEmitter.cpp",
+            "llvm/utils/TableGen/WebAssemblyDisassemblerEmitter.cpp",
+            // Backend specific (X86)
+            "llvm/utils/TableGen/X86InstrMappingEmitter.cpp",
+            "llvm/utils/TableGen/X86DisassemblerTables.cpp",
+            "llvm/utils/TableGen/X86FoldTablesEmitter.cpp",
+            "llvm/utils/TableGen/X86MnemonicTables.cpp",
+            "llvm/utils/TableGen/X86ModRMFilters.cpp",
+            "llvm/utils/TableGen/X86RecognizableInstr.cpp",
+        };
+    };
+
+    /// https://github.com/llvm/llvm-project/blob/main/llvm/lib/Support/CMakeLists.txt
+    const SupportSources = struct {
+        const common = [_][]const u8{
+            "llvm/lib/Support/ABIBreak.cpp",
+            "llvm/lib/Support/AMDGPUMetadata.cpp",
+            "llvm/lib/Support/APFixedPoint.cpp",
+            "llvm/lib/Support/APFloat.cpp",
+            "llvm/lib/Support/APInt.cpp",
+            "llvm/lib/Support/APSInt.cpp",
+            "llvm/lib/Support/ARMBuildAttributes.cpp",
+            "llvm/lib/Support/AArch64AttributeParser.cpp",
+            "llvm/lib/Support/AArch64BuildAttributes.cpp",
+            "llvm/lib/Support/ARMAttributeParser.cpp",
+            "llvm/lib/Support/ARMWinEH.cpp",
+            "llvm/lib/Support/Allocator.cpp",
+            "llvm/lib/Support/AutoConvert.cpp",
+            "llvm/lib/Support/Base64.cpp",
+            "llvm/lib/Support/BalancedPartitioning.cpp",
+            "llvm/lib/Support/BinaryStreamError.cpp",
+            "llvm/lib/Support/BinaryStreamReader.cpp",
+            "llvm/lib/Support/BinaryStreamRef.cpp",
+            "llvm/lib/Support/BinaryStreamWriter.cpp",
+            "llvm/lib/Support/BlockFrequency.cpp",
+            "llvm/lib/Support/BranchProbability.cpp",
+            "llvm/lib/Support/BuryPointer.cpp",
+            "llvm/lib/Support/CachePruning.cpp",
+            "llvm/lib/Support/Caching.cpp",
+            "llvm/lib/Support/circular_raw_ostream.cpp",
+            "llvm/lib/Support/Chrono.cpp",
+            "llvm/lib/Support/COM.cpp",
+            "llvm/lib/Support/CodeGenCoverage.cpp",
+            "llvm/lib/Support/CommandLine.cpp",
+            "llvm/lib/Support/Compression.cpp",
+            "llvm/lib/Support/CRC.cpp",
+            "llvm/lib/Support/ConvertUTF.cpp",
+            "llvm/lib/Support/ConvertEBCDIC.cpp",
+            "llvm/lib/Support/ConvertUTFWrapper.cpp",
+            "llvm/lib/Support/CrashRecoveryContext.cpp",
+            "llvm/lib/Support/CSKYAttributes.cpp",
+            "llvm/lib/Support/CSKYAttributeParser.cpp",
+            "llvm/lib/Support/DataExtractor.cpp",
+            "llvm/lib/Support/Debug.cpp",
+            "llvm/lib/Support/DebugCounter.cpp",
+            "llvm/lib/Support/DeltaAlgorithm.cpp",
+            "llvm/lib/Support/DeltaTree.cpp",
+            "llvm/lib/Support/DivisionByConstantInfo.cpp",
+            "llvm/lib/Support/DAGDeltaAlgorithm.cpp",
+            "llvm/lib/Support/DJB.cpp",
+            "llvm/lib/Support/DynamicAPInt.cpp",
+            "llvm/lib/Support/ELFAttributes.cpp",
+            "llvm/lib/Support/ELFAttrParserCompact.cpp",
+            "llvm/lib/Support/ELFAttrParserExtended.cpp",
+            "llvm/lib/Support/Error.cpp",
+            "llvm/lib/Support/ErrorHandling.cpp",
+            "llvm/lib/Support/ExponentialBackoff.cpp",
+            "llvm/lib/Support/ExtensibleRTTI.cpp",
+            "llvm/lib/Support/FileCollector.cpp",
+            "llvm/lib/Support/FileUtilities.cpp",
+            "llvm/lib/Support/FileOutputBuffer.cpp",
+            "llvm/lib/Support/FloatingPointMode.cpp",
+            "llvm/lib/Support/FoldingSet.cpp",
+            "llvm/lib/Support/FormattedStream.cpp",
+            "llvm/lib/Support/FormatVariadic.cpp",
+            "llvm/lib/Support/GlobPattern.cpp",
+            "llvm/lib/Support/GraphWriter.cpp",
+            "llvm/lib/Support/HexagonAttributeParser.cpp",
+            "llvm/lib/Support/HexagonAttributes.cpp",
+            "llvm/lib/Support/InitLLVM.cpp",
+            "llvm/lib/Support/InstructionCost.cpp",
+            "llvm/lib/Support/IntEqClasses.cpp",
+            "llvm/lib/Support/IntervalMap.cpp",
+            "llvm/lib/Support/JSON.cpp",
+            "llvm/lib/Support/KnownBits.cpp",
+            "llvm/lib/Support/KnownFPClass.cpp",
+            "llvm/lib/Support/LEB128.cpp",
+            "llvm/lib/Support/LineIterator.cpp",
+            "llvm/lib/Support/Locale.cpp",
+            "llvm/lib/Support/LockFileManager.cpp",
+            "llvm/lib/Support/ManagedStatic.cpp",
+            "llvm/lib/Support/MathExtras.cpp",
+            "llvm/lib/Support/MemAlloc.cpp",
+            "llvm/lib/Support/MemoryBuffer.cpp",
+            "llvm/lib/Support/MemoryBufferRef.cpp",
+            "llvm/lib/Support/ModRef.cpp",
+            "llvm/lib/Support/MD5.cpp",
+            "llvm/lib/Support/MSP430Attributes.cpp",
+            "llvm/lib/Support/MSP430AttributeParser.cpp",
+            "llvm/lib/Support/Mustache.cpp",
+            "llvm/lib/Support/NativeFormatting.cpp",
+            "llvm/lib/Support/OptimizedStructLayout.cpp",
+            "llvm/lib/Support/Optional.cpp",
+            "llvm/lib/Support/OptionStrCmp.cpp",
+            "llvm/lib/Support/PGOOptions.cpp",
+            "llvm/lib/Support/Parallel.cpp",
+            "llvm/lib/Support/PluginLoader.cpp",
+            "llvm/lib/Support/PrettyStackTrace.cpp",
+            "llvm/lib/Support/RandomNumberGenerator.cpp",
+            "llvm/lib/Support/Regex.cpp",
+            "llvm/lib/Support/RewriteBuffer.cpp",
+            "llvm/lib/Support/RewriteRope.cpp",
+            "llvm/lib/Support/RISCVAttributes.cpp",
+            "llvm/lib/Support/RISCVAttributeParser.cpp",
+            "llvm/lib/Support/RISCVISAUtils.cpp",
+            "llvm/lib/Support/ScaledNumber.cpp",
+            "llvm/lib/Support/ScopedPrinter.cpp",
+            "llvm/lib/Support/SHA1.cpp",
+            "llvm/lib/Support/SHA256.cpp",
+            "llvm/lib/Support/Signposts.cpp",
+            "llvm/lib/Support/SipHash.cpp",
+            "llvm/lib/Support/SlowDynamicAPInt.cpp",
+            "llvm/lib/Support/SmallPtrSet.cpp",
+            "llvm/lib/Support/SmallVector.cpp",
+            "llvm/lib/Support/SourceMgr.cpp",
+            "llvm/lib/Support/SpecialCaseList.cpp",
+            "llvm/lib/Support/Statistic.cpp",
+            "llvm/lib/Support/StringExtras.cpp",
+            "llvm/lib/Support/StringMap.cpp",
+            "llvm/lib/Support/StringSaver.cpp",
+            "llvm/lib/Support/StringRef.cpp",
+            "llvm/lib/Support/SuffixTreeNode.cpp",
+            "llvm/lib/Support/SuffixTree.cpp",
+            "llvm/lib/Support/SystemUtils.cpp",
+            "llvm/lib/Support/TarWriter.cpp",
+            "llvm/lib/Support/TextEncoding.cpp",
+            "llvm/lib/Support/ThreadPool.cpp",
+            "llvm/lib/Support/TimeProfiler.cpp",
+            "llvm/lib/Support/Timer.cpp",
+            "llvm/lib/Support/ToolOutputFile.cpp",
+            "llvm/lib/Support/TrieRawHashMap.cpp",
+            "llvm/lib/Support/Twine.cpp",
+            "llvm/lib/Support/Unicode.cpp",
+            "llvm/lib/Support/UnicodeCaseFold.cpp",
+            "llvm/lib/Support/UnicodeNameToCodepoint.cpp",
+            "llvm/lib/Support/UnicodeNameToCodepointGenerated.cpp",
+            "llvm/lib/Support/VersionTuple.cpp",
+            "llvm/lib/Support/VirtualFileSystem.cpp",
+            "llvm/lib/Support/WithColor.cpp",
+            "llvm/lib/Support/YAMLParser.cpp",
+            "llvm/lib/Support/YAMLTraits.cpp",
+            "llvm/lib/Support/raw_os_ostream.cpp",
+            "llvm/lib/Support/raw_ostream.cpp",
+            "llvm/lib/Support/raw_socket_stream.cpp",
+            "llvm/lib/Support/xxhash.cpp",
+            "llvm/lib/Support/Z3Solver.cpp",
+            "llvm/lib/Support/Atomic.cpp",
+            "llvm/lib/Support/DynamicLibrary.cpp",
+            "llvm/lib/Support/Errno.cpp",
+            "llvm/lib/Support/Memory.cpp",
+            "llvm/lib/Support/Path.cpp",
+            "llvm/lib/Support/Process.cpp",
+            "llvm/lib/Support/Program.cpp",
+            "llvm/lib/Support/Signals.cpp",
+            "llvm/lib/Support/Threading.cpp",
+            "llvm/lib/Support/Valgrind.cpp",
+            "llvm/lib/Support/Watchdog.cpp",
+        };
+
+        const regex_c = [_][]const u8{
+            "llvm/lib/Support/regcomp.c",
+            "llvm/lib/Support/regerror.c",
+            "llvm/lib/Support/regexec.c",
+            "llvm/lib/Support/regfree.c",
+            "llvm/lib/Support/regstrlcpy.c",
+        };
+
+        const blake3 = [_][]const u8{
+            "llvm/lib/Support/BLAKE3/blake3.c",
+            "llvm/lib/Support/BLAKE3/blake3_dispatch.c",
+            "llvm/lib/Support/BLAKE3/blake3_portable.c",
+        };
+
+        const windows_specific = [_][]const u8{
+            "llvm/lib/Support/Windows/DynamicLibrary.inc",
+            "llvm/lib/Support/Windows/Memory.inc",
+            "llvm/lib/Support/Windows/Path.inc",
+            "llvm/lib/Support/Windows/Process.inc",
+            "llvm/lib/Support/Windows/Program.inc",
+            "llvm/lib/Support/Windows/Signals.inc",
+            "llvm/lib/Support/Windows/Threading.inc",
+            "llvm/lib/Support/Windows/Watchdog.inc",
+        };
     };
 
     b: *std.Build,
+    llvm_dep: *std.Build.Dependency,
+    llvm_root: std.Build.LazyPath,
 
-    llvm_config_path: []const u8,
-    version: std.SemanticVersion,
+    host_tablegen: *std.Build.Step.Compile = undefined,
+    host_deps: Dependencies = undefined,
+    host_support: *std.Build.Step.Compile = undefined,
+    target_deps: Dependencies = undefined,
+    target_support: *std.Build.Step.Compile = undefined,
 
-    pub fn dependencies(self: *const LLVMConfig, config: struct {
+    pub fn build(b: *std.Build, config: struct {
         target: std.Build.ResolvedTarget,
-        optimize: std.builtin.OptimizeMode,
         auto_install: bool,
-    }) !struct {
-        libxml2: Dependency,
-        zlib: Dependency,
-    } {
-        const zlib = try self.compileZLib(.{
-            .target = config.target,
-            .optimize = config.optimize,
+    }) !LibLLVM {
+        const upstream = b.dependency("llvm", .{});
+        var llvm: LibLLVM = .{
+            .b = b,
+            .llvm_dep = upstream,
+            .llvm_root = upstream.path("."),
+        };
+
+        // Host Dependencies for TableGen
+        llvm.host_deps = try llvm.dependencies(.{
+            .target = b.graph.host,
+            .auto_install = false,
         });
 
-        const libxml2 = self.compileLibXml2(.{
+        llvm.host_support = try llvm.support(.{
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+            .deps = llvm.host_deps,
+        });
+        llvm.host_tablegen = llvm.tablegen(llvm.host_support);
+
+        // Target dependencies for conch
+        llvm.target_deps = try llvm.dependencies(.{
+            .target = config.target,
+            .auto_install = config.auto_install,
+        });
+        llvm.target_support = try llvm.support(.{
+            .target = config.target,
+            .optimize = .ReleaseSafe,
+            .deps = llvm.target_deps,
+        });
+
+        return llvm;
+    }
+
+    /// Need More, see https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/Targets.h.cmake
+    /// and friends
+    fn createConfigHeaders(
+        self: *const LibLLVM,
+        target: std.Build.ResolvedTarget,
+    ) !struct {
+        internal_config: *std.Build.Step.ConfigHeader,
+        external_config: *std.Build.Step.ConfigHeader,
+    } {
+        const b = self.b;
+        const t = target.result;
+        const is_darwin = t.os.tag.isDarwin();
+        const is_windows = t.os.tag == .windows;
+        const is_linux = t.os.tag == .linux;
+
+        const native_arch = switch (t.cpu.arch) {
+            .x86_64 => "X86",
+            .aarch64 => "AArch64",
+            .riscv64 => "RISCV",
+            else => "X86",
+        };
+        const triple = try t.linuxTriple(b.allocator);
+
+        // https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/config.h.cmake
+        const internal = b.addConfigHeader(.{
+            .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/config.h.cmake") },
+            .include_path = "llvm/Config/config.h",
+        }, .{
+            .PACKAGE_NAME = "LLVM",
+            .PACKAGE_VERSION = version_str,
+            .PACKAGE_STRING = "LLVM-" ++ version_str,
+            .PACKAGE_BUGREPORT = "https://github.com/llvm/llvm-project/issues/",
+            .PACKAGE_VENDOR = "Conch Project",
+            .BUG_REPORT_URL = "https://github.com/llvm/llvm-project/issues/",
+
+            .ENABLE_BACKTRACES = 1,
+            .ENABLE_CRASH_OVERRIDES = 1,
+            .LLVM_ENABLE_CRASH_DUMPS = 0,
+            .LLVM_WINDOWS_PREFER_FORWARD_SLASH = @intFromBool(is_windows),
+
+            // Functions and Headers
+            .HAVE_UNISTD_H = @intFromBool(!is_windows),
+            .HAVE_SYS_MMAN_H = @intFromBool(!is_windows),
+            .HAVE_SYS_IOCTL_H = @intFromBool(!is_windows),
+            .HAVE_POSIX_SPAWN = @intFromBool(!is_windows),
+            .HAVE_PREAD = @intFromBool(!is_windows),
+            .HAVE_PTHREAD_H = @intFromBool(!is_windows),
+            .HAVE_FUTIMENS = @intFromBool(!is_windows),
+            .HAVE_FUTIMES = @intFromBool(!is_windows),
+            .HAVE_GETPAGESIZE = @intFromBool(!is_windows),
+            .HAVE_GETRUSAGE = @intFromBool(!is_windows),
+            .HAVE_ISATTY = 1,
+            .HAVE_SETENV = @intFromBool(!is_windows),
+            .HAVE_STRERROR_R = @intFromBool(!is_windows),
+            .HAVE_SYSCONF = @intFromBool(!is_windows),
+            .HAVE_SIGALTSTACK = @intFromBool(!is_windows),
+            .HAVE_DLOPEN = @intFromBool(!is_windows),
+            .HAVE_BACKTRACE = @intFromBool(!is_windows),
+            .HAVE_SBRK = @intFromBool(!is_windows),
+
+            // Darwin Specific
+            .HAVE_MACH_MACH_H = @intFromBool(is_darwin),
+            .HAVE_MALLOC_MALLOC_H = @intFromBool(is_darwin),
+            .HAVE_MALLOC_ZONE_STATISTICS = @intFromBool(is_darwin),
+            .HAVE_PROC_PID_RUSAGE = @intFromBool(is_darwin),
+            .HAVE_CRASHREPORTER_INFO = @intFromBool(is_darwin),
+            .HAVE_CRASHREPORTERCLIENT_H = 0,
+
+            // Windows Specific
+            .HAVE_LIBPSAPI = @intFromBool(is_windows),
+            .HAVE__CHSIZE_S = @intFromBool(is_windows),
+            .HAVE__ALLOCA = @intFromBool(is_windows),
+            .stricmp = if (is_windows) "_stricmp" else "stricmp",
+            .strdup = if (is_windows) "_strdup" else "strdup",
+
+            // Allocation & Threading
+            .HAVE_MALLINFO = @intFromBool(is_linux),
+            .HAVE_MALLINFO2 = @intFromBool(is_linux),
+            .HAVE_MALLCTL = 0,
+            .HAVE_PTHREAD_GETNAME_NP = @intFromBool(is_linux or is_darwin),
+            .HAVE_PTHREAD_SETNAME_NP = @intFromBool(is_linux or is_darwin),
+            .HAVE_PTHREAD_GET_NAME_NP = 0,
+            .HAVE_PTHREAD_SET_NAME_NP = 0,
+            .HAVE_PTHREAD_MUTEX_LOCK = 1,
+            .HAVE_PTHREAD_RWLOCK_INIT = 1,
+            .HAVE_LIBPTHREAD = @intFromBool(!is_windows),
+
+            // GlobalISel & Extras
+            .LLVM_GISEL_COV_ENABLED = 0,
+            .LLVM_GISEL_COV_PREFIX = "",
+            .LLVM_ENABLE_LIBXML2 = 1,
+            .HAVE_ICU = 0,
+            .HAVE_ICONV = 0,
+            .LLVM_SUPPORT_XCODE_SIGNPOSTS = @intFromBool(is_darwin),
+            .BACKTRACE_HEADER = if (is_darwin) "execinfo.h" else "link.h",
+            .HOST_LINK_VERSION = "0",
+            .LLVM_TARGET_TRIPLE_ENV = "",
+            .LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO = 1,
+            .LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG = 1,
+
+            // Missing Boilerplate for LLVM headers
+            .HAVE_FFI_CALL = 0,
+            .HAVE_FFI_FFI_H = 0,
+            .HAVE_FFI_H = 0,
+            .HAVE_LIBEDIT = 0,
+            .HAVE_LIBPFM = 0,
+            .LIBPFM_HAS_FIELD_CYCLES = 0,
+            .HAVE_REGISTER_FRAME = 0,
+            .HAVE_DEREGISTER_FRAME = 0,
+            .HAVE_UNW_ADD_DYNAMIC_FDE = 0,
+            .HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC = @intFromBool(is_darwin),
+            .HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC = @intFromBool(is_linux),
+            .HAVE_VALGRIND_VALGRIND_H = 0,
+            .HAVE__UNWIND_BACKTRACE = 0,
+            .HAVE_DECL_ARC4RANDOM = @intFromBool(is_darwin),
+            .HAVE_DECL_FE_ALL_EXCEPT = 1,
+            .HAVE_DECL_FE_INEXACT = 1,
+            .HAVE_DECL_STRERROR_S = @intFromBool(is_windows),
+
+            // Host Intrinsics (Safe to set 0 for most modern compilers via Zig)
+            .HAVE___ALLOCA = 0,
+            .HAVE___ASHLDI3 = 0,
+            .HAVE___ASHRDI3 = 0,
+            .HAVE___CHKSTK = 0,
+            .HAVE___CHKSTK_MS = 0,
+            .HAVE___CMPDI2 = 0,
+            .HAVE___DIVDI3 = 0,
+            .HAVE___FIXDFDI = 0,
+            .HAVE___FIXSFDI = 0,
+            .HAVE___FLOATDIDF = 0,
+            .HAVE___LSHRDI3 = 0,
+            .HAVE___MAIN = 0,
+            .HAVE___MODDI3 = 0,
+            .HAVE___UDIVDI3 = 0,
+            .HAVE___UMODDI3 = 0,
+            .HAVE____CHKSTK = 0,
+            .HAVE____CHKSTK_MS = 0,
+
+            // Compiler Intrinsics
+            .HAVE_BUILTIN_THREAD_POINTER = 1,
+            .HAVE_GETAUXVAL = @intFromBool(is_linux),
+
+            // Extensions
+            .LTDL_SHLIB_EXT = t.dynamicLibSuffix(),
+            .LLVM_PLUGIN_EXT = t.dynamicLibSuffix(),
+        });
+
+        // https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Config/llvm-config.h.cmake
+        const external = b.addConfigHeader(.{
+            .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
+            .include_path = "llvm/Config/llvm-config.h",
+        }, .{
+            .LLVM_VERSION_MAJOR = @as(i64, @intCast(version.major)),
+            .LLVM_VERSION_MINOR = @as(i64, @intCast(version.minor)),
+            .LLVM_VERSION_PATCH = @as(i64, @intCast(version.patch)),
+            .PACKAGE_VERSION = version_str,
+
+            .LLVM_DEFAULT_TARGET_TRIPLE = triple,
+            .LLVM_HOST_TRIPLE = triple,
+
+            .LLVM_ENABLE_THREADS = 1,
+            .LLVM_HAS_ATOMICS = 1,
+            .LLVM_ON_UNIX = @intFromBool(!is_windows),
+            .LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS = 0,
+            .LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS = 0,
+
+            // Native Target Bootstrapping
+            .LLVM_NATIVE_ARCH = native_arch,
+            .LLVM_ENABLE_ZLIB = 1,
+            .LLVM_ENABLE_ZSTD = 1,
+            .LLVM_ENABLE_CURL = 0,
+            .LLVM_ENABLE_HTTPLIB = 0,
+            .LLVM_WITH_Z3 = 0,
+
+            // Optimization & Debug
+            .LLVM_UNREACHABLE_OPTIMIZE = 1,
+            .LLVM_ENABLE_DUMP = 1,
+            .LLVM_ENABLE_DIA_SDK = 0,
+            .HAVE_SYSEXITS_H = @intFromBool(!is_windows),
+
+            // Missing Logic for Native Initialization
+            .LLVM_NATIVE_ASMPARSER = null,
+            .LLVM_NATIVE_ASMPRINTER = null,
+            .LLVM_NATIVE_DISASSEMBLER = null,
+            .LLVM_NATIVE_TARGET = null,
+            .LLVM_NATIVE_TARGETINFO = null,
+            .LLVM_NATIVE_TARGETMC = null,
+            .LLVM_NATIVE_TARGETMCA = null,
+
+            // Performance & Stats
+            .LLVM_USE_INTEL_JITEVENTS = 0,
+            .LLVM_USE_OPROFILE = 0,
+            .LLVM_USE_PERF = 0,
+            .LLVM_FORCE_ENABLE_STATS = 0,
+            .LLVM_ENABLE_PROFCHECK = 0,
+            .LLVM_ENABLE_TELEMETRY = 0,
+
+            // Feature Flags
+            .LLVM_HAVE_TFLITE = 0,
+            .LLVM_BUILD_LLVM_DYLIB = 0,
+            .LLVM_BUILD_SHARED_LIBS = 0,
+            .LLVM_FORCE_USE_OLD_TOOLCHAIN = 0,
+            .LLVM_ENABLE_IO_SANDBOX = 0,
+            .LLVM_ENABLE_PLUGINS = 0,
+            .LLVM_HAS_LOGF128 = 0,
+
+            // Debug Location Tracking
+            .LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE = 0,
+            .LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN = 0,
+
+            // Storage
+            .LLVM_ENABLE_ONDISK_CAS = 0,
+        });
+
+        return .{
+            .internal_config = internal,
+            .external_config = external,
+        };
+    }
+
+    fn support(self: *const LibLLVM, config: struct {
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        deps: Dependencies,
+    }) !*std.Build.Step.Compile {
+        const b = self.b;
+        const t = config.target.result;
+
+        const mod = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
-            .zlib_include = zlib.dependency.path("."),
+            .link_libc = true,
+            .link_libcpp = true,
+        });
+
+        // Standard LLVM Defines for Windows
+        if (t.os.tag == .windows) {
+            mod.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
+            mod.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
+            mod.addCMacro("_CRT_NONSTDC_NO_DEPRECATE", "");
+            mod.addCMacro("_CRT_NONSTDC_NO_WARNINGS", "");
+            mod.addCMacro("_SCL_SECURE_NO_WARNINGS", "");
+            mod.addCMacro("UNICODE", "");
+            mod.addCMacro("_UNICODE", "");
+        }
+
+        const configs = try self.createConfigHeaders(config.target);
+        mod.addIncludePath(configs.internal_config.getOutputDir());
+        mod.addIncludePath(configs.external_config.getOutputDir());
+        mod.addIncludePath(self.llvm_root.path(b, "llvm/include"));
+        mod.addIncludePath(self.llvm_root.path(b, "llvm/lib/Support"));
+
+        // Compile sources
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &SupportSources.regex_c,
+            .flags = &.{"-std=c11"},
+        });
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &SupportSources.blake3,
+            .flags = &.{"-std=c11"},
+        });
+
+        const cpp_flags = [_][]const u8{ "-std=c++17", "-fno-exceptions", "-fno-rtti" };
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &SupportSources.common,
+            .flags = &cpp_flags,
+        });
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &SupportSources.common,
+            .flags = &cpp_flags,
+        });
+
+        mod.linkLibrary(config.deps.zlib.artifact);
+        mod.linkLibrary(config.deps.zstd.artifact);
+        mod.linkLibrary(config.deps.libxml2.artifact);
+
+        // Windows System Libraries
+        if (t.os.tag == .windows) {
+            mod.linkSystemLibrary("psapi", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("shell32", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("ole32", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("uuid", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("advapi32", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("ws2_32", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("ntdll", .{ .preferred_link_mode = .static });
+        } else {
+            mod.linkSystemLibrary("m", .{ .preferred_link_mode = .static });
+            mod.linkSystemLibrary("pthread", .{ .preferred_link_mode = .static });
+        }
+
+        return b.addLibrary(.{
+            .name = b.fmt("LLVMSupport_{s}", .{@tagName(t.cpu.arch)}),
+            .root_module = mod,
+        });
+    }
+
+    fn tablegen(
+        self: *const LibLLVM,
+        support_lib: *std.Build.Step.Compile,
+    ) *std.Build.Step.Compile {
+        const b = self.b;
+        const mod = b.createModule(.{
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+            .link_libc = true,
+        });
+
+        const cpp_flags = [_][]const u8{
+            "-std=c++17",
+            "-fno-exceptions",
+            "-fno-rtti",
+        };
+
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &TableGenSources.emitters,
+            .flags = &cpp_flags,
+        });
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &TableGenSources.basic,
+            .flags = &cpp_flags,
+        });
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root,
+            .files = &TableGenSources.common,
+            .flags = &cpp_flags,
+        });
+
+        mod.addIncludePath(self.llvm_root.path(b, "llvm/include"));
+        mod.addIncludePath(self.llvm_root.path(b, "llvm/utils/TableGen"));
+
+        const exe = b.addExecutable(.{
+            .name = "llvm-tblgen",
+            .root_module = mod,
+        });
+        exe.linkLibrary(support_lib);
+
+        return exe;
+    }
+
+    pub fn dependencies(self: *const LibLLVM, config: struct {
+        target: std.Build.ResolvedTarget,
+        auto_install: bool,
+    }) !Dependencies {
+        const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
+        const zlib_dep = try self.zlib(.{
+            .target = config.target,
+            .optimize = optimize,
+        });
+        const zlib_include = zlib_dep.dependency.path(".");
+
+        const libxml2_dep = self.libxml2(.{
+            .target = config.target,
+            .optimize = optimize,
+            .zlib_include = zlib_include,
+        });
+
+        const zstd_dep = self.zstd(.{
+            .target = config.target,
+            .optimize = optimize,
+            .zlib_include = zlib_include,
         });
 
         const b = self.b;
         if (config.auto_install) {
-            b.installArtifact(zlib.artifact);
-            b.installArtifact(libxml2.artifact);
+            b.installArtifact(zlib_dep.artifact);
+            b.installArtifact(libxml2_dep.artifact);
+            b.installArtifact(zstd_dep.artifact);
         }
 
         return .{
-            .libxml2 = libxml2,
-            .zlib = zlib,
+            .zlib = zlib_dep,
+            .libxml2 = libxml2_dep,
+            .zstd = zstd_dep,
         };
     }
 
     /// Compiles zlib from source as a static library
     /// Reference: https://github.com/allyourcodebase/zlib
-    fn compileZLib(self: *const LLVMConfig, config: struct {
+    fn zlib(self: *const LibLLVM, config: struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
-    }) !Dependency {
+    }) !Dependencies.Dependency {
         const b = self.b;
-        const zlib = b.dependency("zlib", .{});
+        const upstream = b.dependency("zlib", .{});
+        const root = upstream.path(".");
         const mod = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
@@ -172,30 +836,38 @@ const LLVMConfig = struct {
         }
 
         mod.addCSourceFiles(.{
-            .root = zlib.path("."),
+            .root = root,
             .files = &src_files,
             .flags = flags.items,
         });
-        mod.addIncludePath(zlib.path("."));
+        mod.addIncludePath(root);
+
+        const lib = b.addLibrary(.{
+            .name = "z",
+            .root_module = mod,
+        });
+        lib.installHeadersDirectory(upstream.path(""), "zlib", .{
+            .include_extensions = &.{
+                "zconf.h",
+                "zlib.h",
+            },
+        });
 
         return .{
-            .dependency = zlib,
-            .artifact = b.addLibrary(.{
-                .name = "z",
-                .root_module = mod,
-            }),
+            .dependency = upstream,
+            .artifact = lib,
         };
     }
 
     /// Compiles libxml2 from source as a static library
     /// Reference: https://github.com/allyourcodebase/libxml2
-    fn compileLibXml2(self: *const LLVMConfig, config: struct {
+    fn libxml2(self: *const LibLLVM, config: struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         zlib_include: std.Build.LazyPath,
-    }) Dependency {
+    }) Dependencies.Dependency {
         const b = self.b;
-        const libxml = b.dependency("libxml2", .{});
+        const upstream = b.dependency("libxml2", .{});
         const mod = b.createModule(.{
             .target = config.target,
             .optimize = config.optimize,
@@ -205,7 +877,7 @@ const LLVMConfig = struct {
         // CMake generates this required file usually
         const config_header = b.addConfigHeader(.{
             .style = .{
-                .cmake = libxml.path("config.h.cmake.in"),
+                .cmake = upstream.path("config.h.cmake.in"),
             },
             .include_path = "config.h",
         }, .{
@@ -230,7 +902,7 @@ const LLVMConfig = struct {
         // Autotools generates this required file usually
         const xmlversion_header = b.addConfigHeader(.{
             .style = .{
-                .autoconf_at = libxml.path("include/libxml/xmlversion.h.in"),
+                .autoconf_at = upstream.path("include/libxml/xmlversion.h.in"),
             },
             .include_path = "libxml/xmlversion.h",
         }, .{
@@ -268,7 +940,7 @@ const LLVMConfig = struct {
         mod.addConfigHeader(xmlversion_header);
 
         mod.addCSourceFiles(.{
-            .root = libxml.path("."),
+            .root = upstream.path("."),
             .files = &.{
                 "buf.c",       "dict.c",      "entities.c", "error.c",           "globals.c",
                 "hash.c",      "list.c",      "parser.c",   "parserInternals.c", "SAX2.c",
@@ -277,31 +949,82 @@ const LLVMConfig = struct {
             },
             .flags = &.{ "-std=c11", "-D_REENTRANT" },
         });
-        mod.addIncludePath(libxml.path("include"));
+        mod.addIncludePath(upstream.path("include"));
         mod.addIncludePath(config.zlib_include);
 
         const lib = b.addLibrary(.{
             .name = "xml2",
             .root_module = mod,
         });
+        lib.installConfigHeader(xmlversion_header);
+        lib.installHeadersDirectory(upstream.path("include/libxml"), "libxml", .{});
 
         return .{
-            .dependency = libxml,
+            .dependency = upstream,
             .artifact = lib,
         };
     }
 
-    fn trimWhitespace(str: []const u8) []const u8 {
-        return std.mem.trim(u8, str, whitespace);
-    }
+    /// Compiles libxml2 from source as a static library
+    /// Reference: https://github.com/allyourcodebase/zstd
+    fn zstd(self: *const LibLLVM, config: struct {
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        zlib_include: std.Build.LazyPath,
+    }) Dependencies.Dependency {
+        const b = self.b;
+        const upstream = b.dependency("zstd", .{});
+        const lib_path = upstream.path("lib");
 
-    fn tokenizeWhitespace(str: []const u8) std.mem.TokenIterator(u8, .any) {
-        return std.mem.tokenizeAny(u8, str, whitespace);
-    }
+        const mod = b.createModule(.{
+            .target = config.target,
+            .optimize = config.optimize,
+            .link_libc = true,
+        });
 
-    // Runs llvm-config with the provided args. The result is owned by the build.
-    fn run(self: *const LLVMConfig, comptime args: []const []const u8) []u8 {
-        return self.b.run(.{self.llvm_config_path} ++ args);
+        // Common
+        mod.addCSourceFiles(.{
+            .root = lib_path,
+            .files = &.{
+                "common/zstd_common.c",    "common/threading.c", "common/entropy_common.c",
+                "common/fse_decompress.c", "common/xxhash.c",    "common/error_private.c",
+                "common/pool.c",
+            },
+            .flags = &.{ "-std=c99", "-DZSTD_MULTITHREAD=1" },
+        });
+
+        // Compression & Decompression
+        mod.addCSourceFiles(.{
+            .root = lib_path,
+            .files = &.{
+                "compress/fse_compress.c",            "compress/huf_compress.c",      "compress/zstd_double_fast.c",
+                "compress/zstd_compress_literals.c",  "compress/zstdmt_compress.c",   "compress/zstd_compress_superblock.c",
+                "compress/zstd_opt.c",                "compress/zstd_compress.c",     "compress/zstd_compress_sequences.c",
+                "compress/hist.c",                    "compress/zstd_ldm.c",          "compress/zstd_lazy.c",
+                "compress/zstd_fast.c",               "decompress/zstd_decompress.c", "decompress/huf_decompress.c",
+                "decompress/zstd_decompress_block.c", "decompress/zstd_ddict.c",
+            },
+        });
+
+        if (config.target.result.cpu.arch == .x86_64) {
+            mod.addAssemblyFile(upstream.path("lib/decompress/huf_decompress_amd64.S"));
+        } else {
+            mod.addCMacro("ZSTD_DISABLE_ASM", "1");
+        }
+        mod.addIncludePath(lib_path);
+
+        const lib = b.addLibrary(.{
+            .name = "zstd",
+            .root_module = mod,
+        });
+        lib.installHeader(lib_path.path(b, "zstd.h"), "zstd/zstd.h");
+        lib.installHeader(lib_path.path(b, "zdict.h"), "zstd/zdict.h");
+        lib.installHeader(lib_path.path(b, "zstd_errors.h"), "zstd/zstd_errors.h");
+
+        return .{
+            .dependency = upstream,
+            .artifact = lib,
+        };
     }
 };
 
@@ -427,6 +1150,12 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.auto_install) b.installArtifact(libcore);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
 
+    // LLVM is compiled from source because I like burning compute or something
+    const llvm: LibLLVM = try .build(b, .{
+        .target = config.target,
+        .auto_install = config.auto_install,
+    });
+
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
         .name = "compiler",
@@ -437,7 +1166,13 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.core.inc),
         },
         .system_include_paths = &.{magic_enum_inc},
-        .link_libraries = &.{libcore},
+        .link_libraries = &.{
+            libcore,
+            llvm.target_deps.libxml2.artifact,
+            llvm.target_deps.zlib.artifact,
+            llvm.target_deps.zstd.artifact,
+            llvm.host_support,
+        },
         .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
         .cxx_flags = config.cxx_flags,
     });
