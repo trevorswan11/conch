@@ -226,8 +226,10 @@ fn addArtifacts(b: *std.Build, config: struct {
     // LLVM is compiled from source because I like burning compute or something
     const llvm: LLVM = try .build(b, .{
         .target = config.target,
-        .auto_install = config.auto_install,
-        .link_test_cxx_flags = config.cxx_flags,
+        .link_test = .{
+            .auto_install = config.auto_install,
+            .cxx_flags = config.cxx_flags,
+        },
     });
     _ = llvm;
 

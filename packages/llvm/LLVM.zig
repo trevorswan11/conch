@@ -61,9 +61,11 @@ target_support: *std.Build.Step.Compile = undefined,
 
 pub fn build(b: *std.Build, config: struct {
     target: std.Build.ResolvedTarget,
-    auto_install: bool,
-    /// Flags for the link test ONLY, not applied to LLVM artifacts!
-    link_test_cxx_flags: []const []const u8,
+    /// Config for the link test ONLY, not applied to LLVM artifacts!
+    link_test: struct {
+        auto_install: bool,
+        cxx_flags: []const []const u8,
+    },
 }) !Self {
     const upstream = b.dependency("llvm", .{});
     var llvm: Self = .{
@@ -74,36 +76,54 @@ pub fn build(b: *std.Build, config: struct {
     };
 
     // Host Dependencies for TableGen
-    llvm.host_deps = try llvm.dependencies(.{
-        .target = b.graph.host,
-        .auto_install = false,
-    });
-
+    llvm.host_deps = try llvm.dependencies(b.graph.host);
     llvm.host_support = try llvm.support(.{
         .target = b.graph.host,
         .optimize = .ReleaseSafe,
         .deps = llvm.host_deps,
-        .auto_install = false,
+        .minimal = true,
     });
-    llvm.host_tablegen = llvm.tablegen(llvm.host_support);
 
-    // Target dependencies for conch
-    llvm.target_deps = try llvm.dependencies(.{
-        .target = config.target,
-        .auto_install = config.auto_install,
+    const tiny_tg = llvm.tableGen(.{
+        .support_lib = llvm.host_support,
+        .minimal = true,
     });
+
+    const gen_vt_inc = llvm.addTableGen(
+        tiny_tg,
+        "GenVT",
+        "llvm/include/llvm/CodeGenTypes/ValueTypes.td",
+        "-gen-vt",
+    );
+
+    llvm.host_tablegen = llvm.tableGen(.{
+        .support_lib = llvm.host_support,
+        .minimal = false,
+    });
+    llvm.host_tablegen.root_module.addIncludePath(gen_vt_inc.dirname());
+
+    // Target dependencies must be build fully
+    llvm.target_deps = try llvm.dependencies(config.target);
     llvm.target_support = try llvm.support(.{
         .target = config.target,
         .optimize = .ReleaseSafe,
         .deps = llvm.target_deps,
-        .auto_install = config.auto_install,
+        .minimal = false,
     });
 
     const llvm_link_test_exe = llvm.createLinkTest(.{
         .target = b.graph.host,
-        .cxx_flags = config.link_test_cxx_flags,
+        .cxx_flags = config.link_test.cxx_flags,
     });
-    if (config.auto_install) b.installArtifact(llvm_link_test_exe);
+    if (config.link_test.auto_install) b.installArtifact(llvm_link_test_exe);
+
+    for (enabled_targets) |target| {
+        const incs = try llvm.buildTargetHeaders(target);
+        for (incs) |inc| {
+            llvm.target_support.root_module.addIncludePath(inc.dirname());
+            llvm_link_test_exe.root_module.addIncludePath(inc.dirname());
+        }
+    }
 
     return llvm;
 }
@@ -489,7 +509,7 @@ fn support(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     deps: Dependencies,
-    auto_install: bool,
+    minimal: bool,
 }) !*std.Build.Step.Compile {
     const b = self.b;
     const t = config.target.result;
@@ -504,7 +524,6 @@ fn support(self: *const Self, config: struct {
     const demangle_lib = self.demangle(.{
         .target = config.target,
         .optimize = config.optimize,
-        .auto_install = config.auto_install,
     });
     mod.linkLibrary(demangle_lib);
 
@@ -583,7 +602,6 @@ fn support(self: *const Self, config: struct {
         lib.installConfigHeader(header);
     }
 
-    if (config.auto_install) b.installArtifact(lib);
     return lib;
 }
 
@@ -591,7 +609,6 @@ fn support(self: *const Self, config: struct {
 fn demangle(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    auto_install: bool,
 }) *std.Build.Step.Compile {
     const b = self.b;
     const mod = b.createModule(.{
@@ -615,17 +632,18 @@ fn demangle(self: *const Self, config: struct {
     });
     mod.addIncludePath(self.llvm_include);
 
-    const lib = b.addLibrary(.{
+    return b.addLibrary(.{
         .name = "LLVMDemangle",
         .root_module = mod,
     });
-    if (config.auto_install) b.installArtifact(lib);
-    return lib;
 }
 
-fn tablegen(
+fn tableGen(
     self: *const Self,
-    support_lib: *std.Build.Step.Compile,
+    config: struct {
+        support_lib: *std.Build.Step.Compile,
+        minimal: bool,
+    },
 ) *std.Build.Step.Compile {
     const b = self.b;
     const mod = b.createModule(.{
@@ -641,11 +659,6 @@ fn tablegen(
     };
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tablegen_sources.emitter_root),
-        .files = &tablegen_sources.emitters,
-        .flags = &cpp_flags,
-    });
-    mod.addCSourceFiles(.{
         .root = self.llvm_root.path(b, tablegen_sources.basic_root),
         .files = &tablegen_sources.basic,
         .flags = &cpp_flags,
@@ -656,24 +669,32 @@ fn tablegen(
         .flags = &cpp_flags,
     });
 
+    if (!config.minimal) {
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root.path(b, tablegen_sources.emitter_root),
+            .files = &tablegen_sources.emitters,
+            .flags = &cpp_flags,
+        });
+    }
+
     mod.addIncludePath(self.llvm_root.path(b, "llvm/include"));
     mod.addIncludePath(self.llvm_root.path(b, "llvm/utils/TableGen"));
 
     const exe = b.addExecutable(.{
-        .name = "llvm_tablegen",
+        .name = if (config.minimal) "LLVMTableGenMinimal" else "LLVMTableGen",
         .root_module = mod,
     });
-    exe.linkLibrary(support_lib);
+    exe.linkLibrary(config.support_lib);
 
     return exe;
 }
 
-const BackendAction = struct {
+const TargetAction = struct {
     name: []const u8,
     flag: []const u8,
 };
 
-const backend_actions = [_]BackendAction{
+const target_actions = [_]TargetAction{
     .{ .name = "GenRegisterInfo", .flag = "-gen-register-info" },
     .{ .name = "GenInstrInfo", .flag = "-gen-instr-info" },
     .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
@@ -684,53 +705,64 @@ const backend_actions = [_]BackendAction{
 };
 
 /// Uses tablegen to generate a build-time dependency for LLVM
+/// - tg_tool: The tablegen binary to use
 /// - name: The name of the generated .inc file
 /// - td_file: The .td file, relative to LLVM root
 /// - action: The tablegen action to run, e.g. "-gen-intrinsic-enums"
 fn addTableGen(
     self: *const Self,
+    tg_tool: *std.Build.Step.Compile,
     name: []const u8,
     td_file: []const u8,
     action: []const u8,
 ) std.Build.LazyPath {
     const b = self.b;
-    const run = b.addRunArtifact(self.host_tablegen);
+    const run = b.addRunArtifact(tg_tool);
 
     run.addArg(action);
-    run.addDecoratedDirectoryArg("-I", self.llvm_include);
+    run.addPrefixedDirectoryArg("-I", self.llvm_include);
     run.addFileArg(self.llvm_root.path(b, td_file));
+    run.step.name = b.fmt("TableGen {s}", .{name});
     return run.addOutputFileArg(b.fmt("{s}.inc", .{name}));
 }
 
-pub fn dependencies(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    auto_install: bool,
-}) !Dependencies {
+/// Generates all .inc files for a specific target
+fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.LazyPath {
+    const b = self.b;
+    var results: std.ArrayList(std.Build.LazyPath) = .empty;
+
+    // The root .td file for a target is always <Name>.td
+    const main_td = b.fmt("llvm/lib/Target/{s}/{s}.td", .{ target_name, target_name });
+    for (target_actions) |action| {
+        const name = b.fmt("{s}{s}", .{ target_name, action.name });
+        try results.append(
+            b.allocator,
+            self.addTableGen(self.host_tablegen, name, main_td, action.flag),
+        );
+    }
+
+    return results.items;
+}
+
+pub fn dependencies(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies {
     const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
     const zlib_dep = try self.zlib(.{
-        .target = config.target,
+        .target = target,
         .optimize = optimize,
     });
     const zlib_include = zlib_dep.dependency.path(".");
 
     const libxml2_dep = self.libxml2(.{
-        .target = config.target,
+        .target = target,
         .optimize = optimize,
         .zlib_include = zlib_include,
     });
 
     const zstd_dep = self.zstd(.{
-        .target = config.target,
+        .target = target,
         .optimize = optimize,
         .zlib_include = zlib_include,
     });
-
-    const b = self.b;
-    if (config.auto_install) {
-        b.installArtifact(zlib_dep.artifact);
-        b.installArtifact(libxml2_dep.artifact);
-        b.installArtifact(zstd_dep.artifact);
-    }
 
     return .{
         .zlib = zlib_dep,
