@@ -2,7 +2,7 @@
 const std = @import("std");
 
 const support_sources = @import("sources/support.zig");
-const tablegen_sources = @import("sources/tablegen.zig");
+const tblgen_sources = @import("sources/tblgen.zig");
 
 const ThirdParty = struct {
     const siphash_inc = "third-party/siphash/include";
@@ -48,90 +48,106 @@ const enabled_targets = &[_][]const u8{
 const Self = @This();
 
 b: *std.Build,
-llvm_dep: *std.Build.Dependency,
+llvm_upstream: *std.Build.Dependency,
 llvm_root: std.Build.LazyPath,
 llvm_include: std.Build.LazyPath,
 
-/// This is purely needed for GenVT.inc only to prevent circular dependency
-minimal_tablegen: *std.Build.Step.Compile = undefined,
+/// Registry of files to be added as virtual includes
+registry: *std.Build.Step.WriteFile,
+
+/// A minimal set of artifacts, compiled for the host arch.
+///
+/// These are used for the generation of core files for the LLVM pipeline.
+/// A distinction between minimal and full must be made to prevent a circular dependency.
+minimal: struct {
+    tblgen: *std.Build.Step.Compile = undefined,
+    deps: Dependencies = undefined,
+    support: *std.Build.Step.Compile = undefined,
+} = .{},
 
 /// Used to convert the actual target 'td's into 'inc's
-full_tablegen: *std.Build.Step.Compile = undefined,
+full_tblgen: *std.Build.Step.Compile = undefined,
 
-host_deps: Dependencies = undefined,
-host_support: *std.Build.Step.Compile = undefined,
+/// Artifacts compiled for the actual target
+target: struct {
+    deps: Dependencies = undefined,
+    support: *std.Build.Step.Compile = undefined,
+} = .{},
 
-target_deps: Dependencies = undefined,
-target_support: *std.Build.Step.Compile = undefined,
+pub fn init(b: *std.Build) Self {
+    const upstream = b.dependency("llvm", .{});
+    return .{
+        .b = b,
+        .llvm_upstream = upstream,
+        .llvm_root = upstream.path("."),
+        .llvm_include = upstream.path("llvm/include"),
+        .registry = b.addWriteFiles(),
+    };
+}
 
-pub fn build(b: *std.Build, config: struct {
+pub fn build(self: *Self, config: struct {
     target: std.Build.ResolvedTarget,
     /// Config for the link test ONLY, not applied to LLVM artifacts!
     link_test: struct {
         auto_install: bool,
         cxx_flags: []const []const u8,
     },
-}) !Self {
-    const upstream = b.dependency("llvm", .{});
-    var llvm: Self = .{
-        .b = b,
-        .llvm_dep = upstream,
-        .llvm_root = upstream.path("."),
-        .llvm_include = upstream.path("llvm/include"),
-    };
+    skip_link_test: bool,
+}) !void {
+    const b = self.b;
 
     // Host Dependencies for TableGen
-    llvm.host_deps = try llvm.dependencies(b.graph.host);
-    llvm.host_support = try llvm.support(.{
+    self.minimal.deps = try self.dependencies(b.graph.host);
+    self.minimal.support = try self.support(.{
         .target = b.graph.host,
         .optimize = .ReleaseSafe,
-        .deps = llvm.host_deps,
+        .deps = self.minimal.deps,
         .minimal = true,
     });
 
-    llvm.minimal_tablegen = llvm.tableGen(.{
-        .support_lib = llvm.host_support,
+    self.minimal.tblgen = self.tblgen(.{
+        .support_lib = self.minimal.support,
         .minimal = true,
     });
 
-    const gen_vt_inc_flat = llvm.addTableGen(.{
-        .tg_tool = llvm.minimal_tablegen,
+    _ = self.synthesizeHeader(.{
+        .tblgen = self.minimal.tblgen,
         .name = "GenVT",
         .td_file = "llvm/include/llvm/CodeGen/ValueTypes.td",
         .action = "-gen-vt",
+        .virtual_path = "llvm/CodeGen/GenVT.inc",
     });
-    const mapped_includes = b.addWriteFiles();
-    _ = mapped_includes.addCopyFile(gen_vt_inc_flat, "llvm/CodeGen/GenVT.inc");
 
-    llvm.full_tablegen = llvm.tableGen(.{
-        .support_lib = llvm.host_support,
+    self.full_tblgen = self.tblgen(.{
+        .support_lib = self.minimal.support,
         .minimal = false,
     });
-    llvm.full_tablegen.root_module.addIncludePath(mapped_includes.getDirectory());
+    self.full_tblgen.root_module.addIncludePath(self.registry.getDirectory());
 
     // Target dependencies must be built fully
-    llvm.target_deps = try llvm.dependencies(config.target);
-    llvm.target_support = try llvm.support(.{
+    self.target.deps = try self.dependencies(config.target);
+    self.target.support = try self.support(.{
         .target = config.target,
         .optimize = .ReleaseSafe,
-        .deps = llvm.target_deps,
+        .deps = self.target.deps,
         .minimal = false,
     });
 
     for (enabled_targets) |target| {
-        const incs = try llvm.buildTargetHeaders(target);
+        const incs = try self.buildTargetHeaders(target);
         for (incs) |inc| {
-            llvm.target_support.root_module.addIncludePath(inc.dirname());
+            self.target.support.root_module.addIncludePath(inc.dirname());
         }
     }
 
-    const llvm_link_test_exe = llvm.createLinkTest(.{
-        .target = b.graph.host,
-        .cxx_flags = config.link_test.cxx_flags,
-    });
-    if (config.link_test.auto_install) b.installArtifact(llvm_link_test_exe);
-
-    return llvm;
+    // The link test is completely ignored for packaging
+    if (!config.skip_link_test) {
+        const llvm_link_test_exe = self.createLinkTest(.{
+            .target = b.graph.host,
+            .cxx_flags = config.link_test.cxx_flags,
+        });
+        if (config.link_test.auto_install) b.installArtifact(llvm_link_test_exe);
+    }
 }
 
 /// Creates a custom runnable target to test LLVM linkage against a C++23 source file
@@ -152,10 +168,10 @@ fn createLinkTest(self: *const Self, config: struct {
     });
     mod.addSystemIncludePath(self.llvm_include);
 
-    mod.linkLibrary(self.target_support);
-    mod.linkLibrary(self.target_deps.libxml2.artifact);
-    mod.linkLibrary(self.target_deps.zlib.artifact);
-    mod.linkLibrary(self.target_deps.zstd.artifact);
+    mod.linkLibrary(self.target.support);
+    mod.linkLibrary(self.target.deps.libxml2.artifact);
+    mod.linkLibrary(self.target.deps.zlib.artifact);
+    mod.linkLibrary(self.target.deps.zstd.artifact);
 
     const exe = b.addExecutable(.{
         .name = "llvm_link_test",
@@ -187,7 +203,7 @@ const ConfigHeaders = struct {
     target_mcas_def: *std.Build.Step.ConfigHeader,
     targets_def: *std.Build.Step.ConfigHeader,
 
-    pub fn array(self: *const ConfigHeaders) [10]*std.Build.Step.ConfigHeader {
+    fn array(self: *const ConfigHeaders) [10]*std.Build.Step.ConfigHeader {
         return .{
             self.config_h,
             self.llvm_config_h,
@@ -204,23 +220,12 @@ const ConfigHeaders = struct {
 };
 
 /// https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/llvm/include/llvm/Config
-fn createConfigHeaders(
-    self: *const Self,
-    target: std.Build.ResolvedTarget,
-) !ConfigHeaders {
+fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTarget) !ConfigHeaders {
     const b = self.b;
-    const t = target.result;
-    const is_darwin = t.os.tag.isDarwin();
-    const is_windows = t.os.tag == .windows;
-    const is_linux = t.os.tag == .linux;
-
-    const native_arch = switch (t.cpu.arch) {
-        .x86_64 => "X86",
-        .aarch64 => "AArch64",
-        .riscv64 => "RISCV",
-        else => "X86",
-    };
-    const triple = try t.linuxTriple(b.allocator);
+    const target = resolved_target.result;
+    const is_darwin = target.os.tag.isDarwin();
+    const is_windows = target.os.tag == .windows;
+    const is_linux = target.os.tag == .linux;
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/config.h.cmake
     const config = b.addConfigHeader(.{
@@ -229,9 +234,9 @@ fn createConfigHeaders(
     }, .{
         .PACKAGE_NAME = "LLVM",
         .PACKAGE_VERSION = version_str,
-        .PACKAGE_STRING = "LLVM-" ++ version_str,
+        .PACKAGE_STRING = "LLVM-conch-" ++ version_str,
         .PACKAGE_BUGREPORT = "https://github.com/llvm/llvm-project/issues/",
-        .PACKAGE_VENDOR = "Conch Project",
+        .PACKAGE_VENDOR = "https://github.com/trevorswan11/conch",
         .BUG_REPORT_URL = "https://github.com/llvm/llvm-project/issues/",
 
         .ENABLE_BACKTRACES = 1,
@@ -318,7 +323,7 @@ fn createConfigHeaders(
         .HAVE_DECL_FE_INEXACT = 1,
         .HAVE_DECL_STRERROR_S = @intFromBool(is_windows),
 
-        // Host Intrinsics (Safe to set 0 for most modern compilers via Zig)
+        // Host Intrinsics
         .HAVE___ALLOCA = 0,
         .HAVE___ASHLDI3 = 0,
         .HAVE___ASHRDI3 = 0,
@@ -342,11 +347,13 @@ fn createConfigHeaders(
         .HAVE_GETAUXVAL = @intFromBool(is_linux),
 
         // Extensions
-        .LTDL_SHLIB_EXT = t.dynamicLibSuffix(),
-        .LLVM_PLUGIN_EXT = t.dynamicLibSuffix(),
+        .LTDL_SHLIB_EXT = target.dynamicLibSuffix(),
+        .LLVM_PLUGIN_EXT = target.dynamicLibSuffix(),
     });
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/llvm-config.h.cmake
+    const triple = try target.linuxTriple(b.allocator);
+
     const llvm_config = b.addConfigHeader(.{
         .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
         .include_path = "llvm/Config/llvm-config.h",
@@ -366,7 +373,7 @@ fn createConfigHeaders(
         .LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS = 0,
 
         // Native Target Bootstrapping
-        .LLVM_NATIVE_ARCH = native_arch,
+        .LLVM_NATIVE_ARCH = @tagName(target.cpu.arch),
         .LLVM_ENABLE_ZLIB = 1,
         .LLVM_ENABLE_ZSTD = 1,
         .LLVM_ENABLE_CURL = 0,
@@ -644,7 +651,7 @@ fn demangle(self: *const Self, config: struct {
     });
 }
 
-fn tableGen(
+fn tblgen(
     self: *const Self,
     config: struct {
         support_lib: *std.Build.Step.Compile,
@@ -659,33 +666,32 @@ fn tableGen(
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tablegen_sources.basic_root),
-        .files = &tablegen_sources.basic,
+        .root = self.llvm_root.path(b, tblgen_sources.basic_root),
+        .files = &tblgen_sources.basic,
         .flags = &common_llvm_cxx_flags,
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tablegen_sources.lib_root),
-        .files = &tablegen_sources.lib,
+        .root = self.llvm_root.path(b, tblgen_sources.lib_root),
+        .files = &tblgen_sources.lib,
         .flags = &common_llvm_cxx_flags,
     });
 
-    // A minimal tablegen is made first to make core includes for the real tablegen
     if (config.minimal) {
         mod.addCSourceFile(.{
-            .file = self.llvm_root.path(b, tablegen_sources.minimal_main),
+            .file = self.llvm_root.path(b, tblgen_sources.minimal_main),
             .flags = &common_llvm_cxx_flags,
         });
     } else {
         mod.addCSourceFiles(.{
-            .root = self.llvm_root.path(b, tablegen_sources.common_root),
-            .files = &tablegen_sources.common,
+            .root = self.llvm_root.path(b, tblgen_sources.common_root),
+            .files = &tblgen_sources.common,
             .flags = &common_llvm_cxx_flags,
         });
 
         mod.addCSourceFiles(.{
-            .root = self.llvm_root.path(b, tablegen_sources.emitter_root),
-            .files = &tablegen_sources.emitters,
+            .root = self.llvm_root.path(b, tblgen_sources.emitter_root),
+            .files = &tblgen_sources.emitters,
             .flags = &common_llvm_cxx_flags,
         });
     }
@@ -702,12 +708,12 @@ fn tableGen(
     return exe;
 }
 
-const TargetAction = struct {
+const TblgenTargetAction = struct {
     name: []const u8,
     flag: []const u8,
 };
 
-const target_actions = [_]TargetAction{
+const target_actions = [_]TblgenTargetAction{
     .{ .name = "GenRegisterInfo", .flag = "-gen-register-info" },
     .{ .name = "GenInstrInfo", .flag = "-gen-instr-info" },
     .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
@@ -717,20 +723,20 @@ const target_actions = [_]TargetAction{
     .{ .name = "GenCallingConv", .flag = "-gen-callingconv" },
 };
 
-/// Uses tablegen to generate a build-time dependency for LLVM
-/// - tg_tool: The tablegen binary to use
+/// Uses tblgen to generate a build-time dependency for LLVM
+/// - tg_tool: The tblgen binary to use
 /// - name: The name of the generated .inc file
 /// - td_file: The .td file, relative to LLVM root
 /// - action: The tablegen action to run, e.g. "-gen-intrinsic-enums"
-fn addTableGen(self: *const Self, config: struct {
-    tg_tool: *std.Build.Step.Compile,
+fn generateTblGenInc(self: *const Self, config: struct {
+    tblgen: *std.Build.Step.Compile,
     name: []const u8,
     td_file: []const u8,
     action: []const u8,
     extra_includes: ?[]const std.Build.LazyPath = null,
 }) std.Build.LazyPath {
     const b = self.b;
-    const run = b.addRunArtifact(config.tg_tool);
+    const run = b.addRunArtifact(config.tblgen);
     run.step.name = b.fmt("TableGen {s}", .{config.name});
 
     run.addArg(config.action);
@@ -747,6 +753,23 @@ fn addTableGen(self: *const Self, config: struct {
     return run.addOutputFileArg(b.fmt("{s}.inc", .{config.name}));
 }
 
+/// Generate the passed td file as the requested inc, adding it to the virtual path registry.
+fn synthesizeHeader(self: *Self, config: struct {
+    tblgen: *std.Build.Step.Compile,
+    name: []const u8,
+    td_file: []const u8,
+    action: []const u8,
+    virtual_path: []const u8,
+}) std.Build.LazyPath {
+    const flat = self.generateTblGenInc(.{
+        .tblgen = config.tblgen,
+        .name = config.name,
+        .td_file = config.td_file,
+        .action = config.action,
+    });
+    return self.registry.addCopyFile(flat, config.virtual_path);
+}
+
 /// Generates all .inc files for a specific target
 fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.LazyPath {
     const b = self.b;
@@ -759,8 +782,8 @@ fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.L
         const name = b.fmt("{s}{s}", .{ target_name, action.name });
         try results.append(
             b.allocator,
-            self.addTableGen(.{
-                .tg_tool = self.full_tablegen,
+            self.generateTblGenInc(.{
+                .tblgen = self.full_tblgen,
                 .name = name,
                 .td_file = main_td,
                 .action = action.flag,
@@ -772,7 +795,7 @@ fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.L
     return results.items;
 }
 
-pub fn dependencies(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies {
+fn dependencies(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies {
     const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
     const zlib_dep = try self.zlib(.{
         .target = target,

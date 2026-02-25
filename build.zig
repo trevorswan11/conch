@@ -199,6 +199,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     skip_cppcheck: bool,
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
+    skip_link_test: bool = false,
 }) !struct {
     libcore: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -224,14 +225,15 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
 
     // LLVM is compiled from source because I like burning compute or something
-    const llvm: LLVM = try .build(b, .{
+    var llvm: LLVM = .init(b);
+    try llvm.build(.{
         .target = config.target,
         .link_test = .{
             .auto_install = config.auto_install,
             .cxx_flags = config.cxx_flags,
         },
+        .skip_link_test = config.skip_link_test,
     });
-    _ = llvm;
 
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
@@ -1107,12 +1109,7 @@ fn addPackageStep(b: *std.Build, config: struct {
     compile_only: bool,
     cxx_flags: []const []const u8,
 }) !void {
-    // TODO, support packaging correctly with LLVM
     const package_step = b.step("package", "Build the artifacts for packaging");
-    if (true) {
-        return package_step.addError("Packing is currently unsupported as LLVM integration is a WIP", .{});
-    }
-
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
 
@@ -1141,6 +1138,7 @@ fn addPackageStep(b: *std.Build, config: struct {
             .skip_cppcheck = true,
             .behavior = .standalone,
             .auto_install = false,
+            .skip_link_test = true,
         });
 
         std.debug.assert(artifacts.tests == null);
