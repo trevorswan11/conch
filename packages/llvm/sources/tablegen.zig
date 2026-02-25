@@ -1,6 +1,6 @@
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TableGen/CMakeLists.txt
-pub const basic_root = "llvm/lib/TableGen/";
-pub const basic = [_][]const u8{
+pub const lib_root = "llvm/lib/TableGen/";
+pub const lib = [_][]const u8{
     "DetailedRecordsBackend.cpp",
     "Error.cpp",
     "JSONBackend.cpp",
@@ -17,6 +17,24 @@ pub const basic = [_][]const u8{
     "TGTimer.cpp",
 };
 
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/Basic/CMakeLists.txt
+pub const basic_root = emitter_root ++ "Basic/";
+pub const basic = [_][]const u8{
+    "ARMTargetDefEmitter.cpp",
+    "Attributes.cpp",
+    "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "RuntimeLibcallsEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "TargetFeaturesEmitter.cpp",
+    "VTEmitter.cpp",
+};
+
+pub const minimal_main = emitter_root ++ "llvm-min-tblgen.cpp";
+
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/CMakeLists.txt
 pub const common_root = emitter_root ++ "Common/";
 pub const common = [_][]const u8{
@@ -27,6 +45,7 @@ pub const common = [_][]const u8{
     "GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp",
     "GlobalISel/PatternParser.cpp",
     "GlobalISel/Patterns.cpp",
+
     "AsmWriterInst.cpp",
     "CodeGenDAGPatterns.cpp",
     "CodeGenHwModes.cpp",

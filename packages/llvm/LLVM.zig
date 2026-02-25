@@ -3,7 +3,6 @@ const std = @import("std");
 
 const support_sources = @import("sources/support.zig");
 const tablegen_sources = @import("sources/tablegen.zig");
-const td_files = @import("sources/td.zig");
 
 const ThirdParty = struct {
     const siphash_inc = "third-party/siphash/include";
@@ -53,9 +52,15 @@ llvm_dep: *std.Build.Dependency,
 llvm_root: std.Build.LazyPath,
 llvm_include: std.Build.LazyPath,
 
-host_tablegen: *std.Build.Step.Compile = undefined,
+/// This is purely needed for GenVT.inc only to prevent circular dependency
+minimal_tablegen: *std.Build.Step.Compile = undefined,
+
+/// Used to convert the actual target 'td's into 'inc's
+full_tablegen: *std.Build.Step.Compile = undefined,
+
 host_deps: Dependencies = undefined,
 host_support: *std.Build.Step.Compile = undefined,
+
 target_deps: Dependencies = undefined,
 target_support: *std.Build.Step.Compile = undefined,
 
@@ -84,25 +89,27 @@ pub fn build(b: *std.Build, config: struct {
         .minimal = true,
     });
 
-    const tiny_tg = llvm.tableGen(.{
+    llvm.minimal_tablegen = llvm.tableGen(.{
         .support_lib = llvm.host_support,
         .minimal = true,
     });
 
-    const gen_vt_inc = llvm.addTableGen(
-        tiny_tg,
-        "GenVT",
-        "llvm/include/llvm/CodeGenTypes/ValueTypes.td",
-        "-gen-vt",
-    );
+    const gen_vt_inc_flat = llvm.addTableGen(.{
+        .tg_tool = llvm.minimal_tablegen,
+        .name = "GenVT",
+        .td_file = "llvm/include/llvm/CodeGen/ValueTypes.td",
+        .action = "-gen-vt",
+    });
+    const mapped_includes = b.addWriteFiles();
+    _ = mapped_includes.addCopyFile(gen_vt_inc_flat, "llvm/CodeGen/GenVT.inc");
 
-    llvm.host_tablegen = llvm.tableGen(.{
+    llvm.full_tablegen = llvm.tableGen(.{
         .support_lib = llvm.host_support,
         .minimal = false,
     });
-    llvm.host_tablegen.root_module.addIncludePath(gen_vt_inc.dirname());
+    llvm.full_tablegen.root_module.addIncludePath(mapped_includes.getDirectory());
 
-    // Target dependencies must be build fully
+    // Target dependencies must be built fully
     llvm.target_deps = try llvm.dependencies(config.target);
     llvm.target_support = try llvm.support(.{
         .target = config.target,
@@ -111,19 +118,18 @@ pub fn build(b: *std.Build, config: struct {
         .minimal = false,
     });
 
+    for (enabled_targets) |target| {
+        const incs = try llvm.buildTargetHeaders(target);
+        for (incs) |inc| {
+            llvm.target_support.root_module.addIncludePath(inc.dirname());
+        }
+    }
+
     const llvm_link_test_exe = llvm.createLinkTest(.{
         .target = b.graph.host,
         .cxx_flags = config.link_test.cxx_flags,
     });
     if (config.link_test.auto_install) b.installArtifact(llvm_link_test_exe);
-
-    for (enabled_targets) |target| {
-        const incs = try llvm.buildTargetHeaders(target);
-        for (incs) |inc| {
-            llvm.target_support.root_module.addIncludePath(inc.dirname());
-            llvm_link_test_exe.root_module.addIncludePath(inc.dirname());
-        }
-    }
 
     return llvm;
 }
@@ -146,7 +152,7 @@ fn createLinkTest(self: *const Self, config: struct {
     });
     mod.addSystemIncludePath(self.llvm_include);
 
-    mod.linkLibrary(self.host_support);
+    mod.linkLibrary(self.target_support);
     mod.linkLibrary(self.target_deps.libxml2.artifact);
     mod.linkLibrary(self.target_deps.zlib.artifact);
     mod.linkLibrary(self.target_deps.zstd.artifact);
@@ -595,7 +601,7 @@ fn support(self: *const Self, config: struct {
     }
 
     const lib = b.addLibrary(.{
-        .name = "LLVMSupport",
+        .name = if (config.minimal) "LLVMSupportMinimal" else "LLVMSupport",
         .root_module = mod,
     });
     for (config_header_array) |header| {
@@ -652,28 +658,35 @@ fn tableGen(
         .link_libc = true,
     });
 
-    const cpp_flags = [_][]const u8{
-        "-std=c++17",
-        "-fno-exceptions",
-        "-fno-rtti",
-    };
-
     mod.addCSourceFiles(.{
         .root = self.llvm_root.path(b, tablegen_sources.basic_root),
         .files = &tablegen_sources.basic,
-        .flags = &cpp_flags,
-    });
-    mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tablegen_sources.common_root),
-        .files = &tablegen_sources.common,
-        .flags = &cpp_flags,
+        .flags = &common_llvm_cxx_flags,
     });
 
-    if (!config.minimal) {
+    mod.addCSourceFiles(.{
+        .root = self.llvm_root.path(b, tablegen_sources.lib_root),
+        .files = &tablegen_sources.lib,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    // A minimal tablegen is made first to make core includes for the real tablegen
+    if (config.minimal) {
+        mod.addCSourceFile(.{
+            .file = self.llvm_root.path(b, tablegen_sources.minimal_main),
+            .flags = &common_llvm_cxx_flags,
+        });
+    } else {
+        mod.addCSourceFiles(.{
+            .root = self.llvm_root.path(b, tablegen_sources.common_root),
+            .files = &tablegen_sources.common,
+            .flags = &common_llvm_cxx_flags,
+        });
+
         mod.addCSourceFiles(.{
             .root = self.llvm_root.path(b, tablegen_sources.emitter_root),
             .files = &tablegen_sources.emitters,
-            .flags = &cpp_flags,
+            .flags = &common_llvm_cxx_flags,
         });
     }
 
@@ -700,7 +713,7 @@ const target_actions = [_]TargetAction{
     .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
     .{ .name = "GenAsmMatcher", .flag = "-gen-asm-matcher" },
     .{ .name = "GenDAGISel", .flag = "-gen-dag-isel" },
-    .{ .name = "GenSubtargetInfo", .flag = "-gen-subtarget-info" },
+    .{ .name = "GenSubtargetInfo", .flag = "-gen-subtarget" },
     .{ .name = "GenCallingConv", .flag = "-gen-callingconv" },
 };
 
@@ -709,21 +722,29 @@ const target_actions = [_]TargetAction{
 /// - name: The name of the generated .inc file
 /// - td_file: The .td file, relative to LLVM root
 /// - action: The tablegen action to run, e.g. "-gen-intrinsic-enums"
-fn addTableGen(
-    self: *const Self,
+fn addTableGen(self: *const Self, config: struct {
     tg_tool: *std.Build.Step.Compile,
     name: []const u8,
     td_file: []const u8,
     action: []const u8,
-) std.Build.LazyPath {
+    extra_includes: ?[]const std.Build.LazyPath = null,
+}) std.Build.LazyPath {
     const b = self.b;
-    const run = b.addRunArtifact(tg_tool);
+    const run = b.addRunArtifact(config.tg_tool);
+    run.step.name = b.fmt("TableGen {s}", .{config.name});
 
-    run.addArg(action);
+    run.addArg(config.action);
     run.addPrefixedDirectoryArg("-I", self.llvm_include);
-    run.addFileArg(self.llvm_root.path(b, td_file));
-    run.step.name = b.fmt("TableGen {s}", .{name});
-    return run.addOutputFileArg(b.fmt("{s}.inc", .{name}));
+    if (config.extra_includes) |extra_includes| {
+        for (extra_includes) |include| {
+            run.addPrefixedDirectoryArg("-I", include);
+        }
+    }
+
+    run.addFileArg(self.llvm_root.path(b, config.td_file));
+    run.addArg("-o");
+
+    return run.addOutputFileArg(b.fmt("{s}.inc", .{config.name}));
 }
 
 /// Generates all .inc files for a specific target
@@ -732,12 +753,19 @@ fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.L
     var results: std.ArrayList(std.Build.LazyPath) = .empty;
 
     // The root .td file for a target is always <Name>.td
-    const main_td = b.fmt("llvm/lib/Target/{s}/{s}.td", .{ target_name, target_name });
+    const target_dir = b.fmt("llvm/lib/Target/{s}", .{target_name});
+    const main_td = b.fmt("{s}/{s}.td", .{ target_dir, target_name });
     for (target_actions) |action| {
         const name = b.fmt("{s}{s}", .{ target_name, action.name });
         try results.append(
             b.allocator,
-            self.addTableGen(self.host_tablegen, name, main_td, action.flag),
+            self.addTableGen(.{
+                .tg_tool = self.full_tablegen,
+                .name = name,
+                .td_file = main_td,
+                .action = action.flag,
+                .extra_includes = &.{self.llvm_root.path(b, target_dir)},
+            }),
         );
     }
 
