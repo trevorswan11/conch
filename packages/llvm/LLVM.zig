@@ -22,6 +22,22 @@ const Dependencies = struct {
     zstd: Dependency,
 };
 
+/// A minimal set of artifacts, compiled for the host arch.
+///
+/// These are used for the generation of core files for the LLVM pipeline.
+/// A distinction between minimal and full must be made to prevent a circular dependency.
+const MinimalArtifacts = struct {
+    tblgen: *std.Build.Step.Compile = undefined,
+    deps: Dependencies = undefined,
+    demangle: *std.Build.Step.Compile = undefined,
+    support: *std.Build.Step.Compile = undefined,
+
+    /// Registry of files to be added as virtual includes.
+    ///
+    /// Includes only GenVT.
+    registry: *std.Build.Step.WriteFile,
+};
+
 /// Artifacts compiled for the actual target
 const TargetArtifacts = struct {
     deps: Dependencies = undefined,
@@ -33,10 +49,11 @@ const TargetArtifacts = struct {
     remarks: *std.Build.Step.Compile = undefined,
     core: *std.Build.Step.Compile = undefined,
 
-    /// Registry of files to be added as virtual includes.
-    ///
-    /// Consists of target-specific includes.
-    registry: *std.Build.Step.WriteFile,
+    /// Registry of generated intrinsics
+    intrinsics_gen: *std.Build.Step.WriteFile = undefined,
+
+    /// Registry of target-specific generated files
+    target_parser_gen: *std.Build.Step.WriteFile = undefined,
 
     fn artifactArray(self: *const TargetArtifacts) [10]*std.Build.Step.Compile {
         return .{
@@ -99,26 +116,12 @@ llvm: struct {
     llvm_include: std.Build.LazyPath,
 },
 
-/// A minimal set of artifacts, compiled for the host arch.
-///
-/// These are used for the generation of core files for the LLVM pipeline.
-/// A distinction between minimal and full must be made to prevent a circular dependency.
-minimal_artifacts: struct {
-    tblgen: *std.Build.Step.Compile = undefined,
-    deps: Dependencies = undefined,
-    demangle: *std.Build.Step.Compile = undefined,
-    support: *std.Build.Step.Compile = undefined,
-
-    /// Registry of files to be added as virtual includes.
-    ///
-    /// Includes only GenVT and Intrinsics.
-    registry: *std.Build.Step.WriteFile,
-},
+minimal_artifacts: MinimalArtifacts,
 
 /// Used to convert the actual target 'td's into 'inc's
 full_tblgen: *std.Build.Step.Compile = undefined,
 
-target_artifacts: TargetArtifacts,
+target_artifacts: TargetArtifacts = .{},
 
 /// The target system to compile to
 target: std.Build.ResolvedTarget,
@@ -133,9 +136,6 @@ pub fn init(b: *std.Build, target: std.Build.ResolvedTarget) Self {
             .llvm_include = upstream.path("llvm/include"),
         },
         .minimal_artifacts = .{
-            .registry = b.addWriteFiles(),
-        },
-        .target_artifacts = .{
             .registry = b.addWriteFiles(),
         },
         .target = target,
@@ -170,22 +170,6 @@ pub fn build(self: *Self, link_test_config: ?struct {
         .virtual_path = "llvm/CodeGen/GenVT.inc",
     });
 
-    _ = self.synthesizeHeader(self.minimal_artifacts.registry, .{
-        .tblgen = self.minimal_artifacts.tblgen,
-        .name = "Attributes",
-        .td_file = "llvm/include/llvm/IR/Attributes.td",
-        .instruction = .{ .action = "-gen-attrs" },
-        .virtual_path = "llvm/IR/Attributes.inc",
-    });
-
-    _ = self.synthesizeHeader(self.minimal_artifacts.registry, .{
-        .tblgen = self.minimal_artifacts.tblgen,
-        .name = "IntrinsicEnums",
-        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
-        .instruction = .{ .action = "-gen-intrinsic-enums" },
-        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
-    });
-
     self.full_tblgen = self.compileTblgen(.{
         .support_lib = self.minimal_artifacts.support,
         .minimal = false,
@@ -208,10 +192,12 @@ pub fn build(self: *Self, link_test_config: ?struct {
         }
     }
 
+    self.target_artifacts.target_parser_gen = self.runTargetParserGen();
     self.target_artifacts.target_parser = self.compileTargetParser();
     self.target_artifacts.bitstream_reader = self.compileBitstreamReader();
     self.target_artifacts.binary_format = self.compileBinaryFormat();
     self.target_artifacts.remarks = self.compileRemarks();
+    self.target_artifacts.intrinsics_gen = self.runIntrinsicsGen();
     self.target_artifacts.core = self.compileCore();
 
     // The link test is completely ignored for packaging
@@ -595,7 +581,6 @@ fn compileSupport(self: *const Self, config: struct {
     const mod = b.createModule(.{
         .target = config.target,
         .optimize = optimize,
-        .link_libc = true,
         .link_libcpp = true,
     });
 
@@ -681,7 +666,6 @@ fn compileDemangle(self: *const Self, target: std.Build.ResolvedTarget) *std.Bui
     const mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
-        .link_libc = true,
         .link_libcpp = true,
     });
 
@@ -795,17 +779,12 @@ fn compileBitstreamReader(self: *const Self) *std.Build.Step.Compile {
     });
 }
 
-/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TargetParser/CMakeLists.txt
-fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/TargetParser/CMakeLists.txt
+fn runTargetParserGen(self: *Self) *std.Build.Step.WriteFile {
     const b = self.b;
-    const mod = b.createModule(.{
-        .target = self.target,
-        .optimize = optimize,
-        .link_libcpp = true,
-    });
+    const write_file = b.addWriteFiles();
 
-    // AArch64 Target Parser Def
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+    _ = self.synthesizeHeader(write_file, .{
         .tblgen = self.full_tblgen,
         .name = "AArch64TargetParserDef",
         .td_file = "llvm/lib/Target/AArch64/AArch64.td",
@@ -814,8 +793,7 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
         .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/AArch64")},
     });
 
-    // ARM Target Parser Def
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+    _ = self.synthesizeHeader(write_file, .{
         .tblgen = self.full_tblgen,
         .name = "ARMTargetParserDef",
         .td_file = "llvm/lib/Target/ARM/ARM.td",
@@ -824,8 +802,7 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
         .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/ARM")},
     });
 
-    // RISCV Target Parser Def
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+    _ = self.synthesizeHeader(write_file, .{
         .tblgen = self.full_tblgen,
         .name = "RISCVTargetParserDef",
         .td_file = "llvm/lib/Target/RISCV/RISCV.td",
@@ -834,14 +811,25 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
         .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/RISCV")},
     });
 
-    // PPC Target Parser Def
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+    _ = self.synthesizeHeader(write_file, .{
         .tblgen = self.full_tblgen,
         .name = "PPCGenTargetFeatures",
         .td_file = "llvm/lib/Target/PowerPC/PPC.td",
         .instruction = .{ .action = "-gen-target-features" },
         .virtual_path = "llvm/TargetParser/PPCGenTargetFeatures.inc",
         .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/PowerPC")},
+    });
+
+    return write_file;
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TargetParser/CMakeLists.txt
+fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
     });
 
     const tp_dir = self.llvm.root.path(b, "llvm/lib/TargetParser");
@@ -860,7 +848,7 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
     });
 
     mod.addIncludePath(self.llvm.llvm_include);
-    mod.addIncludePath(self.target_artifacts.registry.getDirectory());
+    mod.addIncludePath(self.target_artifacts.target_parser_gen.getDirectory());
 
     mod.linkLibrary(self.target_artifacts.support);
 
@@ -868,6 +856,58 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
         .name = "LLVMTargetParser",
         .root_module = mod,
     });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/IR/CMakeLists.txt
+fn runIntrinsicsGen(self: *Self) *std.Build.Step.WriteFile {
+    const b = self.b;
+    const write_file = b.addWriteFiles();
+
+    _ = self.synthesizeHeader(write_file, .{
+        .tblgen = self.full_tblgen,
+        .name = "Attributes",
+        .td_file = "llvm/include/llvm/IR/Attributes.td",
+        .instruction = .{ .action = "-gen-attrs" },
+        .virtual_path = "llvm/IR/Attributes.inc",
+    });
+
+    _ = self.synthesizeHeader(write_file, .{
+        .tblgen = self.full_tblgen,
+        .name = "IntrinsicEnums",
+        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+        .instruction = .{ .action = "-gen-intrinsic-enums" },
+        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
+    });
+
+    _ = self.synthesizeHeader(write_file, .{
+        .tblgen = self.full_tblgen,
+        .name = "RuntimeLibcalls",
+        .td_file = "llvm/include/llvm/IR/RuntimeLibcalls.td",
+        .instruction = .{ .action = "-gen-runtime-libcalls" },
+        .virtual_path = "llvm/IR/RuntimeLibcalls.inc",
+    });
+
+    _ = self.synthesizeHeader(write_file, .{
+        .tblgen = self.full_tblgen,
+        .name = "IntrinsicImpl",
+        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+        .instruction = .{ .action = "-gen-intrinsic-impl" },
+        .virtual_path = "llvm/IR/IntrinsicImpl.inc",
+    });
+
+    for (ir.intrinsic_info) |info| {
+        _ = self.synthesizeHeader(write_file, .{
+            .tblgen = self.full_tblgen,
+            .name = b.fmt("Intrinsics{s}", .{info.arch}),
+            .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+            .instruction = .{
+                .actions = &.{ "-gen-intrinsic-enums", b.fmt("-intrinsic-prefix={s}", .{info.prefix}) },
+            },
+            .virtual_path = b.fmt("llvm/IR/Intrinsics{s}.h", .{info.arch}),
+        });
+    }
+
+    return write_file;
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IR/CMakeLists.txt
@@ -885,46 +925,9 @@ fn compileCore(self: *Self) *std.Build.Step.Compile {
         .flags = &common_llvm_cxx_flags,
     });
 
-    // Runtime libcalls aren't needed until here
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
-        .tblgen = self.full_tblgen,
-        .name = "RuntimeLibcalls",
-        .td_file = "llvm/include/llvm/IR/RuntimeLibcalls.td",
-        .instruction = .{ .action = "-gen-runtime-libcalls" },
-        .virtual_path = "llvm/IR/RuntimeLibcalls.inc",
-    });
-
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
-        .tblgen = self.full_tblgen,
-        .name = "IntrinsicImpl",
-        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
-        .instruction = .{ .action = "-gen-intrinsic-impl" },
-        .virtual_path = "llvm/IR/IntrinsicImpl.inc",
-    });
-
-    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
-        .tblgen = self.full_tblgen,
-        .name = "IntrinsicEnums",
-        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
-        .instruction = .{ .action = "-gen-intrinsic-enums" },
-        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
-    });
-
-    for (ir.intrinsic_info) |info| {
-        _ = self.synthesizeHeader(self.target_artifacts.registry, .{
-            .tblgen = self.full_tblgen,
-            .name = b.fmt("Intrinsics{s}", .{info.arch}),
-            .td_file = "llvm/include/llvm/IR/Intrinsics.td",
-            .instruction = .{
-                .actions = &.{ "-gen-intrinsic-enums", b.fmt("-intrinsic-prefix={s}", .{info.prefix}) },
-            },
-            .virtual_path = b.fmt("llvm/IR/Intrinsics{s}.h", .{info.arch}),
-        });
-    }
-
     mod.addIncludePath(self.llvm.llvm_include);
     mod.addIncludePath(self.minimal_artifacts.registry.getDirectory());
-    mod.addIncludePath(self.target_artifacts.registry.getDirectory());
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
 
     mod.linkLibrary(self.target_artifacts.binary_format);
     mod.linkLibrary(self.target_artifacts.demangle);
@@ -947,7 +950,7 @@ fn compileTblgen(self: *const Self, config: struct {
     const mod = b.createModule(.{
         .target = b.graph.host,
         .optimize = optimize,
-        .link_libc = true,
+        .link_libcpp = true,
     });
 
     mod.addCSourceFiles(.{
@@ -981,7 +984,7 @@ fn compileTblgen(self: *const Self, config: struct {
         });
     }
 
-    mod.addIncludePath(self.llvm.root.path(b, "llvm/include"));
+    mod.addIncludePath(self.llvm.llvm_include);
     mod.addIncludePath(self.llvm.root.path(b, "llvm/utils/TableGen"));
 
     const exe = b.addExecutable(.{
@@ -1003,6 +1006,7 @@ const TblgenInstruction = union(enum) {
 /// - name: The name of the generated .inc file
 /// - td_file: The .td file, relative to LLVM root
 /// - instruction: The tablegen action(s) to run, e.g. "-gen-intrinsic-enums"
+/// - extra_includes: Optional includes to add to the include path
 fn generateTblgenInc(self: *const Self, config: struct {
     tblgen: *std.Build.Step.Compile,
     name: []const u8,
@@ -1196,7 +1200,7 @@ fn compileLibxml2(self: *const Self, config: struct {
     }, .{
         .VERSION = "2.15.1",
         .LIBXML_VERSION_NUMBER = 21501,
-        .LIBXML_VERSION_EXTRA = "-conch-static",
+        .LIBXML_VERSION_EXTRA = "-conch",
         .WITH_THREADS = 1,
         .WITH_THREAD_ALLOC = 1,
         .WITH_OUTPUT = 1,
