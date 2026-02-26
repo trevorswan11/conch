@@ -225,14 +225,10 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
 
     // LLVM is compiled from source because I like burning compute or something
-    var llvm: LLVM = .init(b);
-    try llvm.build(.{
-        .target = config.target,
-        .link_test = .{
-            .auto_install = config.auto_install,
-            .cxx_flags = config.cxx_flags,
-        },
-        .skip_link_test = config.skip_link_test,
+    var llvm: LLVM = .init(b, config.target);
+    try llvm.build(if (config.skip_link_test) null else .{
+        .auto_install = config.auto_install,
+        .cxx_flags = config.cxx_flags,
     });
 
     // The actual compiler static library
@@ -1013,9 +1009,7 @@ const LOCCounter = struct {
 
     step: std.Build.Step,
 
-    pub fn init(
-        b: *std.Build,
-    ) *LOCCounter {
+    pub fn init(b: *std.Build) *LOCCounter {
         const self = b.allocator.create(LOCCounter) catch @panic("OOM");
         self.* = .{
             .step = .init(.{

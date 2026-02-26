@@ -1,3 +1,5 @@
+const std = @import("std");
+
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TableGen/CMakeLists.txt
 pub const lib_root = "llvm/lib/TableGen/";
 pub const lib = [_][]const u8{
@@ -106,4 +108,19 @@ pub const emitters = [_][]const u8{
     "X86MnemonicTables.cpp",
     "X86ModRMFilters.cpp",
     "X86RecognizableInstr.cpp",
+};
+
+const TblgenTargetAction = struct {
+    name: []const u8,
+    flag: []const u8,
+};
+
+pub const actions = [_]TblgenTargetAction{
+    .{ .name = "GenRegisterInfo", .flag = "-gen-register-info" },
+    .{ .name = "GenInstrInfo", .flag = "-gen-instr-info" },
+    .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
+    .{ .name = "GenAsmMatcher", .flag = "-gen-asm-matcher" },
+    .{ .name = "GenDAGISel", .flag = "-gen-dag-isel" },
+    .{ .name = "GenSubtargetInfo", .flag = "-gen-subtarget" },
+    .{ .name = "GenCallingConv", .flag = "-gen-callingconv" },
 };

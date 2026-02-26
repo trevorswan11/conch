@@ -1,12 +1,15 @@
 //! LLVM Source Compilation rules. All artifacts are compiled as ReleaseSafe.
 const std = @import("std");
 
-const support_sources = @import("sources/support.zig");
-const tblgen_sources = @import("sources/tblgen.zig");
+const support = @import("sources/support.zig");
+const tblgen = @import("sources/tblgen.zig");
+const ir = @import("sources/ir.zig");
 
 const ThirdParty = struct {
     const siphash_inc = "third-party/siphash/include";
 };
+
+const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
 
 const Dependencies = struct {
     const Dependency = struct {
@@ -17,6 +20,38 @@ const Dependencies = struct {
     zlib: Dependency,
     libxml2: Dependency,
     zstd: Dependency,
+};
+
+/// Artifacts compiled for the actual target
+const TargetArtifacts = struct {
+    deps: Dependencies = undefined,
+    demangle: *std.Build.Step.Compile = undefined,
+    support: *std.Build.Step.Compile = undefined,
+    target_parser: *std.Build.Step.Compile = undefined,
+    bitstream_reader: *std.Build.Step.Compile = undefined,
+    binary_format: *std.Build.Step.Compile = undefined,
+    remarks: *std.Build.Step.Compile = undefined,
+    core: *std.Build.Step.Compile = undefined,
+
+    /// Registry of files to be added as virtual includes.
+    ///
+    /// Consists of target-specific includes.
+    registry: *std.Build.Step.WriteFile,
+
+    fn artifactArray(self: *const TargetArtifacts) [10]*std.Build.Step.Compile {
+        return .{
+            self.deps.zlib.artifact,
+            self.deps.libxml2.artifact,
+            self.deps.zstd.artifact,
+            self.demangle,
+            self.support,
+            self.target_parser,
+            self.bitstream_reader,
+            self.binary_format,
+            self.remarks,
+            self.core,
+        };
+    }
 };
 
 const version: std.SemanticVersion = .{
@@ -43,135 +78,166 @@ const enabled_targets = &[_][]const u8{
     "RISCV",
     "WebAssembly",
     "Xtensa",
+    "PowerPC",
 };
+
+/// Converts the enabled target into its Abbr, usually a no-op.
+fn targetAbbr(enabled_target: []const u8) []const u8 {
+    if (std.mem.eql(u8, enabled_target, "PowerPC")) {
+        return "PPC";
+    }
+    return enabled_target;
+}
 
 const Self = @This();
 
 b: *std.Build,
-llvm_upstream: *std.Build.Dependency,
-llvm_root: std.Build.LazyPath,
-llvm_include: std.Build.LazyPath,
-
-/// Registry of files to be added as virtual includes
-registry: *std.Build.Step.WriteFile,
+llvm: struct {
+    upstream: *std.Build.Dependency,
+    root: std.Build.LazyPath,
+    llvm_include: std.Build.LazyPath,
+},
 
 /// A minimal set of artifacts, compiled for the host arch.
 ///
 /// These are used for the generation of core files for the LLVM pipeline.
 /// A distinction between minimal and full must be made to prevent a circular dependency.
-minimal: struct {
+minimal_artifacts: struct {
     tblgen: *std.Build.Step.Compile = undefined,
     deps: Dependencies = undefined,
+    demangle: *std.Build.Step.Compile = undefined,
     support: *std.Build.Step.Compile = undefined,
-} = .{},
+
+    /// Registry of files to be added as virtual includes.
+    ///
+    /// Includes only GenVT and Intrinsics.
+    registry: *std.Build.Step.WriteFile,
+},
 
 /// Used to convert the actual target 'td's into 'inc's
 full_tblgen: *std.Build.Step.Compile = undefined,
 
-/// Artifacts compiled for the actual target
-target: struct {
-    deps: Dependencies = undefined,
-    support: *std.Build.Step.Compile = undefined,
-} = .{},
+target_artifacts: TargetArtifacts,
 
-pub fn init(b: *std.Build) Self {
+/// The target system to compile to
+target: std.Build.ResolvedTarget,
+
+pub fn init(b: *std.Build, target: std.Build.ResolvedTarget) Self {
     const upstream = b.dependency("llvm", .{});
     return .{
         .b = b,
-        .llvm_upstream = upstream,
-        .llvm_root = upstream.path("."),
-        .llvm_include = upstream.path("llvm/include"),
-        .registry = b.addWriteFiles(),
+        .llvm = .{
+            .upstream = upstream,
+            .root = upstream.path("."),
+            .llvm_include = upstream.path("llvm/include"),
+        },
+        .minimal_artifacts = .{
+            .registry = b.addWriteFiles(),
+        },
+        .target_artifacts = .{
+            .registry = b.addWriteFiles(),
+        },
+        .target = target,
     };
 }
 
-pub fn build(self: *Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    /// Config for the link test ONLY, not applied to LLVM artifacts!
-    link_test: struct {
-        auto_install: bool,
-        cxx_flags: []const []const u8,
-    },
-    skip_link_test: bool,
+pub fn build(self: *Self, link_test_config: ?struct {
+    auto_install: bool,
+    cxx_flags: []const []const u8,
 }) !void {
     const b = self.b;
 
     // Host Dependencies for TableGen
-    self.minimal.deps = try self.dependencies(b.graph.host);
-    self.minimal.support = try self.support(.{
+    self.minimal_artifacts.deps = try self.compileDeps(b.graph.host);
+    self.minimal_artifacts.demangle = self.compileDemangle(b.graph.host);
+    self.minimal_artifacts.support = try self.compileSupport(.{
         .target = b.graph.host,
-        .optimize = .ReleaseSafe,
-        .deps = self.minimal.deps,
+        .deps = self.minimal_artifacts.deps,
         .minimal = true,
     });
 
-    self.minimal.tblgen = self.tblgen(.{
-        .support_lib = self.minimal.support,
+    self.minimal_artifacts.tblgen = self.compileTblgen(.{
+        .support_lib = self.minimal_artifacts.support,
         .minimal = true,
     });
 
-    _ = self.synthesizeHeader(.{
-        .tblgen = self.minimal.tblgen,
+    _ = self.synthesizeHeader(self.minimal_artifacts.registry, .{
+        .tblgen = self.minimal_artifacts.tblgen,
         .name = "GenVT",
         .td_file = "llvm/include/llvm/CodeGen/ValueTypes.td",
-        .action = "-gen-vt",
+        .instruction = .{ .action = "-gen-vt" },
         .virtual_path = "llvm/CodeGen/GenVT.inc",
     });
 
-    self.full_tblgen = self.tblgen(.{
-        .support_lib = self.minimal.support,
+    _ = self.synthesizeHeader(self.minimal_artifacts.registry, .{
+        .tblgen = self.minimal_artifacts.tblgen,
+        .name = "Attributes",
+        .td_file = "llvm/include/llvm/IR/Attributes.td",
+        .instruction = .{ .action = "-gen-attrs" },
+        .virtual_path = "llvm/IR/Attributes.inc",
+    });
+
+    _ = self.synthesizeHeader(self.minimal_artifacts.registry, .{
+        .tblgen = self.minimal_artifacts.tblgen,
+        .name = "IntrinsicEnums",
+        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+        .instruction = .{ .action = "-gen-intrinsic-enums" },
+        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
+    });
+
+    self.full_tblgen = self.compileTblgen(.{
+        .support_lib = self.minimal_artifacts.support,
         .minimal = false,
     });
-    self.full_tblgen.root_module.addIncludePath(self.registry.getDirectory());
+    self.full_tblgen.root_module.addIncludePath(self.minimal_artifacts.registry.getDirectory());
 
     // Target dependencies must be built fully
-    self.target.deps = try self.dependencies(config.target);
-    self.target.support = try self.support(.{
-        .target = config.target,
-        .optimize = .ReleaseSafe,
-        .deps = self.target.deps,
+    self.target_artifacts.deps = try self.compileDeps(self.target);
+    self.target_artifacts.demangle = self.compileDemangle(self.target);
+    self.target_artifacts.support = try self.compileSupport(.{
+        .target = self.target,
+        .deps = self.target_artifacts.deps,
         .minimal = false,
     });
 
-    for (enabled_targets) |target| {
-        const incs = try self.buildTargetHeaders(target);
+    for (enabled_targets) |target_name| {
+        const incs = try self.buildTargetHeaders(target_name);
         for (incs) |inc| {
-            self.target.support.root_module.addIncludePath(inc.dirname());
+            self.target_artifacts.support.root_module.addIncludePath(inc.dirname());
         }
     }
 
+    self.target_artifacts.target_parser = self.compileTargetParser();
+    self.target_artifacts.bitstream_reader = self.compileBitstreamReader();
+    self.target_artifacts.binary_format = self.compileBinaryFormat();
+    self.target_artifacts.remarks = self.compileRemarks();
+    self.target_artifacts.core = self.compileCore();
+
     // The link test is completely ignored for packaging
-    if (!config.skip_link_test) {
-        const llvm_link_test_exe = self.createLinkTest(.{
-            .target = b.graph.host,
-            .cxx_flags = config.link_test.cxx_flags,
-        });
-        if (config.link_test.auto_install) b.installArtifact(llvm_link_test_exe);
+    if (link_test_config) |link_test| {
+        const llvm_link_test_exe = self.createLinkTest(link_test.cxx_flags);
+        if (link_test.auto_install) b.installArtifact(llvm_link_test_exe);
     }
 }
 
 /// Creates a custom runnable target to test LLVM linkage against a C++23 source file
-fn createLinkTest(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    cxx_flags: []const []const u8,
-}) *std.Build.Step.Compile {
+fn createLinkTest(self: *const Self, cxx_flags: []const []const u8) *std.Build.Step.Compile {
     const b = self.b;
     const mod = b.createModule(.{
         .optimize = .Debug,
-        .target = config.target,
+        .target = b.graph.host,
         .link_libcpp = true,
     });
 
     mod.addCSourceFile(.{
         .file = b.path("packages/llvm/link_test.cpp"),
-        .flags = config.cxx_flags,
+        .flags = cxx_flags,
     });
-    mod.addSystemIncludePath(self.llvm_include);
+    mod.addSystemIncludePath(self.llvm.llvm_include);
 
-    mod.linkLibrary(self.target.support);
-    mod.linkLibrary(self.target.deps.libxml2.artifact);
-    mod.linkLibrary(self.target.deps.zlib.artifact);
-    mod.linkLibrary(self.target.deps.zstd.artifact);
+    for (self.target_artifacts.artifactArray()) |lib| {
+        mod.linkLibrary(lib);
+    }
 
     const exe = b.addExecutable(.{
         .name = "llvm_link_test",
@@ -203,7 +269,7 @@ const ConfigHeaders = struct {
     target_mcas_def: *std.Build.Step.ConfigHeader,
     targets_def: *std.Build.Step.ConfigHeader,
 
-    fn array(self: *const ConfigHeaders) [10]*std.Build.Step.ConfigHeader {
+    fn configHeaderArray(self: *const ConfigHeaders) [10]*std.Build.Step.ConfigHeader {
         return .{
             self.config_h,
             self.llvm_config_h,
@@ -220,16 +286,15 @@ const ConfigHeaders = struct {
 };
 
 /// https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/llvm/include/llvm/Config
-fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTarget) !ConfigHeaders {
+fn createConfigHeaders(self: *const Self, target: std.Target) !ConfigHeaders {
     const b = self.b;
-    const target = resolved_target.result;
     const is_darwin = target.os.tag.isDarwin();
     const is_windows = target.os.tag == .windows;
     const is_linux = target.os.tag == .linux;
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/config.h.cmake
     const config = b.addConfigHeader(.{
-        .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/config.h.cmake") },
+        .style = .{ .cmake = self.llvm.root.path(b, "llvm/include/llvm/Config/config.h.cmake") },
         .include_path = "llvm/Config/config.h",
     }, .{
         .PACKAGE_NAME = "LLVM",
@@ -355,7 +420,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
     const triple = try target.linuxTriple(b.allocator);
 
     const llvm_config = b.addConfigHeader(.{
-        .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
+        .style = .{ .cmake = self.llvm.root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
         .include_path = "llvm/Config/llvm-config.h",
     }, .{
         .LLVM_VERSION_MAJOR = @as(i64, @intCast(version.major)),
@@ -419,7 +484,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/abi-breaking.h.cmake
     const abi_breaking = b.addConfigHeader(.{
-        .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/abi-breaking.h.cmake") },
+        .style = .{ .cmake = self.llvm.root.path(b, "llvm/include/llvm/Config/abi-breaking.h.cmake") },
         .include_path = "llvm/Config/abi-breaking.h",
     }, .{
         .LLVM_ENABLE_ABI_BREAKING_CHECKS = 0,
@@ -428,7 +493,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Targets.h.cmake
     const targets_h = b.addConfigHeader(.{
-        .style = .{ .cmake = self.llvm_root.path(b, "llvm/include/llvm/Config/Targets.h.cmake") },
+        .style = .{ .cmake = self.llvm.root.path(b, "llvm/include/llvm/Config/Targets.h.cmake") },
         .include_path = "llvm/Config/Targets.h",
     }, .{});
 
@@ -449,7 +514,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/AsmParsers.def.in
     const asm_parsers = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/AsmParsers.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/AsmParsers.def.in") },
         .include_path = "llvm/Config/AsmParsers.def",
     }, .{
         .LLVM_ENUM_ASM_PARSERS = formatDef(b, enabled_targets, "LLVM_ASM_PARSER"),
@@ -457,7 +522,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/AsmPrinters.def.in
     const asm_printers = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/AsmPrinters.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/AsmPrinters.def.in") },
         .include_path = "llvm/Config/AsmPrinters.def",
     }, .{
         .LLVM_ENUM_ASM_PRINTERS = formatDef(b, enabled_targets, "LLVM_ASM_PRINTER"),
@@ -465,7 +530,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Disassemblers.def.in
     const disassemblers = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/Disassemblers.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/Disassemblers.def.in") },
         .include_path = "llvm/Config/Disassemblers.def",
     }, .{
         .LLVM_ENUM_DISASSEMBLERS = formatDef(b, enabled_targets, "LLVM_DISASSEMBLER"),
@@ -473,7 +538,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/TargetExegesis.def.in
     const target_exegesis = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/TargetExegesis.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/TargetExegesis.def.in") },
         .include_path = "llvm/Config/TargetExegesis.def",
     }, .{
         .LLVM_ENUM_EXEGESIS = formatDef(b, enabled_targets, "LLVM_EXEGESIS"),
@@ -481,7 +546,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/TargetMCAs.def.in
     const target_mcas = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/TargetMCAs.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/TargetMCAs.def.in") },
         .include_path = "llvm/Config/TargetMCAs.def",
     }, .{
         .LLVM_ENUM_TARGETMCAS = formatDef(b, enabled_targets, "LLVM_TARGETMCA"),
@@ -489,7 +554,7 @@ fn createConfigHeaders(self: *const Self, resolved_target: std.Build.ResolvedTar
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/Targets.def.in
     const targets_def = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = self.llvm_root.path(b, "llvm/include/llvm/Config/Targets.def.in") },
+        .style = .{ .autoconf_at = self.llvm.root.path(b, "llvm/include/llvm/Config/Targets.def.in") },
         .include_path = "llvm/Config/Targets.def",
     }, .{
         .LLVM_ENUM_TARGETS = formatDef(b, enabled_targets, "LLVM_TARGET"),
@@ -518,9 +583,8 @@ fn formatDef(b: *std.Build, targets: []const []const u8, macro_name: []const u8)
     return list.items;
 }
 
-fn support(self: *const Self, config: struct {
+fn compileSupport(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
     deps: Dependencies,
     minimal: bool,
 }) !*std.Build.Step.Compile {
@@ -529,58 +593,57 @@ fn support(self: *const Self, config: struct {
 
     const mod = b.createModule(.{
         .target = config.target,
-        .optimize = config.optimize,
+        .optimize = optimize,
         .link_libc = true,
         .link_libcpp = true,
     });
 
-    const demangle_lib = self.demangle(.{
-        .target = config.target,
-        .optimize = config.optimize,
-    });
-    mod.linkLibrary(demangle_lib);
-
-    const config_headers = try self.createConfigHeaders(config.target);
-    const config_header_array = config_headers.array();
+    const config_headers = try self.createConfigHeaders(config.target.result);
+    const config_header_array = config_headers.configHeaderArray();
     for (config_header_array) |header| {
         mod.addConfigHeader(header);
     }
 
-    const support_root = self.llvm_root.path(b, support_sources.common_path);
-    mod.addIncludePath(self.llvm_include);
+    const support_root = self.llvm.root.path(b, support.common_path);
+    mod.addIncludePath(self.llvm.llvm_include);
     mod.addIncludePath(support_root);
-    mod.addIncludePath(self.llvm_root.path(b, ThirdParty.siphash_inc));
+    mod.addIncludePath(self.llvm.root.path(b, ThirdParty.siphash_inc));
 
     // Compile sources
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &support_sources.regex_c,
+        .files = &support.regex_c,
         .flags = &.{"-std=c11"},
     });
     mod.addCSourceFiles(.{
-        .root = support_root.path(b, support_sources.blake3_rel_path),
-        .files = &support_sources.blake3,
+        .root = support_root.path(b, support.blake3_rel_path),
+        .files = &support.blake3,
         .flags = &.{"-std=c11"},
     });
 
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &support_sources.common,
+        .files = &support.common,
         .flags = &common_llvm_cxx_flags,
     });
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &support_sources.common,
+        .files = &support.common,
         .flags = &common_llvm_cxx_flags,
     });
 
     mod.linkLibrary(config.deps.zlib.artifact);
     mod.linkLibrary(config.deps.zstd.artifact);
     mod.linkLibrary(config.deps.libxml2.artifact);
+    if (config.minimal) {
+        mod.linkLibrary(self.minimal_artifacts.demangle);
+    } else {
+        mod.linkLibrary(self.target_artifacts.demangle);
+    }
 
     // Specific windows compilation & linking
     if (t.os.tag == .windows) {
-        mod.addIncludePath(self.llvm_root.path(b, support_sources.windows_rel_path));
+        mod.addIncludePath(self.llvm.root.path(b, support.windows_rel_path));
         mod.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
         mod.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
         mod.addCMacro("_CRT_NONSTDC_NO_DEPRECATE", "");
@@ -597,7 +660,7 @@ fn support(self: *const Self, config: struct {
         mod.linkSystemLibrary("ws2_32", .{ .preferred_link_mode = .static });
         mod.linkSystemLibrary("ntdll", .{ .preferred_link_mode = .static });
     } else {
-        mod.addIncludePath(self.llvm_root.path(b, support_sources.unix_rel_path));
+        mod.addIncludePath(self.llvm.root.path(b, support.unix_rel_path));
         if (t.os.tag == .linux) {
             mod.linkSystemLibrary("rt", .{ .preferred_link_mode = .static });
             mod.linkSystemLibrary("dl", .{ .preferred_link_mode = .static });
@@ -619,31 +682,25 @@ fn support(self: *const Self, config: struct {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Demangle/CMakeLists.txt
-fn demangle(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-}) *std.Build.Step.Compile {
+fn compileDemangle(self: *const Self, target: std.Build.ResolvedTarget) *std.Build.Step.Compile {
     const b = self.b;
     const mod = b.createModule(.{
-        .target = config.target,
-        .optimize = config.optimize,
+        .target = target,
+        .optimize = optimize,
         .link_libc = true,
         .link_libcpp = true,
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, "llvm/lib/Demangle"),
+        .root = self.llvm.root.path(b, "llvm/lib/Demangle"),
         .files = &.{
-            "DLangDemangle.cpp",
-            "Demangle.cpp",
-            "ItaniumDemangle.cpp",
-            "MicrosoftDemangle.cpp",
-            "MicrosoftDemangleNodes.cpp",
-            "RustDemangle.cpp",
+            "DLangDemangle.cpp",          "Demangle.cpp",
+            "ItaniumDemangle.cpp",        "MicrosoftDemangle.cpp",
+            "MicrosoftDemangleNodes.cpp", "RustDemangle.cpp",
         },
         .flags = &common_llvm_cxx_flags,
     });
-    mod.addIncludePath(self.llvm_include);
+    mod.addIncludePath(self.llvm.llvm_include);
 
     return b.addLibrary(.{
         .name = "LLVMDemangle",
@@ -651,53 +708,289 @@ fn demangle(self: *const Self, config: struct {
     });
 }
 
-fn tblgen(
-    self: *const Self,
-    config: struct {
-        support_lib: *std.Build.Step.Compile,
-        minimal: bool,
-    },
-) *std.Build.Step.Compile {
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/BinaryFormat/CMakeLists.txt
+fn compileBinaryFormat(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
+    });
+
+    const bf_dir = self.llvm.root.path(b, "llvm/lib/BinaryFormat");
+    mod.addCSourceFiles(.{
+        .root = bf_dir,
+        .files = &.{
+            "AMDGPUMetadataVerifier.cpp", "COFF.cpp",
+            "Dwarf.cpp",                  "DXContainer.cpp",
+            "ELF.cpp",                    "MachO.cpp",
+            "Magic.cpp",                  "Minidump.cpp",
+            "MsgPackDocument.cpp",        "MsgPackDocumentYAML.cpp",
+            "MsgPackReader.cpp",          "MsgPackWriter.cpp",
+            "Wasm.cpp",                   "XCOFF.cpp",
+        },
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMBinaryFormat",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Remarks/CMakeLists.txt
+fn compileRemarks(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
+    });
+
+    const bf_dir = self.llvm.root.path(b, "llvm/lib/Remarks");
+    mod.addCSourceFiles(.{
+        .root = bf_dir,
+        .files = &.{
+            "BitstreamRemarkParser.cpp", "BitstreamRemarkSerializer.cpp",
+            "Remark.cpp",                "RemarkFormat.cpp",
+            "RemarkLinker.cpp",          "RemarkParser.cpp",
+            "RemarkSerializer.cpp",      "RemarkStreamer.cpp",
+            "RemarkStringTable.cpp",     "YAMLRemarkParser.cpp",
+            "YAMLRemarkSerializer.cpp",
+        },
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.minimal_artifacts.registry.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.bitstream_reader);
+
+    return b.addLibrary(.{
+        .name = "LLVMRemarks",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Bitstream/Reader/CMakeLists.txt
+fn compileBitstreamReader(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
+    });
+
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, "llvm/lib/Bitstream/Reader/BitstreamReader.cpp"),
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.linkLibrary(self.target_artifacts.support);
+
+    return b.addLibrary(.{
+        .name = "LLVMBitstreamReader",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TargetParser/CMakeLists.txt
+fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
+    });
+
+    // AArch64 Target Parser Def
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "AArch64TargetParserDef",
+        .td_file = "llvm/lib/Target/AArch64/AArch64.td",
+        .instruction = .{ .action = "-gen-arm-target-def" },
+        .virtual_path = "llvm/TargetParser/AArch64TargetParserDef.inc",
+        .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/AArch64")},
+    });
+
+    // ARM Target Parser Def
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "ARMTargetParserDef",
+        .td_file = "llvm/lib/Target/ARM/ARM.td",
+        .instruction = .{ .action = "-gen-arm-target-def" },
+        .virtual_path = "llvm/TargetParser/ARMTargetParserDef.inc",
+        .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/ARM")},
+    });
+
+    // RISCV Target Parser Def
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "RISCVTargetParserDef",
+        .td_file = "llvm/lib/Target/RISCV/RISCV.td",
+        .instruction = .{ .action = "-gen-riscv-target-def" },
+        .virtual_path = "llvm/TargetParser/RISCVTargetParserDef.inc",
+        .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/RISCV")},
+    });
+
+    // PPC Target Parser Def
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "PPCGenTargetFeatures",
+        .td_file = "llvm/lib/Target/PowerPC/PPC.td",
+        .instruction = .{ .action = "-gen-target-features" },
+        .virtual_path = "llvm/TargetParser/PPCGenTargetFeatures.inc",
+        .extra_includes = &.{self.llvm.root.path(b, "llvm/lib/Target/PowerPC")},
+    });
+
+    const tp_dir = self.llvm.root.path(b, "llvm/lib/TargetParser");
+    mod.addCSourceFiles(.{
+        .root = tp_dir,
+        .files = &.{
+            "AArch64TargetParser.cpp", "ARMTargetParserCommon.cpp",
+            "ARMTargetParser.cpp",     "CSKYTargetParser.cpp",
+            "Host.cpp",                "LoongArchTargetParser.cpp",
+            "PPCTargetParser.cpp",     "RISCVISAInfo.cpp",
+            "RISCVTargetParser.cpp",   "SubtargetFeature.cpp",
+            "TargetParser.cpp",        "Triple.cpp",
+            "X86TargetParser.cpp",
+        },
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(tp_dir.path(b, "Unix"));
+    mod.addIncludePath(tp_dir.path(b, "Windows"));
+    mod.addIncludePath(self.target_artifacts.registry.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.support);
+
+    return b.addLibrary(.{
+        .name = "LLVMTargetParser",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IR/CMakeLists.txt
+fn compileCore(self: *Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = b.createModule(.{
+        .target = self.target,
+        .optimize = optimize,
+        .link_libcpp = true,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, ir.ir_root),
+        .files = &ir.ir,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    // Runtime libcalls aren't needed until here
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "RuntimeLibcalls",
+        .td_file = "llvm/include/llvm/IR/RuntimeLibcalls.td",
+        .instruction = .{ .action = "-gen-runtime-libcalls" },
+        .virtual_path = "llvm/IR/RuntimeLibcalls.inc",
+    });
+
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "IntrinsicImpl",
+        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+        .instruction = .{ .action = "-gen-intrinsic-impl" },
+        .virtual_path = "llvm/IR/IntrinsicImpl.inc",
+    });
+
+    _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+        .tblgen = self.full_tblgen,
+        .name = "IntrinsicEnums",
+        .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+        .instruction = .{ .action = "-gen-intrinsic-enums" },
+        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
+    });
+
+    for (ir.intrinsic_info) |info| {
+        _ = self.synthesizeHeader(self.target_artifacts.registry, .{
+            .tblgen = self.full_tblgen,
+            .name = b.fmt("Intrinsics{s}", .{info.arch}),
+            .td_file = "llvm/include/llvm/IR/Intrinsics.td",
+            .instruction = .{
+                .actions = &.{ "-gen-intrinsic-enums", b.fmt("-intrinsic-prefix={s}", .{info.prefix}) },
+            },
+            .virtual_path = b.fmt("llvm/IR/Intrinsics{s}.h", .{info.arch}),
+        });
+    }
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.minimal_artifacts.registry.getDirectory());
+    mod.addIncludePath(self.target_artifacts.registry.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.binary_format);
+    mod.linkLibrary(self.target_artifacts.demangle);
+    mod.linkLibrary(self.target_artifacts.remarks);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMCore",
+        .root_module = mod,
+    });
+}
+
+/// Compiles tblgen for the host system only
+fn compileTblgen(self: *const Self, config: struct {
+    support_lib: *std.Build.Step.Compile,
+    minimal: bool,
+}) *std.Build.Step.Compile {
     const b = self.b;
     const mod = b.createModule(.{
         .target = b.graph.host,
-        .optimize = .ReleaseSafe,
+        .optimize = optimize,
         .link_libc = true,
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tblgen_sources.basic_root),
-        .files = &tblgen_sources.basic,
+        .root = self.llvm.root.path(b, tblgen.basic_root),
+        .files = &tblgen.basic,
         .flags = &common_llvm_cxx_flags,
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm_root.path(b, tblgen_sources.lib_root),
-        .files = &tblgen_sources.lib,
+        .root = self.llvm.root.path(b, tblgen.lib_root),
+        .files = &tblgen.lib,
         .flags = &common_llvm_cxx_flags,
     });
 
     if (config.minimal) {
         mod.addCSourceFile(.{
-            .file = self.llvm_root.path(b, tblgen_sources.minimal_main),
+            .file = self.llvm.root.path(b, tblgen.minimal_main),
             .flags = &common_llvm_cxx_flags,
         });
     } else {
         mod.addCSourceFiles(.{
-            .root = self.llvm_root.path(b, tblgen_sources.common_root),
-            .files = &tblgen_sources.common,
+            .root = self.llvm.root.path(b, tblgen.common_root),
+            .files = &tblgen.common,
             .flags = &common_llvm_cxx_flags,
         });
 
         mod.addCSourceFiles(.{
-            .root = self.llvm_root.path(b, tblgen_sources.emitter_root),
-            .files = &tblgen_sources.emitters,
+            .root = self.llvm.root.path(b, tblgen.emitter_root),
+            .files = &tblgen.emitters,
             .flags = &common_llvm_cxx_flags,
         });
     }
 
-    mod.addIncludePath(self.llvm_root.path(b, "llvm/include"));
-    mod.addIncludePath(self.llvm_root.path(b, "llvm/utils/TableGen"));
+    mod.addIncludePath(self.llvm.root.path(b, "llvm/include"));
+    mod.addIncludePath(self.llvm.root.path(b, "llvm/utils/TableGen"));
 
     const exe = b.addExecutable(.{
         .name = if (config.minimal) "LLVMTableGenMinimal" else "LLVMTableGen",
@@ -708,66 +1001,62 @@ fn tblgen(
     return exe;
 }
 
-const TblgenTargetAction = struct {
-    name: []const u8,
-    flag: []const u8,
-};
-
-const target_actions = [_]TblgenTargetAction{
-    .{ .name = "GenRegisterInfo", .flag = "-gen-register-info" },
-    .{ .name = "GenInstrInfo", .flag = "-gen-instr-info" },
-    .{ .name = "GenAsmWriter", .flag = "-gen-asm-writer" },
-    .{ .name = "GenAsmMatcher", .flag = "-gen-asm-matcher" },
-    .{ .name = "GenDAGISel", .flag = "-gen-dag-isel" },
-    .{ .name = "GenSubtargetInfo", .flag = "-gen-subtarget" },
-    .{ .name = "GenCallingConv", .flag = "-gen-callingconv" },
+const TblgenInstruction = union(enum) {
+    action: []const u8,
+    actions: []const []const u8,
 };
 
 /// Uses tblgen to generate a build-time dependency for LLVM
 /// - tg_tool: The tblgen binary to use
 /// - name: The name of the generated .inc file
 /// - td_file: The .td file, relative to LLVM root
-/// - action: The tablegen action to run, e.g. "-gen-intrinsic-enums"
-fn generateTblGenInc(self: *const Self, config: struct {
+/// - instruction: The tablegen action(s) to run, e.g. "-gen-intrinsic-enums"
+fn generateTblgenInc(self: *const Self, config: struct {
     tblgen: *std.Build.Step.Compile,
     name: []const u8,
     td_file: []const u8,
-    action: []const u8,
+    instruction: TblgenInstruction,
     extra_includes: ?[]const std.Build.LazyPath = null,
 }) std.Build.LazyPath {
     const b = self.b;
     const run = b.addRunArtifact(config.tblgen);
     run.step.name = b.fmt("TableGen {s}", .{config.name});
 
-    run.addArg(config.action);
-    run.addPrefixedDirectoryArg("-I", self.llvm_include);
+    switch (config.instruction) {
+        .action => |action| run.addArg(action),
+        .actions => |action| run.addArgs(action),
+    }
+
+    run.addPrefixedDirectoryArg("-I", self.llvm.llvm_include);
     if (config.extra_includes) |extra_includes| {
         for (extra_includes) |include| {
             run.addPrefixedDirectoryArg("-I", include);
         }
     }
 
-    run.addFileArg(self.llvm_root.path(b, config.td_file));
+    run.addFileArg(self.llvm.root.path(b, config.td_file));
     run.addArg("-o");
 
     return run.addOutputFileArg(b.fmt("{s}.inc", .{config.name}));
 }
 
 /// Generate the passed td file as the requested inc, adding it to the virtual path registry.
-fn synthesizeHeader(self: *Self, config: struct {
+fn synthesizeHeader(self: *Self, registry: *std.Build.Step.WriteFile, config: struct {
     tblgen: *std.Build.Step.Compile,
     name: []const u8,
     td_file: []const u8,
-    action: []const u8,
+    instruction: TblgenInstruction,
     virtual_path: []const u8,
+    extra_includes: ?[]const std.Build.LazyPath = null,
 }) std.Build.LazyPath {
-    const flat = self.generateTblGenInc(.{
+    const flat = self.generateTblgenInc(.{
         .tblgen = config.tblgen,
         .name = config.name,
         .td_file = config.td_file,
-        .action = config.action,
+        .instruction = config.instruction,
+        .extra_includes = config.extra_includes,
     });
-    return self.registry.addCopyFile(flat, config.virtual_path);
+    return registry.addCopyFile(flat, config.virtual_path);
 }
 
 /// Generates all .inc files for a specific target
@@ -777,17 +1066,17 @@ fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.L
 
     // The root .td file for a target is always <Name>.td
     const target_dir = b.fmt("llvm/lib/Target/{s}", .{target_name});
-    const main_td = b.fmt("{s}/{s}.td", .{ target_dir, target_name });
-    for (target_actions) |action| {
+    const main_td = b.fmt("{s}/{s}.td", .{ target_dir, targetAbbr(target_name) });
+    for (tblgen.actions) |action| {
         const name = b.fmt("{s}{s}", .{ target_name, action.name });
         try results.append(
             b.allocator,
-            self.generateTblGenInc(.{
+            self.generateTblgenInc(.{
                 .tblgen = self.full_tblgen,
                 .name = name,
                 .td_file = main_td,
-                .action = action.flag,
-                .extra_includes = &.{self.llvm_root.path(b, target_dir)},
+                .instruction = .{ .action = action.flag },
+                .extra_includes = &.{self.llvm.root.path(b, target_dir)},
             }),
         );
     }
@@ -795,23 +1084,17 @@ fn buildTargetHeaders(self: *const Self, target_name: []const u8) ![]std.Build.L
     return results.items;
 }
 
-fn dependencies(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies {
-    const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
-    const zlib_dep = try self.zlib(.{
-        .target = target,
-        .optimize = optimize,
-    });
+fn compileDeps(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies {
+    const zlib_dep = try self.compileZlib(target);
     const zlib_include = zlib_dep.dependency.path(".");
 
-    const libxml2_dep = self.libxml2(.{
+    const libxml2_dep = self.compileLibxml2(.{
         .target = target,
-        .optimize = optimize,
         .zlib_include = zlib_include,
     });
 
-    const zstd_dep = self.zstd(.{
+    const zstd_dep = self.compileZstd(.{
         .target = target,
-        .optimize = optimize,
         .zlib_include = zlib_include,
     });
 
@@ -824,16 +1107,13 @@ fn dependencies(self: *const Self, target: std.Build.ResolvedTarget) !Dependenci
 
 /// Compiles zlib from source as a static library
 /// Reference: https://github.com/allyourcodebase/zlib
-fn zlib(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-}) !Dependencies.Dependency {
+fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies.Dependency {
     const b = self.b;
     const upstream = b.dependency("zlib", .{});
     const root = upstream.path(".");
     const mod = b.createModule(.{
-        .target = config.target,
-        .optimize = config.optimize,
+        .target = target,
+        .optimize = optimize,
         .link_libc = true,
     });
 
@@ -846,7 +1126,7 @@ fn zlib(self: *const Self, config: struct {
 
     var flags: std.ArrayList([]const u8) = .empty;
     try flags.appendSlice(b.allocator, &.{ "-std=c11", "-D_REENTRANT" });
-    if (config.target.result.os.tag != .windows) {
+    if (target.result.os.tag != .windows) {
         try flags.appendSlice(b.allocator, &.{ "-DHAVE_UNISTD_H", "-DHAVE_SYS_TYPES_H" });
     } else {
         try flags.append(b.allocator, "-DWIN32");
@@ -878,16 +1158,15 @@ fn zlib(self: *const Self, config: struct {
 
 /// Compiles libxml2 from source as a static library
 /// Reference: https://github.com/allyourcodebase/libxml2
-fn libxml2(self: *const Self, config: struct {
+fn compileLibxml2(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
     zlib_include: std.Build.LazyPath,
 }) Dependencies.Dependency {
     const b = self.b;
     const upstream = b.dependency("libxml2", .{});
     const mod = b.createModule(.{
         .target = config.target,
-        .optimize = config.optimize,
+        .optimize = optimize,
         .link_libc = true,
     });
 
@@ -984,9 +1263,8 @@ fn libxml2(self: *const Self, config: struct {
 
 /// Compiles libxml2 from source as a static library
 /// Reference: https://github.com/allyourcodebase/zstd
-fn zstd(self: *const Self, config: struct {
+fn compileZstd(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
     zlib_include: std.Build.LazyPath,
 }) Dependencies.Dependency {
     const b = self.b;
@@ -995,7 +1273,7 @@ fn zstd(self: *const Self, config: struct {
 
     const mod = b.createModule(.{
         .target = config.target,
-        .optimize = config.optimize,
+        .optimize = optimize,
         .link_libc = true,
     });
 
