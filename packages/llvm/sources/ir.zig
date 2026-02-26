@@ -1,6 +1,6 @@
 //! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IR/CMakeLists.txt
-pub const ir_root = "llvm/lib/IR";
-pub const ir = [_][]const u8{
+pub const root = "llvm/lib/IR";
+pub const sources = [_][]const u8{
     "AbstractCallSite.cpp",
     "AsmWriter.cpp",
     "Assumptions.cpp",

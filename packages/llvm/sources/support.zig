@@ -1,6 +1,6 @@
 //! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Support/CMakeLists.txt
-pub const common_path = "llvm/lib/Support/";
-pub const common = [_][]const u8{
+pub const common_root = "llvm/lib/Support/";
+pub const common_sources = [_][]const u8{
     "ABIBreak.cpp",               "AMDGPUMetadata.cpp",
     "APFixedPoint.cpp",           "APFloat.cpp",
     "APInt.cpp",                  "APSInt.cpp",
@@ -83,7 +83,7 @@ pub const common = [_][]const u8{
     "Watchdog.cpp",
 };
 
-pub const regex_c = [_][]const u8{
+pub const regex_sources = [_][]const u8{
     "regcomp.c",
     "regerror.c",
     "regexec.c",
@@ -91,8 +91,8 @@ pub const regex_c = [_][]const u8{
     "regstrlcpy.c",
 };
 
-pub const blake3_rel_path = "BLAKE3";
-pub const blake3 = [_][]const u8{
+pub const blake3_path = common_root ++ "BLAKE3";
+pub const blake3_sources = [_][]const u8{
     "blake3.c",
     "blake3_dispatch.c",
     "blake3_portable.c",

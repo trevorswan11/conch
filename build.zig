@@ -1028,16 +1028,17 @@ const LOCCounter = struct {
         const extensions = [_][]const u8{ ".cpp", ".hpp", ".zig", ".conch" };
         var files: std.ArrayList([]const u8) = .empty;
 
+        const llvm_src_lists = try collectFiles(b, ProjectPaths.llvm ++ "sources", .{
+            .allowed_extensions = &.{".zig"},
+            .return_basenames_only = true,
+        });
+
         try files.appendSlice(
             b.allocator,
             try collectFiles(b, "packages", .{
                 .allowed_extensions = &extensions,
                 .extra_files = &.{"build.zig"},
-                .dropped_files = &.{
-                    "td_files.zig",
-                    "support_sources.zig",
-                    "tablegen_sources.zig",
-                },
+                .dropped_files = llvm_src_lists,
             }),
         );
 
@@ -1274,10 +1275,11 @@ fn configurePackArtifacts(b: *std.Build, config: struct {
 fn collectFiles(
     b: *std.Build,
     directory: []const u8,
-    options: struct {
+    config: struct {
         allowed_extensions: []const []const u8 = &.{".cpp"},
-        dropped_files: ?[]const [:0]const u8 = null,
+        dropped_files: ?[]const []const u8 = null,
         extra_files: ?[]const []const u8 = null,
+        return_basenames_only: bool = false,
     },
 ) ![]const []const u8 {
     var dir = try b.build_root.handle.openDir(directory, .{ .iterate = true });
@@ -1289,19 +1291,23 @@ fn collectFiles(
     var paths: std.ArrayList([]const u8) = .empty;
     collector: while (try walker.next()) |entry| {
         if (entry.kind != .file) continue;
-        for (options.allowed_extensions) |ext| {
+        for (config.allowed_extensions) |ext| {
             if (std.mem.endsWith(u8, entry.basename, ext)) break;
         } else continue :collector;
 
-        if (options.dropped_files) |drop| for (drop) |drop_file| {
+        if (config.dropped_files) |drop| for (drop) |drop_file| {
             if (std.mem.eql(u8, drop_file, entry.basename)) continue :collector;
         };
 
-        const full_path = b.pathJoin(&.{ directory, entry.path });
-        try paths.append(b.allocator, full_path);
+        if (config.return_basenames_only) {
+            try paths.append(b.allocator, b.dupe(entry.basename));
+        } else {
+            const full_path = b.pathJoin(&.{ directory, entry.path });
+            try paths.append(b.allocator, full_path);
+        }
     }
 
-    if (options.extra_files) |extra_files| {
+    if (config.extra_files) |extra_files| {
         try paths.appendSlice(b.allocator, extra_files);
     }
     return paths.items;

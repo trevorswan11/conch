@@ -1,8 +1,6 @@
-const std = @import("std");
-
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TableGen/CMakeLists.txt
 pub const lib_root = "llvm/lib/TableGen/";
-pub const lib = [_][]const u8{
+pub const lib_sources = [_][]const u8{
     "DetailedRecordsBackend.cpp",
     "Error.cpp",
     "JSONBackend.cpp",
@@ -21,7 +19,7 @@ pub const lib = [_][]const u8{
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/Basic/CMakeLists.txt
 pub const basic_root = emitter_root ++ "Basic/";
-pub const basic = [_][]const u8{
+pub const basic_sources = [_][]const u8{
     "ARMTargetDefEmitter.cpp",
     "Attributes.cpp",
     "CodeGenIntrinsics.cpp",
@@ -68,7 +66,7 @@ pub const common = [_][]const u8{
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/CMakeLists.txt
 pub const emitter_root = "llvm/utils/TableGen/";
-pub const emitters = [_][]const u8{
+pub const emitter_sources = [_][]const u8{
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "CallingConvEmitter.cpp",
