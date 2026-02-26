@@ -97,34 +97,3 @@ pub const blake3 = [_][]const u8{
     "blake3_dispatch.c",
     "blake3_portable.c",
 };
-
-pub const unix_rel_path = "Unix";
-pub const unix_specific = [_][]const u8{
-    "COM.inc",
-    "DynamicLibrary.inc",
-    "Jobserver.inc",
-    "Memory.inc",
-    "Path.inc",
-    "Process.inc",
-    "Program.inc",
-    "README.txt",
-    "Signals.inc",
-    "Threading.inc",
-    "Unix.h",
-    "Watchdog.inc",
-};
-
-pub const windows_rel_path = "Windows";
-pub const windows_specific = [_][]const u8{
-    "COM.inc",
-    "DynamicLibrary.inc",
-    "Jobserver.inc",
-    "Memory.inc",
-    "Path.inc",
-    "Process.inc",
-    "Program.inc",
-    "Signals.inc",
-    "Threading.inc",
-    "Watchdog.inc",
-    "explicit_symbols.inc",
-};

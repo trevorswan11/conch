@@ -627,11 +627,6 @@ fn compileSupport(self: *const Self, config: struct {
         .files = &support.common,
         .flags = &common_llvm_cxx_flags,
     });
-    mod.addCSourceFiles(.{
-        .root = support_root,
-        .files = &support.common,
-        .flags = &common_llvm_cxx_flags,
-    });
 
     mod.linkLibrary(config.deps.zlib.artifact);
     mod.linkLibrary(config.deps.zstd.artifact);
@@ -644,7 +639,6 @@ fn compileSupport(self: *const Self, config: struct {
 
     // Specific windows compilation & linking
     if (t.os.tag == .windows) {
-        mod.addIncludePath(self.llvm.root.path(b, support.windows_rel_path));
         mod.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
         mod.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
         mod.addCMacro("_CRT_NONSTDC_NO_DEPRECATE", "");
@@ -661,7 +655,6 @@ fn compileSupport(self: *const Self, config: struct {
         mod.linkSystemLibrary("ws2_32", .{ .preferred_link_mode = .static });
         mod.linkSystemLibrary("ntdll", .{ .preferred_link_mode = .static });
     } else {
-        mod.addIncludePath(self.llvm.root.path(b, support.unix_rel_path));
         if (t.os.tag == .linux) {
             mod.linkSystemLibrary("rt", .{ .preferred_link_mode = .static });
             mod.linkSystemLibrary("dl", .{ .preferred_link_mode = .static });
@@ -867,8 +860,6 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
     });
 
     mod.addIncludePath(self.llvm.llvm_include);
-    mod.addIncludePath(tp_dir.path(b, "Unix"));
-    mod.addIncludePath(tp_dir.path(b, "Windows"));
     mod.addIncludePath(self.target_artifacts.registry.getDirectory());
 
     mod.linkLibrary(self.target_artifacts.support);
@@ -947,7 +938,7 @@ fn compileCore(self: *Self) *std.Build.Step.Compile {
     });
 }
 
-/// Compiles tblgen for the host system only
+/// Compiles tblgen (for the host system only)
 fn compileTblgen(self: *const Self, config: struct {
     support_lib: *std.Build.Step.Compile,
     minimal: bool,
