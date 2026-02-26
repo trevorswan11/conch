@@ -79,6 +79,7 @@ const enabled_targets = &[_][]const u8{
     "WebAssembly",
     "Xtensa",
     "PowerPC",
+    "LoongArch",
 };
 
 /// Converts the enabled target into its Abbr, usually a no-op.
