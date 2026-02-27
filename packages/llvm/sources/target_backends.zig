@@ -8,6 +8,23 @@ pub const base_sources = [_][]const u8{
     "TargetMachineC.cpp",
 };
 
+pub const parser_root = "llvm/lib/TargetParser";
+pub const parser_sources = [_][]const u8{
+    "AArch64TargetParser.cpp",
+    "ARMTargetParserCommon.cpp",
+    "ARMTargetParser.cpp",
+    "CSKYTargetParser.cpp",
+    "Host.cpp",
+    "LoongArchTargetParser.cpp",
+    "PPCTargetParser.cpp",
+    "RISCVISAInfo.cpp",
+    "RISCVTargetParser.cpp",
+    "SubtargetFeature.cpp",
+    "TargetParser.cpp",
+    "Triple.cpp",
+    "X86TargetParser.cpp",
+};
+
 const BackendAction = struct {
     name: []const u8,
     td_args: []const []const u8,

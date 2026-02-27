@@ -5,7 +5,10 @@ const analysis = @import("sources/analysis.zig");
 const binary_format = @import("sources/binary_format.zig");
 const codegen = @import("sources/codegen.zig");
 const dbg_info = @import("sources/dbg_info.zig");
+const dependencies = @import("sources/dependencies.zig");
+const execution_engine = @import("sources/execution_engine.zig");
 const ir = @import("sources/ir.zig");
+const kaleidoscope = @import("sources/kaleidoscope.zig");
 const lto = @import("sources/lto.zig");
 const machine_code = @import("sources/machine_code.zig");
 const object = @import("sources/object.zig");
@@ -15,7 +18,6 @@ const remarks = @import("sources/remarks.zig");
 const sandbox_ir = @import("sources/sandbox_ir.zig");
 const support = @import("sources/support.zig");
 const target_backends = @import("sources/target_backends.zig");
-const target_parser = @import("sources/target_parser.zig");
 const tblgen = @import("sources/tblgen.zig");
 const text_api = @import("sources/text_api.zig");
 const transforms = @import("sources/transforms.zig");
@@ -141,6 +143,11 @@ const TargetArtifacts = struct {
 
     const TargetBackends = struct {
         core_lib: Artifact = undefined,
+        parser: Artifact = undefined,
+
+        /// Registry of target-specific generated files
+        parser_gen: *std.Build.Step.WriteFile = undefined,
+
         x86: Artifact = undefined,
         aarch64: Artifact = undefined,
         arm: Artifact = undefined,
@@ -167,10 +174,23 @@ const TargetArtifacts = struct {
         dlltool: Artifact = undefined,
     };
 
+    const ExecutionEngine = struct {
+        core_lib: Artifact = undefined,
+        interpreter: Artifact = undefined,
+        jit_link: Artifact = undefined,
+        mc_jit: Artifact = undefined,
+        orc: struct {
+            core_lib: Artifact = undefined,
+            debugging: Artifact = undefined,
+            shared: Artifact = undefined,
+            target_process: Artifact = undefined,
+        } = .{},
+        runtime_dyld: Artifact = undefined,
+    };
+
     deps: Dependencies = .{},
     demangle: Artifact = undefined,
     support: Artifact = undefined,
-    target_parser: Artifact = undefined,
     bitstream_reader: Artifact = undefined,
     binary_format: Artifact = undefined,
     remarks: Artifact = undefined,
@@ -207,103 +227,10 @@ const TargetArtifacts = struct {
     xray: Artifact = undefined,
     windows_support: WindowsSupport = .{},
     tool_drivers: ToolDrivers = .{},
+    execution_engine: ExecutionEngine = .{},
 
-    /// Registry of generated intrinsics
+    /// Registry of generated intrinsics (e.g. Attributes.inc)
     intrinsics_gen: *std.Build.Step.WriteFile = undefined,
-
-    /// Registry of target-specific generated files
-    target_parser_gen: *std.Build.Step.WriteFile = undefined,
-
-    fn artifactArray(self: *const TargetArtifacts) [86]Artifact {
-        return .{
-            self.deps.zlib.artifact,
-            self.deps.libxml2.artifact,
-            self.deps.zstd.artifact,
-            self.demangle,
-            self.support,
-            self.target_parser,
-            self.bitstream_reader,
-            self.binary_format,
-            self.remarks,
-            self.core,
-            self.bitcode.reader,
-            self.bitcode.writer,
-            self.machine_code.core_lib,
-            self.machine_code.disassembler,
-            self.machine_code.parser,
-            self.machine_code.analyzer,
-            self.asm_parser,
-            self.ir_reader,
-            self.text_api.core_lib,
-            self.text_api.binary_reader,
-            self.object,
-            self.object_yaml,
-            self.debug_info.btf,
-            self.debug_info.code_view,
-            self.debug_info.dwarf.core_lib,
-            self.debug_info.dwarf.low_level,
-            self.debug_info.gsym,
-            self.debug_info.logical_view,
-            self.debug_info.msf,
-            self.debug_info.pdb,
-            self.debug_info.symbolize,
-            self.profile_data.coverage,
-            self.profile_data.core_lib,
-            self.analysis,
-            self.codegen.types,
-            self.codegen.data,
-            self.codegen.core_lib,
-            self.codegen.selection_dag,
-            self.codegen.global_isel,
-            self.codegen.asm_printer,
-            self.codegen.mir_parser,
-            self.sandbox_ir,
-            self.frontend.atomic,
-            self.frontend.directive,
-            self.frontend.driver,
-            self.frontend.hlsl,
-            self.frontend.open_acc,
-            self.frontend.open_mp,
-            self.frontend.offloading,
-            self.transforms.utils,
-            self.transforms.instrumentation,
-            self.transforms.aggressive_inst_combine,
-            self.transforms.inst_combine,
-            self.transforms.scalar,
-            self.transforms.ipo,
-            self.transforms.vectorize,
-            self.transforms.obj_carc,
-            self.transforms.coroutines,
-            self.transforms.cf_guard,
-            self.transforms.hip_std_par,
-            self.linker,
-            self.passes,
-            self.ir_printer,
-            self.option,
-            self.obj_copy,
-            self.dwarf_linker.core_lib,
-            self.dwarf_linker.classic,
-            self.dwarf_linker.parallel,
-            self.dwp,
-            self.file_check,
-            self.extensions,
-            self.lto,
-            self.xray,
-            self.windows_support.driver,
-            self.windows_support.manifest,
-            self.tool_drivers.lib,
-            self.tool_drivers.dlltool,
-            self.target_backends.core_lib,
-            self.target_backends.x86,
-            self.target_backends.aarch64,
-            self.target_backends.arm,
-            self.target_backends.riscv,
-            self.target_backends.wasm,
-            self.target_backends.xtensa,
-            self.target_backends.powerpc,
-            self.target_backends.loong_arch,
-        };
-    }
 };
 
 const version: std.SemanticVersion = .{
@@ -317,7 +244,7 @@ const version_str = std.fmt.comptimePrint(
     .{ version.major, version.minor, version.patch },
 );
 
-const common_llvm_cxx_flags = [_][]const u8{
+pub const common_llvm_cxx_flags = [_][]const u8{
     "-std=c++17",
     "-fno-exceptions",
     "-fno-rtti",
@@ -333,14 +260,6 @@ const enabled_targets = &[_][]const u8{
     "PowerPC",
     "LoongArch",
 };
-
-/// Converts the enabled target into its Abbr, usually a no-op.
-fn targetAbbr(enabled_target: []const u8) []const u8 {
-    if (std.mem.eql(u8, enabled_target, "PowerPC")) {
-        return "PPC";
-    }
-    return enabled_target;
-}
 
 const Self = @This();
 
@@ -386,9 +305,12 @@ pub fn init(b: *std.Build, target: std.Build.ResolvedTarget) Self {
     };
 }
 
-pub fn build(self: *Self, link_test_config: ?struct {
-    auto_install: bool,
-    cxx_flags: []const []const u8,
+pub fn build(self: *Self, config: struct {
+    behavior: union(enum) {
+        supplemental_cxx_flags: []const []const u8,
+        package,
+    },
+    auto_install: bool = false,
 }) !void {
     const b = self.b;
 
@@ -429,8 +351,8 @@ pub fn build(self: *Self, link_test_config: ?struct {
         .minimal = false,
     });
 
-    self.target_artifacts.target_parser_gen = self.runTargetParserGen();
-    self.target_artifacts.target_parser = self.compileTargetParser();
+    self.target_artifacts.target_backends.parser_gen = self.runTargetParserGen();
+    self.target_artifacts.target_backends.parser = self.compileTargetParser();
     self.target_artifacts.bitstream_reader = self.compileBitstreamReader();
     self.target_artifacts.binary_format = self.compileBinaryFormat();
     self.target_artifacts.remarks = self.compileRemarks();
@@ -498,10 +420,55 @@ pub fn build(self: *Self, link_test_config: ?struct {
     self.target_artifacts.target_backends.powerpc = self.compilePowerPC();
     self.target_artifacts.target_backends.loong_arch = self.compileLoongArch();
 
-    // The link test is completely ignored for packaging
-    if (link_test_config) |link_test| {
-        const llvm_link_test_exe = self.createLinkTest(link_test.cxx_flags);
-        if (link_test.auto_install) b.installArtifact(llvm_link_test_exe);
+    self.target_artifacts.execution_engine = self.compileExecutionEngine();
+
+    // Packaging ignores test builds
+    switch (config.behavior) {
+        .supplemental_cxx_flags => |cxx_flags| {
+            const llvm_link_test_exe = self.createLinkTest(cxx_flags);
+            if (config.auto_install) b.installArtifact(llvm_link_test_exe);
+
+            const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
+                .dest_dir = .{
+                    .override = .{
+                        .custom = "kaleidoscope",
+                    },
+                },
+            };
+
+            if (config.auto_install and b.option(
+                bool,
+                "all-chapters",
+                "build all kaleidoscope chapters (dangerous)",
+            ) orelse false) {
+                for (std.enums.values(kaleidoscope.KaleidoscopeChapter)) |chapter| {
+                    const exe = chapter.compile(self);
+                    const install_artifact = b.addInstallArtifact(exe, kaleidoscope_install_options);
+                    b.getInstallStep().dependOn(&install_artifact.step);
+                }
+            } else if (b.option(
+                kaleidoscope.KaleidoscopeChapter,
+                "Chapter",
+                "the kaleidoscope chapter to run",
+            )) |chapter| {
+                const exe = chapter.compile(self);
+                const run_cmd = b.addRunArtifact(exe);
+                run_cmd.step.dependOn(b.getInstallStep());
+
+                if (b.args) |args| {
+                    run_cmd.addArgs(args);
+                }
+
+                const kaleidoscope_step = b.step("kaleidoscope", "Run a Kaleidoscope Chapter's executable");
+                kaleidoscope_step.dependOn(&run_cmd.step);
+
+                if (config.auto_install) {
+                    const install_artifact = b.addInstallArtifact(exe, kaleidoscope_install_options);
+                    b.getInstallStep().dependOn(&install_artifact.step);
+                }
+            }
+        },
+        .package => {},
     }
 }
 
@@ -534,22 +501,23 @@ const AddCSourceFileOptions = struct {
 /// 'llvm/include' is implicitly included here
 fn createLLVMLibrary(self: *const Self, config: struct {
     name: []const u8,
-    cxx_source_files: AddCSourceFileOptions,
+    cxx_source_files: ?AddCSourceFileOptions,
     additional_include_paths: ?[]const std.Build.LazyPath = null,
     config_headers: ?[]const *std.Build.Step.ConfigHeader = null,
     link_libraries: ?[]const Artifact = null,
     target_override: ?std.Build.ResolvedTarget = null,
+    bundle_compiler_rt: ?bool = null,
 }) Artifact {
-    var mod = self.createTargetModule();
+    const mod = self.createTargetModule();
     if (config.target_override) |target| {
         mod.resolved_target = target;
     }
 
-    mod.addCSourceFiles(.{
-        .root = config.cxx_source_files.root,
-        .files = config.cxx_source_files.files,
-        .flags = config.cxx_source_files.flags,
-        .language = config.cxx_source_files.language,
+    if (config.cxx_source_files) |cxx_source_files| mod.addCSourceFiles(.{
+        .root = cxx_source_files.root,
+        .files = cxx_source_files.files,
+        .flags = cxx_source_files.flags,
+        .language = cxx_source_files.language,
     });
 
     if (config.additional_include_paths) |addtl_includes| for (addtl_includes) |include| {
@@ -565,10 +533,12 @@ fn createLLVMLibrary(self: *const Self, config: struct {
         mod.linkLibrary(lib);
     };
 
-    return self.b.addLibrary(.{
+    const lib = self.b.addLibrary(.{
         .name = config.name,
         .root_module = mod,
     });
+    lib.bundle_compiler_rt = config.bundle_compiler_rt;
+    return lib;
 }
 
 /// Creates a custom runnable target to test LLVM linkage against a C++23 source file
@@ -583,7 +553,7 @@ fn createLinkTest(self: *const Self, cxx_flags: []const []const u8) Artifact {
     });
     mod.addSystemIncludePath(self.llvm.llvm_include);
 
-    for (self.target_artifacts.artifactArray()) |lib| {
+    for (self.allTargetArtifacts()) |lib| {
         mod.linkLibrary(lib);
     }
 
@@ -946,7 +916,7 @@ fn compileSupport(self: *const Self, config: struct {
     });
     mod.addCSourceFiles(.{
         .root = support_root,
-        .files = &support.regex_sources,
+        .files = &support.reg_sources,
         .flags = &.{"-std=c11"},
     });
 
@@ -1033,7 +1003,7 @@ fn compileBinaryFormat(self: *const Self) Artifact {
         },
         .link_libraries = &.{
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1115,10 +1085,10 @@ fn compileTargetParser(self: *Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTargetParser",
         .cxx_source_files = .{
-            .root = self.llvm.root.path(self.b, target_parser.root),
-            .files = &target_parser.sources,
+            .root = self.llvm.root.path(self.b, target_backends.parser_root),
+            .files = &target_backends.parser_sources,
         },
-        .additional_include_paths = &.{self.target_artifacts.target_parser_gen.getDirectory()},
+        .additional_include_paths = &.{self.target_artifacts.target_backends.parser_gen.getDirectory()},
         .link_libraries = &.{self.target_artifacts.support},
     });
 }
@@ -1192,7 +1162,7 @@ fn compileCore(self: *Self) Artifact {
             self.target_artifacts.demangle,
             self.target_artifacts.remarks,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1214,7 +1184,7 @@ fn compileBitcodeReader(self: *const Self) Artifact {
             self.target_artifacts.bitstream_reader,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1233,7 +1203,7 @@ fn compileMC(self: *const Self) TargetArtifacts.MachineCode {
         .additional_include_paths = &.{self.target_artifacts.intrinsics_gen.getDirectory()},
         .link_libraries = &.{
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.binary_format,
         },
     });
@@ -1247,7 +1217,7 @@ fn compileMC(self: *const Self) TargetArtifacts.MachineCode {
         },
         .link_libraries = &.{
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             mc.core_lib,
         },
     });
@@ -1261,7 +1231,7 @@ fn compileMC(self: *const Self) TargetArtifacts.MachineCode {
         },
         .link_libraries = &.{
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             mc.core_lib,
         },
     });
@@ -1295,7 +1265,7 @@ fn compileAsmParser(self: *const Self) Artifact {
             self.target_artifacts.binary_format,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1330,7 +1300,7 @@ fn compileTextAPI(self: *const Self) Artifact {
         .link_libraries = &.{
             self.target_artifacts.support,
             self.target_artifacts.binary_format,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1353,7 +1323,7 @@ fn compileObject(self: *const Self) Artifact {
             self.target_artifacts.binary_format,
             self.target_artifacts.machine_code.parser,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.text_api.core_lib,
         },
     });
@@ -1395,7 +1365,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
         .link_libraries = &.{
             self.target_artifacts.binary_format,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1411,7 +1381,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
             debug_info.dwarf.low_level,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1426,7 +1396,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             debug_info.dwarf.core_lib,
         },
     });
@@ -1470,7 +1440,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
             self.target_artifacts.object,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             debug_info.code_view,
             debug_info.dwarf.core_lib,
             debug_info.dwarf.low_level,
@@ -1489,7 +1459,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
             self.target_artifacts.object,
             self.target_artifacts.support,
             self.target_artifacts.demangle,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             debug_info.dwarf.core_lib,
             debug_info.gsym,
             debug_info.pdb,
@@ -1513,7 +1483,7 @@ fn compileObjectYAML(self: *const Self) Artifact {
             self.target_artifacts.binary_format,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.debug_info.code_view,
             self.target_artifacts.machine_code.core_lib,
         },
@@ -1541,7 +1511,7 @@ fn compileProfileData(self: *const Self) TargetArtifacts.ProfileData {
             self.target_artifacts.debug_info.symbolize,
             self.target_artifacts.debug_info.dwarf.core_lib,
             self.target_artifacts.debug_info.dwarf.low_level,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1558,7 +1528,7 @@ fn compileProfileData(self: *const Self) TargetArtifacts.ProfileData {
             self.target_artifacts.object,
             profile_data.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1580,7 +1550,7 @@ fn compileAnalysis(self: *const Self) Artifact {
             self.target_artifacts.object,
             self.target_artifacts.profile_data.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1611,7 +1581,7 @@ fn compileBitcodeWriter(self: *const Self) Artifact {
             self.target_artifacts.object,
             self.target_artifacts.profile_data.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1629,7 +1599,7 @@ fn compileTextAPIBinaryReader(self: *const Self) Artifact {
             self.target_artifacts.support,
             self.target_artifacts.object,
             self.target_artifacts.text_api.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1698,7 +1668,7 @@ fn compileInstrumentation(self: *const Self) Artifact {
             self.target_artifacts.demangle,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
             self.target_artifacts.profile_data.core_lib,
         },
@@ -1821,7 +1791,7 @@ fn compileFrontend(self: *Self) TargetArtifacts.Frontend {
             self.target_artifacts.object_yaml,
             self.target_artifacts.support,
             self.target_artifacts.transforms.utils,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1844,7 +1814,7 @@ fn compileFrontend(self: *Self) TargetArtifacts.Frontend {
             self.target_artifacts.support,
             self.target_artifacts.object,
             self.target_artifacts.text_api.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -1879,7 +1849,7 @@ fn compileLinker(self: *const Self) Artifact {
             self.target_artifacts.object,
             self.target_artifacts.support,
             self.target_artifacts.transforms.utils,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1897,7 +1867,7 @@ fn compileTransformUtils(self: *const Self) Artifact {
             self.target_artifacts.analysis,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1915,7 +1885,7 @@ fn compileInstCombine(self: *const Self) Artifact {
             self.target_artifacts.analysis,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1933,7 +1903,7 @@ fn compileAggressiveInstCombine(self: *const Self) Artifact {
             self.target_artifacts.analysis,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1950,7 +1920,7 @@ fn compileCFGuard(self: *const Self) Artifact {
         .link_libraries = &.{
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -1986,7 +1956,7 @@ fn compileObjCARC(self: *const Self) Artifact {
             self.target_artifacts.analysis,
             self.target_artifacts.core,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -2058,7 +2028,7 @@ fn compileIPO(self: *const Self) Artifact {
             self.target_artifacts.profile_data.core_lib,
             self.target_artifacts.transforms.scalar,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
             self.target_artifacts.transforms.vectorize,
             self.target_artifacts.transforms.instrumentation,
@@ -2082,7 +2052,7 @@ fn compileCoroutines(self: *const Self) Artifact {
             self.target_artifacts.transforms.scalar,
             self.target_artifacts.support,
             self.target_artifacts.transforms.utils,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -2101,7 +2071,7 @@ fn compileTarget(self: *const Self) Artifact {
             self.target_artifacts.core,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -2131,7 +2101,7 @@ fn compileCodeGen(self: *const Self) Artifact {
             self.target_artifacts.transforms.scalar,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -2157,7 +2127,7 @@ fn compileSelectionDAG(self: *const Self) Artifact {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -2216,7 +2186,7 @@ fn compileAsmPrinter(self: *const Self) Artifact {
             self.target_artifacts.remarks,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -2386,7 +2356,7 @@ fn compileDwarfLinker(self: *const Self) TargetArtifacts.DwarfLinker {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2412,7 +2382,7 @@ fn compileDwarfLinker(self: *const Self) TargetArtifacts.DwarfLinker {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2501,7 +2471,7 @@ fn compileLTO(self: *const Self) Artifact {
             self.target_artifacts.transforms.scalar,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -2518,7 +2488,7 @@ fn compileXRay(self: *const Self) Artifact {
         .link_libraries = &.{
             self.target_artifacts.support,
             self.target_artifacts.object,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 }
@@ -2537,7 +2507,7 @@ fn compileWindowsSupport(self: *const Self) TargetArtifacts.WindowsSupport {
         .link_libraries = &.{
             self.target_artifacts.option,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2582,7 +2552,7 @@ fn compileToolDrivers(self: *const Self) TargetArtifacts.ToolDrivers {
             self.target_artifacts.object,
             self.target_artifacts.option,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2610,7 +2580,7 @@ fn compileToolDrivers(self: *const Self) TargetArtifacts.ToolDrivers {
             self.target_artifacts.object,
             self.target_artifacts.option,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2688,7 +2658,7 @@ fn compileAArch64(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             info,
@@ -2697,7 +2667,7 @@ fn compileAArch64(self: *Self) Artifact {
             self.target_artifacts.codegen.types,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2739,7 +2709,7 @@ fn compileAArch64(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -2749,7 +2719,7 @@ fn compileAArch64(self: *Self) Artifact {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.machine_code.parser,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -2765,7 +2735,7 @@ fn compileAArch64(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -2785,7 +2755,7 @@ fn compileAArch64(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
             self.target_artifacts.transforms.vectorize,
         },
@@ -2843,7 +2813,7 @@ fn compileX86(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.binary_format,
@@ -2851,7 +2821,7 @@ fn compileX86(self: *Self) Artifact {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.machine_code.disassembler,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             info,
         },
     });
@@ -2890,7 +2860,7 @@ fn compileX86(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
@@ -2920,7 +2890,7 @@ fn compileX86(self: *Self) Artifact {
             self.target_artifacts.machine_code.analyzer,
             self.target_artifacts.machine_code.parser,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             desc,
             info,
         },
@@ -2938,7 +2908,7 @@ fn compileX86(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -2958,7 +2928,7 @@ fn compileX86(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
             self.target_artifacts.transforms.vectorize,
         },
@@ -3033,7 +3003,7 @@ fn compileArm(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             info,
@@ -3044,7 +3014,7 @@ fn compileArm(self: *Self) Artifact {
             self.target_artifacts.machine_code.disassembler,
             self.target_artifacts.object,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3088,7 +3058,7 @@ fn compileArm(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3098,7 +3068,7 @@ fn compileArm(self: *Self) Artifact {
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.machine_code.parser,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3114,7 +3084,7 @@ fn compileArm(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3134,7 +3104,7 @@ fn compileArm(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -3203,13 +3173,13 @@ fn compileRISCV(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
             info,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3249,7 +3219,7 @@ fn compileRISCV(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
@@ -3257,7 +3227,7 @@ fn compileRISCV(self: *Self) Artifact {
             desc,
             info,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3282,7 +3252,7 @@ fn compileRISCV(self: *Self) Artifact {
             desc,
             info,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3298,7 +3268,7 @@ fn compileRISCV(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3318,7 +3288,7 @@ fn compileRISCV(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
             self.target_artifacts.transforms.vectorize,
         },
@@ -3376,14 +3346,14 @@ fn compileWebAssembly(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.codegen.types,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             info,
         },
     });
@@ -3450,14 +3420,14 @@ fn compileWebAssembly(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.codegen.types,
             self.target_artifacts.machine_code.core_lib,
             self.target_artifacts.machine_code.parser,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             desc,
             info,
         },
@@ -3475,7 +3445,7 @@ fn compileWebAssembly(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3494,7 +3464,7 @@ fn compileWebAssembly(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -3551,7 +3521,7 @@ fn compileXtensa(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
@@ -3595,7 +3565,7 @@ fn compileXtensa(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
@@ -3618,7 +3588,7 @@ fn compileXtensa(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3687,7 +3657,7 @@ fn compilePowerPC(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.binary_format,
@@ -3695,7 +3665,7 @@ fn compilePowerPC(self: *Self) Artifact {
             self.target_artifacts.machine_code.core_lib,
             info,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3734,7 +3704,7 @@ fn compilePowerPC(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
@@ -3757,7 +3727,7 @@ fn compilePowerPC(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3776,7 +3746,7 @@ fn compilePowerPC(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
@@ -3833,13 +3803,13 @@ fn compileLoongArch(self: *Self) Artifact {
             desc_root,
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             self.target_artifacts.machine_code.core_lib,
             info,
             self.target_artifacts.support,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
         },
     });
 
@@ -3879,7 +3849,7 @@ fn compileLoongArch(self: *Self) Artifact {
             td_files.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3902,7 +3872,7 @@ fn compileLoongArch(self: *Self) Artifact {
             td_files.getDirectory(),
             self.target_artifacts.intrinsics_gen.getDirectory(),
             self.minimal_artifacts.gen_vt.getDirectory(),
-            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.target_artifacts.target_backends.parser_gen.getDirectory(),
         },
         .link_libraries = &.{
             desc,
@@ -3919,10 +3889,246 @@ fn compileLoongArch(self: *Self) Artifact {
             self.target_artifacts.codegen.selection_dag,
             self.target_artifacts.support,
             self.target_artifacts.target_backends.core_lib,
-            self.target_artifacts.target_parser,
+            self.target_artifacts.target_backends.parser,
             self.target_artifacts.transforms.utils,
         },
     });
+}
+
+fn compileExecutionEngine(self: *const Self) TargetArtifacts.ExecutionEngine {
+    const b = self.b;
+    var exe_engine: TargetArtifacts.ExecutionEngine = .{};
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/RuntimeDyld/CMakeLists.txt
+    const runtime_dyld_root = self.llvm.root.path(b, execution_engine.runtime_dyld_root);
+    exe_engine.runtime_dyld = self.createLLVMLibrary(.{
+        .name = "LLVMRuntimeDyld",
+        .cxx_source_files = .{
+            .root = runtime_dyld_root,
+            .files = &execution_engine.runtime_dyld_sources,
+        },
+        .additional_include_paths = &.{
+            runtime_dyld_root,
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.object,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Orc/Shared/CMakeLists.txt
+    const orc_shared_root = self.llvm.root.path(b, execution_engine.orc_shared_root);
+    exe_engine.orc.shared = self.createLLVMLibrary(.{
+        .name = "LLVMOrcShared",
+        .cxx_source_files = .{
+            .root = orc_shared_root,
+            .files = &execution_engine.orc_shared_sources,
+        },
+        .additional_include_paths = &.{
+            orc_shared_root,
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{self.target_artifacts.support},
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Orc/TargetProcess/CMakeLists.txt
+    const orc_target_process_root = self.llvm.root.path(b, execution_engine.orc_target_process_root);
+    exe_engine.orc.target_process = self.createLLVMLibrary(.{
+        .name = "LLVMOrcTargetProcess",
+        .cxx_source_files = .{
+            .root = orc_target_process_root,
+            .files = &execution_engine.orc_target_process_sources,
+        },
+        .additional_include_paths = &.{orc_target_process_root},
+        .link_libraries = &.{
+            exe_engine.orc.shared,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.parser,
+        },
+        .bundle_compiler_rt = true,
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/JITLink/CMakeLists.txt
+    const jit_link_td = self.generateTblgenInc(.{
+        .tblgen = self.full_tblgen,
+        .name = "COFFOptions",
+        .td_file = execution_engine.jit_link_root ++ "COFFOptions.td",
+        .instruction = .{ .action = "-gen-opt-parser-defs" },
+    });
+
+    const jit_link_root = self.llvm.root.path(b, execution_engine.jit_link_root);
+    exe_engine.jit_link = self.createLLVMLibrary(.{
+        .name = "LLVMJITLink",
+        .cxx_source_files = .{
+            .root = jit_link_root,
+            .files = &execution_engine.jit_link_sources,
+        },
+        .additional_include_paths = &.{
+            jit_link_root,
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            jit_link_td.dirname(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.binary_format,
+            self.target_artifacts.object,
+            self.target_artifacts.option,
+            exe_engine.orc.target_process,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/CMakeLists.txt
+    exe_engine.core_lib = self.createLLVMLibrary(.{
+        .name = "LLVMExecutionEngine",
+        .cxx_source_files = .{
+            .root = self.llvm.root.path(b, execution_engine.root),
+            .files = &execution_engine.base_sources,
+        },
+        .additional_include_paths = &.{self.target_artifacts.intrinsics_gen.getDirectory()},
+        .link_libraries = &.{
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.object,
+            exe_engine.orc.target_process,
+            exe_engine.runtime_dyld,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_backends.parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Orc/CMakeLists.txt
+    exe_engine.orc.core_lib = self.createLLVMLibrary(.{
+        .name = "LLVMOrcJIT",
+        .cxx_source_files = .{
+            .root = self.llvm.root.path(b, execution_engine.orc_root),
+            .files = &execution_engine.orc_base_sources,
+        },
+        .additional_include_paths = &.{
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.binary_format,
+            self.target_artifacts.core,
+            exe_engine.core_lib,
+            exe_engine.jit_link,
+            self.target_artifacts.object,
+            exe_engine.orc.shared,
+            exe_engine.orc.target_process,
+            self.target_artifacts.windows_support.driver,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.passes,
+            exe_engine.runtime_dyld,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_backends.parser,
+            self.target_artifacts.text_api.core_lib,
+            self.target_artifacts.transforms.utils,
+
+            self.target_artifacts.analysis,
+            self.target_artifacts.bitcode.reader,
+            self.target_artifacts.bitcode.writer,
+        },
+        .bundle_compiler_rt = true,
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Interpreter/CMakeLists.txt
+    const interpreter_root = self.llvm.root.path(b, execution_engine.interpreter_root);
+    exe_engine.interpreter = self.createLLVMLibrary(.{
+        .name = "LLVMInterpreter",
+        .cxx_source_files = .{
+            .root = interpreter_root,
+            .files = &execution_engine.interpreter_sources,
+        },
+        .additional_include_paths = &.{
+            interpreter_root,
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.core,
+            exe_engine.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Orc/Debugging/CMakeLists.txt
+    exe_engine.orc.debugging = self.createLLVMLibrary(.{
+        .name = "LLVMOrcDebugging",
+        .cxx_source_files = .{
+            .root = self.llvm.root.path(b, execution_engine.orc_debug_root),
+            .files = &execution_engine.orc_debug_sources,
+        },
+        .additional_include_paths = &.{self.target_artifacts.intrinsics_gen.getDirectory()},
+        .link_libraries = &.{
+            self.target_artifacts.binary_format,
+            self.target_artifacts.debug_info.dwarf.core_lib,
+            exe_engine.jit_link,
+            exe_engine.orc.core_lib,
+            exe_engine.orc.shared,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.parser,
+        },
+        .bundle_compiler_rt = true,
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ExecutionEngine/Interpreter/CMakeLists.txt
+    const mc_jit_root = self.llvm.root.path(b, execution_engine.mc_jit_root);
+    exe_engine.mc_jit = self.createLLVMLibrary(.{
+        .name = "LLVMMCJIT",
+        .cxx_source_files = .{
+            .root = mc_jit_root,
+            .files = &execution_engine.mc_jit_sources,
+        },
+        .additional_include_paths = &.{
+            mc_jit_root,
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.core,
+            exe_engine.core_lib,
+            self.target_artifacts.object,
+            exe_engine.runtime_dyld,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+        },
+    });
+
+    return exe_engine;
+}
+
+/// Combines all compiled libraries into a single static library
+fn amalgamateArtifacts(self: *const Self) Artifact {
+    const gen_vt = self.minimal_artifacts.gen_vt.getDirectory();
+    const intrinsics_gen = self.target_artifacts.intrinsics_gen.getDirectory();
+    const frontend_gen = self.target_artifacts.frontend.gen_files.getDirectory();
+    const parser_gen = self.target_artifacts.target_backends.parser_gen.getDirectory();
+    const vcs_revision = self.llvm.vcs_revision;
+
+    const mod = self.createTargetModule();
+    for (self.allTargetArtifacts()) |artifact| {
+        mod.addObjectFile(artifact.getEmittedBin());
+    }
+
+    const lib = self.b.addLibrary(.{
+        .name = "LLVM",
+        .root_module = mod,
+    });
+
+    lib.installHeadersDirectory(self.llvm.root, "", .{});
+    lib.installHeadersDirectory(gen_vt, "", .{});
+    lib.installHeadersDirectory(intrinsics_gen, "", .{});
+    lib.installHeadersDirectory(frontend_gen, "", .{});
+    lib.installHeadersDirectory(parser_gen, "", .{});
+    lib.installConfigHeader(vcs_revision);
+
+    return lib;
 }
 
 /// Compiles tblgen (for the host system only)
@@ -4071,13 +4277,6 @@ fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencie
         .link_libc = true,
     });
 
-    const src_files = [_][]const u8{
-        "adler32.c", "compress.c", "crc32.c",   "deflate.c",
-        "gzclose.c", "gzlib.c",    "gzread.c",  "gzwrite.c",
-        "infback.c", "inffast.c",  "inflate.c", "inftrees.c",
-        "trees.c",   "uncompr.c",  "zutil.c",
-    };
-
     var flags: std.ArrayList([]const u8) = .empty;
     try flags.appendSlice(b.allocator, &.{ "-std=c11", "-D_REENTRANT" });
     if (target.result.os.tag != .windows) {
@@ -4088,7 +4287,7 @@ fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencie
 
     mod.addCSourceFiles(.{
         .root = root,
-        .files = &src_files,
+        .files = &dependencies.zlib,
         .flags = flags.items,
     });
     mod.addIncludePath(root);
@@ -4097,6 +4296,7 @@ fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencie
         .name = "z",
         .root_module = mod,
     });
+
     lib.installHeadersDirectory(upstream.path(""), "", .{
         .include_extensions = &.{
             "zconf.h",
@@ -4191,12 +4391,7 @@ fn compileLibxml2(self: *const Self, config: struct {
 
     mod.addCSourceFiles(.{
         .root = upstream.path("."),
-        .files = &.{
-            "buf.c",       "dict.c",      "entities.c", "error.c",           "globals.c",
-            "hash.c",      "list.c",      "parser.c",   "parserInternals.c", "SAX2.c",
-            "threads.c",   "tree.c",      "uri.c",      "valid.c",           "xmlIO.c",
-            "xmlmemory.c", "xmlstring.c",
-        },
+        .files = &dependencies.libxml2,
         .flags = &.{ "-std=c11", "-D_REENTRANT" },
     });
     mod.addIncludePath(upstream.path("include"));
@@ -4231,28 +4426,10 @@ fn compileZstd(self: *const Self, config: struct {
         .link_libc = true,
     });
 
-    // Common
-    mod.addCSourceFiles(.{
-        .root = lib_path,
-        .files = &.{
-            "common/zstd_common.c",    "common/threading.c", "common/entropy_common.c",
-            "common/fse_decompress.c", "common/xxhash.c",    "common/error_private.c",
-            "common/pool.c",
-        },
-        .flags = &.{ "-std=c99", "-DZSTD_MULTITHREAD=1" },
-    });
-
     // Compression & Decompression
     mod.addCSourceFiles(.{
         .root = lib_path,
-        .files = &.{
-            "compress/fse_compress.c",            "compress/huf_compress.c",      "compress/zstd_double_fast.c",
-            "compress/zstd_compress_literals.c",  "compress/zstdmt_compress.c",   "compress/zstd_compress_superblock.c",
-            "compress/zstd_opt.c",                "compress/zstd_compress.c",     "compress/zstd_compress_sequences.c",
-            "compress/hist.c",                    "compress/zstd_ldm.c",          "compress/zstd_lazy.c",
-            "compress/zstd_fast.c",               "decompress/zstd_decompress.c", "decompress/huf_decompress.c",
-            "decompress/zstd_decompress_block.c", "decompress/zstd_ddict.c",
-        },
+        .files = &dependencies.zstd,
     });
 
     if (config.target.result.cpu.arch == .x86_64) {
@@ -4273,5 +4450,130 @@ fn compileZstd(self: *const Self, config: struct {
     return .{
         .dependency = upstream,
         .artifact = lib,
+    };
+}
+
+/// Returns all artifacts for the target platform
+pub fn allTargetArtifacts(self: *const Self) []Artifact {
+    var all_artifacts: std.ArrayList(Artifact) = .empty;
+    all_artifacts.appendSlice(self.b.allocator, &.{
+        self.target_artifacts.deps.zlib.artifact,
+        self.target_artifacts.deps.libxml2.artifact,
+        self.target_artifacts.deps.zstd.artifact,
+        self.target_artifacts.demangle,
+        self.target_artifacts.support,
+        self.target_artifacts.bitstream_reader,
+        self.target_artifacts.binary_format,
+        self.target_artifacts.remarks,
+        self.target_artifacts.core,
+        self.target_artifacts.bitcode.reader,
+        self.target_artifacts.bitcode.writer,
+        self.target_artifacts.machine_code.core_lib,
+        self.target_artifacts.machine_code.disassembler,
+        self.target_artifacts.machine_code.parser,
+        self.target_artifacts.machine_code.analyzer,
+        self.target_artifacts.asm_parser,
+        self.target_artifacts.ir_reader,
+        self.target_artifacts.text_api.core_lib,
+        self.target_artifacts.text_api.binary_reader,
+        self.target_artifacts.object,
+        self.target_artifacts.object_yaml,
+        self.target_artifacts.debug_info.btf,
+        self.target_artifacts.debug_info.code_view,
+        self.target_artifacts.debug_info.dwarf.core_lib,
+        self.target_artifacts.debug_info.dwarf.low_level,
+        self.target_artifacts.debug_info.gsym,
+        self.target_artifacts.debug_info.logical_view,
+        self.target_artifacts.debug_info.msf,
+        self.target_artifacts.debug_info.pdb,
+        self.target_artifacts.debug_info.symbolize,
+        self.target_artifacts.profile_data.coverage,
+        self.target_artifacts.profile_data.core_lib,
+        self.target_artifacts.analysis,
+        self.target_artifacts.codegen.types,
+        self.target_artifacts.codegen.data,
+        self.target_artifacts.codegen.core_lib,
+        self.target_artifacts.codegen.selection_dag,
+        self.target_artifacts.codegen.global_isel,
+        self.target_artifacts.codegen.asm_printer,
+        self.target_artifacts.codegen.mir_parser,
+        self.target_artifacts.sandbox_ir,
+        self.target_artifacts.frontend.atomic,
+        self.target_artifacts.frontend.directive,
+        self.target_artifacts.frontend.driver,
+        self.target_artifacts.frontend.hlsl,
+        self.target_artifacts.frontend.open_acc,
+        self.target_artifacts.frontend.open_mp,
+        self.target_artifacts.frontend.offloading,
+        self.target_artifacts.transforms.utils,
+        self.target_artifacts.transforms.instrumentation,
+        self.target_artifacts.transforms.aggressive_inst_combine,
+        self.target_artifacts.transforms.inst_combine,
+        self.target_artifacts.transforms.scalar,
+        self.target_artifacts.transforms.ipo,
+        self.target_artifacts.transforms.vectorize,
+        self.target_artifacts.transforms.obj_carc,
+        self.target_artifacts.transforms.coroutines,
+        self.target_artifacts.transforms.cf_guard,
+        self.target_artifacts.transforms.hip_std_par,
+        self.target_artifacts.linker,
+        self.target_artifacts.passes,
+        self.target_artifacts.ir_printer,
+        self.target_artifacts.option,
+        self.target_artifacts.obj_copy,
+        self.target_artifacts.dwarf_linker.core_lib,
+        self.target_artifacts.dwarf_linker.classic,
+        self.target_artifacts.dwarf_linker.parallel,
+        self.target_artifacts.dwp,
+        self.target_artifacts.file_check,
+        self.target_artifacts.extensions,
+        self.target_artifacts.lto,
+        self.target_artifacts.xray,
+        self.target_artifacts.windows_support.driver,
+        self.target_artifacts.windows_support.manifest,
+        self.target_artifacts.tool_drivers.lib,
+        self.target_artifacts.tool_drivers.dlltool,
+        self.target_artifacts.target_backends.core_lib,
+        self.target_artifacts.target_backends.parser,
+        self.target_artifacts.target_backends.x86,
+        self.target_artifacts.target_backends.aarch64,
+        self.target_artifacts.target_backends.arm,
+        self.target_artifacts.target_backends.riscv,
+        self.target_artifacts.target_backends.wasm,
+        self.target_artifacts.target_backends.xtensa,
+        self.target_artifacts.target_backends.powerpc,
+        self.target_artifacts.target_backends.loong_arch,
+        self.target_artifacts.execution_engine.core_lib,
+        self.target_artifacts.execution_engine.interpreter,
+        self.target_artifacts.execution_engine.jit_link,
+        self.target_artifacts.execution_engine.mc_jit,
+        self.target_artifacts.execution_engine.orc.core_lib,
+        self.target_artifacts.execution_engine.orc.debugging,
+        self.target_artifacts.execution_engine.orc.shared,
+        self.target_artifacts.execution_engine.orc.target_process,
+        self.target_artifacts.execution_engine.runtime_dyld,
+    }) catch @panic("OOM");
+    return all_artifacts.items;
+}
+
+pub fn allIncludePaths(self: *const Self) struct {
+    includes: []std.Build.LazyPath,
+    config_headers: []*std.Build.Step.ConfigHeader,
+} {
+    var all_includes: std.ArrayList(std.Build.LazyPath) = .empty;
+    all_includes.appendSlice(self.b.allocator, &.{
+        self.llvm.llvm_include,
+        self.minimal_artifacts.gen_vt.getDirectory(),
+        self.target_artifacts.intrinsics_gen.getDirectory(),
+        self.target_artifacts.frontend.gen_files.getDirectory(),
+        self.target_artifacts.target_backends.parser_gen.getDirectory(),
+    }) catch @panic("OOM");
+
+    var all_config_headers: std.ArrayList(*std.Build.Step.ConfigHeader) = .empty;
+    all_config_headers.append(self.b.allocator, self.llvm.vcs_revision) catch @panic("OOM");
+
+    return .{
+        .includes = all_includes.items,
+        .config_headers = all_config_headers.items,
     };
 }

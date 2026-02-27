@@ -83,7 +83,7 @@ pub const common_sources = [_][]const u8{
     "Watchdog.cpp",
 };
 
-pub const regex_sources = [_][]const u8{
+pub const reg_sources = [_][]const u8{
     "regcomp.c",
     "regerror.c",
     "regexec.c",
@@ -96,4 +96,5 @@ pub const blake3_sources = [_][]const u8{
     "blake3.c",
     "blake3_dispatch.c",
     "blake3_portable.c",
+    "blake3_neon.c",
 };

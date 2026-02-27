@@ -199,7 +199,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     skip_cppcheck: bool,
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
-    skip_link_test: bool = false,
+    packaging: bool = false,
 }) !struct {
     libcore: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -226,9 +226,11 @@ fn addArtifacts(b: *std.Build, config: struct {
 
     // LLVM is compiled from source because I like burning compute or something
     var llvm: LLVM = .init(b, config.target);
-    try llvm.build(if (config.skip_link_test) null else .{
+    try llvm.build(.{
+        .behavior = if (config.packaging) .package else .{
+            .supplemental_cxx_flags = config.cxx_flags,
+        },
         .auto_install = config.auto_install,
-        .cxx_flags = config.cxx_flags,
     });
 
     // The actual compiler static library
@@ -1133,7 +1135,7 @@ fn addPackageStep(b: *std.Build, config: struct {
             .skip_cppcheck = true,
             .behavior = .standalone,
             .auto_install = false,
-            .skip_link_test = true,
+            .packaging = true,
         });
 
         std.debug.assert(artifacts.tests == null);
