@@ -310,6 +310,7 @@ pub fn build(self: *Self, config: struct {
         supplemental_cxx_flags: []const []const u8,
         package,
     },
+    skip_link_test: bool = true,
     auto_install: bool = false,
 }) !void {
     const b = self.b;
@@ -425,8 +426,7 @@ pub fn build(self: *Self, config: struct {
     // Packaging ignores test builds
     switch (config.behavior) {
         .supplemental_cxx_flags => |cxx_flags| {
-            const llvm_link_test_exe = self.createLinkTest(cxx_flags);
-            if (config.auto_install) b.installArtifact(llvm_link_test_exe);
+            self.createLinkTest(cxx_flags);
 
             const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
                 .dest_dir = .{
@@ -542,7 +542,7 @@ fn createLLVMLibrary(self: *const Self, config: struct {
 }
 
 /// Creates a custom runnable target to test LLVM linkage against a C++23 source file
-fn createLinkTest(self: *const Self, cxx_flags: []const []const u8) Artifact {
+fn createLinkTest(self: *const Self, cxx_flags: []const []const u8) void {
     const b = self.b;
     const mod = self.createHostModule();
     mod.optimize = .Debug;
@@ -563,16 +563,12 @@ fn createLinkTest(self: *const Self, cxx_flags: []const []const u8) Artifact {
     });
 
     const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
     const run_step = b.step("link-test", "Run the llvm link test executable");
     run_step.dependOn(&run_cmd.step);
-
-    return exe;
 }
 
 const ConfigHeaders = struct {
