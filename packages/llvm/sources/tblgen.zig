@@ -37,7 +37,7 @@ pub const minimal_main = utils_root ++ "llvm-min-tblgen.cpp";
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/CMakeLists.txt
 pub const common_root = utils_root ++ "Common/";
-pub const common = [_][]const u8{
+pub const common_sources = [_][]const u8{
     "GlobalISel/CodeExpander.cpp",
     "GlobalISel/CombinerUtils.cpp",
     "GlobalISel/CXXPredicates.cpp",

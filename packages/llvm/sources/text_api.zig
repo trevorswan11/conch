@@ -17,5 +17,3 @@ pub const sources = [_][]const u8{
     "TextStubCommon.cpp",
     "Utils.cpp",
 };
-
-pub const binary_reader = root ++ "BinaryReader/DylibReader.cpp";
