@@ -41,7 +41,7 @@ zig build --release
 This builds the `ReleaseFast` configuration. You can read about Zig's different optimization levels [here](https://ziglang.org/documentation/master/#Build-Mode).
 
 ## Tooling Dependencies
-1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. If you have LLVM installed on your system (specifically the LLVM version required by Conch), then this is a trivial dependency. LLVM 21's formatter is used on all development platforms.
+1. [clang-format](https://github.com/llvm/llvm-project/releases/tag/llvmorg-21.1.8) is used for C++ code formatting. LLVM 21's formatter should be used on all platforms for consistency.
 5. [zip](https://infozip.sourceforge.net/Zip.html) and [tar](https://www.gnu.org/software/tar/tar.html) are both used for packaging releases, but this is automated by GitHub actions runners.
 
 Note that these dependencies are purely optional for users simply building the project from source!

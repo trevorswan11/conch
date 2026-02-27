@@ -50,7 +50,6 @@
               [
                 zig
                 zls
-                curl
                 zip
               ]
               ++ (with llvmPackages_21; [
