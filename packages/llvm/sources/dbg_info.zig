@@ -248,3 +248,32 @@ pub const symbolize_sources = [_][]const u8{
     "SymbolizableObjectFile.cpp",
     "Symbolize.cpp",
 };
+
+pub const dwarf_linker_root = "llvm/lib/DWARFLinker/";
+pub const dwarf_linker_sources = [_][]const u8{
+    "DWARFLinkerBase.cpp",
+    "Utils.cpp",
+};
+
+pub const dwarf_linker_classic_root = dwarf_linker_root ++ "Classic";
+pub const dwarf_linker_classic_sources = [_][]const u8{
+    "DWARFLinkerCompileUnit.cpp",
+    "DWARFLinkerDeclContext.cpp",
+    "DWARFLinker.cpp",
+    "DWARFStreamer.cpp",
+};
+
+pub const dwarf_linker_parallel_root = dwarf_linker_root ++ "Parallel";
+pub const dwarf_linker_parallel_sources = [_][]const u8{
+    "AcceleratorRecordsSaver.cpp",
+    "DependencyTracker.cpp",
+    "DIEAttributeCloner.cpp",
+    "DWARFEmitterImpl.cpp",
+    "DWARFLinker.cpp",
+    "DWARFLinkerCompileUnit.cpp",
+    "DWARFLinkerTypeUnit.cpp",
+    "DWARFLinkerImpl.cpp",
+    "DWARFLinkerUnit.cpp",
+    "OutputSections.cpp",
+    "SyntheticTypeNameBuilder.cpp",
+};

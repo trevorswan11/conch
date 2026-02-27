@@ -71,3 +71,34 @@ pub const yaml_sources = [_][]const u8{
     "YAML.cpp",
     "yaml2obj.cpp",
 };
+
+pub const copy_root = "llvm/lib/ObjCopy/";
+pub const copy_coff_root = copy_root ++ "COFF";
+pub const copy_elf_root = copy_root ++ "ELF";
+pub const copy_macho_root = copy_root ++ "MachO";
+pub const copy_wasm_root = copy_root ++ "wasm";
+pub const copy_xcoff_root = copy_root ++ "XCOFF";
+pub const copy_sources = [_][]const u8{
+    "Archive.cpp",
+    "CommonConfig.cpp",
+    "ObjCopy.cpp",
+    "ConfigManager.cpp",
+    "COFF/COFFObjcopy.cpp",
+    "COFF/COFFObject.cpp",
+    "COFF/COFFReader.cpp",
+    "COFF/COFFWriter.cpp",
+    "ELF/ELFObjcopy.cpp",
+    "ELF/ELFObject.cpp",
+    "MachO/MachOObjcopy.cpp",
+    "MachO/MachOReader.cpp",
+    "MachO/MachOWriter.cpp",
+    "MachO/MachOLayoutBuilder.cpp",
+    "MachO/MachOObject.cpp",
+    "wasm/WasmObject.cpp",
+    "wasm/WasmReader.cpp",
+    "wasm/WasmWriter.cpp",
+    "wasm/WasmObjcopy.cpp",
+    "XCOFF/XCOFFObjcopy.cpp",
+    "XCOFF/XCOFFReader.cpp",
+    "XCOFF/XCOFFWriter.cpp",
+};

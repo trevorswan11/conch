@@ -1,4 +1,5 @@
-//! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/MC/CMakeLists.txt
+//! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/MC
+//! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/MCA
 pub const mc_root = "llvm/lib/MC/";
 pub const mc_sources = [_][]const u8{
     "ConstantPools.cpp",
@@ -101,4 +102,32 @@ pub const disassembler_sources = [_][]const u8{
     "MCExternalSymbolizer.cpp",
     "MCRelocationInfo.cpp",
     "MCSymbolizer.cpp",
+};
+
+pub const mca_root = "llvm/lib/MCA";
+pub const mca_sources = [_][]const u8{
+    "CodeEmitter.cpp",
+    "Context.cpp",
+    "CustomBehaviour.cpp",
+    "HWEventListener.cpp",
+    "HardwareUnits/HardwareUnit.cpp",
+    "HardwareUnits/LSUnit.cpp",
+    "HardwareUnits/RegisterFile.cpp",
+    "HardwareUnits/ResourceManager.cpp",
+    "HardwareUnits/RetireControlUnit.cpp",
+    "HardwareUnits/Scheduler.cpp",
+    "IncrementalSourceMgr.cpp",
+    "InstrBuilder.cpp",
+    "Instruction.cpp",
+    "Pipeline.cpp",
+    "Stages/DispatchStage.cpp",
+    "Stages/EntryStage.cpp",
+    "Stages/ExecuteStage.cpp",
+    "Stages/InOrderIssueStage.cpp",
+    "Stages/InstructionTables.cpp",
+    "Stages/MicroOpQueueStage.cpp",
+    "Stages/RetireStage.cpp",
+    "Stages/Stage.cpp",
+    "Support.cpp",
+    "View.cpp",
 };
