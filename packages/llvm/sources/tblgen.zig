@@ -18,7 +18,7 @@ pub const lib_sources = [_][]const u8{
 };
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/Basic/CMakeLists.txt
-pub const basic_root = emitter_root ++ "Basic/";
+pub const basic_root = utils_root ++ "Basic/";
 pub const basic_sources = [_][]const u8{
     "ARMTargetDefEmitter.cpp",
     "Attributes.cpp",
@@ -33,10 +33,10 @@ pub const basic_sources = [_][]const u8{
     "VTEmitter.cpp",
 };
 
-pub const minimal_main = emitter_root ++ "llvm-min-tblgen.cpp";
+pub const minimal_main = utils_root ++ "llvm-min-tblgen.cpp";
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/CMakeLists.txt
-pub const common_root = emitter_root ++ "Common/";
+pub const common_root = utils_root ++ "Common/";
 pub const common = [_][]const u8{
     "GlobalISel/CodeExpander.cpp",
     "GlobalISel/CombinerUtils.cpp",
@@ -65,8 +65,8 @@ pub const common = [_][]const u8{
 };
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/utils/TableGen/CMakeLists.txt
-pub const emitter_root = "llvm/utils/TableGen/";
-pub const emitter_sources = [_][]const u8{
+pub const utils_root = "llvm/utils/TableGen/";
+pub const utils_sources = [_][]const u8{
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "CallingConvEmitter.cpp",

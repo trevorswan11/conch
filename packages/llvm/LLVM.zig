@@ -1,11 +1,23 @@
 //! LLVM Source Compilation rules. All artifacts are compiled as ReleaseSafe.
 const std = @import("std");
 
-const support = @import("sources/support.zig");
-const tblgen = @import("sources/tblgen.zig");
+const analysis = @import("sources/analysis.zig");
+const binary_format = @import("sources/binary_format.zig");
+const codegen = @import("sources/codegen.zig");
+const dbg_info = @import("sources/dbg_info.zig");
 const ir = @import("sources/ir.zig");
 const machine_code = @import("sources/machine_code.zig");
 const object = @import("sources/object.zig");
+const passes = @import("sources/passes.zig");
+const prof_data = @import("sources/prof_data.zig");
+const remarks = @import("sources/remarks.zig");
+const sandbox_ir = @import("sources/sandbox_ir.zig");
+const support = @import("sources/support.zig");
+const target_backends = @import("sources/target_backends.zig");
+const target_parser = @import("sources/target_parser.zig");
+const tblgen = @import("sources/tblgen.zig");
+const text_api = @import("sources/text_api.zig");
+const transforms = @import("sources/transforms.zig");
 
 const ThirdParty = struct {
     const siphash_inc = "third-party/siphash/include";
@@ -36,7 +48,6 @@ const MinimalArtifacts = struct {
     demangle: *std.Build.Step.Compile = undefined,
     support: *std.Build.Step.Compile = undefined,
 
-    /// GenVT generated include.
     gen_vt: *std.Build.Step.WriteFile,
 };
 
@@ -49,8 +60,67 @@ const TargetArtifacts = struct {
     };
 
     const TextAPI = struct {
-        text_api: *std.Build.Step.Compile = undefined,
+        core_lib: *std.Build.Step.Compile = undefined,
         binary_reader: *std.Build.Step.Compile = undefined,
+    };
+
+    const DebugInfo = struct {
+        btf: *std.Build.Step.Compile = undefined,
+        code_view: *std.Build.Step.Compile = undefined,
+        dwarf: struct {
+            core_lib: *std.Build.Step.Compile = undefined,
+            low_level: *std.Build.Step.Compile = undefined,
+        } = .{},
+        gsym: *std.Build.Step.Compile = undefined,
+        logical_view: *std.Build.Step.Compile = undefined,
+        msf: *std.Build.Step.Compile = undefined,
+        pdb: *std.Build.Step.Compile = undefined,
+        symbolize: *std.Build.Step.Compile = undefined,
+    };
+
+    const ProfileData = struct {
+        core_lib: *std.Build.Step.Compile = undefined,
+        coverage: *std.Build.Step.Compile = undefined,
+    };
+
+    const CodeGen = struct {
+        core_lib: *std.Build.Step.Compile = undefined,
+        types: *std.Build.Step.Compile = undefined,
+        data: *std.Build.Step.Compile = undefined,
+        selection_dag: *std.Build.Step.Compile = undefined,
+        global_isel: *std.Build.Step.Compile = undefined,
+        asm_printer: *std.Build.Step.Compile = undefined,
+        mir_parser: *std.Build.Step.Compile = undefined,
+    };
+
+    const Transforms = struct {
+        utils: *std.Build.Step.Compile = undefined,
+        instrumentation: *std.Build.Step.Compile = undefined,
+        aggressive_inst_combine: *std.Build.Step.Compile = undefined,
+        inst_combine: *std.Build.Step.Compile = undefined,
+        scalar: *std.Build.Step.Compile = undefined,
+        ipo: *std.Build.Step.Compile = undefined,
+        vectorize: *std.Build.Step.Compile = undefined,
+        obj_carc: *std.Build.Step.Compile = undefined,
+        coroutines: *std.Build.Step.Compile = undefined,
+        cf_guard: *std.Build.Step.Compile = undefined,
+        hip_std_par: *std.Build.Step.Compile = undefined,
+    };
+
+    const Frontend = struct {
+        gen_files: *std.Build.Step.WriteFile = undefined,
+
+        atomic: *std.Build.Step.Compile = undefined,
+        directive: *std.Build.Step.Compile = undefined,
+        driver: *std.Build.Step.Compile = undefined,
+        hlsl: *std.Build.Step.Compile = undefined,
+        open_acc: *std.Build.Step.Compile = undefined,
+        open_mp: *std.Build.Step.Compile = undefined,
+        offloading: *std.Build.Step.Compile = undefined,
+    };
+
+    const Target = struct {
+        core_lib: *std.Build.Step.Compile = undefined,
     };
 
     deps: Dependencies = undefined,
@@ -72,6 +142,20 @@ const TargetArtifacts = struct {
     ir_reader: *std.Build.Step.Compile = undefined,
     text_api: TextAPI = undefined,
     object: *std.Build.Step.Compile = undefined,
+    object_yaml: *std.Build.Step.Compile = undefined,
+    debug_info: DebugInfo = undefined,
+    profile_data: ProfileData = .{},
+    analysis: *std.Build.Step.Compile = undefined,
+
+    codegen: CodeGen = .{},
+    sandbox_ir: *std.Build.Step.Compile = undefined,
+    frontend: Frontend = .{},
+    transforms: Transforms = .{},
+    linker: *std.Build.Step.Compile = undefined,
+
+    target: Target = .{},
+    passes: *std.Build.Step.Compile = undefined,
+    ir_printer: *std.Build.Step.Compile = undefined,
 
     /// Registry of generated intrinsics
     intrinsics_gen: *std.Build.Step.WriteFile = undefined,
@@ -79,27 +163,8 @@ const TargetArtifacts = struct {
     /// Registry of target-specific generated files
     target_parser_gen: *std.Build.Step.WriteFile = undefined,
 
-    fn artifactArray(self: *const TargetArtifacts) [18]*std.Build.Step.Compile {
-        return .{
-            self.deps.zlib.artifact,
-            self.deps.libxml2.artifact,
-            self.deps.zstd.artifact,
-            self.demangle,
-            self.support,
-            self.target_parser,
-            self.bitstream_reader,
-            self.binary_format,
-            self.remarks,
-            self.core,
-            self.bitcode.reader,
-            self.machine_code.mc,
-            self.machine_code.disassembler,
-            self.machine_code.parser,
-            self.asm_parser,
-            self.ir_reader,
-            self.text_api.text_api,
-            self.object,
-        };
+    fn artifactArray(self: *const TargetArtifacts) [63]*std.Build.Step.Compile {
+        return .{ self.deps.zlib.artifact, self.deps.libxml2.artifact, self.deps.zstd.artifact, self.demangle, self.support, self.target_parser, self.bitstream_reader, self.binary_format, self.remarks, self.core, self.bitcode.reader, self.bitcode.writer, self.machine_code.mc, self.machine_code.disassembler, self.machine_code.parser, self.asm_parser, self.ir_reader, self.text_api.core_lib, self.text_api.binary_reader, self.object, self.object_yaml, self.debug_info.btf, self.debug_info.code_view, self.debug_info.dwarf.core_lib, self.debug_info.dwarf.low_level, self.debug_info.gsym, self.debug_info.logical_view, self.debug_info.msf, self.debug_info.pdb, self.debug_info.symbolize, self.profile_data.coverage, self.profile_data.core_lib, self.analysis, self.codegen.types, self.codegen.data, self.codegen.core_lib, self.codegen.selection_dag, self.codegen.global_isel, self.codegen.asm_printer, self.codegen.mir_parser, self.sandbox_ir, self.frontend.atomic, self.frontend.directive, self.frontend.driver, self.frontend.hlsl, self.frontend.open_acc, self.frontend.open_mp, self.frontend.offloading, self.transforms.utils, self.transforms.instrumentation, self.transforms.aggressive_inst_combine, self.transforms.inst_combine, self.transforms.scalar, self.transforms.ipo, self.transforms.vectorize, self.transforms.obj_carc, self.transforms.coroutines, self.transforms.cf_guard, self.transforms.hip_std_par, self.linker, self.target.core_lib, self.passes, self.ir_printer };
     }
 };
 
@@ -243,8 +308,42 @@ pub fn build(self: *Self, link_test_config: ?struct {
     self.target_artifacts.machine_code = self.compileMC();
     self.target_artifacts.asm_parser = self.compileAsmParser();
     self.target_artifacts.ir_reader = self.compileIRReader();
-    self.target_artifacts.text_api.text_api = self.compileTextAPI();
+    self.target_artifacts.text_api.core_lib = self.compileTextAPI();
     self.target_artifacts.object = self.compileObject();
+
+    self.target_artifacts.debug_info = self.compileDebugInfo();
+    self.target_artifacts.object_yaml = self.compileObjectYAML();
+    self.target_artifacts.profile_data = self.compileProfileData();
+    self.target_artifacts.analysis = self.compileAnalysis();
+    self.target_artifacts.bitcode.writer = self.compileBitcodeWriter();
+    self.target_artifacts.text_api.binary_reader = self.compileTextAPIBinaryReader();
+
+    self.target_artifacts.codegen.types = self.compileCodeGenTypes();
+    self.target_artifacts.codegen.data = self.compileCGData();
+    self.target_artifacts.sandbox_ir = self.compileSandboxIR();
+    self.target_artifacts.transforms.utils = self.compileTransformUtils();
+    self.target_artifacts.transforms.instrumentation = self.compileInstrumentation();
+    self.target_artifacts.frontend = self.compileFrontend();
+    self.target_artifacts.linker = self.compileLinker();
+
+    self.target_artifacts.transforms.inst_combine = self.compileInstCombine();
+    self.target_artifacts.transforms.aggressive_inst_combine = self.compileAggressiveInstCombine();
+    self.target_artifacts.transforms.cf_guard = self.compileCFGuard();
+    self.target_artifacts.transforms.hip_std_par = self.compileHipStdPar();
+    self.target_artifacts.transforms.obj_carc = self.compileObjCARC();
+    self.target_artifacts.transforms.scalar = self.compileScalar();
+    self.target_artifacts.transforms.vectorize = self.compileVectorize();
+    self.target_artifacts.transforms.ipo = self.compileIPO();
+    self.target_artifacts.transforms.coroutines = self.compileCoroutines();
+
+    self.target_artifacts.target.core_lib = self.compileTarget();
+    self.target_artifacts.codegen.core_lib = self.compileCodeGen();
+    self.target_artifacts.codegen.selection_dag = self.compileSelectionDAG();
+    self.target_artifacts.codegen.global_isel = self.compileGlobalISel();
+    self.target_artifacts.codegen.asm_printer = self.compileAsmPrinter();
+    self.target_artifacts.codegen.mir_parser = self.compileMIRParser();
+    self.target_artifacts.ir_printer = self.compileIRPrinter();
+    self.target_artifacts.passes = self.compilePasses();
 
     // The link test is completely ignored for packaging
     if (link_test_config) |link_test| {
@@ -656,7 +755,7 @@ fn compileSupport(self: *const Self, config: struct {
     });
 
     mod.addCSourceFiles(.{
-        .root = self.llvm.root.path(b, support.blake3_path),
+        .root = self.llvm.root.path(b, support.blake3_root),
         .files = &support.blake3_sources,
         .flags = &.{"-std=c11"},
     });
@@ -681,14 +780,6 @@ fn compileSupport(self: *const Self, config: struct {
 
     // Specific windows compilation & linking
     if (target_result.os.tag == .windows) {
-        mod.addCMacro("_CRT_SECURE_NO_DEPRECATE", "");
-        mod.addCMacro("_CRT_SECURE_NO_WARNINGS", "");
-        mod.addCMacro("_CRT_NONSTDC_NO_DEPRECATE", "");
-        mod.addCMacro("_CRT_NONSTDC_NO_WARNINGS", "");
-        mod.addCMacro("_SCL_SECURE_NO_WARNINGS", "");
-        mod.addCMacro("UNICODE", "");
-        mod.addCMacro("_UNICODE", "");
-
         mod.linkSystemLibrary("psapi", .{ .preferred_link_mode = .static });
         mod.linkSystemLibrary("shell32", .{ .preferred_link_mode = .static });
         mod.linkSystemLibrary("ole32", .{ .preferred_link_mode = .static });
@@ -748,18 +839,9 @@ fn compileBinaryFormat(self: *const Self) *std.Build.Step.Compile {
     const b = self.b;
     const mod = self.createTargetModule();
 
-    const bf_dir = self.llvm.root.path(b, "llvm/lib/BinaryFormat");
     mod.addCSourceFiles(.{
-        .root = bf_dir,
-        .files = &.{
-            "AMDGPUMetadataVerifier.cpp", "COFF.cpp",
-            "Dwarf.cpp",                  "DXContainer.cpp",
-            "ELF.cpp",                    "MachO.cpp",
-            "Magic.cpp",                  "Minidump.cpp",
-            "MsgPackDocument.cpp",        "MsgPackDocumentYAML.cpp",
-            "MsgPackReader.cpp",          "MsgPackWriter.cpp",
-            "Wasm.cpp",                   "XCOFF.cpp",
-        },
+        .root = self.llvm.root.path(b, binary_format.root),
+        .files = &binary_format.sources,
         .flags = &common_llvm_cxx_flags,
     });
 
@@ -779,17 +861,9 @@ fn compileRemarks(self: *const Self) *std.Build.Step.Compile {
     const b = self.b;
     const mod = self.createTargetModule();
 
-    const bf_dir = self.llvm.root.path(b, "llvm/lib/Remarks");
     mod.addCSourceFiles(.{
-        .root = bf_dir,
-        .files = &.{
-            "BitstreamRemarkParser.cpp", "BitstreamRemarkSerializer.cpp",
-            "Remark.cpp",                "RemarkFormat.cpp",
-            "RemarkLinker.cpp",          "RemarkParser.cpp",
-            "RemarkSerializer.cpp",      "RemarkStreamer.cpp",
-            "RemarkStringTable.cpp",     "YAMLRemarkParser.cpp",
-            "YAMLRemarkSerializer.cpp",
-        },
+        .root = self.llvm.root.path(b, remarks.root),
+        .files = &remarks.sources,
         .flags = &common_llvm_cxx_flags,
     });
 
@@ -873,18 +947,9 @@ fn compileTargetParser(self: *Self) *std.Build.Step.Compile {
     const b = self.b;
     const mod = self.createTargetModule();
 
-    const tp_dir = self.llvm.root.path(b, "llvm/lib/TargetParser");
     mod.addCSourceFiles(.{
-        .root = tp_dir,
-        .files = &.{
-            "AArch64TargetParser.cpp", "ARMTargetParserCommon.cpp",
-            "ARMTargetParser.cpp",     "CSKYTargetParser.cpp",
-            "Host.cpp",                "LoongArchTargetParser.cpp",
-            "PPCTargetParser.cpp",     "RISCVISAInfo.cpp",
-            "RISCVTargetParser.cpp",   "SubtargetFeature.cpp",
-            "TargetParser.cpp",        "Triple.cpp",
-            "X86TargetParser.cpp",
-        },
+        .root = self.llvm.root.path(b, target_parser.root),
+        .files = &target_parser.sources,
         .flags = &common_llvm_cxx_flags,
     });
 
@@ -986,10 +1051,8 @@ fn compileBitcodeReader(self: *const Self) *std.Build.Step.Compile {
     mod.addCSourceFiles(.{
         .root = self.llvm.root.path(b, "llvm/lib/Bitcode/Reader"),
         .files = &.{
-            "BitcodeAnalyzer.cpp",
-            "BitReader.cpp",
-            "BitcodeReader.cpp",
-            "MetadataLoader.cpp",
+            "BitcodeAnalyzer.cpp", "BitReader.cpp",
+            "BitcodeReader.cpp",   "MetadataLoader.cpp",
             "ValueList.cpp",
         },
         .flags = &common_llvm_cxx_flags,
@@ -1136,17 +1199,8 @@ fn compileTextAPI(self: *const Self) *std.Build.Step.Compile {
     const b = self.b;
     const mod = self.createTargetModule();
     mod.addCSourceFiles(.{
-        .root = self.llvm.root.path(b, "llvm/lib/TextAPI"),
-        .files = &.{
-            "Architecture.cpp",  "ArchitectureSet.cpp",
-            "InterfaceFile.cpp", "TextStubV5.cpp",
-            "PackedVersion.cpp", "Platform.cpp",
-            "RecordsSlice.cpp",  "RecordVisitor.cpp",
-            "Symbol.cpp",        "SymbolSet.cpp",
-            "Target.cpp",        "TextAPIError.cpp",
-            "TextStub.cpp",      "TextStubCommon.cpp",
-            "Utils.cpp",
-        },
+        .root = self.llvm.root.path(b, text_api.root),
+        .files = &text_api.sources,
         .flags = &common_llvm_cxx_flags,
     });
 
@@ -1183,10 +1237,1241 @@ fn compileObject(self: *const Self) *std.Build.Step.Compile {
     mod.linkLibrary(self.target_artifacts.machine_code.parser);
     mod.linkLibrary(self.target_artifacts.support);
     mod.linkLibrary(self.target_artifacts.target_parser);
-    mod.linkLibrary(self.target_artifacts.text_api.text_api);
+    mod.linkLibrary(self.target_artifacts.text_api.core_lib);
 
     return b.addLibrary(.{
         .name = "LLVMObject",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/CMakeLists.txt
+fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
+    const b = self.b;
+    var debug_info: TargetArtifacts.DebugInfo = .{};
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/BTF/CMakeLists.txt
+    debug_info.btf = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.btf_root),
+            .files = &dbg_info.btf_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoBTF",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/CodeView/CMakeLists.txt
+    debug_info.code_view = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.code_view_root),
+            .files = &dbg_info.code_view_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoCodeView",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/CodeView/CMakeLists.txt
+    debug_info.code_view = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.code_view_root),
+            .files = &dbg_info.code_view_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoCodeView",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/DWARF/LowLevel/CMakeLists.txt
+    debug_info.dwarf.low_level = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.dwarf_ll_root),
+            .files = &dbg_info.dwarf_ll_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoDWARFLowLevel",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/DWARF/CMakeLists.txt
+    debug_info.dwarf.core_lib = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.dwarf_root),
+            .files = &dbg_info.dwarf_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(debug_info.dwarf.low_level);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoDWARF",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/GSYM/CMakeLists.txt
+    debug_info.gsym = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.gsym_root),
+            .files = &dbg_info.gsym_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(self.target_artifacts.machine_code.mc);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+        mod.linkLibrary(debug_info.dwarf.core_lib);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoGSYM",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/MSF/CMakeLists.txt
+    debug_info.msf = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.msf_root),
+            .files = &dbg_info.msf_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoGSYM",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/PDB/CMakeLists.txt
+    debug_info.pdb = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.pdb_root),
+            .files = &dbg_info.pdb_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.support);
+
+        mod.linkLibrary(debug_info.code_view);
+        mod.linkLibrary(debug_info.msf);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoPDB",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/LogicalView/CMakeLists.txt
+    debug_info.logical_view = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.logical_view_root),
+            .files = &dbg_info.logical_view_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(self.target_artifacts.demangle);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.machine_code.mc);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        mod.linkLibrary(debug_info.code_view);
+        mod.linkLibrary(debug_info.dwarf.core_lib);
+        mod.linkLibrary(debug_info.dwarf.low_level);
+        mod.linkLibrary(debug_info.pdb);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMDebugInfoLogicalView",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/Symbolize/CMakeLists.txt
+    debug_info.symbolize = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, dbg_info.symbolize_root),
+            .files = &dbg_info.symbolize_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+
+        mod.linkLibrary(debug_info.dwarf.core_lib);
+        mod.linkLibrary(debug_info.gsym);
+        mod.linkLibrary(debug_info.pdb);
+        mod.linkLibrary(debug_info.btf);
+
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.demangle);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMSymbolize",
+            .root_module = mod,
+        });
+    };
+
+    return debug_info;
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ObjectYAML/CMakeLists.txt
+fn compileObjectYAML(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, object.yaml_root),
+        .files = &object.yaml_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.binary_format);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.debug_info.code_view);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+
+    return b.addLibrary(.{
+        .name = "LLVMObjectYAML",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ProfileData/CMakeLists.txt
+fn compileProfileData(self: *const Self) TargetArtifacts.ProfileData {
+    const b = self.b;
+    var profile_data: TargetArtifacts.ProfileData = .{};
+
+    profile_data.core_lib = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, prof_data.prof_data_root),
+            .files = &prof_data.prof_data_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.bitstream_reader);
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.demangle);
+        mod.linkLibrary(self.target_artifacts.debug_info.symbolize);
+        mod.linkLibrary(self.target_artifacts.debug_info.dwarf.core_lib);
+        mod.linkLibrary(self.target_artifacts.debug_info.dwarf.low_level);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMProfileData",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ProfileData/Coverage/CMakeLists.txt
+    profile_data.coverage = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, prof_data.coverage_root),
+            .files = &prof_data.coverage_sources,
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(profile_data.core_lib);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMCoverage",
+            .root_module = mod,
+        });
+    };
+
+    return profile_data;
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Analysis/CMakeLists.txt
+fn compileAnalysis(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, analysis.constant_folding),
+        .flags = &common_llvm_cxx_flags ++ .{analysis.extra_constant_folding_flag},
+    });
+
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, analysis.root),
+        .files = &analysis.sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.binary_format);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.profile_data.core_lib);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMAnalysis",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Bitcode/Writer/CMakeLists.txt
+fn compileBitcodeWriter(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, "llvm/lib/Bitcode/Writer"),
+        .files = &.{
+            "BitWriter.cpp",
+            "BitcodeWriter.cpp",
+            "BitcodeWriterPass.cpp",
+            "ValueEnumerator.cpp",
+        },
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.profile_data.core_lib);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMBitWriter",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TextAPI/BinaryReader/CMakeLists.txt
+fn compileTextAPIBinaryReader(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, text_api.binary_reader),
+        .flags = &common_llvm_cxx_flags,
+    });
+    mod.addIncludePath(self.llvm.llvm_include);
+
+    mod.linkLibrary(self.target_artifacts.debug_info.dwarf.core_lib);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.text_api.core_lib);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMTextAPIBinaryReader",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGenTypes/CMakeLists.txt
+fn compileCodeGenTypes(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, "llvm/lib/CodeGenTypes/LowLevelType.cpp"),
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+    mod.linkLibrary(self.target_artifacts.support);
+
+    return b.addLibrary(.{
+        .name = "LLVMCodeGenTypes",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CGData/CMakeLists.txt
+fn compileCGData(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.data_root),
+        .files = &codegen.data_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.bitcode.reader);
+    mod.linkLibrary(self.target_artifacts.bitcode.writer);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.object);
+
+    return b.addLibrary(.{
+        .name = "LLVMCGData",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/SandboxIR/CMakeLists.txt
+fn compileSandboxIR(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, sandbox_ir.root),
+        .files = &sandbox_ir.sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.analysis);
+
+    return b.addLibrary(.{
+        .name = "LLVMSandboxIR",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Instrumentation/CMakeLists.txt
+fn compileInstrumentation(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.instrumentation_root),
+        .files = &transforms.instrumentation_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.demangle);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.profile_data.core_lib);
+
+    return b.addLibrary(.{
+        .name = "LLVMInstrumentation",
+        .root_module = mod,
+    });
+}
+
+fn compileFrontend(self: *Self) TargetArtifacts.Frontend {
+    const b = self.b;
+    var frontend: TargetArtifacts.Frontend = .{
+        .gen_files = b.addWriteFiles(),
+    };
+
+    // OpenMP gen files
+    _ = self.synthesizeHeader(frontend.gen_files, .{
+        .tblgen = self.full_tblgen,
+        .name = "OMP",
+        .td_file = "llvm/include/llvm/Frontend/OpenMP/OMP.td",
+        .instruction = .{ .action = "-gen-directive-impl" },
+        .virtual_path = "llvm/Frontend/OpenMP/OMP.inc",
+    });
+
+    _ = self.synthesizeHeader(frontend.gen_files, .{
+        .tblgen = self.full_tblgen,
+        .name = "OMP.h",
+        .td_file = "llvm/include/llvm/Frontend/OpenMP/OMP.td",
+        .instruction = .{ .action = "-gen-directive-decl" },
+        .virtual_path = "llvm/Frontend/OpenMP/OMP.h.inc",
+    });
+
+    // OpenACC gen files
+    _ = self.synthesizeHeader(frontend.gen_files, .{
+        .tblgen = self.full_tblgen,
+        .name = "ACC",
+        .td_file = "llvm/include/llvm/Frontend/OpenACC/ACC.td",
+        .instruction = .{ .action = "-gen-directive-impl" },
+        .virtual_path = "llvm/Frontend/OpenACC/ACC.inc",
+    });
+
+    _ = self.synthesizeHeader(frontend.gen_files, .{
+        .tblgen = self.full_tblgen,
+        .name = "ACC.h",
+        .td_file = "llvm/include/llvm/Frontend/OpenACC/ACC.td",
+        .instruction = .{ .action = "-gen-directive-decl" },
+        .virtual_path = "llvm/Frontend/OpenACC/ACC.h.inc",
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/Atomic/CMakeLists.txt
+    frontend.atomic = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFile(.{
+            .file = self.llvm.root.path(b, "llvm/lib/Frontend/Atomic/Atomic.cpp"),
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.analysis);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendAtomic",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/Directive/CMakeLists.txt
+    frontend.directive = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFile(.{
+            .file = self.llvm.root.path(b, "llvm/lib/Frontend/Directive/Spelling.cpp"),
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendDirective",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/Driver/CMakeLists.txt
+    frontend.driver = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFile(.{
+            .file = self.llvm.root.path(b, "llvm/lib/Frontend/Driver/CodeGenOptions.cpp"),
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.analysis);
+        mod.linkLibrary(self.target_artifacts.transforms.instrumentation);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendDirective",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/HLSL/CMakeLists.txt
+    frontend.hlsl = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, "llvm/lib/Frontend/HLSL"),
+            .files = &.{
+                "CBuffer.cpp",                  "HLSLResource.cpp",
+                "HLSLRootSignature.cpp",        "RootSignatureMetadata.cpp",
+                "RootSignatureValidations.cpp",
+            },
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.support);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendHLSL",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/Offloading/CMakeLists.txt
+    frontend.offloading = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, "llvm/lib/Frontend/Offloading"),
+            .files = &.{ "Utility.cpp", "OffloadWrapper.cpp" },
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.core);
+        mod.linkLibrary(self.target_artifacts.binary_format);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.object_yaml);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.transforms.utils);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendOffloading",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/OpenMP/CMakeLists.txt
+    frontend.open_mp = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFiles(.{
+            .root = self.llvm.root.path(b, "llvm/lib/Frontend/OpenMP"),
+            .files = &.{
+                "OMP.cpp",          "OMPContext.cpp",
+                "OMPIRBuilder.cpp", "DirectiveNameParser.cpp",
+            },
+            .flags = &common_llvm_cxx_flags,
+        });
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(frontend.gen_files.getDirectory());
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.debug_info.dwarf.core_lib);
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(self.target_artifacts.object);
+        mod.linkLibrary(self.target_artifacts.text_api.core_lib);
+        mod.linkLibrary(self.target_artifacts.target_parser);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendOpenMP",
+            .root_module = mod,
+        });
+    };
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Frontend/OpenACC/CMakeLists.txt
+    frontend.open_acc = blk: {
+        const mod = self.createTargetModule();
+        mod.addCSourceFile(.{
+            .file = self.llvm.root.path(b, "llvm/lib/Frontend/OpenACC/ACC.cpp"),
+            .flags = &common_llvm_cxx_flags,
+        });
+
+        mod.addIncludePath(self.llvm.llvm_include);
+        mod.addIncludePath(frontend.gen_files.getDirectory());
+        mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+        mod.linkLibrary(self.target_artifacts.support);
+        mod.linkLibrary(frontend.directive);
+
+        break :blk b.addLibrary(.{
+            .name = "LLVMFrontendOpenACC",
+            .root_module = mod,
+        });
+    };
+
+    return frontend;
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Linker/CMakeLists.txt
+fn compileLinker(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, "llvm/lib/Linker"),
+        .files = &.{ "IRMover.cpp", "LinkModules.cpp" },
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMLinker",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Utils/CMakeLists.txt
+fn compileTransformUtils(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.utils_root),
+        .files = &transforms.utils_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMTransformUtils",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/InstCombine/CMakeLists.txt
+fn compileInstCombine(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.inst_combine_root),
+        .files = &transforms.inst_combine_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMInstCombine",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/AggressiveInstCombine/CMakeLists.txt
+fn compileAggressiveInstCombine(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.aggressive_inst_root),
+        .files = &transforms.aggressive_inst_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMAggressiveInstCombine",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/CFGuard/CMakeLists.txt
+fn compileCFGuard(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, "llvm/lib/Transforms/CFGuard/CFGuard.cpp"),
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMCFGuard",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/HipStdPar/CMakeLists.txt
+fn compileHipStdPar(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, "llvm/lib/Transforms/HipStdPar/HipStdPar.cpp"),
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMHipStdPar",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/ObjCARC/CMakeLists.txt
+fn compileObjCARC(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.obj_carc_root),
+        .files = &transforms.obj_carc_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMObjCARCOpts",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Scalar/CMakeLists.txt
+fn compileScalar(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.scalar_root),
+        .files = &transforms.scalar_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.transforms.aggressive_inst_combine);
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.transforms.inst_combine);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMScalarOpts",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Vectorize/CMakeLists.txt
+fn compileVectorize(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.vectorize_root),
+        .files = &transforms.vectorize_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.sandbox_ir);
+
+    return b.addLibrary(.{
+        .name = "LLVMVectorize",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/IPO/CMakeLists.txt
+fn compileIPO(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.ipo_root),
+        .files = &transforms.ipo_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.target_artifacts.frontend.gen_files.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.transforms.aggressive_inst_combine);
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.bitcode.reader);
+    mod.linkLibrary(self.target_artifacts.bitcode.writer);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.frontend.open_mp);
+    mod.linkLibrary(self.target_artifacts.transforms.inst_combine);
+    mod.linkLibrary(self.target_artifacts.ir_reader);
+    mod.linkLibrary(self.target_artifacts.demangle);
+    mod.linkLibrary(self.target_artifacts.linker);
+    mod.linkLibrary(self.target_artifacts.object);
+    mod.linkLibrary(self.target_artifacts.profile_data.core_lib);
+    mod.linkLibrary(self.target_artifacts.transforms.scalar);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.transforms.vectorize);
+    mod.linkLibrary(self.target_artifacts.transforms.instrumentation);
+
+    return b.addLibrary(.{
+        .name = "LLVMipo",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Coroutines/CMakeLists.txt
+fn compileCoroutines(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, transforms.coroutines_root),
+        .files = &transforms.coroutines_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.transforms.ipo);
+    mod.linkLibrary(self.target_artifacts.transforms.scalar);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMCoroutines",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/CMakeLists.txt
+fn compileTarget(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, target_backends.root),
+        .files = &target_backends.base_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMTarget",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/CMakeLists.txt
+fn compileCodeGen(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.codegen_root),
+        .files = &codegen.codegen_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.bitcode.reader);
+    mod.linkLibrary(self.target_artifacts.bitcode.writer);
+    mod.linkLibrary(self.target_artifacts.codegen.data);
+    mod.linkLibrary(self.target_artifacts.codegen.types);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.transforms.obj_carc);
+    mod.linkLibrary(self.target_artifacts.profile_data.core_lib);
+    mod.linkLibrary(self.target_artifacts.transforms.scalar);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMCodeGen",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/SelectionDAG/CMakeLists.txt
+fn compileSelectionDAG(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.selection_dag_root),
+        .files = &codegen.selection_dag_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.codegen.core_lib);
+    mod.linkLibrary(self.target_artifacts.codegen.types);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMSelectionDAG",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/GlobalISel/CMakeLists.txt
+fn compileGlobalISel(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.global_isel_root),
+        .files = &codegen.global_isel_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.codegen.core_lib);
+    mod.linkLibrary(self.target_artifacts.codegen.types);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.codegen.selection_dag);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+
+    return b.addLibrary(.{
+        .name = "LLVMGlobalISel",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/AsmPrinter/CMakeLists.txt
+fn compileAsmPrinter(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.asm_printer_root),
+        .files = &codegen.asm_printer_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+    mod.addConfigHeader(self.llvm.vcs_revision);
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.binary_format);
+    mod.linkLibrary(self.target_artifacts.codegen.core_lib);
+    mod.linkLibrary(self.target_artifacts.codegen.types);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.debug_info.code_view);
+    mod.linkLibrary(self.target_artifacts.debug_info.dwarf.core_lib);
+    mod.linkLibrary(self.target_artifacts.debug_info.dwarf.low_level);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.machine_code.parser);
+    mod.linkLibrary(self.target_artifacts.remarks);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+    mod.linkLibrary(self.target_artifacts.target_parser);
+
+    return b.addLibrary(.{
+        .name = "LLVMAsmPrinter",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/MIRParser/CMakeLists.txt
+fn compileMIRParser(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, codegen.mir_parser_root),
+        .files = &codegen.mir_parser_sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.llvm.root.path(b, codegen.mir_parser_root));
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.asm_parser);
+    mod.linkLibrary(self.target_artifacts.binary_format);
+    mod.linkLibrary(self.target_artifacts.codegen.core_lib);
+    mod.linkLibrary(self.target_artifacts.codegen.types);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.machine_code.mc);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+
+    return b.addLibrary(.{
+        .name = "LLVMMIRParser",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IRPrinter/CMakeLists.txt
+fn compileIRPrinter(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFile(.{
+        .file = self.llvm.root.path(b, "llvm/lib/IRPrinter/IRPrintingPasses.cpp"),
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.support);
+
+    return b.addLibrary(.{
+        .name = "LLVMIRPrinter",
+        .root_module = mod,
+    });
+}
+
+/// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Passes/CMakeLists.txt
+fn compilePasses(self: *const Self) *std.Build.Step.Compile {
+    const b = self.b;
+    const mod = self.createTargetModule();
+    mod.addCSourceFiles(.{
+        .root = self.llvm.root.path(b, passes.root),
+        .files = &passes.sources,
+        .flags = &common_llvm_cxx_flags,
+    });
+
+    mod.addIncludePath(self.llvm.llvm_include);
+    mod.addIncludePath(self.target_artifacts.intrinsics_gen.getDirectory());
+    mod.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+
+    mod.linkLibrary(self.target_artifacts.transforms.aggressive_inst_combine);
+    mod.linkLibrary(self.target_artifacts.analysis);
+    mod.linkLibrary(self.target_artifacts.transforms.cf_guard);
+    mod.linkLibrary(self.target_artifacts.codegen.core_lib);
+    mod.linkLibrary(self.target_artifacts.codegen.global_isel);
+    mod.linkLibrary(self.target_artifacts.core);
+    mod.linkLibrary(self.target_artifacts.transforms.coroutines);
+    mod.linkLibrary(self.target_artifacts.transforms.hip_std_par);
+    mod.linkLibrary(self.target_artifacts.transforms.ipo);
+    mod.linkLibrary(self.target_artifacts.transforms.inst_combine);
+    mod.linkLibrary(self.target_artifacts.ir_printer);
+    mod.linkLibrary(self.target_artifacts.transforms.obj_carc);
+    mod.linkLibrary(self.target_artifacts.transforms.scalar);
+    mod.linkLibrary(self.target_artifacts.support);
+    mod.linkLibrary(self.target_artifacts.target.core_lib);
+    mod.linkLibrary(self.target_artifacts.transforms.utils);
+    mod.linkLibrary(self.target_artifacts.transforms.vectorize);
+    mod.linkLibrary(self.target_artifacts.transforms.instrumentation);
+
+    return b.addLibrary(.{
+        .name = "LLVMPasses",
         .root_module = mod,
     });
 }
@@ -1224,14 +2509,14 @@ fn compileTblgen(self: *const Self, config: struct {
         });
 
         mod.addCSourceFiles(.{
-            .root = self.llvm.root.path(b, tblgen.emitter_root),
-            .files = &tblgen.emitter_sources,
+            .root = self.llvm.root.path(b, tblgen.utils_root),
+            .files = &tblgen.utils_sources,
             .flags = &common_llvm_cxx_flags,
         });
     }
 
     mod.addIncludePath(self.llvm.llvm_include);
-    mod.addIncludePath(self.llvm.root.path(b, "llvm/utils/TableGen"));
+    mod.addIncludePath(self.llvm.root.path(b, tblgen.utils_root));
 
     const exe = b.addExecutable(.{
         .name = if (config.minimal) "LLVMTableGenMinimal" else "LLVMTableGen",
@@ -1348,7 +2633,7 @@ fn compileDeps(self: *const Self, target: std.Build.ResolvedTarget) !Dependencie
 }
 
 /// Compiles zlib from source as a static library
-/// Reference: https://github.com/allyourcodebase/zlib
+/// https://github.com/allyourcodebase/zlib
 fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies.Dependency {
     const b = self.b;
     const upstream = b.dependency("zlib", .{});
@@ -1399,7 +2684,7 @@ fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencie
 }
 
 /// Compiles libxml2 from source as a static library
-/// Reference: https://github.com/allyourcodebase/libxml2
+/// https://github.com/allyourcodebase/libxml2
 fn compileLibxml2(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
     zlib_include: std.Build.LazyPath,
@@ -1504,7 +2789,7 @@ fn compileLibxml2(self: *const Self, config: struct {
 }
 
 /// Compiles libxml2 from source as a static library
-/// Reference: https://github.com/allyourcodebase/zstd
+/// https://github.com/allyourcodebase/zstd
 fn compileZstd(self: *const Self, config: struct {
     target: std.Build.ResolvedTarget,
     zlib_include: std.Build.LazyPath,

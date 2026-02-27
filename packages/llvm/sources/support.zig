@@ -91,7 +91,7 @@ pub const regex_sources = [_][]const u8{
     "regstrlcpy.c",
 };
 
-pub const blake3_path = common_root ++ "BLAKE3";
+pub const blake3_root = common_root ++ "BLAKE3";
 pub const blake3_sources = [_][]const u8{
     "blake3.c",
     "blake3_dispatch.c",
