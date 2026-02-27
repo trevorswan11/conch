@@ -214,7 +214,7 @@ const TargetArtifacts = struct {
     /// Registry of target-specific generated files
     target_parser_gen: *std.Build.Step.WriteFile = undefined,
 
-    fn artifactArray(self: *const TargetArtifacts) [79]Artifact {
+    fn artifactArray(self: *const TargetArtifacts) [86]Artifact {
         return .{
             self.deps.zlib.artifact,
             self.deps.libxml2.artifact,
@@ -294,7 +294,14 @@ const TargetArtifacts = struct {
             self.tool_drivers.lib,
             self.tool_drivers.dlltool,
             self.target_backends.core_lib,
+            self.target_backends.x86,
             self.target_backends.aarch64,
+            self.target_backends.arm,
+            self.target_backends.riscv,
+            self.target_backends.wasm,
+            self.target_backends.xtensa,
+            self.target_backends.powerpc,
+            self.target_backends.loong_arch,
         };
     }
 };
@@ -2786,25 +2793,1137 @@ fn compileAArch64(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/CMakeLists.txt
-fn compileX86(self: *Self) Artifact {}
+fn compileX86(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.X86;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMX86Info",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMX86Desc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.binary_format,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMX86Disassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMX86AsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/Disassembler/CMakeLists.txt
+    const mca_root = self.llvm.root.path(b, Backend.mca_root);
+    const mca = self.createLLVMLibrary(.{
+        .name = "LLVMX86TargetMCA",
+        .cxx_source_files = .{
+            .root = mca_root,
+            .files = &Backend.mca_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            mca_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.analyzer,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/AArch64/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMX86CodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            disassembler,
+            mca,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.transforms.cf_guard,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.codegen.global_isel,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+            self.target_artifacts.transforms.vectorize,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/CMakeLists.txt
-fn compileArm(self: *Self) Artifact {}
+fn compileArm(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.Arm;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/Utils/CMakeLists.txt
+    const utils_root = self.llvm.root.path(b, Backend.utils_root);
+    const utils = self.createLLVMLibrary(.{
+        .name = "LLVMARMUtils",
+        .cxx_source_files = .{
+            .root = utils_root,
+            .files = &Backend.utils_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            utils_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{self.target_artifacts.support},
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMARMInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMARMDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            info,
+            utils,
+            self.target_artifacts.binary_format,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.object,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMARMDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            utils,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMARMAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            utils,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMARMCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            utils,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.transforms.cf_guard,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.codegen.global_isel,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/CMakeLists.txt
-fn compileRISCV(self: *Self) Artifact {}
+fn compileRISCV(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.RiscV;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    // RISCV has two sets of tblgen files to run
+    inline for (Backend.base_actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.base_td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    inline for (Backend.gisel_actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.gisel_td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMRISCVInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMRISCVDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            info,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMRISCVDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            desc,
+            info,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMRISCVAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            desc,
+            info,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/Disassembler/CMakeLists.txt
+    const mca_root = self.llvm.root.path(b, Backend.mca_root);
+    const mca = self.createLLVMLibrary(.{
+        .name = "LLVMRISCVTargetMCA",
+        .cxx_source_files = .{
+            .root = mca_root,
+            .files = &Backend.mca_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            mca_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.analyzer,
+            self.target_artifacts.machine_code.parser,
+            desc,
+            info,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/AArch64/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMRISCVCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            mca,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.codegen.global_isel,
+            self.target_artifacts.transforms.ipo,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+            self.target_artifacts.transforms.vectorize,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/CMakeLists.txt
-fn compileWebAssembly(self: *Self) Artifact {}
+fn compileWebAssembly(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.WebAssembly;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/Utils/CMakeLists.txt
+    const utils_root = self.llvm.root.path(b, Backend.utils_root);
+    const utils = self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyUtils",
+        .cxx_source_files = .{
+            .root = utils_root,
+            .files = &Backend.utils_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            utils_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+            desc,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMWebAssemblyCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            utils,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.binary_format,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/CMakeLists.txt
-fn compileXtensa(self: *Self) Artifact {}
+fn compileXtensa(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.Xtensa;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMXtensaInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMXtensaDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMXtensaDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMXtensaAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+            desc,
+            info,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMXtensaCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/CMakeLists.txt
-fn compilePowerPC(self: *Self) Artifact {}
+fn compilePowerPC(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.PowerPC;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMPowerPCInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMPowerPCDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.binary_format,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.machine_code.core_lib,
+            info,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMPowerPCDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.machine_code.core_lib,
+            info,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMPowerPCAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            desc,
+            info,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/AArch64/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMPowerPCCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.binary_format,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.codegen.global_isel,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+        },
+    });
+}
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/CMakeLists.txt
-fn compileLoongArch(self: *Self) Artifact {}
+fn compileLoongArch(self: *Self) Artifact {
+    const b = self.b;
+    const td_files = b.addWriteFiles();
+
+    const Backend = target_backends.LoongArch;
+    const backend_root = self.llvm.root.path(b, Backend.backend_root);
+
+    inline for (Backend.actions) |action| {
+        _ = self.synthesizeHeader(td_files, .{
+            .tblgen = self.full_tblgen,
+            .name = action.name,
+            .td_file = Backend.td_filepath,
+            .instruction = .{ .actions = action.td_args },
+            .virtual_path = action.name ++ ".inc",
+            .extra_includes = &.{backend_root},
+        });
+    }
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/TargetInfo/CMakeLists.txt
+    const info_root = self.llvm.root.path(b, Backend.info_root);
+    const info = self.createLLVMLibrary(.{
+        .name = "LLVMLoongArchInfo",
+        .cxx_source_files = .{
+            .root = info_root,
+            .files = &Backend.info_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            info_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/MCTargetDesc/CMakeLists.txt
+    const desc_root = self.llvm.root.path(b, Backend.desc_root);
+    const desc = self.createLLVMLibrary(.{
+        .name = "LLVMLoongArchDesc",
+        .cxx_source_files = .{
+            .root = desc_root,
+            .files = &Backend.desc_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            desc_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            self.target_artifacts.machine_code.core_lib,
+            info,
+            self.target_artifacts.support,
+            self.target_artifacts.target_parser,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/Disassembler/CMakeLists.txt
+    const disassembler_root = self.llvm.root.path(b, Backend.disassembler_root);
+    const disassembler = self.createLLVMLibrary(.{
+        .name = "LLVMLoongArchDisassembler",
+        .cxx_source_files = .{
+            .root = disassembler_root,
+            .files = &Backend.disassembler_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            disassembler_root,
+            td_files.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.disassembler,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/AsmParser/CMakeLists.txt
+    const asm_parser_root = self.llvm.root.path(b, Backend.asm_parser_root);
+    const asm_parser = self.createLLVMLibrary(.{
+        .name = "LLVMLoongArchAsmParser",
+        .cxx_source_files = .{
+            .root = asm_parser_root,
+            .files = &Backend.asm_parser_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            asm_parser_root,
+            td_files.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.machine_code.parser,
+            self.target_artifacts.support,
+        },
+    });
+
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/AArch64/CMakeLists.txt
+    return self.createLLVMLibrary(.{
+        .name = "LLVMLoongArchCodeGen",
+        .cxx_source_files = .{
+            .root = backend_root,
+            .files = &Backend.backend_sources,
+        },
+        .additional_include_paths = &.{
+            backend_root,
+            td_files.getDirectory(),
+            self.target_artifacts.intrinsics_gen.getDirectory(),
+            self.minimal_artifacts.gen_vt.getDirectory(),
+            self.target_artifacts.target_parser_gen.getDirectory(),
+        },
+        .link_libraries = &.{
+            desc,
+            info,
+            disassembler,
+            asm_parser,
+            self.target_artifacts.analysis,
+            self.target_artifacts.codegen.asm_printer,
+            self.target_artifacts.codegen.core_lib,
+            self.target_artifacts.codegen.types,
+            self.target_artifacts.core,
+            self.target_artifacts.machine_code.core_lib,
+            self.target_artifacts.transforms.scalar,
+            self.target_artifacts.codegen.selection_dag,
+            self.target_artifacts.support,
+            self.target_artifacts.target_backends.core_lib,
+            self.target_artifacts.target_parser,
+            self.target_artifacts.transforms.utils,
+        },
+    });
+}
 
 /// Compiles tblgen (for the host system only)
 fn compileTblgen(self: *const Self, config: struct {

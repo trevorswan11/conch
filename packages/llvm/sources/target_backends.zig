@@ -278,8 +278,8 @@ pub const X86 = struct {
 };
 
 pub const Arm = struct {
-    pub const backend_root = root ++ "Arm/";
-    pub const td_filepath = backend_root ++ "Arm.td";
+    pub const backend_root = root ++ "ARM/";
+    pub const td_filepath = backend_root ++ "ARM.td";
     pub const backend_sources = [_][]const u8{
         "A15SDOptimizer.cpp",
         "ARMAsmPrinter.cpp",
@@ -379,10 +379,10 @@ pub const Arm = struct {
     pub const utils_sources = [_][]const u8{"ARMBaseInfo.cpp"};
 };
 
-pub const RISCV = struct {
+pub const RiscV = struct {
     pub const backend_root = root ++ "RISCV/";
     pub const base_td_filepath = backend_root ++ "RISCV.td";
-    pub const gisel_td_filepath = backend_root ++ "RISCV.td";
+    pub const gisel_td_filepath = backend_root ++ "RISCVGISel.td";
 
     pub const backend_sources = [_][]const u8{
         "RISCVAsmPrinter.cpp",
@@ -499,7 +499,7 @@ pub const RISCV = struct {
 
 pub const WebAssembly = struct {
     pub const backend_root = root ++ "WebAssembly/";
-    pub const td_filepath = backend_root ++ "LoongArch.td";
+    pub const td_filepath = backend_root ++ "WebAssembly.td";
     pub const backend_sources = [_][]const u8{
         "WebAssemblyAddMissingPrototypes.cpp",
         "WebAssemblyArgumentMove.cpp",
