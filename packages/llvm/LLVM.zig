@@ -4103,34 +4103,6 @@ fn compileExecutionEngine(self: *const Self) TargetArtifacts.ExecutionEngine {
     return exe_engine;
 }
 
-/// Combines all compiled libraries into a single static library
-fn amalgamateArtifacts(self: *const Self) Artifact {
-    const gen_vt = self.minimal_artifacts.gen_vt.getDirectory();
-    const intrinsics_gen = self.target_artifacts.intrinsics_gen.getDirectory();
-    const frontend_gen = self.target_artifacts.frontend.gen_files.getDirectory();
-    const parser_gen = self.target_artifacts.target_backends.parser_gen.getDirectory();
-    const vcs_revision = self.llvm.vcs_revision;
-
-    const mod = self.createTargetModule();
-    for (self.allTargetArtifacts()) |artifact| {
-        mod.addObjectFile(artifact.getEmittedBin());
-    }
-
-    const lib = self.b.addLibrary(.{
-        .name = "LLVM",
-        .root_module = mod,
-    });
-
-    lib.installHeadersDirectory(self.llvm.root, "", .{});
-    lib.installHeadersDirectory(gen_vt, "", .{});
-    lib.installHeadersDirectory(intrinsics_gen, "", .{});
-    lib.installHeadersDirectory(frontend_gen, "", .{});
-    lib.installHeadersDirectory(parser_gen, "", .{});
-    lib.installConfigHeader(vcs_revision);
-
-    return lib;
-}
-
 /// Compiles tblgen (for the host system only)
 fn compileTblgen(self: *const Self, config: struct {
     support_lib: Artifact,
