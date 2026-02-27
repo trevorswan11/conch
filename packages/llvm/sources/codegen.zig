@@ -319,7 +319,7 @@ pub const mir_parser_sources = [_][]const u8{
     "MIRParser.cpp",
 };
 
-pub const selection_dag_root = codegen_root ++ "SelectionDag";
+pub const selection_dag_root = codegen_root ++ "SelectionDAG";
 pub const selection_dag_sources = [_][]const u8{
     "DAGCombiner.cpp",
     "FastISel.cpp",
