@@ -25,11 +25,6 @@ jobs:
               with:
                   version: 0.15.2
 
-            - name: Install System Dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y zip tar
-
             - name: Build and package
               run: zig build package
 
@@ -38,6 +33,6 @@ jobs:
               with:
                   name: conch-binaries
                   path: |
-                      zig-out/package/compressed/*.tar.gz
+                      zig-out/package/compressed/*.tar.zst
                       zig-out/package/compressed/*.zip
                   if-no-files-found: error

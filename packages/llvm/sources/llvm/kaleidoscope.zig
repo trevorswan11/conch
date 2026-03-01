@@ -1,7 +1,7 @@
 //! https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/llvm/examples/Kaleidoscope
 const std = @import("std");
 
-const LLVM = @import("../LLVM.zig");
+const LLVM = @import("../../LLVM.zig");
 
 const kaleidoscope_root = "llvm/examples/Kaleidoscope";
 
@@ -46,7 +46,7 @@ pub const KaleidoscopeChapter = enum {
     }
 
     /// Compiles the chapter of Kaleidoscope. The host must match the target.
-    pub fn compile(self: KaleidoscopeChapter, llvm: *const LLVM) *std.Build.Step.Compile {
+    pub fn build(self: KaleidoscopeChapter, llvm: *const LLVM) *std.Build.Step.Compile {
         const b = llvm.b;
         const mod = b.createModule(.{
             .target = b.graph.host,

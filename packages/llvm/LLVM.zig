@@ -1,38 +1,37 @@
 //! LLVM Source Compilation rules. All artifacts are compiled as ReleaseSafe.
 const std = @import("std");
 
-const analysis = @import("sources/analysis.zig");
-const binary_format = @import("sources/binary_format.zig");
-const codegen = @import("sources/codegen.zig");
-const dbg_info = @import("sources/dbg_info.zig");
-const dependencies = @import("sources/dependencies.zig");
-const execution_engine = @import("sources/execution_engine.zig");
-const ir = @import("sources/ir.zig");
-const kaleidoscope = @import("sources/kaleidoscope.zig");
-const lto = @import("sources/lto.zig");
-const machine_code = @import("sources/machine_code.zig");
-const object = @import("sources/object.zig");
-const passes = @import("sources/passes.zig");
-const prof_data = @import("sources/prof_data.zig");
-const remarks = @import("sources/remarks.zig");
-const sandbox_ir = @import("sources/sandbox_ir.zig");
-const support = @import("sources/support.zig");
-const target_backends = @import("sources/target_backends.zig");
-const tblgen = @import("sources/tblgen.zig");
-const text_api = @import("sources/text_api.zig");
-const transforms = @import("sources/transforms.zig");
-const xray = @import("sources/xray.zig");
+const analysis = @import("sources/llvm/analysis.zig");
+const binary_format = @import("sources/llvm/binary_format.zig");
+const codegen = @import("sources/llvm/codegen.zig");
+const dbg_info = @import("sources/llvm/dbg_info.zig");
+const execution_engine = @import("sources/llvm/execution_engine.zig");
+const ir = @import("sources/llvm/ir.zig");
+const kaleidoscope = @import("sources/llvm/kaleidoscope.zig");
+const lto = @import("sources/llvm/lto.zig");
+const machine_code = @import("sources/llvm/machine_code.zig");
+const object = @import("sources/llvm/object.zig");
+const passes = @import("sources/llvm/passes.zig");
+const prof_data = @import("sources/llvm/prof_data.zig");
+const remarks = @import("sources/llvm/remarks.zig");
+const sandbox_ir = @import("sources/llvm/sandbox_ir.zig");
+const support = @import("sources/llvm/support.zig");
+const target_backends = @import("sources/llvm/target_backends.zig");
+const tblgen = @import("sources/llvm/tblgen.zig");
+const text_api = @import("sources/llvm/text_api.zig");
+const transforms = @import("sources/llvm/transforms.zig");
+const xray = @import("sources/llvm/xray.zig");
+
+const Dependency = @import("../third-party/Dependency.zig");
+const libxml2 = @import("../third-party/libxml2.zig");
+const zstd = @import("../third-party/zstd.zig");
+const zlib = @import("../third-party/zlib.zig");
 
 const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
 
 const Artifact = *std.Build.Step.Compile;
 
-const Dependencies = struct {
-    const Dependency = struct {
-        dependency: *std.Build.Dependency,
-        artifact: Artifact,
-    };
-
+const ThirdPartyDeps = struct {
     zlib: Dependency = undefined,
     libxml2: Dependency = undefined,
     zstd: Dependency = undefined,
@@ -56,7 +55,7 @@ const Platform = enum {
 /// A distinction between minimal and full must be made to prevent a circular dependency.
 const MinimalArtifacts = struct {
     tblgen: Artifact = undefined,
-    deps: Dependencies = undefined,
+    deps: ThirdPartyDeps = undefined,
     demangle: Artifact = undefined,
     support: Artifact = undefined,
 
@@ -184,7 +183,7 @@ const TargetArtifacts = struct {
         runtime_dyld: Artifact = undefined,
     };
 
-    deps: Dependencies = .{},
+    deps: ThirdPartyDeps = .{},
     demangle: Artifact = undefined,
     support: Artifact = undefined,
     bitstream_reader: Artifact = undefined,
@@ -229,6 +228,26 @@ const TargetArtifacts = struct {
     intrinsics_gen: *std.Build.Step.WriteFile = undefined,
 };
 
+const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
+    .dest_dir = .{
+        .override = .{
+            .custom = "kaleidoscope",
+        },
+    },
+};
+
+const ClangArtifacts = struct {
+    const ClangFormat = struct {
+        core_lib: Artifact = undefined,
+        tool: Artifact = undefined,
+    };
+
+    basic: Artifact = undefined,
+    format: ClangFormat = .{},
+    rewrite: Artifact = undefined,
+    tooling_core: Artifact = undefined,
+};
+
 const version: std.SemanticVersion = .{
     .major = 21,
     .minor = 1,
@@ -266,6 +285,8 @@ llvm: struct {
     llvm_include: std.Build.LazyPath,
     vcs_revision: *std.Build.Step.ConfigHeader,
     extension_def: *std.Build.Step.WriteFile,
+
+    clang_include: std.Build.LazyPath,
 },
 
 minimal_artifacts: MinimalArtifacts,
@@ -274,6 +295,7 @@ minimal_artifacts: MinimalArtifacts,
 full_tblgen: Artifact = undefined,
 
 target_artifacts: TargetArtifacts = .{},
+clang_artifacts: ClangArtifacts = .{},
 
 /// The target system to compile to
 target: std.Build.ResolvedTarget,
@@ -293,6 +315,7 @@ pub fn init(b: *std.Build, target: std.Build.ResolvedTarget) Self {
                 .LLVM_REVISION = "git-" ++ version_str ++ "-2078da43e25a4623cab2d0d60decddf709aaea28",
             }),
             .extension_def = b.addWriteFile("llvm/Support/Extension.def", "#undef HANDLE_EXTENSION"),
+            .clang_include = upstream.path("clang/include"),
         },
         .minimal_artifacts = .{
             .gen_vt = b.addWriteFiles(),
@@ -311,126 +334,13 @@ pub fn build(self: *Self, config: struct {
 }) !void {
     const b = self.b;
 
-    // Host Dependencies for TableGen
-    self.minimal_artifacts.deps = try self.compileDeps(.host);
-    self.minimal_artifacts.demangle = self.compileDemangle(.host);
-    self.minimal_artifacts.support = try self.compileSupport(.{
-        .platform = .host,
-        .deps = self.minimal_artifacts.deps,
-        .minimal = true,
-    });
-
-    self.minimal_artifacts.tblgen = self.compileTblgen(.{
-        .support_lib = self.minimal_artifacts.support,
-        .minimal = true,
-    });
-
-    _ = self.synthesizeHeader(self.minimal_artifacts.gen_vt, .{
-        .tblgen = self.minimal_artifacts.tblgen,
-        .name = "GenVT",
-        .td_file = "llvm/include/llvm/CodeGen/ValueTypes.td",
-        .instruction = .{ .action = "-gen-vt" },
-        .virtual_path = "llvm/CodeGen/GenVT.inc",
-    });
-
-    self.full_tblgen = self.compileTblgen(.{
-        .support_lib = self.minimal_artifacts.support,
-        .minimal = false,
-    });
-    self.full_tblgen.root_module.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
-
-    // Target dependencies must be built fully
-    self.target_artifacts.deps = try self.compileDeps(.target);
-    self.target_artifacts.demangle = self.compileDemangle(.target);
-    self.target_artifacts.support = try self.compileSupport(.{
-        .platform = .target,
-        .deps = self.target_artifacts.deps,
-        .minimal = false,
-    });
-
-    self.target_artifacts.target_backends.parser_gen = self.runTargetParserGen();
-    self.target_artifacts.target_backends.parser = self.compileTargetParser();
-    self.target_artifacts.bitstream_reader = self.compileBitstreamReader();
-    self.target_artifacts.binary_format = self.compileBinaryFormat();
-    self.target_artifacts.remarks = self.compileRemarks();
-    self.target_artifacts.intrinsics_gen = self.runIntrinsicsGen();
-    self.target_artifacts.core = self.compileCore();
-
-    self.target_artifacts.bitcode.reader = self.compileBitcodeReader();
-    self.target_artifacts.machine_code = self.compileMC();
-    self.target_artifacts.asm_parser = self.compileAsmParser();
-    self.target_artifacts.ir_reader = self.compileIRReader();
-    self.target_artifacts.text_api.core_lib = self.compileTextAPI();
-    self.target_artifacts.object = self.compileObject();
-
-    self.target_artifacts.debug_info = self.compileDebugInfo();
-    self.target_artifacts.object_yaml = self.compileObjectYAML();
-    self.target_artifacts.profile_data = self.compileProfileData();
-    self.target_artifacts.analysis = self.compileAnalysis();
-    self.target_artifacts.bitcode.writer = self.compileBitcodeWriter();
-    self.target_artifacts.text_api.binary_reader = self.compileTextAPIBinaryReader();
-
-    self.target_artifacts.codegen.types = self.compileCodeGenTypes();
-    self.target_artifacts.codegen.data = self.compileCGData();
-    self.target_artifacts.sandbox_ir = self.compileSandboxIR();
-    self.target_artifacts.transforms.utils = self.compileTransformUtils();
-    self.target_artifacts.transforms.instrumentation = self.compileInstrumentation();
-    self.target_artifacts.frontend = self.compileFrontend();
-    self.target_artifacts.linker = self.compileLinker();
-
-    self.target_artifacts.transforms.inst_combine = self.compileInstCombine();
-    self.target_artifacts.transforms.aggressive_inst_combine = self.compileAggressiveInstCombine();
-    self.target_artifacts.transforms.cf_guard = self.compileCFGuard();
-    self.target_artifacts.transforms.hip_std_par = self.compileHipStdPar();
-    self.target_artifacts.transforms.obj_carc = self.compileObjCARC();
-    self.target_artifacts.transforms.scalar = self.compileScalar();
-    self.target_artifacts.transforms.vectorize = self.compileVectorize();
-    self.target_artifacts.transforms.ipo = self.compileIPO();
-    self.target_artifacts.transforms.coroutines = self.compileCoroutines();
-
-    self.target_artifacts.target_backends.core_lib = self.compileTarget();
-    self.target_artifacts.codegen.core_lib = self.compileCodeGen();
-    self.target_artifacts.codegen.selection_dag = self.compileSelectionDAG();
-    self.target_artifacts.codegen.global_isel = self.compileGlobalISel();
-    self.target_artifacts.codegen.asm_printer = self.compileAsmPrinter();
-    self.target_artifacts.codegen.mir_parser = self.compileMIRParser();
-    self.target_artifacts.ir_printer = self.compileIRPrinter();
-    self.target_artifacts.passes = self.compilePasses();
-
-    self.target_artifacts.option = self.compileOption();
-    self.target_artifacts.obj_copy = self.compileObjCopy();
-    self.target_artifacts.dwarf_linker = self.compileDwarfLinker();
-    self.target_artifacts.dwp = self.compileDWP();
-    self.target_artifacts.file_check = self.compileFileCheck();
-    self.target_artifacts.extensions = self.compileExtensions();
-    self.target_artifacts.lto = self.compileLTO();
-    self.target_artifacts.xray = self.compileXRay();
-    self.target_artifacts.windows_support = self.compileWindowsSupport();
-    self.target_artifacts.tool_drivers = self.compileToolDrivers();
-
-    self.target_artifacts.target_backends.x86 = self.compileX86();
-    self.target_artifacts.target_backends.aarch64 = self.compileAArch64();
-    self.target_artifacts.target_backends.arm = self.compileArm();
-    self.target_artifacts.target_backends.riscv = self.compileRISCV();
-    self.target_artifacts.target_backends.wasm = self.compileWebAssembly();
-    self.target_artifacts.target_backends.xtensa = self.compileXtensa();
-    self.target_artifacts.target_backends.powerpc = self.compilePowerPC();
-    self.target_artifacts.target_backends.loong_arch = self.compileLoongArch();
-
-    self.target_artifacts.execution_engine = self.compileExecutionEngine();
+    try self.buildHostLLVM();
+    try self.buildTargetLLVM();
 
     // Packaging ignores test builds
     switch (config.behavior) {
         .supplemental_cxx_flags => |cxx_flags| {
             self.createLinkTest(cxx_flags);
-
-            const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
-                .dest_dir = .{
-                    .override = .{
-                        .custom = "kaleidoscope",
-                    },
-                },
-            };
 
             if (config.auto_install and b.option(
                 bool,
@@ -438,7 +348,7 @@ pub fn build(self: *Self, config: struct {
                 "build all kaleidoscope chapters (dangerous)",
             ) orelse false) {
                 for (std.enums.values(kaleidoscope.KaleidoscopeChapter)) |chapter| {
-                    const exe = chapter.compile(self);
+                    const exe = chapter.build(self);
                     const install_artifact = b.addInstallArtifact(exe, kaleidoscope_install_options);
                     b.getInstallStep().dependOn(&install_artifact.step);
                 }
@@ -447,7 +357,7 @@ pub fn build(self: *Self, config: struct {
                 "Chapter",
                 "the kaleidoscope chapter to run",
             )) |chapter| {
-                const exe = chapter.compile(self);
+                const exe = chapter.build(self);
                 const run_cmd = b.addRunArtifact(exe);
                 run_cmd.step.dependOn(b.getInstallStep());
 
@@ -466,6 +376,120 @@ pub fn build(self: *Self, config: struct {
         },
         .package => {},
     }
+}
+
+/// Compiles a subset of LLVM that the host needs for full target compilation.
+///
+/// These should realistically never be linked with anything outside of this subset.
+fn buildHostLLVM(self: *Self) !void {
+    self.minimal_artifacts.deps = try self.buildDeps(.host);
+    self.minimal_artifacts.demangle = self.buildDemangle(.host);
+    self.minimal_artifacts.support = try self.buildSupport(.{
+        .platform = .host,
+        .deps = self.minimal_artifacts.deps,
+        .minimal = true,
+    });
+
+    self.minimal_artifacts.tblgen = self.buildTblgen(.{
+        .support_lib = self.minimal_artifacts.support,
+        .minimal = true,
+    });
+
+    _ = self.synthesizeHeader(self.minimal_artifacts.gen_vt, .{
+        .tblgen = self.minimal_artifacts.tblgen,
+        .name = "GenVT",
+        .td_file = "llvm/include/llvm/CodeGen/ValueTypes.td",
+        .instruction = .{ .action = "-gen-vt" },
+        .virtual_path = "llvm/CodeGen/GenVT.inc",
+    });
+
+    self.full_tblgen = self.buildTblgen(.{
+        .support_lib = self.minimal_artifacts.support,
+        .minimal = false,
+    });
+    self.full_tblgen.root_module.addIncludePath(self.minimal_artifacts.gen_vt.getDirectory());
+}
+
+/// Compiles the entire LLVM target toolchain, allowing linking to other artifacts.
+fn buildTargetLLVM(self: *Self) !void {
+    self.target_artifacts.deps = try self.buildDeps(.target);
+    self.target_artifacts.demangle = self.buildDemangle(.target);
+    self.target_artifacts.support = try self.buildSupport(.{
+        .platform = .target,
+        .deps = self.target_artifacts.deps,
+        .minimal = false,
+    });
+
+    self.target_artifacts.target_backends.parser_gen = self.runTargetParserGen();
+    self.target_artifacts.target_backends.parser = self.buildTargetParser();
+    self.target_artifacts.bitstream_reader = self.buildBitstreamReader();
+    self.target_artifacts.binary_format = self.buildBinaryFormat();
+    self.target_artifacts.remarks = self.buildRemarks();
+    self.target_artifacts.intrinsics_gen = self.runIntrinsicsGen();
+    self.target_artifacts.core = self.buildCore();
+
+    self.target_artifacts.bitcode.reader = self.buildBitcodeReader();
+    self.target_artifacts.machine_code = self.buildMC();
+    self.target_artifacts.asm_parser = self.buildAsmParser();
+    self.target_artifacts.ir_reader = self.buildIRReader();
+    self.target_artifacts.text_api.core_lib = self.buildTextAPI();
+    self.target_artifacts.object = self.buildObject();
+
+    self.target_artifacts.debug_info = self.buildDebugInfo();
+    self.target_artifacts.object_yaml = self.buildObjectYAML();
+    self.target_artifacts.profile_data = self.buildProfileData();
+    self.target_artifacts.analysis = self.buildAnalysis();
+    self.target_artifacts.bitcode.writer = self.buildBitcodeWriter();
+    self.target_artifacts.text_api.binary_reader = self.buildTextAPIBinaryReader();
+
+    self.target_artifacts.codegen.types = self.buildCodeGenTypes();
+    self.target_artifacts.codegen.data = self.buildCodeGenData();
+    self.target_artifacts.sandbox_ir = self.buildSandboxIR();
+    self.target_artifacts.transforms.utils = self.buildTransformUtils();
+    self.target_artifacts.transforms.instrumentation = self.buildInstrumentation();
+    self.target_artifacts.frontend = self.buildFrontend();
+    self.target_artifacts.linker = self.buildLinker();
+
+    self.target_artifacts.transforms.inst_combine = self.buildInstCombine();
+    self.target_artifacts.transforms.aggressive_inst_combine = self.buildAggressiveInstCombine();
+    self.target_artifacts.transforms.cf_guard = self.buildCFGuard();
+    self.target_artifacts.transforms.hip_std_par = self.buildHipStdPar();
+    self.target_artifacts.transforms.obj_carc = self.buildObjCARC();
+    self.target_artifacts.transforms.scalar = self.buildScalar();
+    self.target_artifacts.transforms.vectorize = self.buildVectorize();
+    self.target_artifacts.transforms.ipo = self.buildIPO();
+    self.target_artifacts.transforms.coroutines = self.buildCoroutines();
+
+    self.target_artifacts.target_backends.core_lib = self.buildTarget();
+    self.target_artifacts.codegen.core_lib = self.buildCodeGen();
+    self.target_artifacts.codegen.selection_dag = self.buildSelectionDAG();
+    self.target_artifacts.codegen.global_isel = self.buildGlobalISel();
+    self.target_artifacts.codegen.asm_printer = self.buildAsmPrinter();
+    self.target_artifacts.codegen.mir_parser = self.buildMIRParser();
+    self.target_artifacts.ir_printer = self.buildIRPrinter();
+    self.target_artifacts.passes = self.buildPasses();
+
+    self.target_artifacts.option = self.buildOption();
+    self.target_artifacts.obj_copy = self.buildObjCopy();
+    self.target_artifacts.dwarf_linker = self.buildDwarfLinker();
+    self.target_artifacts.dwp = self.buildDWP();
+    self.target_artifacts.file_check = self.buildFileCheck();
+    self.target_artifacts.extensions = self.buildExtensions();
+    self.target_artifacts.lto = self.buildLTO();
+    self.target_artifacts.xray = self.buildXRay();
+    self.target_artifacts.windows_support = self.buildWindowsSupport();
+    self.target_artifacts.tool_drivers = self.buildToolDrivers();
+
+    self.target_artifacts.target_backends.x86 = self.buildX86();
+    self.target_artifacts.target_backends.aarch64 = self.buildAArch64();
+    self.target_artifacts.target_backends.arm = self.buildArm();
+    self.target_artifacts.target_backends.riscv = self.buildRISCV();
+    self.target_artifacts.target_backends.wasm = self.buildWebAssembly();
+    self.target_artifacts.target_backends.xtensa = self.buildXtensa();
+    self.target_artifacts.target_backends.powerpc = self.buildPowerPC();
+    self.target_artifacts.target_backends.loong_arch = self.buildLoongArch();
+
+    self.target_artifacts.execution_engine = self.buildExecutionEngine();
 }
 
 fn createHostModule(self: *const Self) *std.Build.Module {
@@ -888,9 +912,9 @@ fn formatDef(b: *std.Build, targets: []const []const u8, macro_name: []const u8)
     return list.items;
 }
 
-fn compileSupport(self: *const Self, config: struct {
+fn buildSupport(self: *const Self, config: struct {
     platform: Platform,
-    deps: Dependencies,
+    deps: ThirdPartyDeps,
     minimal: bool,
 }) !Artifact {
     const b = self.b;
@@ -973,7 +997,7 @@ fn compileSupport(self: *const Self, config: struct {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Demangle/CMakeLists.txt
-fn compileDemangle(self: *const Self, platform: Platform) Artifact {
+fn buildDemangle(self: *const Self, platform: Platform) Artifact {
     return self.createLLVMLibrary(.{
         .name = self.b.fmt("LLVMDemangle{s}", .{platform.suffix()}),
         .cxx_source_files = .{
@@ -992,7 +1016,7 @@ fn compileDemangle(self: *const Self, platform: Platform) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/BinaryFormat/CMakeLists.txt
-fn compileBinaryFormat(self: *const Self) Artifact {
+fn buildBinaryFormat(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMBinaryFormat",
         .cxx_source_files = .{
@@ -1007,7 +1031,7 @@ fn compileBinaryFormat(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Remarks/CMakeLists.txt
-fn compileRemarks(self: *const Self) Artifact {
+fn buildRemarks(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMRemarks",
         .cxx_source_files = .{
@@ -1023,7 +1047,7 @@ fn compileRemarks(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Bitstream/Reader/CMakeLists.txt
-fn compileBitstreamReader(self: *const Self) Artifact {
+fn buildBitstreamReader(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMBitstreamReader",
         .cxx_source_files = .{
@@ -1079,7 +1103,7 @@ fn runTargetParserGen(self: *Self) *std.Build.Step.WriteFile {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TargetParser/CMakeLists.txt
-fn compileTargetParser(self: *Self) Artifact {
+fn buildTargetParser(self: *Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTargetParser",
         .cxx_source_files = .{
@@ -1144,7 +1168,7 @@ fn runIntrinsicsGen(self: *Self) *std.Build.Step.WriteFile {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IR/CMakeLists.txt
-fn compileCore(self: *Self) Artifact {
+fn buildCore(self: *Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCore",
         .cxx_source_files = .{
@@ -1166,7 +1190,7 @@ fn compileCore(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Bitcode/Reader/CMakeLists.txt
-fn compileBitcodeReader(self: *const Self) Artifact {
+fn buildBitcodeReader(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMBitReader",
         .cxx_source_files = .{
@@ -1188,7 +1212,7 @@ fn compileBitcodeReader(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/MC/CMakeLists.txt
-fn compileMC(self: *const Self) TargetArtifacts.MachineCode {
+fn buildMC(self: *const Self) TargetArtifacts.MachineCode {
     const b = self.b;
     var mc: TargetArtifacts.MachineCode = .{};
 
@@ -1251,7 +1275,7 @@ fn compileMC(self: *const Self) TargetArtifacts.MachineCode {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/AsmParser/CMakeLists.txt
-fn compileAsmParser(self: *const Self) Artifact {
+fn buildAsmParser(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMAsmParser",
         .cxx_source_files = .{
@@ -1269,7 +1293,7 @@ fn compileAsmParser(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IRReader/CMakeLists.txt
-fn compileIRReader(self: *const Self) Artifact {
+fn buildIRReader(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMIRReader",
         .cxx_source_files = .{
@@ -1287,7 +1311,7 @@ fn compileIRReader(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TextAPI/CMakeLists.txt
-fn compileTextAPI(self: *const Self) Artifact {
+fn buildTextAPI(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTextAPI",
         .cxx_source_files = .{
@@ -1304,7 +1328,7 @@ fn compileTextAPI(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Object/CMakeLists.txt
-fn compileObject(self: *const Self) Artifact {
+fn buildObject(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMObject",
         .cxx_source_files = .{
@@ -1328,7 +1352,7 @@ fn compileObject(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DebugInfo/CMakeLists.txt
-fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
+fn buildDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
     const b = self.b;
     var debug_info: TargetArtifacts.DebugInfo = .{};
 
@@ -1469,7 +1493,7 @@ fn compileDebugInfo(self: *const Self) TargetArtifacts.DebugInfo {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ObjectYAML/CMakeLists.txt
-fn compileObjectYAML(self: *const Self) Artifact {
+fn buildObjectYAML(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMObjectYAML",
         .cxx_source_files = .{
@@ -1489,7 +1513,7 @@ fn compileObjectYAML(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ProfileData/CMakeLists.txt
-fn compileProfileData(self: *const Self) TargetArtifacts.ProfileData {
+fn buildProfileData(self: *const Self) TargetArtifacts.ProfileData {
     const b = self.b;
     var profile_data: TargetArtifacts.ProfileData = .{};
 
@@ -1534,7 +1558,7 @@ fn compileProfileData(self: *const Self) TargetArtifacts.ProfileData {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Analysis/CMakeLists.txt
-fn compileAnalysis(self: *const Self) Artifact {
+fn buildAnalysis(self: *const Self) Artifact {
     var library = self.createLLVMLibrary(.{
         .name = "LLVMAnalysis",
         .cxx_source_files = .{
@@ -1561,7 +1585,7 @@ fn compileAnalysis(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Bitcode/Writer/CMakeLists.txt
-fn compileBitcodeWriter(self: *const Self) Artifact {
+fn buildBitcodeWriter(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMBitWriter",
         .cxx_source_files = .{
@@ -1585,7 +1609,7 @@ fn compileBitcodeWriter(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/TextAPI/BinaryReader/CMakeLists.txt
-fn compileTextAPIBinaryReader(self: *const Self) Artifact {
+fn buildTextAPIBinaryReader(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTextAPIBinaryReader",
         .cxx_source_files = .{
@@ -1603,7 +1627,7 @@ fn compileTextAPIBinaryReader(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGenTypes/CMakeLists.txt
-fn compileCodeGenTypes(self: *const Self) Artifact {
+fn buildCodeGenTypes(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCodeGenTypes",
         .cxx_source_files = .{
@@ -1616,7 +1640,7 @@ fn compileCodeGenTypes(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CGData/CMakeLists.txt
-fn compileCGData(self: *const Self) Artifact {
+fn buildCodeGenData(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCGData",
         .cxx_source_files = .{
@@ -1635,7 +1659,7 @@ fn compileCGData(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/SandboxIR/CMakeLists.txt
-fn compileSandboxIR(self: *const Self) Artifact {
+fn buildSandboxIR(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMSandboxIR",
         .cxx_source_files = .{
@@ -1652,7 +1676,7 @@ fn compileSandboxIR(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Instrumentation/CMakeLists.txt
-fn compileInstrumentation(self: *const Self) Artifact {
+fn buildInstrumentation(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMInstrumentation",
         .cxx_source_files = .{
@@ -1673,7 +1697,7 @@ fn compileInstrumentation(self: *const Self) Artifact {
     });
 }
 
-fn compileFrontend(self: *Self) TargetArtifacts.Frontend {
+fn buildFrontend(self: *Self) TargetArtifacts.Frontend {
     const b = self.b;
     var frontend: TargetArtifacts.Frontend = .{
         .gen_files = b.addWriteFiles(),
@@ -1834,7 +1858,7 @@ fn compileFrontend(self: *Self) TargetArtifacts.Frontend {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Linker/CMakeLists.txt
-fn compileLinker(self: *const Self) Artifact {
+fn buildLinker(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMLinker",
         .cxx_source_files = .{
@@ -1853,7 +1877,7 @@ fn compileLinker(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Utils/CMakeLists.txt
-fn compileTransformUtils(self: *const Self) Artifact {
+fn buildTransformUtils(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTransformUtils",
         .cxx_source_files = .{
@@ -1871,7 +1895,7 @@ fn compileTransformUtils(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/InstCombine/CMakeLists.txt
-fn compileInstCombine(self: *const Self) Artifact {
+fn buildInstCombine(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMInstCombine",
         .cxx_source_files = .{
@@ -1889,7 +1913,7 @@ fn compileInstCombine(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/AggressiveInstCombine/CMakeLists.txt
-fn compileAggressiveInstCombine(self: *const Self) Artifact {
+fn buildAggressiveInstCombine(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMAggressiveInstCombine",
         .cxx_source_files = .{
@@ -1907,7 +1931,7 @@ fn compileAggressiveInstCombine(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/CFGuard/CMakeLists.txt
-fn compileCFGuard(self: *const Self) Artifact {
+fn buildCFGuard(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCFGuard",
         .cxx_source_files = .{
@@ -1924,7 +1948,7 @@ fn compileCFGuard(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/HipStdPar/CMakeLists.txt
-fn compileHipStdPar(self: *const Self) Artifact {
+fn buildHipStdPar(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMHipStdPar",
         .cxx_source_files = .{
@@ -1942,7 +1966,7 @@ fn compileHipStdPar(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/ObjCARC/CMakeLists.txt
-fn compileObjCARC(self: *const Self) Artifact {
+fn buildObjCARC(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMObjCARCOpts",
         .cxx_source_files = .{
@@ -1961,7 +1985,7 @@ fn compileObjCARC(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Scalar/CMakeLists.txt
-fn compileScalar(self: *const Self) Artifact {
+fn buildScalar(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMScalarOpts",
         .cxx_source_files = .{
@@ -1981,7 +2005,7 @@ fn compileScalar(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Vectorize/CMakeLists.txt
-fn compileVectorize(self: *const Self) Artifact {
+fn buildVectorize(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMVectorize",
         .cxx_source_files = .{
@@ -2000,7 +2024,7 @@ fn compileVectorize(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/IPO/CMakeLists.txt
-fn compileIPO(self: *const Self) Artifact {
+fn buildIPO(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMipo",
         .cxx_source_files = .{
@@ -2035,7 +2059,7 @@ fn compileIPO(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Transforms/Coroutines/CMakeLists.txt
-fn compileCoroutines(self: *const Self) Artifact {
+fn buildCoroutines(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCoroutines",
         .cxx_source_files = .{
@@ -2056,7 +2080,7 @@ fn compileCoroutines(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/CMakeLists.txt
-fn compileTarget(self: *const Self) Artifact {
+fn buildTarget(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMTarget",
         .cxx_source_files = .{
@@ -2075,7 +2099,7 @@ fn compileTarget(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/CMakeLists.txt
-fn compileCodeGen(self: *const Self) Artifact {
+fn buildCodeGen(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMCodeGen",
         .cxx_source_files = .{
@@ -2106,7 +2130,7 @@ fn compileCodeGen(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/SelectionDAG/CMakeLists.txt
-fn compileSelectionDAG(self: *const Self) Artifact {
+fn buildSelectionDAG(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMSelectionDAG",
         .cxx_source_files = .{
@@ -2132,7 +2156,7 @@ fn compileSelectionDAG(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/GlobalISel/CMakeLists.txt
-fn compileGlobalISel(self: *const Self) Artifact {
+fn buildGlobalISel(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMGlobalISel",
         .cxx_source_files = .{
@@ -2158,7 +2182,7 @@ fn compileGlobalISel(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/AsmPrinter/CMakeLists.txt
-fn compileAsmPrinter(self: *const Self) Artifact {
+fn buildAsmPrinter(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMAsmPrinter",
         .cxx_source_files = .{
@@ -2190,7 +2214,7 @@ fn compileAsmPrinter(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/CodeGen/MIRParser/CMakeLists.txt
-fn compileMIRParser(self: *const Self) Artifact {
+fn buildMIRParser(self: *const Self) Artifact {
     const root = self.llvm.root.path(self.b, codegen.mir_parser_root);
     return self.createLLVMLibrary(.{
         .name = "LLVMMIRParser",
@@ -2217,7 +2241,7 @@ fn compileMIRParser(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IRPrinter/CMakeLists.txt
-fn compileIRPrinter(self: *const Self) Artifact {
+fn buildIRPrinter(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMIRPrinter",
         .cxx_source_files = .{
@@ -2234,7 +2258,7 @@ fn compileIRPrinter(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Passes/CMakeLists.txt
-fn compilePasses(self: *const Self) Artifact {
+fn buildPasses(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMPasses",
         .cxx_source_files = .{
@@ -2269,7 +2293,7 @@ fn compilePasses(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Option/CMakeLists.txt
-fn compileOption(self: *const Self) Artifact {
+fn buildOption(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMOption",
         .cxx_source_files = .{
@@ -2283,7 +2307,7 @@ fn compileOption(self: *const Self) Artifact {
     });
 }
 
-fn compileObjCopy(self: *const Self) Artifact {
+fn buildObjCopy(self: *const Self) Artifact {
     const copy_root = self.llvm.root.path(self.b, object.copy_root);
     return self.createLLVMLibrary(.{
         .name = "LLVMObjCopy",
@@ -2311,7 +2335,7 @@ fn compileObjCopy(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/llvm/lib/DWARFLinker/CMakeLists.txt
-fn compileDwarfLinker(self: *const Self) TargetArtifacts.DwarfLinker {
+fn buildDwarfLinker(self: *const Self) TargetArtifacts.DwarfLinker {
     const b = self.b;
     var linker: TargetArtifacts.DwarfLinker = .{};
 
@@ -2388,7 +2412,7 @@ fn compileDwarfLinker(self: *const Self) TargetArtifacts.DwarfLinker {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/DWP/CMakeLists.txt
-fn compileDWP(self: *const Self) Artifact {
+fn buildDWP(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMDWP",
         .cxx_source_files = .{
@@ -2406,7 +2430,7 @@ fn compileDWP(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/FileCheck/CMakeLists.txt
-fn compileFileCheck(self: *const Self) Artifact {
+fn buildFileCheck(self: *const Self) Artifact {
     const root = self.llvm.root.path(self.b, "llvm/lib/FileCheck");
     return self.createLLVMLibrary(.{
         .name = "LLVMFileCheck",
@@ -2420,7 +2444,7 @@ fn compileFileCheck(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Extensions/CMakeLists.txt
-fn compileExtensions(self: *const Self) Artifact {
+fn buildExtensions(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMExtensions",
         .cxx_source_files = .{
@@ -2433,7 +2457,7 @@ fn compileExtensions(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/LTO/CMakeLists.txt
-fn compileLTO(self: *const Self) Artifact {
+fn buildLTO(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMLTO",
         .cxx_source_files = .{
@@ -2476,7 +2500,7 @@ fn compileLTO(self: *const Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/XRay/CMakeLists.txt
-fn compileXRay(self: *const Self) Artifact {
+fn buildXRay(self: *const Self) Artifact {
     return self.createLLVMLibrary(.{
         .name = "LLVMXRay",
         .cxx_source_files = .{
@@ -2491,7 +2515,7 @@ fn compileXRay(self: *const Self) Artifact {
     });
 }
 
-fn compileWindowsSupport(self: *const Self) TargetArtifacts.WindowsSupport {
+fn buildWindowsSupport(self: *const Self) TargetArtifacts.WindowsSupport {
     const b = self.b;
     var windows_support: TargetArtifacts.WindowsSupport = .{};
 
@@ -2526,7 +2550,7 @@ fn compileWindowsSupport(self: *const Self) TargetArtifacts.WindowsSupport {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/ToolDrivers/CMakeLists.txt
-fn compileToolDrivers(self: *const Self) TargetArtifacts.ToolDrivers {
+fn buildToolDrivers(self: *const Self) TargetArtifacts.ToolDrivers {
     const b = self.b;
     var tool_drivers: TargetArtifacts.ToolDrivers = .{};
 
@@ -2586,7 +2610,7 @@ fn compileToolDrivers(self: *const Self) TargetArtifacts.ToolDrivers {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/AArch64/CMakeLists.txt
-fn compileAArch64(self: *Self) Artifact {
+fn buildAArch64(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -2761,7 +2785,7 @@ fn compileAArch64(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/X86/CMakeLists.txt
-fn compileX86(self: *Self) Artifact {
+fn buildX86(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -2934,7 +2958,7 @@ fn compileX86(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/ARM/CMakeLists.txt
-fn compileArm(self: *Self) Artifact {
+fn buildArm(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3109,7 +3133,7 @@ fn compileArm(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/RISCV/CMakeLists.txt
-fn compileRISCV(self: *Self) Artifact {
+fn buildRISCV(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3294,7 +3318,7 @@ fn compileRISCV(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/WebAssembly/CMakeLists.txt
-fn compileWebAssembly(self: *Self) Artifact {
+fn buildWebAssembly(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3469,7 +3493,7 @@ fn compileWebAssembly(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/Xtensa/CMakeLists.txt
-fn compileXtensa(self: *Self) Artifact {
+fn buildXtensa(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3605,7 +3629,7 @@ fn compileXtensa(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/PowerPC/CMakeLists.txt
-fn compilePowerPC(self: *Self) Artifact {
+fn buildPowerPC(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3751,7 +3775,7 @@ fn compilePowerPC(self: *Self) Artifact {
 }
 
 /// https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target/LoongArch/CMakeLists.txt
-fn compileLoongArch(self: *Self) Artifact {
+fn buildLoongArch(self: *Self) Artifact {
     const b = self.b;
     const td_files = b.addWriteFiles();
 
@@ -3893,7 +3917,7 @@ fn compileLoongArch(self: *Self) Artifact {
     });
 }
 
-fn compileExecutionEngine(self: *const Self) TargetArtifacts.ExecutionEngine {
+fn buildExecutionEngine(self: *const Self) TargetArtifacts.ExecutionEngine {
     const b = self.b;
     var exe_engine: TargetArtifacts.ExecutionEngine = .{};
 
@@ -4102,7 +4126,7 @@ fn compileExecutionEngine(self: *const Self) TargetArtifacts.ExecutionEngine {
 }
 
 /// Compiles tblgen (for the host system only)
-fn compileTblgen(self: *const Self, config: struct {
+fn buildTblgen(self: *const Self, config: struct {
     support_lib: Artifact,
     minimal: bool,
 }) Artifact {
@@ -4209,218 +4233,21 @@ fn synthesizeHeader(self: *Self, registry: *std.Build.Step.WriteFile, config: st
     return registry.addCopyFile(flat, config.virtual_path);
 }
 
-fn compileDeps(self: *const Self, platform: Platform) !Dependencies {
+fn buildDeps(self: *const Self, platform: Platform) !ThirdPartyDeps {
+    const b = self.b;
     const target = switch (platform) {
-        .host => self.b.graph.host,
+        .host => b.graph.host,
         .target => self.target,
     };
 
-    const zlib_dep = try self.compileZlib(target);
-    const zlib_include = zlib_dep.dependency.path(".");
-
-    const libxml2_dep = self.compileLibxml2(.{
-        .target = target,
-        .zlib_include = zlib_include,
-    });
-
-    const zstd_dep = self.compileZstd(.{
-        .target = target,
-        .zlib_include = zlib_include,
-    });
+    const zlib_dep = zlib.build(b, .{ .target = target, .optimize = optimize });
+    const libxml2_dep = libxml2.build(b, .{ .target = target, .optimize = optimize, .zlib = zlib_dep });
+    const zstd_dep = zstd.build(b, .{ .target = target, .optimize = optimize });
 
     return .{
         .zlib = zlib_dep,
         .libxml2 = libxml2_dep,
         .zstd = zstd_dep,
-    };
-}
-
-/// Compiles zlib from source as a static library
-/// https://github.com/allyourcodebase/zlib
-fn compileZlib(self: *const Self, target: std.Build.ResolvedTarget) !Dependencies.Dependency {
-    const b = self.b;
-    const upstream = b.dependency("zlib", .{});
-    const root = upstream.path(".");
-    const mod = b.createModule(.{
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-
-    var flags: std.ArrayList([]const u8) = .empty;
-    try flags.appendSlice(b.allocator, &.{ "-std=c11", "-D_REENTRANT" });
-    if (target.result.os.tag != .windows) {
-        try flags.appendSlice(b.allocator, &.{ "-DHAVE_UNISTD_H", "-DHAVE_SYS_TYPES_H" });
-    } else {
-        try flags.append(b.allocator, "-DWIN32");
-    }
-
-    mod.addCSourceFiles(.{
-        .root = root,
-        .files = &dependencies.zlib,
-        .flags = flags.items,
-    });
-    mod.addIncludePath(root);
-
-    const lib = b.addLibrary(.{
-        .name = "z",
-        .root_module = mod,
-    });
-
-    lib.installHeadersDirectory(upstream.path(""), "", .{
-        .include_extensions = &.{
-            "zconf.h",
-            "zlib.h",
-        },
-    });
-
-    return .{
-        .dependency = upstream,
-        .artifact = lib,
-    };
-}
-
-/// Compiles libxml2 from source as a static library
-/// https://github.com/allyourcodebase/libxml2
-fn compileLibxml2(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    zlib_include: std.Build.LazyPath,
-}) Dependencies.Dependency {
-    const b = self.b;
-    const upstream = b.dependency("libxml2", .{});
-    const mod = b.createModule(.{
-        .target = config.target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-    const os_tag = config.target.result.os.tag;
-
-    // CMake generates this required file usually
-    const config_header = b.addConfigHeader(.{
-        .style = .{
-            .cmake = upstream.path("config.h.cmake.in"),
-        },
-        .include_path = "config.h",
-    }, .{
-        .HAVE_STDLIB_H = 1,
-        .HAVE_STDINT_H = 1,
-        .HAVE_STAT = 1,
-        .HAVE_FSTAT = 1,
-        .HAVE_FUNC_ATTRIBUTE_DESTRUCTOR = 1,
-        .HAVE_LIBHISTORY = 0,
-        .HAVE_LIBREADLINE = 0,
-        .XML_SYSCONFDIR = 0,
-
-        // Platform-specific logic
-        .HAVE_DLOPEN = @intFromBool(os_tag != .windows),
-        .XML_THREAD_LOCAL = switch (os_tag) {
-            .windows => "__declspec(thread)",
-            else => "_Thread_local",
-        },
-    });
-    mod.addConfigHeader(config_header);
-
-    // Autotools generates this required file usually
-    const xmlversion_header = b.addConfigHeader(.{
-        .style = .{
-            .autoconf_at = upstream.path("include/libxml/xmlversion.h.in"),
-        },
-        .include_path = "libxml/xmlversion.h",
-    }, .{
-        .VERSION = "2.15.1",
-        .LIBXML_VERSION_NUMBER = 21501,
-        .LIBXML_VERSION_EXTRA = "-conch",
-        .WITH_THREADS = 1,
-        .WITH_THREAD_ALLOC = 1,
-        .WITH_OUTPUT = 1,
-        .WITH_PUSH = 1,
-        .WITH_READER = 1,
-        .WITH_PATTERN = 1,
-        .WITH_WRITER = 1,
-        .WITH_SAX1 = 1,
-        .WITH_HTTP = 0,
-        .WITH_VALID = 1,
-        .WITH_HTML = 1,
-        .WITH_C14N = 0,
-        .WITH_CATALOG = 0,
-        .WITH_XPATH = 1,
-        .WITH_XPTR = 1,
-        .WITH_XINCLUDE = 1,
-        .WITH_ICONV = 0,
-        .WITH_ICU = 0,
-        .WITH_ISO8859X = 1,
-        .WITH_DEBUG = 1,
-        .WITH_REGEXPS = 1,
-        .WITH_RELAXNG = 0,
-        .WITH_SCHEMAS = 0,
-        .WITH_SCHEMATRON = 0,
-        .WITH_MODULES = 0,
-        .WITH_ZLIB = 1,
-        .MODULE_EXTENSION = config.target.result.dynamicLibSuffix(),
-    });
-    mod.addConfigHeader(xmlversion_header);
-
-    mod.addCSourceFiles(.{
-        .root = upstream.path("."),
-        .files = &dependencies.libxml2,
-        .flags = &.{ "-std=c11", "-D_REENTRANT" },
-    });
-    mod.addIncludePath(upstream.path("include"));
-    mod.addIncludePath(config.zlib_include);
-
-    const lib = b.addLibrary(.{
-        .name = "xml2",
-        .root_module = mod,
-    });
-    lib.installConfigHeader(xmlversion_header);
-    lib.installHeadersDirectory(upstream.path("include/libxml"), "libxml", .{});
-
-    return .{
-        .dependency = upstream,
-        .artifact = lib,
-    };
-}
-
-/// Compiles libxml2 from source as a static library
-/// https://github.com/allyourcodebase/zstd
-fn compileZstd(self: *const Self, config: struct {
-    target: std.Build.ResolvedTarget,
-    zlib_include: std.Build.LazyPath,
-}) Dependencies.Dependency {
-    const b = self.b;
-    const upstream = b.dependency("zstd", .{});
-    const lib_path = upstream.path("lib");
-
-    const mod = b.createModule(.{
-        .target = config.target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-
-    // Compression & Decompression
-    mod.addCSourceFiles(.{
-        .root = lib_path,
-        .files = &dependencies.zstd,
-    });
-
-    if (config.target.result.cpu.arch == .x86_64) {
-        mod.addAssemblyFile(upstream.path("lib/decompress/huf_decompress_amd64.S"));
-    } else {
-        mod.addCMacro("ZSTD_DISABLE_ASM", "1");
-    }
-    mod.addIncludePath(lib_path);
-
-    const lib = b.addLibrary(.{
-        .name = "zstd",
-        .root_module = mod,
-    });
-    lib.installHeader(lib_path.path(b, "zstd.h"), "zstd.h");
-    lib.installHeader(lib_path.path(b, "zdict.h"), "zdict.h");
-    lib.installHeader(lib_path.path(b, "zstd_errors.h"), "zstd_errors.h");
-
-    return .{
-        .dependency = upstream,
-        .artifact = lib,
     };
 }
 

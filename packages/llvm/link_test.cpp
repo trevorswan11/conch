@@ -13,7 +13,7 @@
 auto main(int argc, char** argv) -> int {
     llvm::InitLLVM    test{argc, argv};
     llvm::LLVMContext ctx;
-
-    std::println("Built-in: {}", llvm::sys::getDefaultTargetTriple());
-    std::println("Runtime:  {}", LLVM_DEFAULT_TARGET_TRIPLE);
+    
+    std::println("Builtin: {}", llvm::sys::getDefaultTargetTriple());
+    std::println("Runtime: {}", LLVM_DEFAULT_TARGET_TRIPLE);
 }

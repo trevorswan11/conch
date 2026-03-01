@@ -1,4 +1,5 @@
 packages/llvm/sources/** linguist-vendored
+packages/third-party/** linguist-vendored
 
 * text eol=lf
 
