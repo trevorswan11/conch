@@ -15,18 +15,13 @@
       in
       {
         devShells.default = pkgs.mkShell {
+          hardeningDisable = [ "all" ];
           buildInputs = with pkgs; [
-            zig
-            zls
+            zig_0_15
+            zls_0_15
             llvmPackages_21.clang-tools
             llvmPackages_21.lldb
           ];
-
-          # Without this hook, Zig freaks out over unknown flags
-            shellHook = ''
-              export NIX_CFLAGS_COMPILE=$(echo $NIX_CFLAGS_COMPILE | sed 's/-fmacro-prefix-map=[^ ]*//g')
-              export NIX_LDFLAGS=$(echo $NIX_LDFLAGS | sed 's/-fmacro-prefix-map=[^ ]*//g')
-            '';
         };
       }
     );

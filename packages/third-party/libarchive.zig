@@ -454,9 +454,6 @@ pub fn build(b: *std.Build) Dependency {
             },
         });
     } else {
-        if (is_macos) {
-            mod.linkFramework("CoreServices", .{});
-        }
         mod.addCSourceFiles(.{
             .root = source_root,
             .files = &.{
