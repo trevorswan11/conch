@@ -14,15 +14,6 @@ auto main(int argc, char** argv) -> int {
     llvm::InitLLVM    test{argc, argv};
     llvm::LLVMContext ctx;
 
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllAsmPrinters();
-
-    std::string TargetTriple  = llvm::sys::getDefaultTargetTriple();
-    std::string BuiltInTriple = LLVM_DEFAULT_TARGET_TRIPLE;
-
-    std::println("Built-in: {}", BuiltInTriple);
-    std::println("Runtime:  {}", TargetTriple);
+    std::println("Built-in: {}", llvm::sys::getDefaultTargetTriple());
+    std::println("Runtime:  {}", LLVM_DEFAULT_TARGET_TRIPLE);
 }
