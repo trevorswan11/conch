@@ -1,4 +1,5 @@
 packages/llvm/sources/** linguist-vendored
+packages/third-party/** linguist-vendored
 
 * text eol=lf
 
@@ -8,6 +9,13 @@ packages/llvm/sources/** linguist-vendored
 *.hpp    text eol=lf
 *.zig    text eol=lf
 
-Makefile text eol=lf
+.clangd         text eol=lf
+.clangd-format  text eol=lf
+.flake.*        text eol=lf
+
+*.sh     text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
 *.sh     text eol=lf
 *.bat    text eol=crlf
+*.fish   text eol=crlf

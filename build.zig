@@ -1,6 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const cppcheck = @import("packages/third-party/cppcheck.zig");
+const libarchive = @import("packages/third-party/libarchive.zig");
+
 const LLVM = @import("packages/llvm/LLVM.zig");
 
 pub fn build(b: *std.Build) !void {
@@ -27,10 +30,12 @@ pub fn build(b: *std.Build) !void {
     const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
     try package_flags.appendSlice(b.allocator, dist_flags);
 
-    try compiler_flags.appendSlice(b.allocator, &.{
+    const cdb_flags = [_][]const u8{
         "-gen-cdb-fragment-path",
         getCacheRelativePath(b, &.{CdbGenerator.cdb_frags_dirname}),
-    });
+    };
+
+    try compiler_flags.appendSlice(b.allocator, &cdb_flags);
     switch (optimize) {
         .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
         .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
@@ -99,6 +104,8 @@ const ProjectPaths = struct {
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
     const llvm = "packages/llvm/";
+    const third_party = "packages/third-party/";
+    const compressor = "packages/compressor/";
 };
 
 fn addFlagOptions(b: *std.Build) struct {
@@ -199,6 +206,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     skip_cppcheck: bool,
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
+    packaging: bool = false,
 }) !struct {
     libcore: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -217,19 +225,22 @@ fn addArtifacts(b: *std.Build, config: struct {
         .optimize = config.optimize,
         .include_paths = &.{b.path(ProjectPaths.core.inc)},
         .system_include_paths = &.{magic_enum_inc},
-        .cxx_files = try collectFiles(b, ProjectPaths.core.src, .{}),
-        .cxx_flags = config.cxx_flags,
+        .cxx = .{
+            .files = try collectFiles(b, ProjectPaths.core.src, .{}),
+            .flags = config.cxx_flags,
+        },
     });
     if (config.auto_install) b.installArtifact(libcore);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcore.step);
 
     // LLVM is compiled from source because I like burning compute or something
-    const llvm: LLVM = try .build(b, .{
-        .target = config.target,
+    var llvm: LLVM = .init(b, config.target);
+    try llvm.build(.{
+        .behavior = if (config.packaging) .package else .{
+            .supplemental_cxx_flags = config.cxx_flags,
+        },
         .auto_install = config.auto_install,
-        .link_test_cxx_flags = config.cxx_flags,
     });
-    _ = llvm;
 
     // The actual compiler static library
     const libcompiler = createLibrary(b, .{
@@ -242,8 +253,10 @@ fn addArtifacts(b: *std.Build, config: struct {
         },
         .system_include_paths = &.{magic_enum_inc},
         .link_libraries = &.{libcore},
-        .cxx_files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
-        .cxx_flags = config.cxx_flags,
+        .cxx = .{
+            .files = try collectFiles(b, ProjectPaths.compiler.src, .{}),
+            .flags = config.cxx_flags,
+        },
     });
     if (config.auto_install) b.installArtifact(libcompiler);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcompiler.step);
@@ -260,10 +273,12 @@ fn addArtifacts(b: *std.Build, config: struct {
         },
         .system_include_paths = &.{magic_enum_inc},
         .link_libraries = &.{libcompiler},
-        .cxx_files = try collectFiles(b, ProjectPaths.cli.src, .{
-            .dropped_files = &.{"main.cpp"},
-        }),
-        .cxx_flags = config.cxx_flags,
+        .cxx = .{
+            .files = try collectFiles(b, ProjectPaths.cli.src, .{
+                .dropped_files = &.{"main.cpp"},
+            }),
+            .flags = config.cxx_flags,
+        },
     });
     if (config.auto_install) b.installArtifact(libcli);
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcli.step);
@@ -274,8 +289,10 @@ fn addArtifacts(b: *std.Build, config: struct {
         .target = config.target,
         .optimize = config.optimize,
         .include_paths = &.{b.path(ProjectPaths.cli.inc)},
-        .cxx_files = &.{ProjectPaths.cli.src ++ "main.cpp"},
-        .cxx_flags = config.cxx_flags,
+        .cxx = .{
+            .files = &.{ProjectPaths.cli.src ++ "main.cpp"},
+            .flags = config.cxx_flags,
+        },
         .link_libraries = &.{libcli},
         .behavior = config.behavior orelse .{
             .runnable = .{
@@ -300,8 +317,10 @@ fn addArtifacts(b: *std.Build, config: struct {
             .optimize = .ReleaseSafe,
             .include_paths = &.{catch2_inc},
             .source_root = catch2.path("."),
-            .cxx_files = &.{"extras/catch_amalgamated.cpp"},
-            .cxx_flags = config.cxx_flags,
+            .cxx = .{
+                .files = &.{"extras/catch_amalgamated.cpp"},
+                .flags = config.cxx_flags,
+            },
         });
 
         // The runner has standalone tests
@@ -333,10 +352,12 @@ fn addArtifacts(b: *std.Build, config: struct {
                 catch2_inc,
                 magic_enum_inc,
             },
-            .cxx_files = try collectFiles(b, ProjectPaths.core.tests, .{
-                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
-            }),
-            .cxx_flags = config.cxx_flags,
+            .cxx = .{
+                .files = try collectFiles(b, ProjectPaths.core.tests, .{
+                    .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+                }),
+                .flags = config.cxx_flags,
+            },
             .link_libraries = &.{ tests.?.libcatch2, libcore },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -361,10 +382,12 @@ fn addArtifacts(b: *std.Build, config: struct {
                 catch2_inc,
                 magic_enum_inc,
             },
-            .cxx_files = try collectFiles(b, ProjectPaths.compiler.tests, .{
-                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
-            }),
-            .cxx_flags = config.cxx_flags,
+            .cxx = .{
+                .files = try collectFiles(b, ProjectPaths.compiler.tests, .{
+                    .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+                }),
+                .flags = config.cxx_flags,
+            },
             .link_libraries = &.{ libcompiler, tests.?.libcatch2 },
             .behavior = config.behavior orelse .{
                 .runnable = .{
@@ -390,10 +413,12 @@ fn addArtifacts(b: *std.Build, config: struct {
                 catch2_inc,
                 magic_enum_inc,
             },
-            .cxx_files = try collectFiles(b, ProjectPaths.cli.tests, .{
-                .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
-            }),
-            .cxx_flags = config.cxx_flags,
+            .cxx = .{
+                .files = try collectFiles(b, ProjectPaths.cli.tests, .{
+                    .extra_files = &.{ProjectPaths.test_runner ++ "runner.cpp"},
+                }),
+                .flags = config.cxx_flags,
+            },
             .link_libraries = &.{
                 libcompiler,
                 libcli,
@@ -410,105 +435,24 @@ fn addArtifacts(b: *std.Build, config: struct {
         try tests.?.configure(b, config.auto_install, config.cdb_steps);
     }
 
-    const cppcheck = if (config.skip_cppcheck) null else try compileCppcheck(b, config.target);
-
     return .{
         .libcore = libcore,
         .libcompiler = libcompiler,
         .libcli = libcli,
         .cli = cli,
         .tests = tests,
-        .cppcheck = cppcheck,
+        .cppcheck = if (config.skip_cppcheck) null else (try cppcheck.build(b)).artifact,
     };
-}
-
-/// Compiles cppcheck from source using the flags given by:
-/// https://github.com/danmar/cppcheck#g-for-experts
-fn compileCppcheck(b: *std.Build, target: std.Build.ResolvedTarget) !*std.Build.Step.Compile {
-    const cppcheck = b.dependency("cppcheck", .{});
-    const cppcheck_includes: []const std.Build.LazyPath = &.{
-        cppcheck.path("externals"),
-        cppcheck.path("externals/simplecpp"),
-        cppcheck.path("externals/tinyxml2"),
-        cppcheck.path("externals/picojson"),
-        cppcheck.path("lib"),
-        cppcheck.path("frontend"),
-    };
-
-    const cppcheck_sources = [_][]const u8{
-        "externals/simplecpp/simplecpp.cpp", "externals/tinyxml2/tinyxml2.cpp",
-        "frontend/frontend.cpp",             "cli/cmdlineparser.cpp",
-        "cli/cppcheckexecutor.cpp",          "cli/executor.cpp",
-        "cli/filelister.cpp",                "cli/main.cpp",
-        "cli/processexecutor.cpp",           "cli/sehwrapper.cpp",
-        "cli/signalhandler.cpp",             "cli/singleexecutor.cpp",
-        "cli/stacktrace.cpp",                "cli/threadexecutor.cpp",
-        "lib/addoninfo.cpp",                 "lib/analyzerinfo.cpp",
-        "lib/astutils.cpp",                  "lib/check.cpp",
-        "lib/check64bit.cpp",                "lib/checkassert.cpp",
-        "lib/checkautovariables.cpp",        "lib/checkbool.cpp",
-        "lib/checkbufferoverrun.cpp",        "lib/checkclass.cpp",
-        "lib/checkcondition.cpp",            "lib/checkers.cpp",
-        "lib/checkersidmapping.cpp",         "lib/checkersreport.cpp",
-        "lib/checkexceptionsafety.cpp",      "lib/checkfunctions.cpp",
-        "lib/checkinternal.cpp",             "lib/checkio.cpp",
-        "lib/checkleakautovar.cpp",          "lib/checkmemoryleak.cpp",
-        "lib/checknullpointer.cpp",          "lib/checkother.cpp",
-        "lib/checkpostfixoperator.cpp",      "lib/checksizeof.cpp",
-        "lib/checkstl.cpp",                  "lib/checkstring.cpp",
-        "lib/checktype.cpp",                 "lib/checkuninitvar.cpp",
-        "lib/checkunusedfunctions.cpp",      "lib/checkunusedvar.cpp",
-        "lib/checkvaarg.cpp",                "lib/clangimport.cpp",
-        "lib/color.cpp",                     "lib/cppcheck.cpp",
-        "lib/ctu.cpp",                       "lib/errorlogger.cpp",
-        "lib/errortypes.cpp",                "lib/findtoken.cpp",
-        "lib/forwardanalyzer.cpp",           "lib/fwdanalysis.cpp",
-        "lib/importproject.cpp",             "lib/infer.cpp",
-        "lib/keywords.cpp",                  "lib/library.cpp",
-        "lib/mathlib.cpp",                   "lib/path.cpp",
-        "lib/pathanalysis.cpp",              "lib/pathmatch.cpp",
-        "lib/platform.cpp",                  "lib/preprocessor.cpp",
-        "lib/programmemory.cpp",             "lib/regex.cpp",
-        "lib/reverseanalyzer.cpp",           "lib/sarifreport.cpp",
-        "lib/settings.cpp",                  "lib/standards.cpp",
-        "lib/summaries.cpp",                 "lib/suppressions.cpp",
-        "lib/symboldatabase.cpp",            "lib/templatesimplifier.cpp",
-        "lib/timer.cpp",                     "lib/token.cpp",
-        "lib/tokenize.cpp",                  "lib/tokenlist.cpp",
-        "lib/utils.cpp",                     "lib/valueflow.cpp",
-        "lib/vf_analyzers.cpp",              "lib/vf_common.cpp",
-        "lib/vf_settokenvalue.cpp",          "lib/vfvalue.cpp",
-    };
-
-    // The path needs to be fixed on windows due to cppcheck internals
-    const cfg_path = blk: {
-        const raw_cfg_path = try cppcheck.path(".").getPath3(b, null).toString(b.allocator);
-        if (builtin.os.tag == .windows) {
-            break :blk try std.mem.replaceOwned(u8, b.allocator, raw_cfg_path, "\\", "/");
-        }
-        break :blk raw_cfg_path;
-    };
-
-    const files_dir = try std.fmt.allocPrint(
-        b.allocator,
-        "-DFILESDIR=\"{s}\"",
-        .{cfg_path},
-    );
-
-    return createExecutable(b, .{
-        .name = "cppcheck",
-        .target = target,
-        .optimize = .ReleaseSafe,
-        .include_paths = cppcheck_includes,
-        .source_root = cppcheck.path("."),
-        .cxx_files = &cppcheck_sources,
-        .cxx_flags = &.{ files_dir, "-Uunix", "-std=c++11" },
-    });
 }
 
 const SystemLibraries = struct {
     search_paths: []const std.Build.LazyPath,
     libs: []const []const u8,
+};
+
+const CXXOpts = struct {
+    files: []const []const u8,
+    flags: []const []const u8,
 };
 
 fn createLibrary(b: *std.Build, config: struct {
@@ -520,8 +464,7 @@ fn createLibrary(b: *std.Build, config: struct {
     source_root: ?std.Build.LazyPath = null,
     link_libraries: ?[]const *std.Build.Step.Compile = null,
     system_libraries: ?SystemLibraries = null,
-    cxx_files: []const []const u8,
-    cxx_flags: []const []const u8,
+    cxx: CXXOpts,
 }) *std.Build.Step.Compile {
     const mod = b.createModule(.{
         .target = config.target,
@@ -548,8 +491,8 @@ fn createLibrary(b: *std.Build, config: struct {
 
     mod.addCSourceFiles(.{
         .root = config.source_root,
-        .files = config.cxx_files,
-        .flags = config.cxx_flags,
+        .files = config.cxx.files,
+        .flags = config.cxx.flags,
         .language = .cpp,
     });
 
@@ -576,11 +519,10 @@ fn createExecutable(b: *std.Build, config: struct {
     zig_main: ?std.Build.LazyPath = null,
     target: ?std.Build.ResolvedTarget,
     optimize: ?std.builtin.OptimizeMode,
-    include_paths: []const std.Build.LazyPath,
+    include_paths: ?[]const std.Build.LazyPath = null,
     system_include_paths: ?[]const std.Build.LazyPath = null,
     source_root: ?std.Build.LazyPath = null,
-    cxx_files: []const []const u8,
-    cxx_flags: []const []const u8,
+    cxx: ?CXXOpts = null,
     link_libraries: []const *std.Build.Step.Compile = &.{},
     system_libraries: ?SystemLibraries = null,
     behavior: ExecutableBehavior = .standalone,
@@ -593,13 +535,15 @@ fn createExecutable(b: *std.Build, config: struct {
         .link_libcpp = true,
     });
 
-    for (config.include_paths) |include| {
-        mod.addIncludePath(include);
+    if (config.include_paths) |include_paths| {
+        for (include_paths) |include| {
+            mod.addIncludePath(include);
+        }
     }
 
     if (config.system_include_paths) |system_includes| {
-        for (system_includes) |inc_path| {
-            mod.addSystemIncludePath(inc_path);
+        for (system_includes) |include| {
+            mod.addSystemIncludePath(include);
         }
     }
 
@@ -607,12 +551,14 @@ fn createExecutable(b: *std.Build, config: struct {
         mod.linkLibrary(library);
     }
 
-    mod.addCSourceFiles(.{
-        .root = config.source_root,
-        .files = config.cxx_files,
-        .flags = config.cxx_flags,
-        .language = .cpp,
-    });
+    if (config.cxx) |cxx| {
+        mod.addCSourceFiles(.{
+            .root = config.source_root,
+            .files = cxx.files,
+            .flags = cxx.flags,
+            .language = .cpp,
+        });
+    }
 
     if (config.system_libraries) |libs| {
         for (libs.search_paths) |path| {
@@ -794,10 +740,10 @@ fn addTooling(b: *std.Build, config: struct {
         });
     }
 
-    if (config.cppcheck) |cppcheck| {
+    if (config.cppcheck) |cppcheck_bin| {
         const check_step = try addStaticAnalysisStep(b, .{
             .tooling_sources = tooling_sources,
-            .cppcheck = cppcheck,
+            .cppcheck = cppcheck_bin,
             .cdb_gen = config.cdb_gen,
         });
         check_step.dependOn(&config.cdb_gen.step);
@@ -827,12 +773,13 @@ fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang_format: []const u8,
 }) !void {
-    const zig_paths: []const []const u8 = &.{
-        "build.zig",
-        ProjectPaths.llvm ++ "LLVM.zig",
-        "build.zig.zon",
-        ProjectPaths.test_runner ++ "main.zig",
-    };
+    const zig_paths = try collectFiles(b, "packages", .{
+        .allowed_extensions = &.{".zig"},
+        .extra_files = &.{
+            "build.zig",
+            "build.zig.zon",
+        },
+    });
     const build_fmt = b.addFmt(.{ .paths = zig_paths });
     const build_fmt_check = b.addFmt(.{ .paths = zig_paths, .check = true });
 
@@ -857,18 +804,18 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cdb_gen: *CdbGenerator,
 }) !*std.Build.Step {
     const check_step = b.step("check", "Run static analysis on all project files");
-    const cppcheck = b.addRunArtifact(config.cppcheck);
+    const cppcheck_run = b.addRunArtifact(config.cppcheck);
 
     const installed_cppcheck_cache_path = getCacheRelativePath(b, &.{"cppcheck"});
-    cppcheck.addArg("--inline-suppr");
-    cppcheck.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
-    const cppcheck_cache = cppcheck.addPrefixedOutputDirectoryArg(
+    cppcheck_run.addArg("--inline-suppr");
+    cppcheck_run.addPrefixedFileArg("--project=", config.cdb_gen.getCdbPath());
+    const cppcheck_cache = cppcheck_run.addPrefixedOutputDirectoryArg(
         "--cppcheck-build-dir=",
         installed_cppcheck_cache_path,
     );
-    cppcheck.addArg("--check-level=exhaustive");
-    cppcheck.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
-    cppcheck.addArgs(&.{
+    cppcheck_run.addArg("--check-level=exhaustive");
+    cppcheck_run.addArgs(&.{ "--error-exitcode=1", "--enable=all" });
+    cppcheck_run.addArgs(&.{
         "-icatch_amalgamated.cpp",
         "--suppress=*:catch_amalgamated.hpp",
         "--suppress=*:magic_enum.hpp",
@@ -882,13 +829,13 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     };
 
     inline for (suppressions) |suppression| {
-        cppcheck.addArg("--suppress=" ++ suppression);
+        cppcheck_run.addArg("--suppress=" ++ suppression);
     }
 
-    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.core.tests));
-    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.compiler.tests));
-    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.cli.tests));
-    cppcheck.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.llvm));
+    cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.core.tests));
+    cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.compiler.tests));
+    cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.cli.tests));
+    cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.llvm));
 
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
@@ -898,7 +845,7 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
 
     cppcheck_cache_install.step.dependOn(&config.cppcheck.step);
     check_step.dependOn(&cppcheck_cache_install.step);
-    check_step.dependOn(&cppcheck.step);
+    check_step.dependOn(&cppcheck_run.step);
     return check_step;
 }
 
@@ -1009,9 +956,7 @@ const LOCCounter = struct {
 
     step: std.Build.Step,
 
-    pub fn init(
-        b: *std.Build,
-    ) *LOCCounter {
+    pub fn init(b: *std.Build) *LOCCounter {
         const self = b.allocator.create(LOCCounter) catch @panic("OOM");
         self.* = .{
             .step = .init(.{
@@ -1030,16 +975,21 @@ const LOCCounter = struct {
         const extensions = [_][]const u8{ ".cpp", ".hpp", ".zig", ".conch" };
         var files: std.ArrayList([]const u8) = .empty;
 
+        const dropped_list = try collectFiles(b, ProjectPaths.llvm ++ "sources", .{
+            .allowed_extensions = &.{".zig"},
+            .return_basenames_only = true,
+            .extra_files = try collectFiles(b, ProjectPaths.third_party, .{
+                .allowed_extensions = &.{".zig"},
+                .return_basenames_only = true,
+            }),
+        });
+
         try files.appendSlice(
             b.allocator,
             try collectFiles(b, "packages", .{
                 .allowed_extensions = &extensions,
                 .extra_files = &.{"build.zig"},
-                .dropped_files = &.{
-                    "td_files.zig",
-                    "support_sources.zig",
-                    "tablegen_sources.zig",
-                },
+                .dropped_files = dropped_list,
             }),
         );
 
@@ -1070,6 +1020,18 @@ const LOCCounter = struct {
         try result.print();
     }
 };
+
+fn compileCompressor(b: *std.Build) *std.Build.Step.Compile {
+    const libarchive_dep = libarchive.build(b);
+    return createExecutable(b, .{
+        .name = "compressor",
+        .zig_main = b.path(ProjectPaths.compressor ++ "main.zig"),
+        .target = b.graph.host,
+        .optimize = .ReleaseFast,
+        .link_libraries = &.{libarchive_dep.artifact},
+        .behavior = .standalone,
+    });
+}
 
 const target_queries = [_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .macos },
@@ -1105,11 +1067,9 @@ fn addPackageStep(b: *std.Build, config: struct {
     compile_only: bool,
     cxx_flags: []const []const u8,
 }) !void {
-    // TODO, support packaging correctly with LLVM
     const package_step = b.step("package", "Build the artifacts for packaging");
-    if (true) {
-        return package_step.addError("Packing is currently unsupported as LLVM integration is a WIP", .{});
-    }
+    const compressor = compileCompressor(b);
+    package_step.dependOn(&compressor.step);
 
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
@@ -1139,6 +1099,7 @@ fn addPackageStep(b: *std.Build, config: struct {
             .skip_cppcheck = true,
             .behavior = .standalone,
             .auto_install = false,
+            .packaging = true,
         });
 
         std.debug.assert(artifacts.tests == null);
@@ -1167,16 +1128,7 @@ fn addPackageStep(b: *std.Build, config: struct {
         package_step.dependOn(&platform.step);
 
         if (!config.compile_only) {
-            const tar = findProgram(b, "tar");
-            const zip = findProgram(b, "zip");
-            if (zip == null or tar == null) {
-                return package_step.addError(
-                    \\Packaging cannot run without zip and tar commands
-                    \\  zip: {s}
-                    \\  tar: {s}
-                , .{ zip orelse "null", tar orelse "null" });
-            }
-
+            const prefix: std.Build.LazyPath = .{ .cwd_relative = b.install_prefix };
             const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
                 .{ b.path("LICENSE"), "LICENSE" },
                 .{ b.path("README.md"), "README.md" },
@@ -1202,16 +1154,16 @@ fn addPackageStep(b: *std.Build, config: struct {
                     .{package_artifact_dirname},
                 );
 
-                const zipper = b.addSystemCommand(&.{ zip.?, "-r" });
-                const output_zip = zipper.addOutputFileArg(zip_filename);
-                zipper.addArg(package_artifact_dirname);
-                zipper.setCwd(b.path(getPrefixRelativePath(b, uncompressed_package_dir)));
-                _ = zipper.captureStdErr();
+                const packer = b.addRunArtifact(compressor);
+                packer.addArg("zip");
+                const output_zip = packer.addOutputFileArg(zip_filename);
+                packer.addArg(package_artifact_dir_path);
+                packer.setCwd(prefix);
 
-                zipper.step.dependOn(&platform.step);
-                package_step.dependOn(&zipper.step);
+                packer.step.dependOn(&platform.step);
+                package_step.dependOn(&packer.step);
                 for (file_installs) |step| {
-                    zipper.step.dependOn(step);
+                    packer.step.dependOn(step);
                 }
 
                 const copy_zip = b.addInstallFileWithDir(
@@ -1225,21 +1177,20 @@ fn addPackageStep(b: *std.Build, config: struct {
             // All platforms get an archive because I'm nice
             const tar_filename = try std.fmt.allocPrint(
                 b.allocator,
-                "{s}.tar.gz",
+                "{s}.tar.zst",
                 .{package_artifact_dirname},
             );
 
-            const archiver = b.addSystemCommand(&.{ tar.?, "-czf" });
-            const output_tar = archiver.addOutputFileArg(tar_filename);
-            archiver.addArg("-C");
-            archiver.addArg(getPrefixRelativePath(b, uncompressed_package_dir));
-            archiver.addArg(package_artifact_dirname);
-            _ = archiver.captureStdErr();
+            const packer = b.addRunArtifact(compressor);
+            packer.addArg("zst");
+            const output_tar = packer.addOutputFileArg(tar_filename);
+            packer.addArg(package_artifact_dir_path);
+            packer.setCwd(prefix);
 
-            archiver.step.dependOn(&platform.step);
-            package_step.dependOn(&archiver.step);
+            packer.step.dependOn(&platform.step);
+            package_step.dependOn(&packer.step);
             for (file_installs) |step| {
-                archiver.step.dependOn(step);
+                packer.step.dependOn(step);
             }
 
             const copy_tar = b.addInstallFileWithDir(
@@ -1280,10 +1231,11 @@ fn configurePackArtifacts(b: *std.Build, config: struct {
 fn collectFiles(
     b: *std.Build,
     directory: []const u8,
-    options: struct {
+    config: struct {
         allowed_extensions: []const []const u8 = &.{".cpp"},
-        dropped_files: ?[]const [:0]const u8 = null,
+        dropped_files: ?[]const []const u8 = null,
         extra_files: ?[]const []const u8 = null,
+        return_basenames_only: bool = false,
     },
 ) ![]const []const u8 {
     var dir = try b.build_root.handle.openDir(directory, .{ .iterate = true });
@@ -1295,19 +1247,23 @@ fn collectFiles(
     var paths: std.ArrayList([]const u8) = .empty;
     collector: while (try walker.next()) |entry| {
         if (entry.kind != .file) continue;
-        for (options.allowed_extensions) |ext| {
+        for (config.allowed_extensions) |ext| {
             if (std.mem.endsWith(u8, entry.basename, ext)) break;
         } else continue :collector;
 
-        if (options.dropped_files) |drop| for (drop) |drop_file| {
+        if (config.dropped_files) |drop| for (drop) |drop_file| {
             if (std.mem.eql(u8, drop_file, entry.basename)) continue :collector;
         };
 
-        const full_path = b.pathJoin(&.{ directory, entry.path });
-        try paths.append(b.allocator, full_path);
+        if (config.return_basenames_only) {
+            try paths.append(b.allocator, b.dupe(entry.basename));
+        } else {
+            const full_path = b.pathJoin(&.{ directory, entry.path });
+            try paths.append(b.allocator, full_path);
+        }
     }
 
-    if (options.extra_files) |extra_files| {
+    if (config.extra_files) |extra_files| {
         try paths.appendSlice(b.allocator, extra_files);
     }
     return paths.items;

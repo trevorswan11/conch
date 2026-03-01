@@ -52,25 +52,25 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# debug information files
+# Debug information files
 *.dwo
 
-# zig
+# Zig
 zig-out/
 .zig-cache
 
-out/
-build/
-Makefile
-**.sln
+# Lsp caches
 .cache
+__cmake_systeminformation/
 
+# Editors
 .vscode
 .vs
 .zed
-.DS_Store
 
-__cmake_systeminformation/
-
+# Packge locks
 *.lock
 !flake.lock
+
+# MISC
+.DS_Store

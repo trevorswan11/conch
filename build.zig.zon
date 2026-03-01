@@ -32,6 +32,10 @@
             .url = "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz",
             .hash = "N-V-__8AAPZ7fwBg4JoCzM_0o2A8wxH2hsUUeiU1iuZv53L5",
         },
+        .libarchive = .{
+            .url = "https://github.com/libarchive/libarchive/archive/refs/tags/v3.8.5.tar.gz",
+            .hash = "N-V-__8AABtbCwHDmVvgXlm5f-07LtFZjUQNvvJrBnG-HeqN",
+        },
     },
     .paths = .{
         "apps",
