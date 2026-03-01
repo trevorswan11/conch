@@ -23,13 +23,9 @@ const text_api = @import("sources/text_api.zig");
 const transforms = @import("sources/transforms.zig");
 const xray = @import("sources/xray.zig");
 
-const Artifact = *std.Build.Step.Compile;
-
-const ThirdParty = struct {
-    const siphash_inc = "third-party/siphash/include";
-};
-
 const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
+
+const Artifact = *std.Build.Step.Compile;
 
 const Dependencies = struct {
     const Dependency = struct {
@@ -725,9 +721,9 @@ fn createConfigHeaders(self: *const Self, target: std.Target) !ConfigHeaders {
         .LLVM_PLUGIN_EXT = target.dynamicLibSuffix(),
     });
 
-    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/llvm-config.h.cmake
-    const triple = try target.linuxTriple(b.allocator);
+    const triple = llvmTriple(b.allocator, target);
 
+    // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/include/llvm/Config/llvm-config.h.cmake
     const llvm_config = b.addConfigHeader(.{
         .style = .{ .cmake = self.llvm.root.path(b, "llvm/include/llvm/Config/llvm-config.h.cmake") },
         .include_path = "llvm/Config/llvm-config.h",
@@ -922,6 +918,12 @@ fn compileSupport(self: *const Self, config: struct {
         .flags = &.{"-std=c11"},
     });
 
+    // BLAKE3 has some optional assembly files that are pure optimization and optional
+    mod.addCMacro("BLAKE3_NO_AVX512", "1");
+    mod.addCMacro("BLAKE3_NO_AVX2", "1");
+    mod.addCMacro("BLAKE3_NO_SSE41", "1");
+    mod.addCMacro("BLAKE3_NO_SSE2", "1");
+
     const config_headers = try self.createConfigHeaders(target_result);
     const config_header_array = config_headers.configHeaderArray();
     for (config_header_array) |header| {
@@ -929,7 +931,7 @@ fn compileSupport(self: *const Self, config: struct {
     }
 
     mod.addIncludePath(self.llvm.llvm_include);
-    mod.addIncludePath(self.llvm.root.path(b, ThirdParty.siphash_inc));
+    mod.addIncludePath(self.llvm.root.path(b, "third-party/siphash/include"));
 
     mod.linkLibrary(config.deps.zlib.artifact);
     mod.linkLibrary(config.deps.zstd.artifact);
@@ -4291,6 +4293,7 @@ fn compileLibxml2(self: *const Self, config: struct {
         .optimize = optimize,
         .link_libc = true,
     });
+    const os_tag = config.target.result.os.tag;
 
     // CMake generates this required file usually
     const config_header = b.addConfigHeader(.{
@@ -4309,8 +4312,8 @@ fn compileLibxml2(self: *const Self, config: struct {
         .XML_SYSCONFDIR = 0,
 
         // Platform-specific logic
-        .HAVE_DLOPEN = @intFromBool(config.target.result.os.tag != .windows),
-        .XML_THREAD_LOCAL = switch (config.target.result.os.tag) {
+        .HAVE_DLOPEN = @intFromBool(os_tag != .windows),
+        .XML_THREAD_LOCAL = switch (os_tag) {
             .windows => "__declspec(thread)",
             else => "_Thread_local",
         },
@@ -4343,7 +4346,7 @@ fn compileLibxml2(self: *const Self, config: struct {
         .WITH_XPATH = 1,
         .WITH_XPTR = 1,
         .WITH_XINCLUDE = 1,
-        .WITH_ICONV = 1,
+        .WITH_ICONV = 0,
         .WITH_ICU = 0,
         .WITH_ISO8859X = 1,
         .WITH_DEBUG = 1,
@@ -4524,6 +4527,7 @@ pub fn allTargetArtifacts(self: *const Self) []Artifact {
     return all_artifacts.items;
 }
 
+/// Populates all include and config header paths for inclusion in modules
 pub fn allIncludePaths(self: *const Self) struct {
     includes: []std.Build.LazyPath,
     config_headers: []*std.Build.Step.ConfigHeader,
@@ -4544,4 +4548,23 @@ pub fn allIncludePaths(self: *const Self) struct {
         .includes = all_includes.items,
         .config_headers = all_config_headers.items,
     };
+}
+
+/// Creates an LLVM-formatted target triple for use in LLVM's configuration
+fn llvmTriple(allocator: std.mem.Allocator, target: std.Target) []u8 {
+    const os = target.os.tag;
+    const arch = target.cpu.arch;
+
+    // LLVM requires ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT
+    return std.fmt.allocPrint(allocator, "{s}-{s}-{s}-{s}", .{
+        @tagName(arch),
+        blk: {
+            if (os.isDarwin()) break :blk "apple";
+            if (os == .ps4 or os == .ps5) break :blk "scei";
+            if (arch.isMIPS()) break :blk "mips";
+            break :blk "unknown";
+        },
+        if (os.isDarwin()) "darwin" else @tagName(os),
+        @tagName(target.abi),
+    }) catch @panic("OOM");
 }

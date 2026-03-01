@@ -118,7 +118,7 @@ fn addFlagOptions(b: *std.Build) struct {
         "skip-tests",
         "Skip compilation of tests and disable test running",
     ) orelse false;
-    
+
     const skip_cppcheck = b.option(
         bool,
         "skip-cppcheck",
