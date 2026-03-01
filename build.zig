@@ -1067,9 +1067,10 @@ fn addPackageStep(b: *std.Build, config: struct {
     compile_only: bool,
     cxx_flags: []const []const u8,
 }) !void {
-    const compressor = compileCompressor(b);
-    b.installArtifact(compressor);
     const package_step = b.step("package", "Build the artifacts for packaging");
+    const compressor = compileCompressor(b);
+    package_step.dependOn(&compressor.step);
+
     const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
     const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
 
