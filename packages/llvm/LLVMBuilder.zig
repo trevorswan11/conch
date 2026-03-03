@@ -27,9 +27,9 @@ const libxml2 = @import("../third-party/libxml2.zig");
 const zstd = @import("../third-party/zstd.zig");
 const zlib = @import("../third-party/zlib.zig");
 
-const optimize: std.builtin.OptimizeMode = .ReleaseSafe;
+pub const default_optimize: std.builtin.OptimizeMode = .ReleaseSafe;
 
-const Artifact = *std.Build.Step.Compile;
+pub const Artifact = *std.Build.Step.Compile;
 
 const ThirdPartyDeps = struct {
     zlib: Dependency = undefined,
@@ -229,6 +229,14 @@ const LLVMTargetArtifacts = struct {
     intrinsics_gen: *std.Build.Step.WriteFile = undefined,
 };
 
+const Metadata = struct {
+    upstream: *std.Build.Dependency,
+    root: std.Build.LazyPath,
+    llvm_include: std.Build.LazyPath,
+    vcs_revision: *std.Build.Step.ConfigHeader,
+    extension_def: *std.Build.Step.WriteFile,
+};
+
 const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
     .dest_dir = .{
         .override = .{
@@ -237,20 +245,7 @@ const kaleidoscope_install_options: std.Build.Step.InstallArtifact.Options = .{
     },
 };
 
-/// Artifacts compiled for the actual target, associated with the clang subproject of llvm
-const ClangTargetArtifacts = struct {
-    const ClangFormat = struct {
-        core_lib: Artifact = undefined,
-        tool: Artifact = undefined,
-    };
-
-    basic: Artifact = undefined,
-    format: ClangFormat = .{},
-    rewrite: Artifact = undefined,
-    tooling_core: Artifact = undefined,
-};
-
-const version: std.SemanticVersion = .{
+pub const version: std.SemanticVersion = .{
     .major = 21,
     .minor = 1,
     .patch = 8,
@@ -267,7 +262,7 @@ pub const common_llvm_cxx_flags = [_][]const u8{
     "-fno-rtti",
 };
 
-const enabled_targets = &[_][]const u8{
+pub const enabled_targets = &[_][]const u8{
     "X86",
     "AArch64",
     "ARM",
@@ -276,16 +271,6 @@ const enabled_targets = &[_][]const u8{
     "Xtensa",
     "PowerPC",
     "LoongArch",
-};
-
-const Metadata = struct {
-    upstream: *std.Build.Dependency,
-    root: std.Build.LazyPath,
-    llvm_include: std.Build.LazyPath,
-    vcs_revision: *std.Build.Step.ConfigHeader,
-    extension_def: *std.Build.Step.WriteFile,
-
-    clang_include: std.Build.LazyPath,
 };
 
 const Self = @This();
@@ -297,10 +282,12 @@ metadata: Metadata,
 configure_phase_artifacts: *ConfigurePhaseArtifacts,
 
 target_artifacts: LLVMTargetArtifacts = .{},
-clang_artifacts: ClangTargetArtifacts = .{},
 
 /// The target system to compile to, not determined until `build`
 target: std.Build.ResolvedTarget = undefined,
+
+/// This is only true once `build` is called and exits successfully
+complete: bool = false,
 
 /// Creates a new LLVM builder with no preconfigured artifacts.
 ///
@@ -346,7 +333,6 @@ fn create(b: *std.Build, config: union(enum) {
             .llvm_include = upstream.path("llvm/include"),
             .vcs_revision = vcs_revision,
             .extension_def = extension_def,
-            .clang_include = upstream.path("clang/include"),
         },
         .configure_phase_artifacts = configure_phase_artifacts,
     };
@@ -537,12 +523,15 @@ fn buildTargetLLVM(self: *Self) void {
     self.target_artifacts.target_backends.loong_arch = self.buildLoongArch();
 
     self.target_artifacts.execution_engine = self.buildExecutionEngine();
+
+    // Now this can be used for whatever
+    self.complete = true;
 }
 
 fn createHostModule(self: *const Self) *std.Build.Module {
     return self.b.createModule(.{
         .target = self.b.graph.host,
-        .optimize = optimize,
+        .optimize = default_optimize,
         .link_libc = true,
         .link_libcpp = true,
     });
@@ -551,7 +540,7 @@ fn createHostModule(self: *const Self) *std.Build.Module {
 fn createTargetModule(self: *const Self) *std.Build.Module {
     return self.b.createModule(.{
         .target = self.target,
-        .optimize = optimize,
+        .optimize = default_optimize,
         .link_libc = true,
         .link_libcpp = true,
     });
@@ -4257,15 +4246,15 @@ fn buildDeps(self: *const Self, platform: Platform) ThirdPartyDeps {
         .target => self.target,
     };
 
-    const zlib_dep = zlib.build(b, .{ .target = target, .optimize = optimize });
+    const zlib_dep = zlib.build(b, .{ .target = target, .optimize = default_optimize });
     const libxml2_dep = libxml2.build(b, .{
         .opts = .{
             .target = target,
-            .optimize = optimize,
+            .optimize = default_optimize,
         },
         .zlib = zlib_dep,
     });
-    const zstd_dep = zstd.build(b, .{ .target = target, .optimize = optimize });
+    const zstd_dep = zstd.build(b, .{ .target = target, .optimize = default_optimize });
 
     return .{
         .zlib = zlib_dep,

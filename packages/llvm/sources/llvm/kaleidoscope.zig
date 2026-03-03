@@ -48,6 +48,10 @@ pub const KaleidoscopeChapter = enum {
     /// Compiles the chapter of Kaleidoscope. The host must match the target.
     pub fn build(self: KaleidoscopeChapter, llvm: *const LLVMBuilder) *std.Build.Step.Compile {
         const b = llvm.b;
+        if (!llvm.complete) {
+            @panic("Misconfigured build script - LLVM was not built");
+        }
+
         const mod = b.createModule(.{
             .target = b.graph.host,
             .optimize = .Debug,
