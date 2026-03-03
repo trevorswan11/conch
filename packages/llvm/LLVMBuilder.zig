@@ -555,7 +555,7 @@ const AddCSourceFileOptions = struct {
 
 /// Creates a module and corresponding library, defaulting to the target platform.
 /// 'llvm/include' is implicitly included here
-fn createLLVMLibrary(self: *const Self, config: struct {
+pub fn createLLVMLibrary(self: *const Self, config: struct {
     name: []const u8,
     cxx_source_files: ?AddCSourceFileOptions,
     additional_include_paths: ?[]const std.Build.LazyPath = null,

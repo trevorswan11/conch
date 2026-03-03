@@ -36,10 +36,13 @@ clang_artifacts: ClangTargetArtifacts = .{},
 pub fn init(llvm: *const LLVMBuilder) *Self {
     const b = llvm.b;
     const self = b.allocator.create(Self) catch @panic("OOM");
-    self.* = .{ .llvm = llvm, .metadata = .{
-        .clang_include = llvm.metadata.root.path(b, "clang/incldue"),
-    } };
 
+    self.* = .{
+        .llvm = llvm,
+        .metadata = .{
+            .clang_include = llvm.metadata.root.path(b, "clang/incldue"),
+        },
+    };
     return self;
 }
 

@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const zon = @import("build.zig.zon");
 
 const Dependency = @import("packages/third-party/Dependency.zig");
 const cppcheck = @import("packages/third-party/cppcheck.zig");
@@ -15,7 +16,6 @@ pub fn build(b: *std.Build) !void {
     });
 
     const llvm: *LLVMBuilder = .init(b);
-    const flag_opts = addFlagOptions(b);
     const cdb_gen: *CDBGenerator = .init(b);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
@@ -59,13 +59,11 @@ pub fn build(b: *std.Build) !void {
         .cdb_gen = cdb_gen,
         .cli = artifacts.cli,
         .cppcheck = artifacts.cppcheck.?,
-        .clean_cache = flag_opts.clean_cache,
     });
 
     try addPackageStep(b, .{
         .llvm = llvm,
         .cxx_flags = package_flags.items,
-        .compile_only = flag_opts.compile_only,
     });
 }
 
@@ -109,28 +107,6 @@ const ProjectPaths = struct {
 
     const compressor = "apps/compressor/";
 };
-
-fn addFlagOptions(b: *std.Build) struct {
-    compile_only: bool,
-    clean_cache: bool,
-} {
-    const compile_only = b.option(
-        bool,
-        "compile-only",
-        "Skip copying legal documents to and compressing packaged directories",
-    ) orelse false;
-
-    const clean_cache = builtin.os.tag != .windows and b.option(
-        bool,
-        "clean-cache",
-        "Clean the build cache with the clean step",
-    ) orelse false;
-
-    return .{
-        .compile_only = compile_only,
-        .clean_cache = clean_cache,
-    };
-}
 
 const ExecutableBehavior = union(enum) {
     runnable: struct {
@@ -702,7 +678,6 @@ fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CDBGenerator,
     cli: *std.Build.Step.Compile,
     cppcheck: *std.Build.Step.Compile,
-    clean_cache: bool,
 }) !void {
     const tooling_sources = try collectToolingFiles(b);
 
@@ -727,14 +702,6 @@ fn addTooling(b: *std.Build, config: struct {
     const cloc: *LOCCounter = .init(b);
     const cloc_step = b.step("cloc", "Count lines of code across the project");
     cloc_step.dependOn(&cloc.step);
-
-    const clean_step = b.step("clean", "Remove all emitted artifacts");
-    const remove_install = b.addRemoveDirTree(b.path(getPrefixRelativePath(b, &.{})));
-    clean_step.dependOn(&remove_install.step);
-    if (config.clean_cache) {
-        const remove_cache = b.addRemoveDirTree(b.path(getCacheRelativePath(b, &.{})));
-        clean_step.dependOn(&remove_cache.step);
-    }
 }
 
 fn addFmtStep(b: *std.Build, config: struct {
@@ -942,18 +909,6 @@ const LOCCounter = struct {
     }
 };
 
-fn compileCompressor(b: *std.Build) *std.Build.Step.Compile {
-    const libarchive_dep = libarchive.build(b);
-    return createExecutable(b, .{
-        .name = "compressor",
-        .zig_main = b.path(ProjectPaths.compressor ++ "main.zig"),
-        .target = b.graph.host,
-        .optimize = .ReleaseFast,
-        .link_libraries = &.{libarchive_dep.artifact},
-        .behavior = .standalone,
-    });
-}
-
 const target_queries = [_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .macos },
     .{ .cpu_arch = .aarch64, .os_tag = .macos },
@@ -986,34 +941,41 @@ const target_queries = [_]std.Target.Query{
 
 fn addPackageStep(b: *std.Build, config: struct {
     llvm: *LLVMBuilder,
-    compile_only: bool,
     cxx_flags: []const []const u8,
 }) !void {
-    const package_step = b.step("package", "Build the artifacts for packaging");
-    const compressor = compileCompressor(b);
+    const libarchive_dep = libarchive.build(b);
+    const compressor = createExecutable(b, .{
+        .name = "compressor",
+        .zig_main = b.path(ProjectPaths.compressor ++ "main.zig"),
+        .target = b.graph.host,
+        .optimize = .ReleaseFast,
+        .link_libraries = &.{libarchive_dep.artifact},
+        .behavior = .standalone,
+    });
+
+    // Always clean up the compressed dir before packaging
+    const package_parent_dirname = "package";
+    const cleaner = b.addRemoveDirTree(.{
+        .cwd_relative = b.pathJoin(&.{ b.install_prefix, package_parent_dirname }),
+    });
+    compressor.step.dependOn(&cleaner.step);
+
+    const package_step = b.step("package", "Package artifacts for a new release");
     package_step.dependOn(&compressor.step);
+    const version = zon.version;
+    const compressed_package_dir = b.pathJoin(&.{ package_parent_dirname, "compressed" });
 
-    const uncompressed_package_dir: []const []const u8 = &.{ "package", "uncompressed" };
-    const compressed_package_dir: []const []const u8 = &.{ "package", "compressed" };
-
-    var zon_buf: [5 * 1024]u8 = undefined;
-    const raw_zon_contents = try b.build_root.handle.readFile("build.zig.zon", &zon_buf);
-    zon_buf[raw_zon_contents.len] = 0;
-    const zon_contents = zon_buf[0..raw_zon_contents.len :0];
-
-    const parsed = try std.zon.parse.fromSlice(
-        struct { version: []const u8 },
-        b.allocator,
-        zon_contents,
-        null,
-        .{ .ignore_unknown_fields = true },
-    );
-    const version = parsed.version;
+    const ArchiveBehavior = struct {
+        compressor_arg: enum { zip, zst },
+        file_extension: []const u8,
+        artifact_dirname: []const u8,
+        skip: bool = false,
+    };
 
     for (target_queries) |query| {
-        const resolved_target = b.resolveTargetQuery(query);
+        const target = b.resolveTargetQuery(query);
         const artifacts = try addArtifacts(b, .{
-            .target = resolved_target,
+            .target = target,
             .optimize = .ReleaseFast,
             .llvm = config.llvm.clone(),
             .cxx_flags = config.cxx_flags,
@@ -1022,80 +984,78 @@ fn addPackageStep(b: *std.Build, config: struct {
             .auto_install = false,
             .packaging = true,
         });
-
         std.debug.assert(artifacts.tests == null);
+        std.debug.assert(artifacts.cppcheck == null);
 
-        try configurePackArtifacts(b, .{
-            .artifacts = &.{ artifacts.libcompiler, artifacts.libcli, artifacts.cli },
-            .target = resolved_target,
-            .version = version,
-        });
+        artifacts.cli.out_filename = blk: {
+            const name = artifacts.cli.name;
+            break :blk if (target.result.os.tag == .windows)
+                b.fmt("{s}-{s}.exe", .{ name, version })
+            else
+                b.fmt("{s}-{s}", .{ name, version });
+        };
 
         const package_artifact_dirname = b.fmt("conch-{s}-{s}", .{
             try query.zigTriple(b.allocator),
             version,
         });
 
-        const package_artifact_dir_path = b.pathJoin(uncompressed_package_dir ++ .{package_artifact_dirname});
-        const platform = b.addInstallArtifact(
-            artifacts.cli,
-            .{
-                .dest_dir = .{
-                    .override = .{ .custom = package_artifact_dir_path },
-                },
+        const package_artifact_dir_path = b.pathJoin(&.{
+            package_parent_dirname,
+            "uncompressed",
+            package_artifact_dirname,
+        });
+
+        const platform = b.addInstallArtifact(artifacts.cli, .{
+            .dest_dir = .{
+                .override = .{ .custom = package_artifact_dir_path },
             },
-        );
+        });
         package_step.dependOn(&platform.step);
 
-        if (!config.compile_only) {
-            const prefix: std.Build.LazyPath = .{ .cwd_relative = b.install_prefix };
-            const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
-                .{ b.path("LICENSE"), "LICENSE" },
-                .{ b.path("README.md"), "README.md" },
-                .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
-            };
+        const prefix: std.Build.LazyPath = .{ .cwd_relative = b.install_prefix };
+        const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
+            .{ b.path("LICENSE"), "LICENSE" },
+            .{ b.path("README.md"), "README.md" },
+            .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
+        };
 
-            var file_installs: [legal_paths.len]*std.Build.Step = undefined;
-            for (legal_paths, 0..) |path, i| {
-                const install_file_step = b.addInstallFileWithDir(
-                    path.@"0",
-                    .{ .custom = package_artifact_dir_path },
-                    path.@"1",
-                );
-                package_step.dependOn(&install_file_step.step);
-                file_installs[i] = &install_file_step.step;
-            }
+        var file_installs: [legal_paths.len]*std.Build.Step = undefined;
+        for (legal_paths, 0..) |path, i| {
+            const install_file_step = b.addInstallFileWithDir(
+                path.@"0",
+                .{ .custom = package_artifact_dir_path },
+                path.@"1",
+            );
+            package_step.dependOn(&install_file_step.step);
+            file_installs[i] = &install_file_step.step;
+        }
 
-            // Zip is only needed on windows
-            if (query.os_tag.? == .windows) {
-                const zip_filename = b.fmt("{s}.zip", .{package_artifact_dirname});
+        // Zip is only needed on windows
+        const archives = [_]ArchiveBehavior{
+            .{
+                .compressor_arg = .zip,
+                .file_extension = "zip",
+                .artifact_dirname = package_artifact_dirname,
+                .skip = target.result.os.tag != .windows,
+            },
+            .{
+                .compressor_arg = .zst,
+                .file_extension = "tar.zst",
+                .artifact_dirname = package_artifact_dirname,
+            },
+        };
 
-                const packer = b.addRunArtifact(compressor);
-                packer.addArg("zip");
-                const output_zip = packer.addOutputFileArg(zip_filename);
-                packer.addArg(package_artifact_dir_path);
-                packer.setCwd(prefix);
-
-                packer.step.dependOn(&platform.step);
-                package_step.dependOn(&packer.step);
-                for (file_installs) |step| {
-                    packer.step.dependOn(step);
-                }
-
-                const copy_zip = b.addInstallFileWithDir(
-                    output_zip,
-                    .{ .custom = b.pathJoin(compressed_package_dir) },
-                    zip_filename,
-                );
-                package_step.dependOn(&copy_zip.step);
-            }
-
-            // All platforms get a zstd archive because I'm nice
-            const tar_filename = b.fmt("{s}.tar.zst", .{package_artifact_dirname});
+        for (archives) |archive| {
+            if (archive.skip) continue;
+            const out_name = b.fmt("{s}.{s}", .{
+                archive.artifact_dirname,
+                archive.file_extension,
+            });
 
             const packer = b.addRunArtifact(compressor);
-            packer.addArg("zst");
-            const output_tar = packer.addOutputFileArg(tar_filename);
+            packer.addArg(@tagName(archive.compressor_arg));
+            const out_path = packer.addOutputFileArg(out_name);
             packer.addArg(package_artifact_dir_path);
             packer.setCwd(prefix);
 
@@ -1105,36 +1065,13 @@ fn addPackageStep(b: *std.Build, config: struct {
                 packer.step.dependOn(step);
             }
 
-            const copy_tar = b.addInstallFileWithDir(
-                output_tar,
-                .{ .custom = b.pathJoin(compressed_package_dir) },
-                tar_filename,
+            const copy = b.addInstallFileWithDir(
+                out_path,
+                .{ .custom = compressed_package_dir },
+                out_name,
             );
-            package_step.dependOn(&copy_tar.step);
+            package_step.dependOn(&copy.step);
         }
-    }
-}
-
-fn configurePackArtifacts(b: *std.Build, config: struct {
-    artifacts: []const *std.Build.Step.Compile,
-    target: std.Build.ResolvedTarget,
-    version: []const u8,
-}) !void {
-    for (config.artifacts) |artifact| {
-        artifact.root_module.strip = true;
-        artifact.out_filename = blk: {
-            if (config.target.result.os.tag == .windows) {
-                break :blk b.fmt(
-                    "{s}-{s}.exe",
-                    .{ artifact.name, config.version },
-                );
-            } else {
-                break :blk b.fmt(
-                    "{s}-{s}",
-                    .{ artifact.name, config.version },
-                );
-            }
-        };
     }
 }
 
