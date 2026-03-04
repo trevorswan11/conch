@@ -1,0 +1,26 @@
+//! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/clang/utils/TableGen/CMakeLists.txt
+pub const root = "clang/utils/TableGen";
+pub const sources = [_][]const u8{
+    "ASTTableGen.cpp",
+    "ClangASTNodesEmitter.cpp",
+    "ClangASTPropertiesEmitter.cpp",
+    "ClangAttrEmitter.cpp",
+    "ClangBuiltinsEmitter.cpp",
+    "ClangBuiltinTemplatesEmitter.cpp",
+    "ClangCommentCommandInfoEmitter.cpp",
+    "ClangCommentHTMLNamedCharacterReferenceEmitter.cpp",
+    "ClangCommentHTMLTagsEmitter.cpp",
+    "ClangDataCollectorsEmitter.cpp",
+    "ClangDiagnosticsEmitter.cpp",
+    "ClangOpcodesEmitter.cpp",
+    "ClangOpenCLBuiltinEmitter.cpp",
+    "ClangOptionDocEmitter.cpp",
+    "ClangSACheckersEmitter.cpp",
+    "ClangSyntaxEmitter.cpp",
+    "ClangTypeNodesEmitter.cpp",
+    "MveEmitter.cpp",
+    "NeonEmitter.cpp",
+    "RISCVVEmitter.cpp",
+    "SveEmitter.cpp",
+    "TableGen.cpp",
+};

@@ -1,7 +1,8 @@
-#include <format>
 #include <string>
 
-#include <catch_amalgamated.hpp>
+#include <fmt/format.h>
+
+#include <catch2/catch_test_macros.hpp>
 
 #include "lexer/token.hpp"
 
@@ -93,7 +94,7 @@ TEST_CASE("Token formatting") {
     const Token tok{TokenType::STRING, R"("Hello, World!")", 1, 24};
 
     const auto expected{R"(STRING("Hello, World!") [1, 24])"};
-    const auto actual = std::format("{}", tok);
+    const auto actual = fmt::format("{}", tok);
     REQUIRE(expected == actual);
 }
 

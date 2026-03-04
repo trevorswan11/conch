@@ -10,8 +10,8 @@ class ImplicitAccessExpression : public PrefixExpression<ImplicitAccessExpressio
     static constexpr auto KIND = NodeKind::IMPLICIT_ACCESS_EXPRESSION;
 
   public:
-    using PrefixExpression::PrefixExpression;
     using PrefixExpression::parse;
+    using PrefixExpression::PrefixExpression;
 };
 
 } // namespace conch::ast

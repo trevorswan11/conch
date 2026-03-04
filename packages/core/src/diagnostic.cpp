@@ -1,5 +1,7 @@
 #include <sstream>
 
+#include <fmt/format.h>
+
 #include "diagnostic.hpp"
 
 namespace conch::detail {
@@ -11,7 +13,7 @@ auto format_diagnostic(const std::optional<std::string>&    message,
     if (message) { ss << *message << " ("; }
     ss << error_name;
     if (message) { ss << ")"; }
-    if (location) { ss << std::format(" [{}, {}]", location->line, location->column); }
+    if (location) { ss << fmt::format(" [{}, {}]", location->line, location->column); }
     return ss.str();
 }
 

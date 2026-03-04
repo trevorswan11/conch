@@ -1,0 +1,25 @@
+//! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/clang/lib/Format/CMakeLists.txt
+pub const root = "clang/lib/Format";
+pub const sources = [_][]const u8{
+    "AffectedRangeManager.cpp",
+    "BreakableToken.cpp",
+    "ContinuationIndenter.cpp",
+    "DefinitionBlockSeparator.cpp",
+    "Format.cpp",
+    "FormatToken.cpp",
+    "FormatTokenLexer.cpp",
+    "IntegerLiteralSeparatorFixer.cpp",
+    "MacroCallReconstructor.cpp",
+    "MacroExpander.cpp",
+    "MatchFilePath.cpp",
+    "NamespaceEndCommentsFixer.cpp",
+    "ObjCPropertyAttributeOrderFixer.cpp",
+    "QualifierAlignmentFixer.cpp",
+    "SortJavaScriptImports.cpp",
+    "TokenAnalyzer.cpp",
+    "TokenAnnotator.cpp",
+    "UnwrappedLineFormatter.cpp",
+    "UnwrappedLineParser.cpp",
+    "UsingDeclarationsSorter.cpp",
+    "WhitespaceManager.cpp",
+};

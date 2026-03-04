@@ -10,8 +10,8 @@ class UnaryExpression : public PrefixExpression<UnaryExpression> {
     static constexpr auto KIND = NodeKind::POINTER_EXPRESSION;
 
   public:
-    using PrefixExpression::PrefixExpression;
     using PrefixExpression::parse;
+    using PrefixExpression::PrefixExpression;
 };
 
 } // namespace conch::ast

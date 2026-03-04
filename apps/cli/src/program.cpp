@@ -1,6 +1,7 @@
 #include <iostream>
-#include <print>
 #include <string>
+
+#include <fmt/format.h>
 
 #include "program.hpp"
 
@@ -13,10 +14,10 @@ namespace conch::cli {
 auto Program::repl() -> void {
     Lexer lexer;
 
-    std::println("Welcome to Conch REPL! Type 'exit' to quit.");
+    fmt::println("Welcome to Conch REPL! Type 'exit' to quit.");
     std::string line;
     while (true) {
-        std::print(">>> ");
+        fmt::print(">>> ");
         line.clear();
 
         if (!std::getline(std::cin, line)) { break; }
@@ -24,7 +25,7 @@ auto Program::repl() -> void {
         if (trimmed == "exit") { break; }
 
         lexer.reset(trimmed);
-        for (const auto& token : lexer) { std::println("{}", token); }
+        for (const auto& token : lexer) { fmt::println("{}", token); }
     }
 }
 

@@ -1,10 +1,11 @@
 #pragma once
 
-#include <print>
 #include <span>
 #include <string_view>
 
-#include <catch_amalgamated.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include "string.hpp"
 
@@ -26,7 +27,7 @@ auto into_expression_statement(const N& node) -> const ast::ExpressionStatement&
 template <typename E>
 auto check_errors(std::span<const E> actual, std::span<const E> expected = {}) {
     if (expected.empty()) {
-        if (!actual.empty()) { std::println("{}", actual); }
+        if (!actual.empty()) { fmt::println("{}", actual); }
         REQUIRE(actual.empty());
         return;
     }

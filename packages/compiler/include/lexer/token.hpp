@@ -1,10 +1,10 @@
 #pragma once
 
-#include <format>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 
 #include "diagnostic.hpp"
@@ -309,13 +309,11 @@ template <> struct SourceInfo<Token> {
 
 } // namespace conch
 
-template <> struct std::formatter<conch::Token> : std::formatter<std::string> {
-    static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
+template <> struct fmt::formatter<conch::Token> {
+    static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> auto format(const conch::Token& t, F& ctx) const {
-        return std::formatter<std::string>::format(
-            std::format(
-                "{}({}) [{}, {}]", magic_enum::enum_name(t.type), t.slice, t.line, t.column),
-            ctx);
+    template <typename F> static auto format(const conch::Token& t, F& ctx) {
+        return fmt::format_to(
+            ctx.out(), "{}({}) [{}, {}]", magic_enum::enum_name(t.type), t.slice, t.line, t.column);
     }
 };

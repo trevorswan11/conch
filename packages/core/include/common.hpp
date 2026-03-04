@@ -3,8 +3,9 @@
 #include <cassert>
 #include <cstdio>
 #include <optional>
-#include <print>
 #include <string_view>
+
+#include <fmt/format.h>
 
 namespace conch {
 
@@ -17,7 +18,7 @@ namespace detail {
 
 template <typename... Args>
 auto todo_impl(std::optional<std::string_view> message) noexcept -> void {
-    if (message) { std::println(stderr, "TODO: {}", *message); }
+    if (message) { fmt::println(stderr, "TODO: {}", *message); }
     assert(false);
 }
 

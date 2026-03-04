@@ -16,6 +16,10 @@
             .url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.9.7.tar.gz",
             .hash = "N-V-__8AAG0CEAClLikJpJ7Cg3LFZxHR_xfy6ddADO6AKqq2",
         },
+        .fmt = .{
+            .url = "https://github.com/fmtlib/fmt/archive/refs/tags/12.1.0.tar.gz",
+            .hash = "N-V-__8AAPE8LgDK9Qn7tjvCIu78z8Y8e6SW8WIUCAQIszuf",
+        },
         .llvm = .{
             .url = "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-21.1.8.tar.gz",
             .hash = "N-V-__8AABpqQW-SXByMsTbdc-Sm0xuxtXzfQBvflhYdUshy",
@@ -31,6 +35,10 @@
         .zstd = .{
             .url = "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz",
             .hash = "N-V-__8AAPZ7fwBg4JoCzM_0o2A8wxH2hsUUeiU1iuZv53L5",
+        },
+        .libarchive = .{
+            .url = "https://github.com/libarchive/libarchive/archive/refs/tags/v3.8.5.tar.gz",
+            .hash = "N-V-__8AABtbCwHDmVvgXlm5f-07LtFZjUQNvvJrBnG-HeqN",
         },
     },
     .paths = .{

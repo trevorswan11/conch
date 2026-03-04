@@ -1,6 +1,6 @@
 #include <new>
 
-#include <catch_amalgamated.hpp>
+#include <catch2/catch_session.hpp>
 
 extern "C" {
 auto launch(int argc, char** proc) -> int { return Catch::Session().run(argc, proc); }

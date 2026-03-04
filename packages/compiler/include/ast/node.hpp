@@ -2,10 +2,9 @@
 
 #include <cassert>
 #include <concepts>
-#include <format>
-#include <string>
 #include <utility>
 
+#include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 
 #include "lexer/token.hpp"
@@ -154,11 +153,11 @@ template <typename Derived> class StmtBase : public NodeBase<Derived, Statement>
 
 } // namespace conch::ast
 
-template <conch::ast::NodeSubtype N> struct std::formatter<N> : std::formatter<std::string> {
-    static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
+template <conch::ast::NodeSubtype N> struct fmt::formatter<N> {
+    static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> auto format(const N& n, F& ctx) const {
-        return std::formatter<std::string>::format(
-            std::format("{}: {}", magic_enum::enum_name(n.get_kind()), n.get_token()), ctx);
+    template <typename F> static auto format(const N& n, F& ctx) {
+        return fmt::format_to(
+            ctx.out(), "{}: {}", magic_enum::enum_name(n.get_kind()), n.get_token());
     }
 };

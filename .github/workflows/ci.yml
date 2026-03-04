@@ -42,7 +42,7 @@ jobs:
                 path: |
                   ${{ env.ZIG_LOCAL_CACHE_DIR }}
                   ${{ env.ZIG_GLOBAL_CACHE_DIR }}
-                key: ${{ runner.os }}-zig-${{ hashFiles('build.zig.zon', 'packages/llvm/**.zig') }}
+                key: ${{ runner.os }}-zig-${{ hashFiles('packages/llvm/**.zig') }}
                 restore-keys: |
                   ${{ runner.os }}-zig-
 

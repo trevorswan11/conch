@@ -1,8 +1,8 @@
 #include <algorithm>
-#include <format>
 #include <ranges>
 #include <utility>
 
+#include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 
 #include "array.hpp"
@@ -117,7 +117,7 @@ auto Parser::parse_expression(Precedence precedence)
 
     const auto& prefix = poll_prefix_fn(current_token_.type);
     if (!prefix) {
-        return make_parser_unexpected(std::format("No prefix parse function for {}({}) found",
+        return make_parser_unexpected(fmt::format("No prefix parse function for {}({}) found",
                                                   magic_enum::enum_name(current_token_.type),
                                                   current_token_.slice),
                                       ParserError::MISSING_PREFIX_PARSER,
@@ -305,7 +305,7 @@ constexpr auto Parser::poll_infix_fn(TokenType tt) noexcept -> Optional<const In
 }
 
 auto Parser::tt_mismatch_error(TokenType expected, const Token& actual) -> ParserDiagnostic {
-    return ParserDiagnostic{std::format("Expected token {}, found {}",
+    return ParserDiagnostic{fmt::format("Expected token {}, found {}",
                                         magic_enum::enum_name(expected),
                                         magic_enum::enum_name(actual.type)),
                             ParserError::UNEXPECTED_TOKEN,

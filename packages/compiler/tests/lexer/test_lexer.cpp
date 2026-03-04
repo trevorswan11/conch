@@ -2,7 +2,7 @@
 #include <string_view>
 #include <utility>
 
-#include <catch_amalgamated.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "lexer/keywords.hpp"
 #include "lexer/lexer.hpp"

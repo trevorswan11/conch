@@ -1,11 +1,12 @@
 #pragma once
 
-#include <format>
 #include <optional>
 #include <type_traits>
 #include <utility>
 
 #include <magic_enum/magic_enum.hpp>
+
+#include <fmt/format.h>
 
 #include "source_loc.hpp"
 #include "types.hpp"
@@ -58,15 +59,15 @@ class Diagnostic {
     E                             error_;
     std::optional<SourceLocation> loc_{};
 
-    friend struct std::formatter<Diagnostic>;
+    friend struct fmt::formatter<Diagnostic>;
 };
 
 } // namespace conch
 
-template <typename E> struct std::formatter<conch::Diagnostic<E>> : std::formatter<std::string> {
-    static constexpr auto parse(std::format_parse_context& ctx) noexcept { return ctx.begin(); }
+template <typename E> struct fmt::formatter<conch::Diagnostic<E>> {
+    static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> auto format(const conch::Diagnostic<E>& d, F& ctx) const {
-        return std::formatter<std::string>::format(d.to_string(), ctx);
+    template <typename F> static auto format(const conch::Diagnostic<E>& d, F& ctx) {
+        return fmt::format_to(ctx.out(), "{}", d.to_string());
     }
 };
