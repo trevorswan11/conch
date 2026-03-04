@@ -1,4 +1,7 @@
 //! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/Target
+const LLVMBuilder = @import("../../LLVMBuilder.zig");
+const SynthesizeHeaderConfig = LLVMBuilder.SynthesizeHeaderConfig;
+
 pub const root = "llvm/lib/Target/";
 pub const base_sources = [_][]const u8{
     "RegisterTargetPassConfigCallback.cpp",
@@ -23,6 +26,59 @@ pub const parser_sources = [_][]const u8{
     "TargetParser.cpp",
     "Triple.cpp",
     "X86TargetParser.cpp",
+};
+
+const SythesizeWithInclude = struct {
+    config: SynthesizeHeaderConfig,
+    include_path: []const u8,
+};
+
+pub const parser_synthesize_pairs = [_]SythesizeWithInclude{
+    .{
+        .config = .{
+            .gen_conf = .{
+                .name = "AArch64TargetParserDef",
+                .td_file = "llvm/lib/Target/AArch64/AArch64.td",
+                .instruction = .{ .action = "-gen-arm-target-def" },
+            },
+            .virtual_path = "llvm/TargetParser/AArch64TargetParserDef.inc",
+        },
+        .include_path = "llvm/lib/Target/AArch64",
+    },
+    .{
+        .config = .{
+            .gen_conf = .{
+                .name = "ARMTargetParserDef",
+                .td_file = "llvm/lib/Target/ARM/ARM.td",
+                .instruction = .{ .action = "-gen-arm-target-def" },
+            },
+            .virtual_path = "llvm/TargetParser/ARMTargetParserDef.inc",
+        },
+        .include_path = "llvm/lib/Target/ARM",
+    },
+    .{
+        .config = .{
+            .gen_conf = .{
+                .name = "RISCVTargetParserDef",
+                .td_file = "llvm/lib/Target/RISCV/RISCV.td",
+                .instruction = .{ .action = "-gen-riscv-target-def" },
+            },
+            .virtual_path = "llvm/TargetParser/RISCVTargetParserDef.inc",
+        },
+        .include_path = "llvm/lib/Target/RISCV",
+    },
+
+    .{
+        .config = .{
+            .gen_conf = .{
+                .name = "PPCGenTargetFeatures",
+                .td_file = "llvm/lib/Target/PowerPC/PPC.td",
+                .instruction = .{ .action = "-gen-target-features" },
+            },
+            .virtual_path = "llvm/TargetParser/PPCGenTargetFeatures.inc",
+        },
+        .include_path = "llvm/lib/Target/PowerPC",
+    },
 };
 
 const BackendAction = struct {

@@ -1,4 +1,7 @@
 //! https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8/clang/lib/Tooling
+const LLVMBuilder = @import("../../LLVMBuilder.zig");
+const SynthesizeHeaderConfig = LLVMBuilder.SynthesizeHeaderConfig;
+
 pub const root = "clang/lib/Tooling/";
 pub const sources = [_][]const u8{
     "AllTUsExecution.cpp",
@@ -85,4 +88,25 @@ pub const transformer_sources = [_][]const u8{
     "SourceCodeBuilders.cpp",
     "Stencil.cpp",
     "Transformer.cpp",
+};
+
+const nodes_td = "clang/include/clang/Tooling/Syntax/Nodes.td";
+
+pub const synthesize_node_configs = [_]SynthesizeHeaderConfig{
+    .{
+        .gen_conf = .{
+            .name = "ClangSyntaxNodeList",
+            .td_file = nodes_td,
+            .instruction = .{ .action = "-gen-clang-syntax-node-list" },
+        },
+        .virtual_path = "clang/Tooling/Syntax/Nodes.inc",
+    },
+    .{
+        .gen_conf = .{
+            .name = "ClangSyntaxNodeClasses",
+            .td_file = nodes_td,
+            .instruction = .{ .action = "-gen-clang-syntax-node-classes" },
+        },
+        .virtual_path = "clang/Tooling/Syntax/NodeClasses.inc",
+    },
 };

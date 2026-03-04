@@ -1,4 +1,7 @@
 //! https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/llvm/lib/IR/CMakeLists.txt
+const LLVMBuilder = @import("../../LLVMBuilder.zig");
+const SynthesizeHeaderConfig = LLVMBuilder.SynthesizeHeaderConfig;
+
 pub const root = "llvm/lib/IR";
 pub const sources = [_][]const u8{
     "AbstractCallSite.cpp",
@@ -80,6 +83,42 @@ pub const sources = [_][]const u8{
     "Verifier.cpp",
     "VFABIDemangler.cpp",
     "RuntimeLibcalls.cpp",
+};
+
+const include_root = "llvm/include/llvm/IR/";
+pub const synthesize_configs = [_]SynthesizeHeaderConfig{
+    .{
+        .gen_conf = .{
+            .name = "Attributes",
+            .td_file = include_root ++ "Attributes.td",
+            .instruction = .{ .action = "-gen-attrs" },
+        },
+        .virtual_path = "llvm/IR/Attributes.inc",
+    },
+    .{
+        .gen_conf = .{
+            .name = "IntrinsicEnums",
+            .td_file = include_root ++ "Intrinsics.td",
+            .instruction = .{ .action = "-gen-intrinsic-enums" },
+        },
+        .virtual_path = "llvm/IR/IntrinsicEnums.inc",
+    },
+    .{
+        .gen_conf = .{
+            .name = "RuntimeLibcalls",
+            .td_file = include_root ++ "RuntimeLibcalls.td",
+            .instruction = .{ .action = "-gen-runtime-libcalls" },
+        },
+        .virtual_path = "llvm/IR/RuntimeLibcalls.inc",
+    },
+    .{
+        .gen_conf = .{
+            .name = "IntrinsicImpl",
+            .td_file = include_root ++ "Intrinsics.td",
+            .instruction = .{ .action = "-gen-intrinsic-impl" },
+        },
+        .virtual_path = "llvm/IR/IntrinsicImpl.inc",
+    },
 };
 
 const Intrinsic = struct {
