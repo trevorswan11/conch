@@ -22,7 +22,7 @@ pub const sources = [_][]const u8{
     "ModuleManager.cpp",
     "PCHContainerOperations.cpp",
     "ObjectFilePCHContainerReader.cpp",
-    "TemplateArgumentHasher.cpp  ",
+    "TemplateArgumentHasher.cpp",
 };
 
 pub const attr_td = basic.attr_td;
