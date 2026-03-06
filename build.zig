@@ -19,7 +19,6 @@ pub fn build(b: *std.Build) !void {
 
     const llvm: *LLVMBuilder = .init(b);
     const clang: *ClangBuilder = .init(llvm);
-    const lld: *LLDBuilder = .init(llvm);
     const cdb_gen: *CDBGenerator = .init(b);
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
@@ -66,13 +65,6 @@ pub fn build(b: *std.Build) !void {
         .cli = artifacts.cli,
         .cppcheck = artifacts.cppcheck.?,
     });
-
-    // TODO: Remove
-    lld.build();
-    // const install_step = b.getInstallStep();
-    // for (lld.allArtifacts()) |art| {
-    //     install_step.dependOn(&art.step);
-    // }
 
     try addPackageStep(b, .{
         .llvm = llvm,

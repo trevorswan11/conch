@@ -30,5 +30,5 @@ pub const synthesize_options: SynthesizeHeaderConfig = .{
         .td_file = root ++ "Options.td",
         .instruction = .{ .action = "-gen-opt-parser-defs" },
     },
-    .virtual_path = root ++ "Options.inc",
+    .virtual_path = "Options.inc",
 };

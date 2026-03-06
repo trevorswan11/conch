@@ -159,6 +159,24 @@ const LLVMTargetArtifacts = struct {
         xtensa: Artifact = undefined,
         powerpc: Artifact = undefined,
         loong_arch: Artifact = undefined,
+
+        /// Returns artifacts associated with the enabled targets, including the core.
+        pub fn targetsToBuild(self: *const TargetBackends) std.ArrayList(Artifact) {
+            const b = self.core_lib.step.owner;
+            var targets: std.ArrayList(Artifact) = .empty;
+            targets.appendSlice(b.allocator, &.{
+                self.core_lib,
+                self.x86,
+                self.aarch64,
+                self.arm,
+                self.riscv,
+                self.wasm,
+                self.xtensa,
+                self.powerpc,
+                self.loong_arch,
+            }) catch @panic("OOM");
+            return targets;
+        }
     };
 
     const DwarfLinker = struct {
