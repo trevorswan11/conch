@@ -803,21 +803,26 @@ fn buildSerialization(self: *const Self) ArtifactWithGen {
     }
 
     // https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/clang/lib/Serialization/CMakeLists.txt
+    const root = self.metadata.root.path(b, serialization.root);
     const lib = self.createClangLibrary(.{
         .name = "clangSerialization",
         .cxx_source_files = .{
-            .root = self.metadata.root.path(b, sema.root),
-            .files = &sema.sources,
+            .root = root,
+            .files = &serialization.sources,
         },
         .additional_include_paths = &.{
-            self.metadata.root.path(b, serialization.root),
+            root,
+            registry.getDirectory(),
             self.llvm.target_artifacts.frontend.gen.getDirectory(),
             self.clang_artifacts.sema.gen.getDirectory(),
             self.clang_artifacts.basic.gen.getDirectory(),
             self.clang_artifacts.driver.gen.getDirectory(),
             self.clang_artifacts.ast.gen.getDirectory(),
         },
-        .config_headers = &.{self.config_h},
+        .config_headers = &.{
+            self.config_h,
+            self.clang_artifacts.basic.version_inc,
+        },
         .link_libraries = &.{
             self.llvm.target_artifacts.bitcode.reader,
             self.llvm.target_artifacts.bitstream_reader,
@@ -1507,7 +1512,7 @@ fn buildFormatTool(self: *const Self) Artifact {
 }
 
 /// Returns all clang-specific artifacts
-pub fn allClangArtifacts(self: *const Self) []Artifact {
+pub fn allArtifacts(self: *const Self) []Artifact {
     var all_artifacts: std.ArrayList(Artifact) = .empty;
     all_artifacts.appendSlice(self.b.allocator, &.{
         self.clang_artifacts.support,
