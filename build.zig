@@ -281,7 +281,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         const test_runner = b.path(ProjectPaths.test_runner ++ "main.zig");
         const catch2_dep = catch2.build(b, .{
             .target = target,
-            .optimize = .Debug,
+            .optimize = config.optimize,
         });
 
         // The runner has standalone tests
