@@ -44,7 +44,8 @@ ExplicitType::~ExplicitType() = default;
 
     // Otherwise the type has to be a 'simple' function or ident
     return TRY(([&]() -> Expected<ExplicitType, ParserDiagnostic> {
-        if (parser.peek_token_is(TokenType::IDENT)) {
+        const auto& peek_token = parser.peek_token();
+        if (peek_token.is_primitive() || peek_token.type == TokenType::IDENT) {
             parser.advance();
             return ExplicitType{
                 modifier,
@@ -72,6 +73,29 @@ ExplicitType::~ExplicitType() = default;
         // No other expressions qualify as types
         return make_parser_unexpected(ParserError::ILLEGAL_EXPLICIT_TYPE, type_start);
     }()));
+}
+
+auto ExplicitType::is_equal(const ExplicitType& other) const noexcept -> bool {
+    const auto& other_type = other.type_;
+    if (type_.index() != other_type.index()) { return false; }
+    return modifier_ == other.modifier_ &&
+           std::visit(Overloaded{
+                          [&other_type](const ExplicitIdentType& v) {
+                              return *v == *std::get<ExplicitIdentType>(other_type);
+                          },
+                          [&other_type](const ExplicitFunctionType& v) {
+                              return *v == *std::get<ExplicitFunctionType>(other_type);
+                          },
+                          [&other_type](const ExplicitArrayType& v1) {
+                              const auto& v2 = std::get<ExplicitArrayType>(other_type);
+                              return *v1.dimension_ == *v2.dimension_ &&
+                                     *v1.inner_type_ == *v2.inner_type_;
+                          },
+                          [&other_type](const Box<ExplicitType>& v1) {
+                              return *v1 == *std::get<ExplicitRecursiveType>(other_type);
+                          },
+                      },
+                      type_);
 }
 
 TypeExpression::TypeExpression(const Token& start_token, Optional<ExplicitType> exp) noexcept
@@ -113,29 +137,7 @@ auto TypeExpression::parse(Parser& parser)
 
 auto TypeExpression::is_equal(const Node& other) const noexcept -> bool {
     const auto& casted = as<TypeExpression>(other);
-    return optional::safe_eq<ExplicitType>(
-        explicit_, casted.explicit_, [](const auto& a, const auto& b) {
-            if (a.type_.index() != b.type_.index()) { return false; }
-
-            const auto& btype = b.type_;
-            const auto  variant_eq =
-                std::visit(Overloaded{
-                               [&btype](const ExplicitIdentType& v) {
-                                   return *v == *std::get<ExplicitIdentType>(btype);
-                               },
-                               [&btype](const ExplicitFunctionType& v) {
-                                   return *v == *std::get<ExplicitFunctionType>(btype);
-                               },
-                               [&btype](const ExplicitArrayType& v1) {
-                                   const auto& v2 = std::get<ExplicitArrayType>(btype);
-                                   return *v1.dimension_ == *v2.dimension_ &&
-                                          *v1.inner_type_ == *v2.inner_type_;
-                               },
-                           },
-                           a.type_);
-
-            return variant_eq && a.primitive_ == b.primitive_;
-        });
+    return optional::safe_eq<ExplicitType>(explicit_, casted.explicit_);
 }
 
 } // namespace conch::ast

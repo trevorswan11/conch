@@ -48,7 +48,6 @@ TEST_CASE("Explicit primitive declaration") {
                                    {},
                                    ast::ExplicitTypeVariant{
                                        make_box<ast::IdentifierExpression>(Token{keywords::INT})},
-                                   true,
                                }),
                            make_box<ast::SignedIntegerExpression>(Token{TokenType::INT_10, "2"}, 2),
                            ast::DeclModifiers::VARIABLE,
@@ -66,7 +65,6 @@ TEST_CASE("Explicit non-primitive declaration") {
                                    {},
                                    ast::ExplicitTypeVariant{make_box<ast::IdentifierExpression>(
                                        Token{TokenType::IDENT, "Foo"})},
-                                   false,
                                }),
                            make_box<ast::IdentifierExpression>(Token{TokenType::IDENT, "bar"}),
                            ast::DeclModifiers::VARIABLE,
@@ -115,7 +113,6 @@ TEST_CASE("Correct declaration modifiers") {
                             {},
                             ast::ExplicitTypeVariant{
                                 make_box<ast::IdentifierExpression>(Token{keywords::INT})},
-                            true,
                         }),
                     nullopt,
                     flags,

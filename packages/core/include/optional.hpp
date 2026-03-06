@@ -49,6 +49,13 @@ auto safe_eq(const Optional<T>& a, const Optional<T>& b, bool (*cmp)(const T&, c
     return cmp(*a, *b);
 }
 
+// Compares two values, delegating equality to the default equality operator.
+template <typename T> auto safe_eq(const Optional<T>& a, const Optional<T>& b) noexcept -> bool {
+    if (a.has_value() != b.has_value()) { return false; }
+    if (!a.has_value()) { return true; }
+    return *a == *b;
+}
+
 // Compares two unique pointers by assuming that both are valid.
 template <typename T>
 auto unsafe_eq(const Optional<std::unique_ptr<T>>& a,

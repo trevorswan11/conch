@@ -162,6 +162,7 @@ class TypeModifier {
     };
 
   public:
+    TypeModifier() noexcept = default;
     explicit TypeModifier(Optional<Modifier> underlying) noexcept
         : underlying_{std::move(underlying)} {}
 

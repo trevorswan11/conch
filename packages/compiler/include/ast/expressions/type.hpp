@@ -65,6 +65,13 @@ class ExplicitType {
     VARIANT_UNPACKER(array, ExplicitArrayType, ExplicitArrayType, std::get)
     VARIANT_UNPACKER(recursive, ExplicitRecursiveType, ExplicitRecursiveType, std::get)
 
+    friend auto operator==(const ExplicitType& lhs, const ExplicitType& rhs) noexcept -> bool {
+        return lhs.is_equal(rhs);
+    }
+
+  private:
+    auto is_equal(const ExplicitType& other) const noexcept -> bool;
+
   private:
     TypeModifier        modifier_;
     ExplicitTypeVariant type_;
