@@ -2,6 +2,7 @@
 
 #include <span>
 
+#include "ast/expressions/type_modifiers.hpp"
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
@@ -32,6 +33,28 @@ class FunctionParameter {
     friend class FunctionExpression;
 };
 
+class SelfParameter {
+  public:
+    explicit SelfParameter(Optional<TypeModifier>    modifier,
+                           Box<IdentifierExpression> name) noexcept;
+    ~SelfParameter();
+
+    SelfParameter(const SelfParameter&)                        = delete;
+    auto operator=(const SelfParameter&) -> SelfParameter&     = delete;
+    SelfParameter(SelfParameter&&) noexcept                    = default;
+    auto operator=(SelfParameter&&) noexcept -> SelfParameter& = default;
+
+    [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
+    [[nodiscard]] auto has_modifier() const noexcept -> bool { return modifier_.has_value(); }
+    [[nodiscard]] auto get_modifier() const noexcept -> Optional<TypeModifier> { return modifier_; }
+
+  private:
+    Optional<TypeModifier>    modifier_;
+    Box<IdentifierExpression> name_;
+
+    friend class FunctionExpression;
+};
+
 class FunctionExpression : public ExprBase<FunctionExpression> {
   public:
     static constexpr auto KIND = NodeKind::FUNCTION_EXPRESSION;
@@ -39,6 +62,7 @@ class FunctionExpression : public ExprBase<FunctionExpression> {
   public:
     explicit FunctionExpression(const Token&                   start_token,
                                 bool                           mut,
+                                Optional<SelfParameter>        self,
                                 std::vector<FunctionParameter> parameters,
                                 Box<TypeExpression>            return_type,
                                 Optional<Box<BlockStatement>>  body) noexcept;
@@ -66,6 +90,7 @@ class FunctionExpression : public ExprBase<FunctionExpression> {
 
   private:
     bool                           mutable_;
+    Optional<SelfParameter>        self_;
     std::vector<FunctionParameter> parameters_;
     Box<TypeExpression>            return_type_;
     Optional<Box<BlockStatement>>  body_;

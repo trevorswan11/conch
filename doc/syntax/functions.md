@@ -8,22 +8,16 @@ const foo := fn(a: int, b: uint): ulong {
 };
 ```
 
-- 'Mutable' functions can mutate the state of outer variables and are denoted with `mut`
-- A functions mutability is tied to its type, meaning potential reassignments must match mutability
-```conch
-const bar := mut fn(): ulong {
-    // ...
-};
-```
-
 ## Parameters
 - Parameters obey the same syntax rules as the rest of the type system
 - Without any type modifiers, parameters are passed by value
     - All parameters are implicitly constant values
 - A parameter may be passed by const reference by marking it as `&`
     - To call such a function, the call site must also indicate with the `&` operator
+    - A const pointer is created with the same operator, but the definition denotes this with `*`
 - A parameter may be passed by mutable reference by marking it as `&mut`
     - To call such a function, the call site must also indicate with the `&mut` operator
+    - A mutable pointer is created with the same operator, but the definition denotes this with `*mut`
 - There are no default parameters
 ```conch
 const foo := fn(a: &int): ulong {
