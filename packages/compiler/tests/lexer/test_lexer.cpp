@@ -434,6 +434,25 @@ TEST_CASE("Compiler builtins") {
     }
 }
 
+TEST_CASE("Pointers and references") {
+    Lexer l{"& &mut * *mut nullptr"};
+
+    const auto expecteds = std::to_array<ExpectedLexeme>({
+        {TokenType::AND, "&"},
+        {TokenType::AND_MUT, "&mut"},
+        {TokenType::STAR, "*"},
+        {TokenType::STAR_MUT, "*mut"},
+        {TokenType::NULLPTR, "nullptr"},
+    });
+
+    size_t i = 0;
+    for (const auto& token : l) {
+        REQUIRE(expecteds[i].first == token.type);
+        REQUIRE(expecteds[i].second == token.slice);
+        i += 1;
+    }
+}
+
 TEST_CASE("Illegal builtins") {
     const std::string_view input{"@run"};
     Lexer                  l{input};

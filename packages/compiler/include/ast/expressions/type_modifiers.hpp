@@ -10,11 +10,20 @@
 
 namespace conch::ast {
 
+#define MUTUALLY_EXCLUSIVE_TYPE_QUERY(name, modifier)       \
+    [[nodiscard]] auto is_##name() const noexcept -> bool { \
+        if (is_value()) { return false; }                   \
+        return *underlying_ == modifier;                    \
+    }
+
 class TypeModifier {
   public:
     enum class Modifier : u8 {
         REF,
-        REF_MUT,
+        MUT_REF,
+        PTR,
+        MUT_PTR,
+        VOLATILE,
     };
 
   public:
@@ -30,17 +39,19 @@ class TypeModifier {
     // Whether or not the type is a 'value' type (no modifier), mutually exclusive result.
     [[nodiscard]] auto is_value() const noexcept -> bool { return !underlying_; }
 
-    // Whether or not the type is a const reference, mutually exclusive result.
-    [[nodiscard]] auto is_const_ref() const noexcept -> bool {
-        if (is_value()) { return false; }
-        return *underlying_ == Modifier::REF;
+    MUTUALLY_EXCLUSIVE_TYPE_QUERY(mutable_ref, Modifier::MUT_REF)
+    MUTUALLY_EXCLUSIVE_TYPE_QUERY(const_ref, Modifier::REF)
+    [[nodiscard]] auto is_ref() const noexcept -> bool {
+        return is_mutable_ref() || is_const_ref();
     }
 
-    // Whether or not the type is a mutable reference, mutually exclusive result.
-    [[nodiscard]] auto is_mutable_ref() const noexcept -> bool {
-        if (is_value()) { return false; }
-        return *underlying_ == Modifier::REF_MUT;
+    MUTUALLY_EXCLUSIVE_TYPE_QUERY(mutable_ptr, Modifier::MUT_PTR)
+    MUTUALLY_EXCLUSIVE_TYPE_QUERY(const_ptr, Modifier::PTR)
+    [[nodiscard]] auto is_ptr() const noexcept -> bool {
+        return is_mutable_ptr() || is_const_ptr();
     }
+
+    MUTUALLY_EXCLUSIVE_TYPE_QUERY(voltaile, Modifier::VOLATILE)
 
     friend auto operator==(const TypeModifier& lhs, const TypeModifier& rhs) noexcept -> bool {
         return lhs.underlying_ == rhs.underlying_;
@@ -50,7 +61,10 @@ class TypeModifier {
     using ModifierMapping                 = std::pair<TokenType, Modifier>;
     static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
         {TokenType::AND, Modifier::REF},
-        {TokenType::AND_MUT, Modifier::REF_MUT},
+        {TokenType::AND_MUT, Modifier::MUT_REF},
+        {TokenType::STAR, Modifier::PTR},
+        {TokenType::STAR_MUT, Modifier::MUT_PTR},
+        {TokenType::VOLATILE, Modifier::VOLATILE},
     });
 
   private:

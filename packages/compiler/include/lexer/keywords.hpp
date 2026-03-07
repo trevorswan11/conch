@@ -57,12 +57,15 @@ constexpr Keyword VOLATILE{"volatile", TokenType::VOLATILE};
 constexpr Keyword STATIC{"static", TokenType::STATIC};
 constexpr Keyword MUT{"mut", TokenType::MUT};
 constexpr Keyword NORETURN{"noreturn", TokenType::NORETURN};
+constexpr Keyword NULLPTR{"nullptr", TokenType::NULLPTR};
 
 namespace builtins {
 
 constexpr Keyword TYPEOF{"@typeOf", TokenType::TYPEOF};
 constexpr Keyword SIZEOF{"@sizeOf", TokenType::SIZEOF};
 constexpr Keyword ALIGNOF{"@alignOf", TokenType::ALIGNOF};
+constexpr Keyword PTR_ADD{"@ptrAdd", TokenType::PTR_ADD};
+constexpr Keyword PTR_SUB{"@ptrSub", TokenType::PTR_SUB};
 constexpr Keyword SIN{"@sin", TokenType::SIN};
 constexpr Keyword COS{"@cos", TokenType::COS};
 constexpr Keyword TAN{"@tan", TokenType::TAN};
@@ -99,7 +102,7 @@ constexpr auto ALL_KEYWORDS = []() {
         keywords::BYTE,        keywords::STRING,     keywords::BOOL,     keywords::VOID,
         keywords::TYPE,        keywords::AS,         keywords::PRIVATE,  keywords::EXTERN,
         keywords::EXPORT,      keywords::PACKED,     keywords::VOLATILE, keywords::STATIC,
-        keywords::MUT,         keywords::NORETURN,
+        keywords::MUT,         keywords::NORETURN,   keywords::NULLPTR,
     };
 
     std::ranges::sort(all_keywords, {}, &Keyword::first);
@@ -129,11 +132,11 @@ constexpr auto ALL_PRIMITIVES = std::array{
 constexpr auto ALL_BUILTINS = []() {
     using namespace keywords;
     auto all_builtins = std::array{
-        builtins::TYPEOF, builtins::SIZEOF, builtins::ALIGNOF, builtins::SIN,    builtins::COS,
-        builtins::TAN,    builtins::SQRT,   builtins::LOG,     builtins::LOG_10, builtins::LOG_2,
-        builtins::MIN,    builtins::MAX,    builtins::MOD,     builtins::DIVMOD, builtins::TRUNC,
-        builtins::CAST,   builtins::CEIL,   builtins::FLOOR,   builtins::EXP,    builtins::EXP_2,
-        builtins::CLZ,    builtins::CTZ,
+        builtins::TYPEOF, builtins::SIZEOF, builtins::ALIGNOF, builtins::PTR_ADD, builtins::PTR_SUB,
+        builtins::SIN,    builtins::COS,    builtins::TAN,     builtins::SQRT,    builtins::LOG,
+        builtins::LOG_10, builtins::LOG_2,  builtins::MIN,     builtins::MAX,     builtins::MOD,
+        builtins::DIVMOD, builtins::TRUNC,  builtins::CAST,    builtins::CEIL,    builtins::FLOOR,
+        builtins::EXP,    builtins::EXP_2,  builtins::CLZ,     builtins::CTZ,
     };
 
     std::ranges::sort(all_builtins, {}, &Keyword::first);

@@ -114,6 +114,7 @@ enum class TokenType : u8 {
     SINGLE_QUOTE,
     UNDERSCORE,
     AND_MUT,
+    STAR_MUT,
 
     FUNCTION,
     VAR,
@@ -159,10 +160,13 @@ enum class TokenType : u8 {
     STATIC,
     MUT,
     NORETURN,
+    NULLPTR,
 
     TYPEOF,
     SIZEOF,
     ALIGNOF,
+    PTR_ADD,
+    PTR_SUB,
     SIN,
     COS,
     TAN,
