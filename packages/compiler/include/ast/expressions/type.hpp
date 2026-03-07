@@ -1,11 +1,13 @@
 #pragma once
 
 #include <utility>
-#include <variant>
 
+#include "ast/expressions/type_modifiers.hpp"
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
+
+#include "variant.hpp"
 
 namespace conch::ast {
 
@@ -60,10 +62,10 @@ class ExplicitType {
     [[nodiscard]] auto get_modifier() const noexcept -> const TypeModifier& { return modifier_; }
     [[nodiscard]] auto get_type() const noexcept -> const ExplicitTypeVariant& { return type_; }
 
-    VARIANT_UNPACKER(ident, IdentifierExpression, ExplicitIdentType, *std::get)
-    VARIANT_UNPACKER(function, FunctionExpression, ExplicitFunctionType, *std::get)
-    VARIANT_UNPACKER(array, ExplicitArrayType, ExplicitArrayType, std::get)
-    VARIANT_UNPACKER(recursive, ExplicitRecursiveType, ExplicitRecursiveType, std::get)
+    VARIANT_UNPACKER(ident_type, IdentifierExpression, ExplicitIdentType, type_, *std::get)
+    VARIANT_UNPACKER(function_type, FunctionExpression, ExplicitFunctionType, type_, *std::get)
+    VARIANT_UNPACKER(array_type, ExplicitArrayType, ExplicitArrayType, type_, std::get)
+    VARIANT_UNPACKER(recursive_type, ExplicitRecursiveType, ExplicitRecursiveType, type_, std::get)
 
     friend auto operator==(const ExplicitType& lhs, const ExplicitType& rhs) noexcept -> bool {
         return lhs.is_equal(rhs);

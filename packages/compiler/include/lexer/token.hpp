@@ -113,7 +113,6 @@ enum class TokenType : u8 {
 
     SINGLE_QUOTE,
     UNDERSCORE,
-    REF,
     AND_MUT,
 
     FUNCTION,

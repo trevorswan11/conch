@@ -4,8 +4,6 @@
 #include "ast/expressions/primitive.hpp"
 #include "ast/visitor.hpp"
 
-#include "common.hpp"
-
 namespace conch::ast {
 
 ImportStatement::ImportStatement(const Token&                           start_token,

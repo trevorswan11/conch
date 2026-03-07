@@ -5,8 +5,6 @@
 
 #include "ast/visitor.hpp"
 
-#include "common.hpp"
-
 namespace conch::ast {
 
 ExplicitArrayType::ExplicitArrayType(Box<Expression>   dimension,

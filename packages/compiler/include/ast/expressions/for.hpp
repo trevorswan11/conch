@@ -4,6 +4,7 @@
 #include <variant>
 #include <vector>
 
+#include "ast/expressions/type_modifiers.hpp"
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"

@@ -56,7 +56,6 @@ constexpr Keyword PACKED{"packed", TokenType::PACKED};
 constexpr Keyword VOLATILE{"volatile", TokenType::VOLATILE};
 constexpr Keyword STATIC{"static", TokenType::STATIC};
 constexpr Keyword MUT{"mut", TokenType::MUT};
-constexpr Keyword REF{"ref", TokenType::REF};
 constexpr Keyword NORETURN{"noreturn", TokenType::NORETURN};
 
 namespace builtins {
@@ -100,7 +99,7 @@ constexpr auto ALL_KEYWORDS = []() {
         keywords::BYTE,        keywords::STRING,     keywords::BOOL,     keywords::VOID,
         keywords::TYPE,        keywords::AS,         keywords::PRIVATE,  keywords::EXTERN,
         keywords::EXPORT,      keywords::PACKED,     keywords::VOLATILE, keywords::STATIC,
-        keywords::MUT,         keywords::REF,        keywords::NORETURN,
+        keywords::MUT,         keywords::NORETURN,
     };
 
     std::ranges::sort(all_keywords, {}, &Keyword::first);

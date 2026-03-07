@@ -1,11 +1,10 @@
 #pragma once
 
-#include <utility>
-#include <variant>
-
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
+
+#include "variant.hpp"
 
 namespace conch::ast {
 
@@ -28,27 +27,8 @@ class ImportStatement : public StmtBase<ImportStatement> {
     auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
-    // UB if the import is not a module import.
-    [[nodiscard]] auto get_module_import() const noexcept -> const IdentifierExpression& {
-        try {
-            return *std::get<ModuleImport>(imported_);
-        } catch (...) { std::unreachable(); }
-    }
-
-    [[nodiscard]] auto is_module_import() const noexcept -> bool {
-        return std::holds_alternative<ModuleImport>(imported_);
-    }
-
-    // UB if the import is not a user import.
-    [[nodiscard]] auto get_user_import() const noexcept -> const StringExpression& {
-        try {
-            return *std::get<UserImport>(imported_);
-        } catch (...) { std::unreachable(); }
-    }
-
-    [[nodiscard]] auto is_user_import() const noexcept -> bool {
-        return std::holds_alternative<UserImport>(imported_);
-    }
+    VARIANT_UNPACKER(module_import, IdentifierExpression, ModuleImport, imported_, *std::get)
+    VARIANT_UNPACKER(user_import, StringExpression, UserImport, imported_, *std::get)
 
     [[nodiscard]] auto has_alias() const noexcept -> bool { return alias_.has_value(); }
     [[nodiscard]] auto get_alias() const noexcept -> Optional<const IdentifierExpression&> {
