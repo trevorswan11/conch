@@ -17,7 +17,8 @@ ExplicitType::~ExplicitType() = default;
 
 [[nodiscard]] auto ExplicitType::parse(Parser& parser) -> Expected<ExplicitType, ParserDiagnostic> {
     // Always check for a modifier and advance past it if present
-    const auto modifier = TypeModifier::from_token(parser.peek_token());
+    const auto modifier_token = parser.peek_token();
+    const auto modifier       = TypeModifier::from_token(modifier_token);
     if (!modifier.is_value()) { parser.advance(); }
 
     // The array dimension of a type are only present conditionally
@@ -40,7 +41,15 @@ ExplicitType::~ExplicitType() = default;
     // Otherwise the type has to be a 'simple' function or ident
     return TRY(([&]() -> Expected<ExplicitType, ParserDiagnostic> {
         const auto& peek_token = parser.peek_token();
-        if (peek_token.is_primitive() || peek_token.type == TokenType::IDENT) {
+        if (peek_token.is_valid_ident() && !peek_token.is_builtin()) {
+            // It's trivial to catch these syntactic errors here
+            if ((peek_token.type == TokenType::VOID_TYPE ||
+                 peek_token.type == TokenType::NORETURN) &&
+                !modifier.is_value()) {
+                return make_parser_unexpected(ParserError::ILLEGAL_RETURN_TYPE_MODIFIER,
+                                              modifier_token);
+            }
+
             parser.advance();
             return ExplicitType{
                 modifier,
@@ -54,8 +63,9 @@ ExplicitType::~ExplicitType() = default;
 
         if (type_expr->is<FunctionExpression>()) {
             auto function = Node::downcast<FunctionExpression>(std::move(type_expr));
-            if (!modifier.is_value()) {
-                return make_parser_unexpected(ParserError::ILLEGAL_TYPE_MODIFIER, type_start);
+            if (!(modifier.is_value() || modifier.is_const_ptr())) {
+                return make_parser_unexpected(ParserError::ILLEGAL_FUNCTION_TYPE_MODIFIER,
+                                              type_start);
             }
 
             // Function types cannot have bodies

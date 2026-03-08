@@ -29,8 +29,8 @@ class ImportStatement : public StmtBase<ImportStatement> {
     auto                      accept(Visitor& v) const -> void override;
     [[nodiscard]] static auto parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic>;
 
-    VARIANT_UNPACKER(module_import, IdentifierExpression, ModuleImport, imported_, *std::get)
-    VARIANT_UNPACKER(user_import, StringExpression, UserImport, imported_, *std::get)
+    MAKE_VARIANT_UNPACKER(module_import, IdentifierExpression, ModuleImport, imported_, *std::get)
+    MAKE_VARIANT_UNPACKER(user_import, StringExpression, UserImport, imported_, *std::get)
 
     [[nodiscard]] auto has_alias() const noexcept -> bool { return alias_.has_value(); }
     [[nodiscard]] auto get_alias() const noexcept -> Optional<const IdentifierExpression&> {

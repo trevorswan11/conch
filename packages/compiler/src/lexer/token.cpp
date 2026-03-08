@@ -140,7 +140,8 @@ auto Token::is_builtin() const noexcept -> bool {
 }
 
 auto Token::is_valid_ident() const noexcept -> bool {
-    return type == TokenType::IDENT || is_primitive() || is_builtin();
+    return type == TokenType::IDENT || type == TokenType::NORETURN || is_primitive() ||
+           is_builtin();
 }
 
 } // namespace conch

@@ -1,13 +1,14 @@
 #pragma once
 
 #include <span>
-#include <variant>
 #include <vector>
 
 #include "ast/expressions/type_modifiers.hpp"
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
+
+#include "variant.hpp"
 
 namespace conch::ast {
 
@@ -49,16 +50,7 @@ class ForLoopCapture {
         return std::holds_alternative<std::monostate>(underlying_);
     }
 
-    // UB if the import is not a captured expression.
-    [[nodiscard]] auto get_valued() const noexcept -> const Valued& {
-        try {
-            return std::get<Valued>(underlying_);
-        } catch (...) { std::unreachable(); }
-    }
-
-    [[nodiscard]] auto is_valued() const noexcept -> bool {
-        return std::holds_alternative<Valued>(underlying_);
-    }
+    MAKE_VARIANT_UNPACKER(valued, Valued, Valued, underlying_, std::get)
 
     friend auto operator==(const ForLoopCapture& lhs, const ForLoopCapture& rhs) noexcept -> bool {
         return lhs.is_equal(rhs);

@@ -32,18 +32,16 @@ class FunctionParameter {
 
 class SelfParameter {
   public:
-    explicit SelfParameter(Optional<TypeModifier>    modifier,
-                           Box<IdentifierExpression> name) noexcept;
+    explicit SelfParameter(TypeModifier modifier, Box<IdentifierExpression> name) noexcept;
     ~SelfParameter();
 
     MAKE_AST_COPY_MOVE(SelfParameter)
 
     [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
-    [[nodiscard]] auto has_modifier() const noexcept -> bool { return modifier_.has_value(); }
-    [[nodiscard]] auto get_modifier() const noexcept -> Optional<TypeModifier> { return modifier_; }
+    [[nodiscard]] auto get_modifier() const noexcept -> const TypeModifier& { return modifier_; }
 
   private:
-    Optional<TypeModifier>    modifier_;
+    TypeModifier              modifier_;
     Box<IdentifierExpression> name_;
 
     friend class FunctionExpression;

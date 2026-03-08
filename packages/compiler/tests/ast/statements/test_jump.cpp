@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "ast/expressions/identifier.hpp"
 #include "ast/helpers.hpp"
 
 #include "ast/expressions/enum.hpp"
+#include "ast/expressions/identifier.hpp"
 #include "ast/expressions/primitive.hpp"
 #include "ast/statements/jump.hpp"
 

@@ -16,8 +16,7 @@ FunctionParameter::FunctionParameter(Box<IdentifierExpression> name,
     : name_{std::move(name)}, type_{std::move(type)} {}
 FunctionParameter::~FunctionParameter() = default;
 
-SelfParameter::SelfParameter(Optional<TypeModifier>    modifier,
-                             Box<IdentifierExpression> name) noexcept
+SelfParameter::SelfParameter(TypeModifier modifier, Box<IdentifierExpression> name) noexcept
     : modifier_{std::move(modifier)}, name_{std::move(name)} {}
 SelfParameter::~SelfParameter() = default;
 
@@ -89,8 +88,9 @@ auto FunctionExpression::parse(Parser& parser) -> Expected<Box<Expression>, Pars
     }
 
     TRY(parser.expect_peek(TokenType::COLON));
-    auto explicit_type = TRY(ExplicitType::parse(parser));
-    auto return_type   = make_box<TypeExpression>(start_token, std::move(explicit_type));
+    const auto colon         = parser.current_token();
+    auto       explicit_type = TRY(ExplicitType::parse(parser));
+    auto       return_type   = make_box<TypeExpression>(colon, std::move(explicit_type));
 
     // If there is opening brace then just return without a body
     if (!parser.peek_token_is(TokenType::LBRACE)) {
