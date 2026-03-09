@@ -45,4 +45,23 @@ template <typename Derived> class InfixExpression : public ExprBase<Derived> {
     Box<Expression> rhs_;
 };
 
+#define DECLARE_INFIX_EXPRESSION(Type, Kind)    \
+    class Type : public InfixExpression<Type> { \
+      public:                                   \
+        static constexpr auto KIND = Kind;      \
+                                                \
+      public:                                   \
+        using InfixExpression::InfixExpression; \
+        MAKE_AST_COPY_MOVE(Type)                \
+                                                \
+        using InfixExpression::parse;           \
+    };
+
+DECLARE_INFIX_EXPRESSION(AssignmentExpression, NodeKind::ASSIGNMENT_EXPRESSION)
+DECLARE_INFIX_EXPRESSION(BinaryExpression, NodeKind::BINARY_EXPRESSION)
+DECLARE_INFIX_EXPRESSION(DotExpression, NodeKind::DOT_EXPRESSION)
+DECLARE_INFIX_EXPRESSION(RangeExpression, NodeKind::RANGE_EXPRESSION)
+
+#undef DECLARE_INFIX_EXPRESSION
+
 } // namespace conch::ast

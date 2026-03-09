@@ -66,11 +66,11 @@ auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Parse
 
     // Captures are entirely optional and take on something similar to zig's capture syntax
     Optional<std::vector<ForLoopCapture>> captures;
-    if (parser.peek_token_is(TokenType::OR)) {
+    if (parser.peek_token_is(TokenType::BW_OR)) {
         captures.emplace();
         parser.advance();
 
-        while (!parser.peek_token_is(TokenType::OR) && !parser.peek_token_is(TokenType::END)) {
+        while (!parser.peek_token_is(TokenType::BW_OR) && !parser.peek_token_is(TokenType::END)) {
             parser.advance();
             if (parser.current_token_is(TokenType::UNDERSCORE)) {
                 captures->emplace_back();

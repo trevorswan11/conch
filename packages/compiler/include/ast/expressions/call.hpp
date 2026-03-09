@@ -35,7 +35,10 @@ class CallExpression : public ExprBase<CallExpression> {
   protected:
     auto is_equal(const Node& other) const noexcept -> bool override {
         const auto& casted = as<CallExpression>(other);
-        return *function_ == *casted.function_ && std::ranges::equal(arguments_, casted.arguments_);
+        return *function_ == *casted.function_ &&
+               std::ranges::equal(arguments_, casted.arguments_, [](const auto& a, const auto& b) {
+                   return *a == *b;
+               });
     }
 
   private:

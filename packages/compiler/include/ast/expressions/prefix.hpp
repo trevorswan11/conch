@@ -40,4 +40,22 @@ template <typename Derived> class PrefixExpression : public ExprBase<Derived> {
     Box<Expression> rhs_;
 };
 
+#define DECLARE_PREFIX_EXPRESSION(Type, Kind)     \
+    class Type : public PrefixExpression<Type> {  \
+      public:                                     \
+        static constexpr auto KIND = Kind;        \
+                                                  \
+      public:                                     \
+        using PrefixExpression::PrefixExpression; \
+        MAKE_AST_COPY_MOVE(Type)                  \
+                                                  \
+        using PrefixExpression::parse;            \
+    };
+
+DECLARE_PREFIX_EXPRESSION(UnaryExpression, NodeKind::UNARY_EXPRESSION)
+DECLARE_PREFIX_EXPRESSION(ReferenceExpression, NodeKind::REFERENCE_EXPRESSION)
+DECLARE_PREFIX_EXPRESSION(DereferenceExpression, NodeKind::DEREFERENCE_EXPRESSION)
+
+#undef DECLARE_PREFIX_EXPRESSION
+
 } // namespace conch::ast

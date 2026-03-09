@@ -23,8 +23,6 @@ constexpr Keyword STRUCT{"struct", TokenType::STRUCT};
 constexpr Keyword ENUM{"enum", TokenType::ENUM};
 constexpr Keyword TRUE{"true", TokenType::TRUE};
 constexpr Keyword FALSE{"false", TokenType::FALSE};
-constexpr Keyword BOOLEAN_AND{"and", TokenType::BOOLEAN_AND};
-constexpr Keyword BOOLEAN_OR{"or", TokenType::BOOLEAN_OR};
 constexpr Keyword IF{"if", TokenType::IF};
 constexpr Keyword ELSE{"else", TokenType::ELSE};
 constexpr Keyword DO{"do", TokenType::DO};
@@ -91,17 +89,16 @@ constexpr Keyword CTZ{"@ctz", TokenType::CTZ};
 
 constexpr auto ALL_KEYWORDS = []() {
     auto all_keywords = std::array{
-        keywords::FN,          keywords::VAR,        keywords::CONST,    keywords::COMPTIME,
-        keywords::STRUCT,      keywords::ENUM,       keywords::TRUE,     keywords::FALSE,
-        keywords::BOOLEAN_AND, keywords::BOOLEAN_OR, keywords::IF,       keywords::ELSE,
-        keywords::DO,          keywords::MATCH,      keywords::RETURN,   keywords::LOOP,
-        keywords::FOR,         keywords::WHILE,      keywords::CONTINUE, keywords::BREAK,
-        keywords::IMPORT,      keywords::INT,        keywords::LONG,     keywords::ISIZE,
-        keywords::UINT,        keywords::ULONG,      keywords::USIZE,    keywords::FLOAT,
-        keywords::BYTE,        keywords::STRING,     keywords::BOOL,     keywords::VOID,
-        keywords::TYPE,        keywords::AS,         keywords::PRIVATE,  keywords::EXTERN,
-        keywords::EXPORT,      keywords::PACKED,     keywords::VOLATILE, keywords::STATIC,
-        keywords::NORETURN,    keywords::NULLPTR,
+        keywords::FN,       keywords::VAR,    keywords::CONST,    keywords::COMPTIME,
+        keywords::STRUCT,   keywords::ENUM,   keywords::TRUE,     keywords::FALSE,
+        keywords::IF,       keywords::ELSE,   keywords::DO,       keywords::MATCH,
+        keywords::RETURN,   keywords::LOOP,   keywords::FOR,      keywords::WHILE,
+        keywords::CONTINUE, keywords::BREAK,  keywords::IMPORT,   keywords::INT,
+        keywords::LONG,     keywords::ISIZE,  keywords::UINT,     keywords::ULONG,
+        keywords::USIZE,    keywords::FLOAT,  keywords::BYTE,     keywords::STRING,
+        keywords::BOOL,     keywords::VOID,   keywords::TYPE,     keywords::AS,
+        keywords::PRIVATE,  keywords::EXTERN, keywords::EXPORT,   keywords::PACKED,
+        keywords::VOLATILE, keywords::STATIC, keywords::NORETURN, keywords::NULLPTR,
     };
 
     std::ranges::sort(all_keywords, {}, &Keyword::first);

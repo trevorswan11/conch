@@ -32,10 +32,10 @@ constexpr Operator BANG{"!", TokenType::BANG};
 constexpr Operator AND_MUT{"&mut", TokenType::AND_MUT};
 constexpr Operator STAR_MUT{"*mut", TokenType::STAR_MUT};
 
-constexpr Operator AND{"&", TokenType::AND};
-constexpr Operator AND_ASSIGN{"&=", TokenType::AND_ASSIGN};
-constexpr Operator OR{"|", TokenType::OR};
-constexpr Operator OR_ASSIGN{"|=", TokenType::OR_ASSIGN};
+constexpr Operator BW_AND{"&", TokenType::BW_AND};
+constexpr Operator BW_AND_ASSIGN{"&=", TokenType::BW_AND_ASSIGN};
+constexpr Operator BW_OR{"|", TokenType::BW_OR};
+constexpr Operator BW_OR_ASSIGN{"|=", TokenType::BW_OR_ASSIGN};
 constexpr Operator SHL{"<<", TokenType::SHL};
 constexpr Operator SHL_ASSIGN{"<<=", TokenType::SHL_ASSIGN};
 constexpr Operator SHR{">>", TokenType::SHR};
@@ -45,10 +45,12 @@ constexpr Operator NOT_ASSIGN{"~=", TokenType::NOT_ASSIGN};
 constexpr Operator XOR{"^", TokenType::XOR};
 constexpr Operator XOR_ASSIGN{"^=", TokenType::XOR_ASSIGN};
 
+constexpr Operator BOOLEAN_AND{"and", TokenType::BOOLEAN_AND};
+constexpr Operator BOOLEAN_OR{"or", TokenType::BOOLEAN_OR};
 constexpr Operator LT{"<", TokenType::LT};
-constexpr Operator LTEQ{"<=", TokenType::LTEQ};
+constexpr Operator LT_EQ{"<=", TokenType::LT_EQ};
 constexpr Operator GT{">", TokenType::GT};
-constexpr Operator GTEQ{">=", TokenType::GTEQ};
+constexpr Operator GT_EQ{">=", TokenType::GT_EQ};
 constexpr Operator EQ{"==", TokenType::EQ};
 constexpr Operator NEQ{"!=", TokenType::NEQ};
 
@@ -80,10 +82,10 @@ constexpr auto ALL_OPERATORS = []() {
         operators::BANG,
         operators::AND_MUT,
         operators::STAR_MUT,
-        operators::AND,
-        operators::AND_ASSIGN,
-        operators::OR,
-        operators::OR_ASSIGN,
+        operators::BW_AND,
+        operators::BW_AND_ASSIGN,
+        operators::BW_OR,
+        operators::BW_OR_ASSIGN,
         operators::SHL,
         operators::SHL_ASSIGN,
         operators::SHR,
@@ -92,10 +94,12 @@ constexpr auto ALL_OPERATORS = []() {
         operators::NOT_ASSIGN,
         operators::XOR,
         operators::XOR_ASSIGN,
+        operators::BOOLEAN_AND,
+        operators::BOOLEAN_OR,
         operators::LT,
-        operators::LTEQ,
+        operators::LT_EQ,
         operators::GT,
-        operators::GTEQ,
+        operators::GT_EQ,
         operators::EQ,
         operators::NEQ,
         operators::COLON_COLON,

@@ -67,9 +67,13 @@ template <ast::LeafNode N> auto test_stmt(std::string_view input, const N& expec
     REQUIRE(expected == actual_stmt);
 }
 
+template <ast::LeafNode N>
+auto test_expr_stmt(std::string_view input, const Token& start_token, N&& expected) -> void {
+    test_stmt(input, ast::ExpressionStatement{start_token, make_box<N>(std::move(expected))});
+}
+
 template <ast::LeafNode N> auto test_expr_stmt(std::string_view input, N&& expected) -> void {
-    test_stmt(input,
-              ast::ExpressionStatement{expected.get_token(), make_box<N>(std::move(expected))});
+    test_expr_stmt(input, expected.get_token(), std::move(expected));
 }
 
 template <typename T, typename... Ts> auto make_vector(Ts&&... es) -> std::vector<T> {

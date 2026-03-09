@@ -72,7 +72,9 @@ TEST_CASE("Array size token requirement") {
 
 TEST_CASE("Empty arrays") {
     helpers::test_fail("[_]int{};", ParserDiagnostic{ParserError::EMPTY_ARRAY, 1, 1});
-    helpers::test_fail("[0]int{};", ParserDiagnostic{ParserError::EMPTY_ARRAY, 1, 1});
+    helpers::test_fail("[0uz]int{};", ParserDiagnostic{ParserError::EMPTY_ARRAY, 1, 1});
+    helpers::test_fail("[0uz]int{2};",
+                       ParserDiagnostic{ParserError::EXPLICIT_ZERO_ARRAY_SIZE, 1, 2});
 }
 
 } // namespace conch::tests

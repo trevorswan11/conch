@@ -44,18 +44,25 @@ auto ArrayExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserD
         if (!parser.peek_token_is(TokenType::RBRACE)) { TRY(parser.expect_peek(TokenType::COMMA)); }
     }
 
-    // Perform last minute bounds checks to reduce load on Sema
+    // Perform last minute ident/size checks to reduce load on Sema
     TRY(parser.expect_peek(TokenType::RBRACE));
     if (items.empty()) { return make_parser_unexpected(ParserError::EMPTY_ARRAY, start_token); }
 
-    // The size can either be an ident or a size token
     if (size) {
         const auto& size_expr = *(*size);
         if (size_expr.is<USizeIntegerExpression>()) {
-            const auto& actual_size = as<USizeIntegerExpression>(size_expr);
-            if (items.size() != actual_size.get_value()) {
+            const auto& explicit_size = as<USizeIntegerExpression>(size_expr);
+            const auto& size_token    = size_expr.get_token();
+
+            // Enforce non-empty arrays
+            if (explicit_size.get_value() == 0) {
+                return make_parser_unexpected(ParserError::EXPLICIT_ZERO_ARRAY_SIZE, size_token);
+            }
+
+            // Enforce full initialization
+            if (items.size() != explicit_size.get_value()) {
                 return make_parser_unexpected(ParserError::EXPLICIT_ARRAY_SIZE_MISMATCH,
-                                              size_expr.get_token());
+                                              size_token);
             }
         } else if (!size_expr.is<IdentifierExpression>()) {
             return make_parser_unexpected(ParserError::ILLEGAL_ARRAY_SIZE_TYPE,

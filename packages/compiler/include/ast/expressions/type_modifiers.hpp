@@ -57,7 +57,7 @@ class TypeModifier {
   private:
     using ModifierMapping                 = std::pair<TokenType, Modifier>;
     static constexpr auto LEGAL_MODIFIERS = std::to_array<ModifierMapping>({
-        {TokenType::AND, Modifier::REF},
+        {TokenType::BW_AND, Modifier::REF},
         {TokenType::AND_MUT, Modifier::MUT_REF},
         {TokenType::STAR, Modifier::PTR},
         {TokenType::STAR_MUT, Modifier::MUT_PTR},

@@ -8,7 +8,7 @@ auto IndexExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto IndexExpression::parse(Parser& parser, Box<Expression> array)
     -> Expected<Box<Expression>, ParserDiagnostic> {
-    const auto start_token = parser.current_token();
+    const auto start_token = array->get_token();
     if (parser.current_token_is(TokenType::RBRACE)) {
         return make_parser_unexpected(ParserError::INDEX_MISSING_EXPRESSION, start_token);
     }
