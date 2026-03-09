@@ -22,7 +22,16 @@ TEST_CASE("Multiple statement block") {
                            helpers::ident_from("c")));
 }
 
-TEST_CASE("Empty block") { helpers::test_stmt("{};", helpers::expr_block_stmt_from()); }
+TEST_CASE("Empty block") {
+    helpers::test_stmt("{};", helpers::expr_block_stmt_from());
+    helpers::test_stmt("{}", helpers::expr_block_stmt_from());
+}
+
+TEST_CASE("Non-terminated block") {
+    helpers::test_fail(
+        "{ ",
+        ParserDiagnostic{"Expected token RBRACE, found END", ParserError::UNEXPECTED_TOKEN, 1, 3});
+}
 
 TEST_CASE("Illegal block inner statement") {
     helpers::test_fail("{ import std; };",
