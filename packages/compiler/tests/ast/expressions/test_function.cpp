@@ -47,23 +47,19 @@ auto function_expr_from(ast::ExplicitType&&                return_type,
 
 } // namespace helpers
 
-const ast::TypeModifier base{};
-const ast::TypeModifier ref{ast::TypeModifier::Modifier::REF};
-const ast::TypeModifier mut_ref{ast::TypeModifier::Modifier::MUT_REF};
-const ast::TypeModifier ptr{ast::TypeModifier::Modifier::PTR};
-const ast::TypeModifier mut_ptr{ast::TypeModifier::Modifier::MUT_PTR};
+namespace mods = helpers::type_modifiers;
 
 TEST_CASE("Function without body, self, or parameters") {
     helpers::test_expr_stmt(
         "fn(): int;",
-        helpers::function_expr_from(ast::ExplicitType{base, helpers::make_ident("int")}));
+        helpers::function_expr_from(ast::ExplicitType{mods::BASE, helpers::make_ident("int")}));
 }
 
 TEST_CASE("Function with self but no parameters or body") {
     helpers::test_expr_stmt(
         "fn(&self): int;",
-        helpers::function_expr_from(ast::SelfParameter{ref, helpers::make_ident("self")},
-                                    ast::ExplicitType{base, helpers::make_ident("int")}));
+        helpers::function_expr_from(ast::SelfParameter{mods::REF, helpers::make_ident("self")},
+                                    ast::ExplicitType{mods::BASE, helpers::make_ident("int")}));
 }
 
 TEST_CASE("Function with parameters but no self or body") {
@@ -72,36 +68,36 @@ TEST_CASE("Function with parameters but no self or body") {
         helpers::function_expr_from(
             helpers::make_parameters(
                 ast::FunctionParameter{helpers::make_ident("a"),
-                                       ast::ExplicitType{base, helpers::make_ident("A")}},
+                                       ast::ExplicitType{mods::BASE, helpers::make_ident("A")}},
                 ast::FunctionParameter{helpers::make_ident("b"),
-                                       ast::ExplicitType{ptr, helpers::make_ident("B")}}),
-            ast::ExplicitType{base, helpers::make_ident("int")}));
+                                       ast::ExplicitType{mods::PTR, helpers::make_ident("B")}}),
+            ast::ExplicitType{mods::BASE, helpers::make_ident("int")}));
 }
 
 TEST_CASE("Function with self & parameters but no body") {
     helpers::test_expr_stmt(
         "fn(&mut this, a: A, b: *B): int;",
         helpers::function_expr_from(
-            ast::SelfParameter{mut_ref, helpers::make_ident("this")},
+            ast::SelfParameter{mods::MUT_REF, helpers::make_ident("this")},
             helpers::make_parameters(
                 ast::FunctionParameter{helpers::make_ident("a"),
-                                       ast::ExplicitType{base, helpers::make_ident("A")}},
+                                       ast::ExplicitType{mods::BASE, helpers::make_ident("A")}},
                 ast::FunctionParameter{helpers::make_ident("b"),
-                                       ast::ExplicitType{ptr, helpers::make_ident("B")}}),
-            ast::ExplicitType{base, helpers::make_ident("int")}));
+                                       ast::ExplicitType{mods::PTR, helpers::make_ident("B")}}),
+            ast::ExplicitType{mods::BASE, helpers::make_ident("int")}));
 }
 
 TEST_CASE("Full function expression") {
     helpers::test_expr_stmt(
         "fn(*mut this, a: A, b: *B, ): int { c; };",
         helpers::function_expr_from(
-            ast::SelfParameter{mut_ptr, helpers::make_ident("this")},
+            ast::SelfParameter{mods::MUT_PTR, helpers::make_ident("this")},
             helpers::make_parameters(
                 ast::FunctionParameter{helpers::make_ident("a"),
-                                       ast::ExplicitType{base, helpers::make_ident("A")}},
+                                       ast::ExplicitType{mods::BASE, helpers::make_ident("A")}},
                 ast::FunctionParameter{helpers::make_ident("b"),
-                                       ast::ExplicitType{ptr, helpers::make_ident("B")}}),
-            ast::ExplicitType{base, helpers::make_ident("int")},
+                                       ast::ExplicitType{mods::PTR, helpers::make_ident("B")}}),
+            ast::ExplicitType{mods::BASE, helpers::make_ident("int")},
             helpers::make_expr_block_stmt(helpers::ident_from("c"))));
 }
 

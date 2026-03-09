@@ -28,90 +28,80 @@ auto test_type_expr(std::string_view type_str, ast::ExplicitType&& expected) -> 
 
 } // namespace helpers
 
+namespace mods = helpers::type_modifiers;
+
 using Parameters = std::vector<ast::FunctionParameter>;
 
 TEST_CASE("Indent type") {
-    helpers::test_type_expr("int", ast::ExplicitType{{}, helpers::make_ident("int")});
-
-    helpers::test_type_expr("*int",
-                            ast::ExplicitType{ast::TypeModifier{ast::TypeModifier::Modifier::PTR},
-                                              helpers::make_ident("int")});
+    helpers::test_type_expr("int", ast::ExplicitType{mods::BASE, helpers::make_ident("int")});
+    helpers::test_type_expr("*int", ast::ExplicitType{mods::PTR, helpers::make_ident("int")});
 }
 
 TEST_CASE("Function types") {
     helpers::test_type_expr(
         "fn(): noreturn",
-        ast::ExplicitType{{},
+        ast::ExplicitType{mods::BASE,
                           make_box<ast::FunctionExpression>(
                               Token{keywords::FN},
                               nullopt,
                               Parameters{},
-                              ast::ExplicitType{{}, helpers::make_ident("noreturn")},
+                              ast::ExplicitType{mods::BASE, helpers::make_ident("noreturn")},
                               nullopt)});
 
     helpers::test_type_expr(
         "fn(&self): *mut E",
-        ast::ExplicitType{
-            {},
-            make_box<ast::FunctionExpression>(
-                Token{keywords::FN},
-                ast::SelfParameter{ast::TypeModifier{ast::TypeModifier::Modifier::REF},
-                                   helpers::make_ident("self")},
-                Parameters{},
-                ast::ExplicitType{ast::TypeModifier{ast::TypeModifier::Modifier::MUT_PTR},
-                                  helpers::make_ident("E")},
-                nullopt)});
+        ast::ExplicitType{mods::BASE,
+                          make_box<ast::FunctionExpression>(
+                              Token{keywords::FN},
+                              ast::SelfParameter{mods::REF, helpers::make_ident("self")},
+                              Parameters{},
+                              ast::ExplicitType{mods::MUT_PTR, helpers::make_ident("E")},
+                              nullopt)});
 }
 
 TEST_CASE("Array types") {
     helpers::test_type_expr(
         "[5uz]*ulong",
         ast::ExplicitType{
-            {},
+            mods::BASE,
             ast::ExplicitArrayType{
                 make_box<ast::USizeIntegerExpression>(Token{TokenType::UZINT_10, "5uz"}, 5uz),
-                make_box<ast::ExplicitType>(ast::TypeModifier{ast::TypeModifier::Modifier::PTR},
-                                            helpers::make_ident("ulong"))}});
+                make_box<ast::ExplicitType>(mods::PTR, helpers::make_ident("ulong"))}});
 }
 
 TEST_CASE("Recursive types") {
     helpers::test_type_expr(
         "&[S]&*mut T",
         ast::ExplicitType{
-            ast::TypeModifier{ast::TypeModifier::Modifier::REF},
-            ast::ExplicitArrayType{helpers::make_ident("S"),
-                                   make_box<ast::ExplicitType>(
-                                       ast::TypeModifier{ast::TypeModifier::Modifier::REF},
-                                       make_box<ast::ExplicitType>(
-                                           ast::TypeModifier{ast::TypeModifier::Modifier::MUT_PTR},
-                                           helpers::make_ident("T")))}});
+            mods::REF,
+            ast::ExplicitArrayType{
+                helpers::make_ident("S"),
+                make_box<ast::ExplicitType>(
+                    mods::REF,
+                    make_box<ast::ExplicitType>(mods::MUT_PTR, helpers::make_ident("T")))}});
 }
 
 TEST_CASE("Complex function type (holistic)") {
     helpers::test_type_expr(
         "*fn(&a, b: *mut B): &[0x2uz][N]*E",
         ast::ExplicitType{
-            ast::TypeModifier{ast::TypeModifier::Modifier::PTR},
+            mods::PTR,
             make_box<ast::FunctionExpression>(
                 Token{keywords::FN},
-                ast::SelfParameter{ast::TypeModifier{ast::TypeModifier::Modifier::REF},
-                                   helpers::make_ident("a")},
+                ast::SelfParameter{mods::REF, helpers::make_ident("a")},
                 helpers::make_parameters(ast::FunctionParameter{
                     helpers::make_ident("b"),
-                    ast::ExplicitType{ast::TypeModifier{ast::TypeModifier::Modifier::MUT_PTR},
-                                      helpers::make_ident("B")}}),
+                    ast::ExplicitType{mods::MUT_PTR, helpers::make_ident("B")}}),
                 ast::ExplicitType{
-                    ast::TypeModifier{ast::TypeModifier::Modifier::REF},
+                    mods::REF,
                     ast::ExplicitArrayType{
                         make_box<ast::USizeIntegerExpression>(Token{TokenType::UZINT_16, "0x2uz"},
                                                               0x2uz),
                         make_box<ast::ExplicitType>(
-                            ast::TypeModifier{},
-                            ast::ExplicitArrayType{
-                                helpers::make_ident("N"),
-                                make_box<ast::ExplicitType>(
-                                    ast::TypeModifier{ast::TypeModifier::Modifier::PTR},
-                                    helpers::make_ident("E"))})}},
+                            mods::BASE,
+                            ast::ExplicitArrayType{helpers::make_ident("N"),
+                                                   make_box<ast::ExplicitType>(
+                                                       mods::PTR, helpers::make_ident("E"))})}},
                 nullopt)});
 }
 

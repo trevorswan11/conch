@@ -146,4 +146,14 @@ auto make_parameters(Ps&&... params) -> std::vector<ast::FunctionParameter> {
     return make_vector<ast::FunctionParameter>(std::forward<Ps>(params)...);
 }
 
+namespace type_modifiers {
+
+const ast::TypeModifier BASE{};
+const ast::TypeModifier REF{ast::TypeModifier::Modifier::REF};
+const ast::TypeModifier MUT_REF{ast::TypeModifier::Modifier::MUT_REF};
+const ast::TypeModifier PTR{ast::TypeModifier::Modifier::PTR};
+const ast::TypeModifier MUT_PTR{ast::TypeModifier::Modifier::MUT_PTR};
+
+} // namespace type_modifiers
+
 } // namespace conch::tests::helpers

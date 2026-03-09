@@ -16,7 +16,11 @@ auto StructExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto StructExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic> {
     const auto start_token = parser.current_token();
-    if (parser.current_token_is(TokenType::PACKED)) { TRY(parser.expect_peek(TokenType::STRUCT)); }
+    if (parser.current_token_is(TokenType::PACKED)) {
+        TRY(parser.expect_peek(TokenType::STRUCT));
+    } else if (parser.peek_token_is(TokenType::PACKED)) {
+        return make_parser_unexpected(ParserError::PACKED_AFTER_STRUCT_KEYWORD, start_token);
+    }
 
     std::vector<Box<DeclStatement>> members;
     TRY(parser.expect_peek(TokenType::LBRACE));

@@ -18,38 +18,36 @@
 
 namespace conch::tests {
 
-using ExplicitTypeVariant = ast::ExplicitType::ExplicitTypeVariant;
+namespace mods = helpers::type_modifiers;
 
 TEST_CASE("Explicit primitive declaration") {
-    helpers::test_stmt(
-        "var a: int = 2;",
-        ast::DeclStatement{
-            Token{keywords::VAR},
-            helpers::make_ident("a"),
-            make_box<ast::TypeExpression>(Token{TokenType::COLON, ":"},
-                                          ast::ExplicitType{
-                                              {},
-                                              ExplicitTypeVariant{helpers::make_ident("int")},
-                                          }),
-            make_box<ast::SignedIntegerExpression>(Token{TokenType::INT_10, "2"}, 2),
-            ast::DeclModifiers::VARIABLE,
-        });
+    helpers::test_stmt("var a: int = 2;",
+                       ast::DeclStatement{
+                           Token{keywords::VAR},
+                           helpers::make_ident("a"),
+                           make_box<ast::TypeExpression>(Token{TokenType::COLON, ":"},
+                                                         ast::ExplicitType{
+                                                             mods::BASE,
+                                                             helpers::make_ident("int"),
+                                                         }),
+                           make_box<ast::SignedIntegerExpression>(Token{TokenType::INT_10, "2"}, 2),
+                           ast::DeclModifiers::VARIABLE,
+                       });
 }
 
 TEST_CASE("Explicit non-primitive declaration") {
-    helpers::test_stmt(
-        "var a: Foo = bar;",
-        ast::DeclStatement{
-            Token{keywords::VAR},
-            helpers::make_ident("a"),
-            make_box<ast::TypeExpression>(Token{TokenType::COLON, ":"},
-                                          ast::ExplicitType{
-                                              {},
-                                              ExplicitTypeVariant{helpers::make_ident("Foo")},
-                                          }),
-            helpers::make_ident("bar"),
-            ast::DeclModifiers::VARIABLE,
-        });
+    helpers::test_stmt("var a: Foo = bar;",
+                       ast::DeclStatement{
+                           Token{keywords::VAR},
+                           helpers::make_ident("a"),
+                           make_box<ast::TypeExpression>(Token{TokenType::COLON, ":"},
+                                                         ast::ExplicitType{
+                                                             mods::BASE,
+                                                             helpers::make_ident("Foo"),
+                                                         }),
+                           helpers::make_ident("bar"),
+                           ast::DeclModifiers::VARIABLE,
+                       });
 }
 
 TEST_CASE("Implicit comptime declaration") {
@@ -87,12 +85,11 @@ TEST_CASE("Correct declaration modifiers") {
                                ast::DeclStatement{
                                    Token{*modifiers.begin()},
                                    helpers::make_ident("a"),
-                                   make_box<ast::TypeExpression>(
-                                       Token{TokenType::COLON, ":"},
-                                       ast::ExplicitType{
-                                           {},
-                                           ExplicitTypeVariant{helpers::make_ident("int")},
-                                       }),
+                                   make_box<ast::TypeExpression>(Token{TokenType::COLON, ":"},
+                                                                 ast::ExplicitType{
+                                                                     mods::BASE,
+                                                                     helpers::make_ident("int"),
+                                                                 }),
                                    nullopt,
                                    flags,
                                });

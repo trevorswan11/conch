@@ -19,6 +19,8 @@ template <ast::LeafNode... Ns> auto make_items(Ns&&... nodes) -> Items {
 
 } // namespace helpers
 
+namespace mods = helpers::type_modifiers;
+
 const Token rbracket{TokenType::LBRACKET, "["};
 
 TEST_CASE("Explicitly sized arrays") {
@@ -27,7 +29,7 @@ TEST_CASE("Explicitly sized arrays") {
         ast::ArrayExpression{
             rbracket,
             make_box<ast::USizeIntegerExpression>(Token{TokenType::UZINT_10, "1uz"}, 1),
-            ast::ExplicitType{{}, helpers::make_ident("int")},
+            ast::ExplicitType{mods::BASE, helpers::make_ident("int")},
             helpers::make_items(ast::SignedIntegerExpression{Token{TokenType::INT_10, "2"}, 2})});
 
     helpers::test_expr_stmt(
@@ -35,20 +37,21 @@ TEST_CASE("Explicitly sized arrays") {
         ast::ArrayExpression{
             rbracket,
             make_box<ast::USizeIntegerExpression>(Token{TokenType::UZINT_10, "2uz"}, 2),
-            ast::ExplicitType{{}, helpers::make_ident("int")},
+            ast::ExplicitType{mods::BASE, helpers::make_ident("int")},
             helpers::make_items(helpers::ident_from("A"), helpers::ident_from("B"))});
 }
 
 TEST_CASE("Implicitly sized array") {
-    helpers::test_expr_stmt("[_]N{a, b, c, d, e, };",
-                            ast::ArrayExpression{rbracket,
-                                                 nullopt,
-                                                 ast::ExplicitType{{}, helpers::make_ident("N")},
-                                                 helpers::make_items(helpers::ident_from("a"),
-                                                                     helpers::ident_from("b"),
-                                                                     helpers::ident_from("c"),
-                                                                     helpers::ident_from("d"),
-                                                                     helpers::ident_from("e"))});
+    helpers::test_expr_stmt(
+        "[_]*N{a, b, c, d, e, };",
+        ast::ArrayExpression{rbracket,
+                             nullopt,
+                             ast::ExplicitType{mods::PTR, helpers::make_ident("N")},
+                             helpers::make_items(helpers::ident_from("a"),
+                                                 helpers::ident_from("b"),
+                                                 helpers::ident_from("c"),
+                                                 helpers::ident_from("d"),
+                                                 helpers::ident_from("e"))});
 }
 
 TEST_CASE("Size mismatch") {
