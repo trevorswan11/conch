@@ -23,6 +23,13 @@ TEST_CASE("If without alternate") {
 
 TEST_CASE("If with alternate") {
     helpers::test_expr_stmt(
+        "if (a) { b; } else { c; };",
+        ast::IfExpression{Token{keywords::IF},
+                          helpers::make_ident("a"),
+                          helpers::make_expr_block_stmt(helpers::ident_from("b")),
+                          helpers::make_expr_block_stmt(helpers::ident_from("c"))});
+
+    helpers::test_expr_stmt(
         "if (a) b; else { c; };",
         ast::IfExpression{Token{keywords::IF},
                           helpers::make_ident("a"),

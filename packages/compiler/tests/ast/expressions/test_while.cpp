@@ -60,8 +60,23 @@ TEST_CASE("Full while loop") {
             make_box<ast::JumpStatement>(Token{keywords::RETURN}, helpers::make_ident("b"))});
 }
 
+TEST_CASE("Empty while with continuation") {
+    helpers::test_expr_stmt(
+        "while (true) : (i += 1) {};",
+        ast::WhileLoopExpression{
+            Token{keywords::WHILE},
+            make_box<ast::BoolExpression>(Token{keywords::TRUE}, true),
+            make_box<ast::AssignmentExpression>(
+                Token{TokenType::IDENT, "i"},
+                helpers::make_ident("i"),
+                TokenType::PLUS_ASSIGN,
+                make_box<ast::SignedIntegerExpression>(Token{TokenType::INT_10, "1"}, 1)),
+            helpers::make_block_stmt(),
+            {}});
+}
+
 TEST_CASE("Empty while") {
-    helpers::test_fail("while (true) {};", ParserDiagnostic{ParserError::EMPTY_WHILE_LOOP, 1, 1});
+    helpers::test_fail("while (true) {};", ParserDiagnostic{ParserError::EMPTY_WHILE_LOOP, 1, 14});
 }
 
 TEST_CASE("Missing while condition") {

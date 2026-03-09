@@ -36,8 +36,6 @@ auto MatchExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserD
         // The resulting statement must be restricted like an if branch
         parser.advance();
         auto consequence = TRY(parser.parse_restricted_statement(ParserError::ILLEGAL_MATCH_ARM));
-        if (!parser.peek_token_is(TokenType::RBRACE)) { TRY(parser.expect_peek(TokenType::COMMA)); }
-
         arms.emplace_back(std::move(pattern), std::move(consequence));
     }
 

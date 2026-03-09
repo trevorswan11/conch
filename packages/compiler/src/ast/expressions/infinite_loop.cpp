@@ -17,7 +17,9 @@ auto InfiniteLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, 
     TRY(parser.expect_peek(TokenType::LBRACE));
 
     auto block = downcast<BlockStatement>(TRY(BlockStatement::parse(parser)));
-    if (block->empty()) { return make_parser_unexpected(ParserError::EMPTY_LOOP, start_token); }
+    if (block->empty()) {
+        return make_parser_unexpected(ParserError::EMPTY_LOOP, block->get_token());
+    }
     return make_box<InfiniteLoopExpression>(start_token, std::move(block));
 }
 

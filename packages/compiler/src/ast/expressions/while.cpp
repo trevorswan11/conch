@@ -56,7 +56,7 @@ auto WhileLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Par
 
     // There needs to be at least a continuation or block
     if (!continuation && block->empty()) {
-        return make_parser_unexpected(ParserError::EMPTY_WHILE_LOOP, start_token);
+        return make_parser_unexpected(ParserError::EMPTY_WHILE_LOOP, block->get_token());
     }
 
     return make_box<WhileLoopExpression>(start_token,

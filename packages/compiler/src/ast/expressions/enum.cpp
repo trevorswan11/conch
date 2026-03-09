@@ -33,8 +33,9 @@ auto EnumExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
 
     TRY(parser.expect_peek(TokenType::LBRACE));
     if (parser.peek_token_is(TokenType::RBRACE)) {
+        const auto opening = parser.current_token();
         parser.advance();
-        return make_parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, std::move(start_token));
+        return make_parser_unexpected(ParserError::ENUM_MISSING_VARIANTS, opening);
     }
 
     std::vector<Enumeration> enumeration;

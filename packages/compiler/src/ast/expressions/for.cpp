@@ -93,7 +93,10 @@ auto ForLoopExpression::parse(Parser& parser) -> Expected<Box<Expression>, Parse
     if (captures.size() != iterables.size()) {
         return make_parser_unexpected(ParserError::FOR_ITERABLE_CAPTURE_MISMATCH, start_token);
     }
-    if (block->empty()) { return make_parser_unexpected(ParserError::EMPTY_FOR_LOOP, start_token); }
+
+    if (block->empty()) {
+        return make_parser_unexpected(ParserError::EMPTY_FOR_LOOP, block->get_token());
+    }
 
     return make_box<ForLoopExpression>(start_token,
                                        std::move(iterables),

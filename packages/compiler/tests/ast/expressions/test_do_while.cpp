@@ -15,7 +15,7 @@ TEST_CASE("Correct do-while") {
 }
 
 TEST_CASE("Empty do-while") {
-    helpers::test_fail("do {} while (true);", ParserDiagnostic{ParserError::EMPTY_LOOP, 1, 1});
+    helpers::test_fail("do {} while (true);", ParserDiagnostic{ParserError::EMPTY_LOOP, 1, 4});
 }
 
 TEST_CASE("Missing do-while condition") {

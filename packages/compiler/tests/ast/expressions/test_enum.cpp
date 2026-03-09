@@ -51,8 +51,8 @@ TEST_CASE("Underlying type") {
 }
 
 TEST_CASE("Empty enum") {
-    helpers::test_fail("enum {};", ParserDiagnostic{ParserError::ENUM_MISSING_VARIANTS, 1, 1});
-    helpers::test_fail("enum : T {};", ParserDiagnostic{ParserError::ENUM_MISSING_VARIANTS, 1, 1});
+    helpers::test_fail("enum {};", ParserDiagnostic{ParserError::ENUM_MISSING_VARIANTS, 1, 6});
+    helpers::test_fail("enum : T {};", ParserDiagnostic{ParserError::ENUM_MISSING_VARIANTS, 1, 10});
 }
 
 TEST_CASE("Illegal underlying type") {

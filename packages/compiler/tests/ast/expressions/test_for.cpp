@@ -113,7 +113,7 @@ TEST_CASE("Iterable-capture mismatch") {
 
 TEST_CASE("Empty for block") {
     helpers::test_fail("for (0..4) |i| {} else return b;",
-                       ParserDiagnostic{ParserError::EMPTY_FOR_LOOP, 1, 1});
+                       ParserDiagnostic{ParserError::EMPTY_FOR_LOOP, 1, 16});
 }
 
 TEST_CASE("Illegal for-else clause") {

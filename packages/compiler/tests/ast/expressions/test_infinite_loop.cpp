@@ -14,7 +14,7 @@ TEST_CASE("Correct infinite loop") {
 }
 
 TEST_CASE("Empty infinite loop") {
-    helpers::test_fail("loop {};", ParserDiagnostic{ParserError::EMPTY_LOOP, 1, 1});
+    helpers::test_fail("loop {};", ParserDiagnostic{ParserError::EMPTY_LOOP, 1, 6});
 }
 
 } // namespace conch::tests
