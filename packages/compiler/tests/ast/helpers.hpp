@@ -10,6 +10,7 @@
 
 #include "string.hpp"
 
+#include "ast/expressions/function.hpp"
 #include "ast/expressions/identifier.hpp"
 #include "ast/statements/block.hpp"
 #include "ast/statements/expression.hpp"
@@ -137,6 +138,12 @@ template <ast::LeafNode... Ns> auto expr_block_stmt_from(Ns&&... nodes) -> ast::
 template <ast::LeafNode... Ns>
 auto make_expr_block_stmt(Ns&&... nodes) -> Box<ast::BlockStatement> {
     return make_box<ast::BlockStatement>(expr_block_stmt_from(std::forward<Ns>(nodes)...));
+}
+
+template <typename... Ps>
+    requires(std::same_as<Ps, ast::FunctionParameter> && ...)
+auto make_parameters(Ps&&... params) -> std::vector<ast::FunctionParameter> {
+    return make_vector<ast::FunctionParameter>(std::forward<Ps>(params)...);
 }
 
 } // namespace conch::tests::helpers

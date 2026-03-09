@@ -70,8 +70,10 @@ auto FunctionExpression::parse(Parser& parser) -> Expected<Box<Expression>, Pars
         }
 
         // The loop starts either on an LPAREN or COMMA
+        bool first = true;
         while (!parser.peek_token_is(TokenType::RPAREN) && !parser.peek_token_is(TokenType::END)) {
-            parser.advance();
+            // If there was no self parameter then we can't advance on the first pass
+            if (!first || self.has_value()) { parser.advance(); }
             auto name = downcast<IdentifierExpression>(TRY(IdentifierExpression::parse(parser)));
             auto [type_expr, initialized] = TRY(TypeExpression::parse(parser));
             auto type                     = downcast<TypeExpression>(std::move(type_expr));
@@ -86,6 +88,7 @@ auto FunctionExpression::parse(Parser& parser) -> Expected<Box<Expression>, Pars
             if (!parser.peek_token_is(TokenType::RPAREN)) {
                 TRY(parser.expect_peek(TokenType::COMMA));
             }
+            first = false;
         }
         TRY(parser.expect_peek(TokenType::RPAREN));
     }

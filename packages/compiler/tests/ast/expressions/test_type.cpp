@@ -96,7 +96,7 @@ TEST_CASE("Complex function type (holistic)") {
                 Token{keywords::FN},
                 ast::SelfParameter{ast::TypeModifier{ast::TypeModifier::Modifier::REF},
                                    helpers::make_ident("a")},
-                helpers::make_vector<ast::FunctionParameter>(ast::FunctionParameter{
+                helpers::make_parameters(ast::FunctionParameter{
                     helpers::make_ident("b"),
                     ast::ExplicitType{ast::TypeModifier{ast::TypeModifier::Modifier::MUT_PTR},
                                       helpers::make_ident("B")}}),
