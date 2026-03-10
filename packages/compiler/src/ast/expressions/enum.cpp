@@ -9,7 +9,7 @@ namespace conch::ast {
 
 Enumeration::Enumeration(Box<IdentifierExpression> enumeration,
                          Optional<Box<Expression>> value) noexcept
-    : enumeration_{std::move(enumeration)}, value_{std::move(value)} {}
+    : name_{std::move(enumeration)}, value_{std::move(value)} {}
 Enumeration::~Enumeration() = default;
 
 EnumExpression::EnumExpression(const Token&                        start_token,
@@ -62,7 +62,7 @@ auto EnumExpression::is_equal(const Node& other) const noexcept -> bool {
     return optional::unsafe_eq<IdentifierExpression>(underlying_, casted.underlying_) &&
            std::ranges::equal(
                enumerations_, casted.enumerations_, [](const auto& a, const auto& b) {
-                   return *a.enumeration_ == *b.enumeration_ &&
+                   return *a.name_ == *b.name_ &&
                           optional::unsafe_eq<Expression>(a.value_, b.value_);
                });
 }

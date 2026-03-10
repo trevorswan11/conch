@@ -3,6 +3,8 @@
 #include <string>
 #include <string_view>
 
+#include <fmt/format.h>
+
 #include "ast/node.hpp"
 
 #include "parser/parser.hpp"
@@ -29,3 +31,11 @@ class IdentifierExpression : public ExprBase<IdentifierExpression> {
 };
 
 } // namespace conch::ast
+
+template <> struct fmt::formatter<conch::ast::IdentifierExpression> {
+    static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
+
+    template <typename F> static auto format(const conch::ast::IdentifierExpression& n, F& ctx) {
+        return fmt::format_to(ctx.out(), "{}", n.get_name());
+    }
+};

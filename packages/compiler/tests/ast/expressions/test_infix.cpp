@@ -48,7 +48,7 @@ void test_binary_expr(std::string_view        input,
 } // namespace helpers
 
 TEST_CASE("Assignment expressions") {
-    const auto ops = std::to_array<Operator>({
+    const auto ops = std::array{
         operators::ASSIGN,
         operators::PLUS_ASSIGN,
         operators::MINUS_ASSIGN,
@@ -61,12 +61,12 @@ TEST_CASE("Assignment expressions") {
         operators::SHR_ASSIGN,
         operators::NOT_ASSIGN,
         operators::XOR_ASSIGN,
-    });
+    };
     helpers::test_infix_op_list<ast::AssignmentExpression>(ops);
 }
 
 TEST_CASE("Binary expressions") {
-    const auto ops = std::to_array<Operator>({
+    const auto ops = std::array{
         operators::PLUS,
         operators::MINUS,
         operators::STAR,
@@ -85,23 +85,21 @@ TEST_CASE("Binary expressions") {
         operators::XOR,
         operators::SHR,
         operators::SHL,
-    });
+    };
     helpers::test_infix_op_list<ast::BinaryExpression>(ops);
 }
 
 TEST_CASE("Miscellaneous infixes") {
     SECTION("Range expressions") {
-        const auto ops = std::to_array<Operator>({
+        const auto ops = std::array{
             operators::DOT_DOT,
             operators::DOT_DOT_EQ,
-        });
+        };
         helpers::test_infix_op_list<ast::RangeExpression>(ops);
     }
 
     SECTION("Dot expression") {
-        const auto ops = std::to_array<Operator>({
-            operators::DOT,
-        });
+        const auto ops = std::array{operators::DOT};
         helpers::test_infix_op_list<ast::DotExpression>(ops);
     }
 }

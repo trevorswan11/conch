@@ -21,12 +21,18 @@ class ASTDumper : public Visitor {
   private:
     auto dump_explicit_type(const ExplicitType& type, bool print_branch) -> void;
 
-    template <typename T> void dump_list(const T& container) {
+    template <typename T, typename Func> void dump_container(const T& container, Func&& func) {
         for (auto it = container.begin(); it != container.end(); ++it) {
-            const Indent::Guard g{indent_, std::next(it) == container.end()};
-            fmt::print(out_, "{}", indent_.current_branch());
-            (*it)->accept(*this);
+            Indent::Guard g{indent_, std::next(it) == container.end()};
+            std::forward<Func>(func)(*it);
         }
+    }
+
+    template <typename T> void dump_node_list(const T& list) {
+        dump_container(list, [this](const auto& node) {
+            fmt::print(out_, "{}", indent_.current_branch());
+            node->accept(*this);
+        });
     }
 
   private:

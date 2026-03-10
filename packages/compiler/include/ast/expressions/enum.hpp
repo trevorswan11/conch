@@ -18,14 +18,12 @@ class Enumeration {
 
     MAKE_AST_COPY_MOVE(Enumeration)
 
-    [[nodiscard]] auto get_enumeration() const noexcept -> const IdentifierExpression& {
-        return *enumeration_;
-    }
+    [[nodiscard]] auto get_name() const noexcept -> const IdentifierExpression& { return *name_; }
 
     MAKE_OPTIONAL_UNPACKER(default_value, Expression, value_, **)
 
   private:
-    Box<IdentifierExpression> enumeration_;
+    Box<IdentifierExpression> name_;
     Optional<Box<Expression>> value_;
 
     friend class EnumExpression;
