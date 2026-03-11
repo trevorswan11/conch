@@ -1,0 +1,40 @@
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+
+#cmakedefine01 HAVE_CONFIG_H
+
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine01 HAVE_ALLOCA_H
+
+#cmakedefine HAVE_EX_USAGE
+
+#cmakedefine01 HAVE_ASPRINTF
+#cmakedefine01 HAVE_STRCHRNUL
+#cmakedefine01 HAVE_STRNDUP
+#cmakedefine01 HAVE_MEMPCPY
+
+#cmakedefine01 HAVE_DECL_PROGRAM_INVOCATION_NAME
+#cmakedefine01 HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
+
+#cmakedefine01 HAVE_DECL_FWRITE_UNLOCKED
+#cmakedefine HAVE_DECL_CLEARERR_UNLOCKED
+#cmakedefine HAVE_DECL_FEOF_UNLOCKED
+#cmakedefine HAVE_DECL_FERROR_UNLOCKED
+#cmakedefine HAVE_DECL_FFLUSH_UNLOCKED
+#cmakedefine HAVE_DECL_FGETS_UNLOCKED
+#cmakedefine01 HAVE_DECL_FPUTC_UNLOCKED
+#cmakedefine01 HAVE_DECL_FPUTS_UNLOCKED
+#cmakedefine01 HAVE_DECL_FLOCKFILE
+#cmakedefine01 HAVE_DECL_PUTC_UNLOCKED
+
+#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define NORETURN __attribute__ ((__noreturn__))
+# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define NORETURN
+# define PRINTF_STYLE(f, a)
+# define UNUSED
+#endif

@@ -106,7 +106,7 @@ pub fn init(target: std.Build.ResolvedTarget) Self {
         },
         else => std.debug.panic("TODO '{s}-{s}'", .{ @tagName(target.result.cpu.arch), @tagName(target.result.os.tag) }),
     };
-    
+
     return .{
         .default_vector = default_vector,
         .select_architectures = select_architectures,

@@ -26,13 +26,12 @@ const transforms = @import("sources/llvm/transforms.zig");
 const xray = @import("sources/llvm/xray.zig");
 
 const Dependency = @import("../third-party/Dependency.zig");
+pub const Artifact = Dependency.Artifact;
 const libxml2 = @import("../third-party/libxml2.zig");
 const zstd = @import("../third-party/zstd.zig");
 const zlib = @import("../third-party/zlib.zig");
 
 pub const default_optimize: std.builtin.OptimizeMode = .ReleaseSafe;
-
-pub const Artifact = *std.Build.Step.Compile;
 
 const ThirdPartyDeps = struct {
     zlib: Dependency = undefined,

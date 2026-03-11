@@ -5,12 +5,10 @@ const BinutilsBuilder = @import("../BinutilsBuilder.zig");
 
 pub fn configHeader(
     b: *std.Build,
-    root: std.Build.LazyPath,
+    style: std.Build.Step.ConfigHeader.Style,
     target: std.Build.ResolvedTarget,
 ) *std.Build.Step.ConfigHeader {
-    return b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = root.path(b, "config.in") },
-    }, .{
+    return b.addConfigHeader(.{ .style = style }, .{
         .ENABLE_CHECKING = null,
         .ENABLE_NLS = if (target.result.os.tag == .linux) true else null,
         .HAVE_CFLOCALECOPYPREFERREDLANGUAGES = null,

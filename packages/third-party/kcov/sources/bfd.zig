@@ -9,14 +9,16 @@ pub const ConfigHeaders = struct {
     bfdver: *std.Build.Step.ConfigHeader,
 };
 
-pub fn configHeader(
+pub fn configHeaders(
     b: *std.Build,
-    root: std.Build.LazyPath,
+    styles: struct {
+        config: std.Build.Step.ConfigHeader.Style,
+        bfd: std.Build.Step.ConfigHeader.Style,
+        bfdver: std.Build.Step.ConfigHeader.Style,
+    },
     target: std.Build.ResolvedTarget,
 ) ConfigHeaders {
-    const config = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = root.path(b, "config.in") },
-    }, .{
+    const config = b.addConfigHeader(.{ .style = styles.config }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
         .CORE_HEADER = @as(?[]const u8, switch (target.result.os.tag) {
             .linux => switch (target.result.cpu.arch) {
@@ -142,7 +144,7 @@ pub fn configHeader(
     });
 
     const bfd = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = root.path(b, "bfd-in2.h") },
+        .style = styles.bfd,
         .include_path = "bfd.h",
     }, .{
         .supports_plugins = 0,
@@ -153,7 +155,7 @@ pub fn configHeader(
     });
 
     const bfdver = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = root.path(b, "version.h") },
+        .style = styles.bfdver,
         .include_path = "bfdver.h",
     }, .{
         .bfd_version = 245000000,

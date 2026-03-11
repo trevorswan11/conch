@@ -3,12 +3,10 @@ const std = @import("std");
 
 pub fn configHeader(
     b: *std.Build,
-    root: std.Build.LazyPath,
+    style: std.Build.Step.ConfigHeader.Style,
     target: std.Build.ResolvedTarget,
 ) *std.Build.Step.ConfigHeader {
-    const config = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = root.path(b, "config.in") },
-    }, .{
+    const config = b.addConfigHeader(.{ .style = style }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
         .CRAY_STACKSEG_END = null,
         .HAVE_ALLOCA_H = switch (target.result.os.tag) {
@@ -320,7 +318,7 @@ pub fn configHeader(
         .ssize_t = null,
         .uintptr_t = null,
     });
-    
+
     if (target.result.os.tag == .wasi) {
         config.addValues(.{ .vfork = .fork });
     } else {

@@ -10,6 +10,7 @@ const catch2 = @import("packages/third-party/catch2.zig");
 
 const CurlBuilder = @import("packages/third-party/kcov/CurlBuilder.zig");
 const BinutilsBuilder = @import("packages/third-party/kcov/BinutilsBuilder.zig");
+const ElfutilsBuilder = @import("packages/third-party/kcov/ElfutilsBuilder.zig");
 
 const LLVMBuilder = @import("packages/llvm/LLVMBuilder.zig");
 const ClangBuilder = @import("packages/llvm/ClangBuilder.zig");
@@ -24,22 +25,35 @@ pub fn build(b: *std.Build) !void {
     const clang: *ClangBuilder = .init(llvm);
     const cdb_gen: *CDBGenerator = .init(b);
 
-    const curl: CurlBuilder = try .build(b, .{
+    if (CurlBuilder.build(b, .{
         .target = b.graph.host,
         .optimize = .ReleaseFast,
-    });
-    b.installArtifact(curl.exe);
-    b.installArtifact(curl.lib);
+    })) |curl| {
+        b.installArtifact(curl.exe);
+        b.installArtifact(curl.lib);
+    }
 
-    const binutils: ?BinutilsBuilder = .build(b, .{
+    if (BinutilsBuilder.build(b, .{
         .target = b.graph.host,
         .optimize = .ReleaseFast,
-    });
-    if (binutils) |bu| {
-        b.installArtifact(bu.libbfd);
-        b.installArtifact(bu.libiberty);
-        b.installArtifact(bu.libopcodes);
-        b.installArtifact(bu.libsframe);
+    })) |binutils| {
+        b.installArtifact(binutils.libbfd);
+        b.installArtifact(binutils.libiberty);
+        b.installArtifact(binutils.libopcodes);
+        b.installArtifact(binutils.libsframe);
+    }
+
+    if (b.graph.host.result.os.tag == .linux) {
+        if (ElfutilsBuilder.build(b, .{
+            .target = b.graph.host,
+            .optimize = .ReleaseFast,
+        })) |elfutils| {
+            b.installArtifact(elfutils.libeu);
+            b.installArtifact(elfutils.libelf);
+            b.installArtifact(elfutils.libdwelf);
+            b.installArtifact(elfutils.libebl);
+            b.installArtifact(elfutils.libdw);
+        }
     }
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;

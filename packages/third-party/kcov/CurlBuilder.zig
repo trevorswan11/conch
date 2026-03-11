@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Dependency = @import("../Dependency.zig");
 const Config = Dependency.Config;
+const Artifact = Dependency.Artifact;
 
 const curl = @import("sources/curl.zig");
 
@@ -14,20 +15,24 @@ const version: std.SemanticVersion = .{
     .minor = 18,
     .patch = 0,
 };
-const version_str = std.fmt.comptimePrint("{f}", .{version});
+pub const version_str = std.fmt.comptimePrint("{f}", .{version});
 
 const c_flags: []const []const u8 = &.{"-fvisibility=hidden"};
 
 const Self = @This();
 
 upstream: *std.Build.Dependency,
-lib: *std.Build.Step.Compile,
-exe: *std.Build.Step.Compile,
+lib: Artifact,
+exe: Artifact,
 
 /// Compiles curl from source (lib and exe).
 /// https://github.com/allyourcodebase/curl
-pub fn build(b: *std.Build, config: Config) !Self {
-    const upstream = b.dependency("curl", .{});
+pub fn build(b: *std.Build, config: Config) ?Self {
+    const upstream_dep = b.lazyDependency("curl", .{});
+    const mbedtls_dep = mbedtls.build(b, config);
+    if (upstream_dep == null or mbedtls_dep == null) return null;
+    const upstream = upstream_dep.?;
+
     const target = config.target;
     const lib_mod = b.createModule(.{
         .target = target,
@@ -89,8 +94,7 @@ pub fn build(b: *std.Build, config: Config) !Self {
         lib_mod.linkSystemLibrary("bcrypt", .{});
     }
 
-    const mbedtls_dep = mbedtls.build(b, config);
-    lib_mod.linkLibrary(mbedtls_dep.artifact);
+    lib_mod.linkLibrary(mbedtls_dep.?.artifact);
     lib_mod.addCMacro("MBEDTLS_VERSION", mbedtls.version_str);
 
     const zlib_dep = zlib.build(b, config);
@@ -127,11 +131,11 @@ pub fn build(b: *std.Build, config: Config) !Self {
 
         if (ca_path_autodetect and !ca_path_set) {
             const search_ca_path: []const u8 = "/etc/ssl/certs";
-            var ca_dir = try std.fs.openDirAbsolute(search_ca_path, .{ .iterate = true });
+            var ca_dir = std.fs.openDirAbsolute(search_ca_path, .{ .iterate = true }) catch @panic("dir open failed");
             defer ca_dir.close();
 
             var ca_dir_it = ca_dir.iterate();
-            while (try ca_dir_it.next()) |item| {
+            while (ca_dir_it.next() catch @panic("dir iter failed")) |item| {
                 if (item.name.len != 10) continue;
                 if (!std.mem.endsWith(u8, item.name, ".0")) continue;
                 ca_path = search_ca_path;
@@ -150,329 +154,7 @@ pub fn build(b: *std.Build, config: Config) !Self {
         }
     }
 
-    const curl_config = b.addConfigHeader(.{
-        .style = .{ .cmake = upstream.path("lib/curl_config-cmake.h.in") },
-        .include_path = "curl_config.h",
-    }, .{
-        .CURL_CA_BUNDLE = null,
-        .CURL_CA_FALLBACK = false,
-        .CURL_CA_PATH = null,
-        .CURL_DEFAULT_SSL_BACKEND = null,
-        .CURL_DISABLE_ALTSVC = false,
-        .CURL_DISABLE_COOKIES = false,
-        .CURL_DISABLE_BASIC_AUTH = false,
-        .CURL_DISABLE_BEARER_AUTH = false,
-        .CURL_DISABLE_DIGEST_AUTH = false,
-        .CURL_DISABLE_KERBEROS_AUTH = false,
-        .CURL_DISABLE_NEGOTIATE_AUTH = false,
-        .CURL_DISABLE_AWS = false,
-        .CURL_DISABLE_DICT = false,
-        .CURL_DISABLE_DOH = false,
-        .CURL_DISABLE_FILE = false,
-        .CURL_DISABLE_FORM_API = false,
-        .CURL_DISABLE_FTP = false,
-        .CURL_DISABLE_GETOPTIONS = false,
-        .CURL_DISABLE_GOPHER = false,
-        .CURL_DISABLE_HEADERS_API = false,
-        .CURL_DISABLE_HSTS = false,
-        .CURL_DISABLE_HTTP = false,
-        .CURL_DISABLE_HTTP_AUTH = false,
-        .CURL_DISABLE_IMAP = false,
-        .CURL_DISABLE_LDAP = true,
-        .CURL_DISABLE_LDAPS = true,
-        .CURL_DISABLE_LIBCURL_OPTION = false,
-        .CURL_DISABLE_MIME = false,
-        .CURL_DISABLE_BINDLOCAL = false,
-        .CURL_DISABLE_MQTT = false,
-        .CURL_DISABLE_NETRC = false,
-        .CURL_DISABLE_NTLM = false,
-        .CURL_DISABLE_PARSEDATE = false,
-        .CURL_DISABLE_POP3 = false,
-        .CURL_DISABLE_PROGRESS_METER = false,
-        .CURL_DISABLE_PROXY = false,
-        .CURL_DISABLE_IPFS = false,
-        .CURL_DISABLE_RTSP = false,
-        .CURL_DISABLE_SHA512_256 = false,
-        .CURL_DISABLE_SHUFFLE_DNS = false,
-        .CURL_DISABLE_SMB = false,
-        .CURL_DISABLE_SMTP = false,
-        .CURL_DISABLE_WEBSOCKETS = false,
-        .CURL_DISABLE_SOCKETPAIR = false,
-        .CURL_DISABLE_TELNET = false,
-        .CURL_DISABLE_TFTP = false,
-        .CURL_DISABLE_VERBOSE_STRINGS = false,
-        .CURL_DISABLE_CA_SEARCH = false,
-        .CURL_CA_SEARCH_SAFE = false,
-        .CURL_EXTERN_SYMBOL = "__attribute__((__visibility__(\"default\")))",
-        .USE_WIN32_CRYPTO = target.result.os.tag == .windows,
-        .USE_WIN32_LDAP = false,
-        .USE_IPV6 = true,
-        .HAVE_ALARM = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_ARC4RANDOM = switch (target.result.os.tag) {
-            .dragonfly,
-            .netbsd,
-            .freebsd,
-            .openbsd,
-            .macos,
-            .ios,
-            .tvos,
-            .watchos,
-            .visionos,
-            .wasi,
-            => true,
-            else => false,
-        },
-        .HAVE_ARPA_INET_H = target.result.os.tag != .windows,
-        .HAVE_ATOMIC = true,
-        .HAVE_ACCEPT4 = switch (target.result.os.tag) {
-            .linux => true,
-            .freebsd => target.result.os.isAtLeast(.freebsd, .{ .major = 10, .minor = 0, .patch = 0 }) orelse false,
-            .netbsd => target.result.os.isAtLeast(.netbsd, .{ .major = 8, .minor = 0, .patch = 0 }) orelse false,
-            else => false,
-        },
-        .HAVE_FNMATCH = target.result.os.tag != .windows,
-        .HAVE_BASENAME = true,
-        .HAVE_BOOL_T = true,
-        .HAVE_BUILTIN_AVAILABLE = target.result.os.tag.isDarwin(),
-        .HAVE_CLOCK_GETTIME_MONOTONIC = target.result.os.tag != .windows,
-        .HAVE_CLOCK_GETTIME_MONOTONIC_RAW = target.result.os.tag == .linux or target.result.os.tag.isDarwin(),
-        .HAVE_CLOSESOCKET = target.result.os.tag == .windows,
-        .HAVE_CLOSESOCKET_CAMEL = null,
-        .HAVE_DIRENT_H = true,
-        .HAVE_OPENDIR = true,
-        .HAVE_FCNTL = target.result.os.tag != .windows,
-        .HAVE_FCNTL_H = true,
-        .HAVE_FCNTL_O_NONBLOCK = target.result.os.tag != .windows,
-        .HAVE_FREEADDRINFO = target.result.os.tag != .wasi,
-        .HAVE_FSEEKO = target.result.os.tag != .windows,
-        .HAVE_DECL_FSEEKO = target.result.os.tag != .windows,
-        .HAVE_FTRUNCATE = true,
-        .HAVE_GETADDRINFO = target.result.os.tag != .wasi,
-        .HAVE_GETADDRINFO_THREADSAFE = target.result.os.tag != .wasi,
-        .HAVE_GETEUID = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETPPID = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETHOSTBYNAME_R = switch (target.result.os.tag) {
-            .linux => true,
-            .windows, .wasi => false,
-            .freebsd => target.result.os.isAtLeast(.freebsd, .{ .major = 6, .minor = 2, .patch = 0 }) orelse false,
-            .dragonfly => target.result.os.isAtLeast(.dragonfly, .{ .major = 2, .minor = 1, .patch = 0 }) orelse false,
-            else => false,
-        },
-        .HAVE_GETHOSTBYNAME_R_3 = null,
-        .HAVE_GETHOSTBYNAME_R_5 = null,
-        .HAVE_GETHOSTBYNAME_R_6 = switch (target.result.os.tag) {
-            .linux => true,
-            .windows, .wasi => false,
-            .freebsd => target.result.os.isAtLeast(.freebsd, .{ .major = 6, .minor = 2, .patch = 0 }) orelse false,
-            .dragonfly => target.result.os.isAtLeast(.dragonfly, .{ .major = 2, .minor = 1, .patch = 0 }) orelse false,
-            else => false,
-        },
-        .HAVE_GETHOSTNAME = target.result.os.tag != .wasi,
-        .HAVE_GETIFADDRS = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETPASS_R = target.result.os.isAtLeast(.netbsd, .{ .major = 7, .minor = 0, .patch = 0 }) orelse false,
-        .HAVE_GETPEERNAME = target.result.os.tag != .wasi,
-        .HAVE_GETSOCKNAME = target.result.os.tag != .wasi,
-        .HAVE_IF_NAMETOINDEX = target.result.os.tag != .wasi,
-        .HAVE_GETPWUID = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETPWUID_R = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETRLIMIT = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_GETTIMEOFDAY = true,
-        .HAVE_GLIBC_STRERROR_R = false,
-        .HAVE_GMTIME_R = target.result.os.tag != .windows,
-        .HAVE_GSSAPI = null,
-        .HAVE_GSSGNU = null,
-        .CURL_KRB5_VERSION = null,
-        .HAVE_IFADDRS_H = target.result.os.tag != .windows,
-        .HAVE_INET_NTOP = target.result.os.tag != .windows,
-        .HAVE_INET_PTON = target.result.os.tag != .windows,
-        .HAVE_SA_FAMILY_T = target.result.os.tag != .windows,
-        .HAVE_ADDRESS_FAMILY = target.result.os.tag == .windows,
-        .HAVE_IOCTLSOCKET = target.result.os.tag == .windows,
-        .HAVE_IOCTLSOCKET_CAMEL = null,
-        .HAVE_IOCTLSOCKET_CAMEL_FIONBIO = null,
-        .HAVE_IOCTLSOCKET_FIONBIO = target.result.os.tag == .windows,
-        .HAVE_IOCTL_FIONBIO = target.result.os.tag != .windows,
-        .HAVE_IOCTL_SIOCGIFADDR = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_IO_H = target.result.os.tag == .windows,
-        .HAVE_LBER_H = false,
-        .HAVE_LDAP_SSL = false,
-        .HAVE_LDAP_SSL_H = null,
-        .HAVE_LDAP_URL_PARSE = null,
-        .HAVE_LIBGEN_H = true,
-        .HAVE_LIBIDN2 = false,
-        .HAVE_IDN2_H = false,
-        .HAVE_LIBZ = true,
-        .HAVE_BROTLI = false,
-        .HAVE_ZSTD = true,
-        .HAVE_LOCALE_H = true,
-        .HAVE_LOCALTIME_R = target.result.os.tag != .windows,
-        .HAVE_LONGLONG = true,
-        .HAVE_SUSECONDS_T = target.result.os.tag != .windows,
-        .HAVE_MSG_NOSIGNAL = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_NETDB_H = target.result.os.tag != .windows,
-        .HAVE_NETINET_IN_H = target.result.os.tag != .windows,
-        .HAVE_NETINET_IN6_H = null,
-        .HAVE_NETINET_TCP_H = target.result.os.tag != .windows,
-        .HAVE_NETINET_UDP_H = target.result.os.tag != .windows,
-        .HAVE_LINUX_TCP_H = target.result.os.tag == .linux,
-        .HAVE_NET_IF_H = target.result.os.tag != .windows,
-        .HAVE_OLD_GSSMIT = null,
-        .HAVE_PIPE = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_PIPE2 = switch (target.result.os.tag) {
-            .linux => true,
-            .dragonfly, .freebsd, .netbsd, .openbsd => true,
-            else => false,
-        },
-        .HAVE_EVENTFD = switch (target.result.os.tag) {
-            .windows, .wasi => false,
-            .linux => if (target.result.isMuslLibC())
-                true
-            else
-                target.result.os.isAtLeast(.linux, .{ .major = 2, .minor = 8, .patch = 0 }),
-            else => !target.result.os.tag.isDarwin(),
-        },
-        .HAVE_POLL = target.result.os.tag != .windows,
-        .HAVE_POLL_H = target.result.os.tag != .windows,
-        .HAVE_POSIX_STRERROR_R = switch (target.result.os.tag) {
-            .windows => false,
-            .linux => true,
-            else => true,
-        },
-        .HAVE_PWD_H = target.result.os.tag != .windows,
-        .HAVE_SSL_SET0_WBIO = null,
-        .HAVE_RECV = true,
-        .HAVE_SELECT = true,
-        .HAVE_SCHED_YIELD = target.result.os.tag != .windows,
-        .HAVE_SEND = true,
-        .HAVE_SENDMSG = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_SENDMMSG = switch (target.result.os.tag) {
-            .windows, .wasi => false,
-            .linux => if (target.result.isMuslLibC())
-                true
-            else
-                target.result.os.isAtLeast(.linux, .{ .major = 2, .minor = 14, .patch = 0 }),
-            else => !target.result.os.tag.isDarwin(),
-        },
-        .HAVE_FSETXATTR = target.result.os.tag == .linux or target.result.os.tag == .netbsd,
-        .HAVE_FSETXATTR_5 = target.result.os.tag == .linux or target.result.os.tag == .netbsd,
-        .HAVE_FSETXATTR_6 = null,
-        .HAVE_SETLOCALE = true,
-        .HAVE_SETMODE = target.result.os.tag == .windows or target.result.os.tag.isBSD(),
-        .HAVE__SETMODE = target.result.os.tag == .windows,
-        .HAVE_SETRLIMIT = target.result.os.tag != .wasi,
-        .HAVE_SETSOCKOPT_SO_NONBLOCK = null,
-        .HAVE_SIGACTION = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_SIGINTERRUPT = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_SIGNAL = target.result.os.tag != .wasi,
-        .HAVE_SIGSETJMP = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_SNPRINTF = true,
-        .HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID = target.result.os.tag == .windows, // TODO
-        .HAVE_SOCKET = target.result.os.tag != .wasi,
-        .HAVE_PROTO_BSDSOCKET_H = null,
-        .HAVE_SOCKETPAIR = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_STDATOMIC_H = true,
-        .HAVE_STDBOOL_H = true,
-        .HAVE_STDINT_H = true,
-        .HAVE_STRCASECMP = target.result.os.tag != .windows,
-        .HAVE_STRCMPI = null,
-        .HAVE_STRDUP = true,
-        .HAVE_STRERROR_R = target.result.os.tag != .windows,
-        .HAVE_STRICMP = null,
-        .HAVE_STRINGS_H = true,
-        .HAVE_STROPTS_H = target.result.isMuslLibC(),
-        .HAVE_MEMRCHR = target.result.os.tag != .windows and !target.result.os.tag.isDarwin() and target.result.os.tag != .wasi,
-        .HAVE_STRUCT_SOCKADDR_STORAGE = true,
-        .HAVE_STRUCT_TIMEVAL = true,
-        .HAVE_SYS_EVENTFD_H = target.result.os.tag != .windows and !target.result.os.tag.isDarwin(),
-        .HAVE_SYS_FILIO_H = target.result.os.tag.isBSD(),
-        .HAVE_SYS_IOCTL_H = target.result.os.tag != .windows,
-        .HAVE_SYS_PARAM_H = true,
-        .HAVE_SYS_POLL_H = target.result.os.tag != .windows,
-        .HAVE_SYS_RESOURCE_H = target.result.os.tag != .windows and target.result.os.tag != .wasi,
-        .HAVE_SYS_SELECT_H = target.result.os.tag != .windows,
-        .HAVE_SYS_SOCKIO_H = target.result.os.tag.isBSD(),
-        .HAVE_SYS_STAT_H = true,
-        .HAVE_SYS_TYPES_H = true,
-        .HAVE_SYS_UN_H = target.result.os.tag != .windows,
-        .HAVE_SYS_UTIME_H = target.result.os.tag == .windows,
-        .HAVE_TERMIOS_H = target.result.os.tag != .windows,
-        .HAVE_TERMIO_H = null,
-        .HAVE_UNISTD_H = true,
-        .HAVE_UTIME = true,
-        .HAVE_UTIMES = target.result.os.tag != .windows,
-        .HAVE_UTIME_H = true,
-        .HAVE_WRITABLE_ARGV = target.result.os.tag.isDarwin(),
-        .HAVE_TIME_T_UNSIGNED = null,
-        .NEED_REENTRANT = null,
-        .CURL_OS = b.fmt("\"{s}\"", .{target.result.zigTriple(b.allocator) catch @panic("OOM")}),
-        .SIZEOF_INT_CODE = b.fmt("#define SIZEOF_INT {d}", .{target.result.cTypeByteSize(.int)}),
-        .SIZEOF_LONG_CODE = b.fmt("#define SIZEOF_LONG {d}", .{target.result.cTypeByteSize(.long)}),
-        .SIZEOF_LONG_LONG_CODE = b.fmt("#define SIZEOF_LONG_LONG {d}", .{target.result.cTypeByteSize(.longlong)}),
-        .SIZEOF_OFF_T_CODE = b.fmt("#define SIZEOF_OFF_T {d}", .{8}),
-        .SIZEOF_CURL_OFF_T_CODE = b.fmt("#define SIZEOF_CURL_OFF_T {d}", .{8}),
-        .SIZEOF_CURL_SOCKET_T_CODE = b.fmt("#define SIZEOF_CURL_SOCKET_T {d}", .{@as(i64, if (target.result.os.tag == .windows) 8 else 4)}),
-        .SIZEOF_SIZE_T_CODE = b.fmt("#define SIZEOF_SIZE_T {d}", .{target.result.ptrBitWidth() / 8}),
-        .SIZEOF_TIME_T_CODE = b.fmt("#define SIZEOF_TIME_T {d}", .{8}),
-        .PACKAGE = "",
-        .PACKAGE_BUGREPORT = "curl",
-        .PACKAGE_NAME = "a suitable curl mailing list: https://curl.se/mail/",
-        .PACKAGE_STRING = "curl",
-        .PACKAGE_TARNAME = "curl",
-        .PACKAGE_VERSION = version_str,
-        .STDC_HEADERS = true,
-        .USE_ARES = false,
-        .USE_THREADS_POSIX = target.result.os.tag != .windows and !target.result.os.tag.isBSD(),
-        .USE_THREADS_WIN32 = target.result.os.tag == .windows,
-        .USE_GNUTLS = false,
-        .USE_SSLS_EXPORT = false,
-        .USE_MBEDTLS = true,
-        .USE_RUSTLS = false,
-        .USE_WOLFSSL = false,
-        .HAVE_WOLFSSL_DES_ECB_ENCRYPT = false,
-        .HAVE_WOLFSSL_BIO = false,
-        .HAVE_WOLFSSL_FULL_BIO = false,
-        .USE_LIBSSH = false,
-        .USE_LIBSSH2 = false,
-        .USE_LIBPSL = false,
-        .USE_OPENLDAP = false,
-        .USE_OPENSSL = false,
-        .USE_AMISSL = null,
-        .USE_LIBRTMP = false,
-        .USE_GSASL = false,
-        .USE_LIBUV = false,
-        .HAVE_UV_H = false,
-        .CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG = false,
-        .USE_NGHTTP2 = false,
-        .USE_NGTCP2 = false,
-        .USE_NGHTTP3 = false,
-        .USE_QUICHE = false,
-        .USE_OPENSSL_QUIC = false,
-        .HAVE_QUICHE_CONN_SET_QLOG_FD = null,
-        .USE_UNIX_SOCKETS = true,
-        .USE_WIN32_LARGE_FILES = target.result.os.tag == .windows,
-        .USE_WINDOWS_SSPI = false,
-        .USE_SCHANNEL = false,
-        .USE_WATT32 = null,
-        .CURL_WITH_MULTI_SSL = false,
-        .VERSION = version_str,
-        ._FILE_OFFSET_BITS = 64,
-        ._LARGE_FILES = null,
-        ._THREAD_SAFE = null,
-        .@"const" = null,
-        .size_t = null,
-        .ssize_t = null,
-        .HAVE_MACH_ABSOLUTE_TIME = target.result.os.tag.isDarwin(),
-        .USE_WIN32_IDN = false,
-        .USE_APPLE_IDN = false,
-        .HAVE_OPENSSL_SRP = null,
-        .HAVE_GNUTLS_SRP = null,
-        .USE_TLS_SRP = null,
-        .USE_HTTPSRR = false,
-        .USE_ECH = false,
-        .HAVE_WOLFSSL_CTX_GENERATEECHCONFIG = null,
-        .HAVE_SSL_SET1_ECH_CONFIG_LIST = null,
-        .HAVE_DES_ECB_ENCRYPT = false,
-    });
+    const curl_config = curl.configHeader(b, .{ .cmake = lib_root.path(b, "curl_config-cmake.h.in") }, target);
     lib_mod.addConfigHeader(curl_config);
     exe_mod.addConfigHeader(curl_config);
 

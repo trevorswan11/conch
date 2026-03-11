@@ -43,14 +43,27 @@
         .curl = .{
             .url = "https://github.com/curl/curl/archive/refs/tags/curl-8_18_0.tar.gz",
             .hash = "N-V-__8AAHcEBgHdCKCoETva5Llwxgbs_1fqyMcAIdbywrg6",
+            .lazy = true,
         },
         .mbedtls = .{
             .url = "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-3.6.4.tar.gz",
             .hash = "N-V-__8AADE9jALWhPS2ykOLbf8gUmr9r-SBwyzzpccbtBAv",
+            .lazy = true,
         },
         .binutils = .{
             .url = "https://sourceware.org/pub/binutils/releases/binutils-2.45.tar.xz",
             .hash = "N-V-__8AAA6W9hFBAXcaEDszHBBVI0IfEpYUwk8y2YtqoTBr",
+            .lazy = true,
+        },
+        .elfutils = .{
+            .url = "https://github.com/Techatrix/elfutils/archive/refs/tags/elfutils-0.192.tar.gz",
+            .hash = "N-V-__8AAIQGJAEXcr6-lFXTMBDHeC3iKepWTJ81xkih2e9T",
+            .lazy = true,
+        },
+        .argp = .{
+            .url = "https://github.com/argp-standalone/argp-standalone/archive/refs/tags/1.5.0.tar.gz",
+            .hash = "N-V-__8AABTDAwBuawEWBE-P-NIkZF5T4pwX9tRHsf0rRCkO",
+            .lazy = true,
         },
     },
     .paths = .{
