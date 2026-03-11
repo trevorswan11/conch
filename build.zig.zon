@@ -65,6 +65,11 @@
             .hash = "N-V-__8AABTDAwBuawEWBE-P-NIkZF5T4pwX9tRHsf0rRCkO",
             .lazy = true,
         },
+        .libdwarf = .{
+            .url = "https://github.com/davea42/libdwarf-code/archive/refs/tags/v2.3.1.tar.gz",
+            .hash = "N-V-__8AAESGsACJHNukVw9fMHuLowaKWinuxfGbHF4W554F",
+            .lazy = true,
+        },
     },
     .paths = .{
         "apps",

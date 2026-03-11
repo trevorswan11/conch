@@ -11,6 +11,7 @@ const catch2 = @import("packages/third-party/catch2.zig");
 const CurlBuilder = @import("packages/third-party/kcov/CurlBuilder.zig");
 const BinutilsBuilder = @import("packages/third-party/kcov/BinutilsBuilder.zig");
 const ElfutilsBuilder = @import("packages/third-party/kcov/ElfutilsBuilder.zig");
+const libdwarf = @import("packages/third-party/kcov/libdwarf.zig");
 
 const LLVMBuilder = @import("packages/llvm/LLVMBuilder.zig");
 const ClangBuilder = @import("packages/llvm/ClangBuilder.zig");
@@ -54,6 +55,13 @@ pub fn build(b: *std.Build) !void {
             b.installArtifact(elfutils.libebl);
             b.installArtifact(elfutils.libdw);
         }
+    }
+
+    if (libdwarf.build(b, .{
+        .target = b.graph.host,
+        .optimize = .ReleaseFast,
+    })) |libdwarf_dep| {
+        b.installArtifact(libdwarf_dep.artifact);
     }
 
     var compiler_flags: std.ArrayList([]const u8) = .empty;
