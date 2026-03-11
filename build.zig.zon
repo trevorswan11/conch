@@ -40,6 +40,14 @@
             .url = "https://github.com/libarchive/libarchive/archive/refs/tags/v3.8.5.tar.gz",
             .hash = "N-V-__8AABtbCwHDmVvgXlm5f-07LtFZjUQNvvJrBnG-HeqN",
         },
+        .curl = .{
+            .url = "https://github.com/curl/curl/archive/refs/tags/curl-8_18_0.tar.gz",
+            .hash = "N-V-__8AAHcEBgHdCKCoETva5Llwxgbs_1fqyMcAIdbywrg6",
+        },
+        .mbedtls = .{
+            .url = "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-3.6.4.tar.gz",
+            .hash = "N-V-__8AADE9jALWhPS2ykOLbf8gUmr9r-SBwyzzpccbtBAv",
+        },
     },
     .paths = .{
         "apps",
