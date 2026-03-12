@@ -13,22 +13,22 @@ R"(ExpressionStatement
         └─ StringExpression: 54
 ExpressionStatement
 └─ Expr: BinaryExpression (BOOLEAN_AND)
-    ├─ LHS BinaryExpression (BOOLEAN_OR)
-    │   ├─ LHS BinaryExpression (LT_EQ)
-    │   │   ├─ LHS IdentifierExpression: a
-    │   │   └─ RHS IdentifierExpression: b
-    │   └─ RHS BinaryExpression (EQ)
-    │       ├─ LHS IdentifierExpression: c
-    │       └─ RHS IdentifierExpression: d
-    └─ RHS IdentifierExpression: e
+    ├─ LHS: BinaryExpression (BOOLEAN_OR)
+    │   ├─ LHS: BinaryExpression (LT_EQ)
+    │   │   ├─ LHS: IdentifierExpression: a
+    │   │   └─ RHS: IdentifierExpression: b
+    │   └─ RHS: BinaryExpression (EQ)
+    │       ├─ LHS: IdentifierExpression: c
+    │       └─ RHS: IdentifierExpression: d
+    └─ RHS: IdentifierExpression: e
 ExpressionStatement
 └─ Expr: BinaryExpression (BOOLEAN_OR)
-    ├─ LHS IdentifierExpression: a
-    └─ RHS BinaryExpression (EQ)
-        ├─ LHS IndexExpression
+    ├─ LHS: IdentifierExpression: a
+    └─ RHS: BinaryExpression (EQ)
+        ├─ LHS: IndexExpression
         │   ├─ Object: IdentifierExpression: b
         │   └─ Index: USizeIntegerExpression: 3
-        └─ RHS UnaryExpression (BANG)
+        └─ RHS: UnaryExpression (BANG)
             └─ Operand: IdentifierExpression: c
 JumpStatement (CONTINUE)
 JumpStatement (RETURN)
@@ -61,8 +61,8 @@ ExpressionStatement
 └─ Expr: WhileLoopExpression
     ├─ Condition: BoolExpression: true
     ├─ Continuation: AssignmentExpression (PLUS_ASSIGN)
-    │   ├─ Assignee IdentifierExpression: i
-    │   └─ Value SignedIntegerExpression: 1
+    │   ├─ Assignee: IdentifierExpression: i
+    │   └─ Value: SignedIntegerExpression: 1
     ├─ Body: BlockStatement
     │   └─ ExpressionStatement
     │       └─ Expr: IdentifierExpression: a
@@ -129,13 +129,22 @@ ExpressionStatement
     └─ Operand: IdentifierExpression: a
 ExpressionStatement
 └─ Expr: MatchExpression
-    ├─ Input: IdentifierExpression: a
+    ├─ Matcher: IdentifierExpression: a
     ├─ Arms:
-    │   └─ Arm
-    │       ├─ Pattern: IdentifierExpression: b
-    │       └─ Dispatch: BlockStatement
-    │           └─ ExpressionStatement
-    │               └─ Expr: IdentifierExpression: c
+    │   ├─ Arm:
+    │   │   ├─ Pattern: IdentifierExpression: b
+    │   │   ├─ Capture: IdentifierExpression: c
+    │   │   └─ Dispatch: ExpressionStatement
+    │   │       └─ Expr: IdentifierExpression: d
+    │   ├─ Arm:
+    │   │   ├─ Pattern: IdentifierExpression: e
+    │   │   ├─ Capture: <discarded>
+    │   │   └─ Dispatch: ExpressionStatement
+    │   │       └─ Expr: IdentifierExpression: f
+    │   └─ Arm:
+    │       ├─ Pattern: IdentifierExpression: g
+    │       └─ Dispatch: ExpressionStatement
+    │           └─ Expr: IdentifierExpression: h
     └─ Catch All: ExpressionStatement
         └─ Expr: IdentifierExpression: d
 ExpressionStatement
@@ -144,13 +153,13 @@ ExpressionStatement
         └─ Expr: IdentifierExpression: a
 ExpressionStatement
 └─ Expr: AssignmentExpression (ASSIGN)
-    ├─ Assignee DereferenceExpression (STAR)
+    ├─ Assignee: DereferenceExpression (STAR)
     │   └─ Operand: IndexExpression
     │       ├─ Object: IndexExpression
     │       │   ├─ Object: IdentifierExpression: arr
     │       │   └─ Index: IdentifierExpression: i
     │       └─ Index: IdentifierExpression: j
-    └─ Value SignedIntegerExpression: 2
+    └─ Value: SignedIntegerExpression: 2
 ExpressionStatement
 └─ Expr: IfExpression
     ├─ Condition: IdentifierExpression: a
@@ -173,7 +182,7 @@ ExpressionStatement
     │       └─ Type: ExplicitType (modifier: PTR)
     │           └─ IdentifierExpression: B
     ├─ Returns: ExplicitType (modifier: BASE)
-    │   └─ IdentifierExpression: int
+    │   └─ IdentifierExpression: int (primitive)
     └─ Body: BlockStatement
         └─ ExpressionStatement
             └─ Expr: IdentifierExpression: c
@@ -194,7 +203,7 @@ ExpressionStatement
         └─ Value: IdentifierExpression: b
 ExpressionStatement
 └─ Expr: EnumExpression
-    ├─ Underlying: IdentifierExpression: ulong
+    ├─ Underlying: IdentifierExpression: ulong (primitive)
     └─ Enumerations:
         ├─ Name: IdentifierExpression: A
         │   └─ Default: UnsignedLongIntegerExpression: 1
@@ -203,14 +212,14 @@ ExpressionStatement
         └─ Name: IdentifierExpression: C
 ExpressionStatement
 └─ Expr: CallExpression
-    ├─ Callee: IdentifierExpression: @ptrAdd
+    ├─ Callee: IdentifierExpression: @ptrAdd (builtin)
     └─ Arguments: 
         ├─ IdentifierExpression: a
         └─ USizeIntegerExpression: 4
 UsingStatement
 ├─ Alias: IdentifierExpression: T
 └─ Type: ExplicitType (modifier: BASE)
-    └─ IdentifierExpression: int
+    └─ IdentifierExpression: int (primitive)
 ExpressionStatement
 └─ Expr: CallExpression
     ├─ Callee: IdentifierExpression: a
@@ -222,5 +231,22 @@ ExpressionStatement
             └─ ArrayType
                 ├─ Dimensions: IdentifierExpression: N
                 └─ ExplicitType (modifier: BASE)
-                    └─ IdentifierExpression: int
+                    └─ IdentifierExpression: int (primitive)
+ExpressionStatement
+└─ Expr: ImplicitDereferenceExpression (ARROW)
+    ├─ Object: IdentifierExpression: a
+    └─ Member: IdentifierExpression: b
+ExpressionStatement
+└─ Expr: ImplicitAccessExpression (DOT)
+    └─ Operand: IdentifierExpression: a
+ExpressionStatement
+└─ Expr: UnionExpression
+    ├─ Field:
+    │   ├─ Tag: IdentifierExpression: a
+    │   └─ Type: ExplicitType (modifier: BASE)
+    │       └─ IdentifierExpression: int (primitive)
+    └─ Field:
+        ├─ Tag: IdentifierExpression: b
+        └─ Type: ExplicitType (modifier: MUT_REF)
+            └─ IdentifierExpression: T
 )"

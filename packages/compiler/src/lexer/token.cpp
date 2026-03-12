@@ -85,6 +85,7 @@ constexpr auto INT_SUFFIX_MAPPINGS = std::to_array<SuffixMapping>({
 });
 
 auto suffix_length(TokenType tt) noexcept -> usize {
+    if (tt == TokenType::FLOAT) { return 1; }
     if (tt < TokenType::INT_2 || tt > TokenType::UZINT_16) { return 0; }
     return std::ranges::find_if(
                INT_SUFFIX_MAPPINGS,

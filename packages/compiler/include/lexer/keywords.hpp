@@ -21,6 +21,7 @@ constexpr Keyword CONST{"const", TokenType::CONST};
 constexpr Keyword COMPTIME{"comptime", TokenType::COMPTIME};
 constexpr Keyword STRUCT{"struct", TokenType::STRUCT};
 constexpr Keyword ENUM{"enum", TokenType::ENUM};
+constexpr Keyword UNION{"union", TokenType::UNION};
 constexpr Keyword TRUE{"true", TokenType::TRUE};
 constexpr Keyword FALSE{"false", TokenType::FALSE};
 constexpr Keyword IF{"if", TokenType::IF};
@@ -41,6 +42,7 @@ constexpr Keyword UINT{"uint", TokenType::UINT_TYPE};
 constexpr Keyword ULONG{"ulong", TokenType::ULONG_TYPE};
 constexpr Keyword USIZE{"usize", TokenType::USIZE_TYPE};
 constexpr Keyword FLOAT{"float", TokenType::FLOAT_TYPE};
+constexpr Keyword DOUBLE{"double", TokenType::DOUBLE_TYPE};
 constexpr Keyword BYTE{"byte", TokenType::BYTE_TYPE};
 constexpr Keyword STRING{"string", TokenType::STRING_TYPE};
 constexpr Keyword BOOL{"bool", TokenType::BOOL_TYPE};
@@ -65,6 +67,7 @@ constexpr Keyword ALIGNOF{"@alignOf", TokenType::ALIGNOF};
 constexpr Keyword PTR_ADD{"@ptrAdd", TokenType::PTR_ADD};
 constexpr Keyword PTR_SUB{"@ptrSub", TokenType::PTR_SUB};
 constexpr Keyword PTR_FROM_ARRAY{"@ptrFromArray", TokenType::PTR_FROM_ARRAY};
+constexpr Keyword SLICE_FROM_PTR{"@sliceFromPtr", TokenType::SLICE_FROM_PTR};
 constexpr Keyword PTR_IDX{"@ptrIdx", TokenType::PTR_IDX};
 constexpr Keyword PTR_FROM_INT{"@ptrFromInt", TokenType::PTR_FROM_INT};
 constexpr Keyword INT_FROM_PTR{"@intFromPtr", TokenType::INT_FROM_PTR};
@@ -95,17 +98,17 @@ constexpr Keyword CTZ{"@ctz", TokenType::CTZ};
 
 constexpr auto ALL_KEYWORDS = []() {
     auto all_keywords = std::array{
-        keywords::FN,       keywords::VAR,    keywords::CONST,    keywords::COMPTIME,
-        keywords::STRUCT,   keywords::ENUM,   keywords::TRUE,     keywords::FALSE,
-        keywords::IF,       keywords::ELSE,   keywords::DO,       keywords::MATCH,
-        keywords::RETURN,   keywords::LOOP,   keywords::FOR,      keywords::WHILE,
-        keywords::CONTINUE, keywords::BREAK,  keywords::IMPORT,   keywords::INT,
-        keywords::LONG,     keywords::ISIZE,  keywords::UINT,     keywords::ULONG,
-        keywords::USIZE,    keywords::FLOAT,  keywords::BYTE,     keywords::STRING,
-        keywords::BOOL,     keywords::VOID,   keywords::TYPE,     keywords::AS,
-        keywords::PRIVATE,  keywords::EXTERN, keywords::EXPORT,   keywords::PACKED,
-        keywords::VOLATILE, keywords::STATIC, keywords::NORETURN, keywords::NULLPTR,
-        keywords::USING,
+        keywords::FN,       keywords::VAR,      keywords::CONST,    keywords::COMPTIME,
+        keywords::STRUCT,   keywords::ENUM,     keywords::UNION,    keywords::TRUE,
+        keywords::FALSE,    keywords::IF,       keywords::ELSE,     keywords::DO,
+        keywords::MATCH,    keywords::RETURN,   keywords::LOOP,     keywords::FOR,
+        keywords::WHILE,    keywords::CONTINUE, keywords::BREAK,    keywords::IMPORT,
+        keywords::INT,      keywords::LONG,     keywords::ISIZE,    keywords::UINT,
+        keywords::ULONG,    keywords::USIZE,    keywords::FLOAT,    keywords::DOUBLE,
+        keywords::BYTE,     keywords::STRING,   keywords::BOOL,     keywords::VOID,
+        keywords::TYPE,     keywords::AS,       keywords::PRIVATE,  keywords::EXTERN,
+        keywords::EXPORT,   keywords::PACKED,   keywords::VOLATILE, keywords::STATIC,
+        keywords::NORETURN, keywords::NULLPTR,  keywords::USING,
     };
 
     std::ranges::sort(all_keywords, {}, &Keyword::first);
@@ -126,6 +129,7 @@ constexpr auto ALL_PRIMITIVES = std::array{
     keywords::ULONG.second,
     keywords::USIZE.second,
     keywords::FLOAT.second,
+    keywords::DOUBLE.second,
     keywords::BYTE.second,
     keywords::STRING.second,
     keywords::BOOL.second,
@@ -135,16 +139,36 @@ constexpr auto ALL_PRIMITIVES = std::array{
 constexpr auto ALL_BUILTINS = []() {
     using namespace keywords;
     auto all_builtins = std::array{
-        builtins::TYPEOF,  builtins::SIZEOF,       builtins::ALIGNOF,
-        builtins::PTR_ADD, builtins::PTR_SUB,      builtins::PTR_FROM_ARRAY,
-        builtins::PTR_IDX, builtins::PTR_FROM_INT, builtins::INT_FROM_PTR,
-        builtins::SIN,     builtins::COS,          builtins::TAN,
-        builtins::SQRT,    builtins::LOG,          builtins::LOG_10,
-        builtins::LOG_2,   builtins::MIN,          builtins::MAX,
-        builtins::MOD,     builtins::DIVMOD,       builtins::TRUNC,
-        builtins::CAST,    builtins::CEIL,         builtins::FLOOR,
-        builtins::POW,     builtins::EXP,          builtins::EXP_2,
-        builtins::CLZ,     builtins::CTZ,
+        builtins::TYPEOF,
+        builtins::SIZEOF,
+        builtins::ALIGNOF,
+        builtins::PTR_ADD,
+        builtins::PTR_SUB,
+        builtins::PTR_FROM_ARRAY,
+        builtins::SLICE_FROM_PTR,
+        builtins::PTR_IDX,
+        builtins::PTR_FROM_INT,
+        builtins::INT_FROM_PTR,
+        builtins::SIN,
+        builtins::COS,
+        builtins::TAN,
+        builtins::SQRT,
+        builtins::LOG,
+        builtins::LOG_10,
+        builtins::LOG_2,
+        builtins::MIN,
+        builtins::MAX,
+        builtins::MOD,
+        builtins::DIVMOD,
+        builtins::TRUNC,
+        builtins::CAST,
+        builtins::CEIL,
+        builtins::FLOOR,
+        builtins::POW,
+        builtins::EXP,
+        builtins::EXP_2,
+        builtins::CLZ,
+        builtins::CTZ,
     };
 
     std::ranges::sort(all_builtins, {}, &Keyword::first);

@@ -23,6 +23,7 @@
 #include "ast/expressions/struct.hpp"
 #include "ast/expressions/type.hpp"
 #include "ast/expressions/type_modifiers.hpp"
+#include "ast/expressions/union.hpp"
 #include "ast/expressions/while.hpp"
 
 #include "ast/statements/block.hpp"

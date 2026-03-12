@@ -1,15 +1,18 @@
 # Structs
 - Structs are defined using the standard declaration syntax
+    - As structs are types, they can also be defined with a `using` statement. This restricts the modifiers you can use, preventing access/abi restrictions
 - Struct definitions must be `const`
 - Struct members are simply declarations
     - Members cannot be marked `extern` or `export`
     - Members can be marked `private` to prevent external access
     - Members can be marked `static`, denoting struct-level ownership (as opposed to instance)
     - Member functions have a first argument which is an instance of the struct: `self`
-        - A member function can provide this keyword in three different ways:
+        - A member function can provide this keyword in five different ways:
             1. `self` denotes a pass by value (copy)
             2. `&self` denotes a pass by const reference
-            3. `&mut self` denotes a pass by mutable reference
+            3. `*self` denotes a pass by const pointer
+            4. `&mut self` denotes a pass by mutable reference
+            5. `*mut self` denotes a pass by mutable pointer
         - This parameter _must_ be the first parameter of the function's parameter list
         - This parameter is conventionally named `self` but is allowed to assume any non-reserved keyword
         - This parameter has the underlying type of the directly enclosing struct

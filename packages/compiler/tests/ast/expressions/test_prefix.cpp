@@ -25,13 +25,17 @@ TEST_CASE("Unary expressions") {
     helpers::test_prefix_expr<ast::UnaryExpression>(operators::PLUS);
 }
 
-TEST_CASE("Dereference expressions") {
+TEST_CASE("Dereference expression") {
     helpers::test_prefix_expr<ast::DereferenceExpression>(operators::STAR);
 }
 
 TEST_CASE("Reference expressions") {
     helpers::test_prefix_expr<ast::ReferenceExpression>(operators::BW_AND);
     helpers::test_prefix_expr<ast::ReferenceExpression>(operators::AND_MUT);
+}
+
+TEST_CASE("Implicit access expression") {
+    helpers::test_prefix_expr<ast::ImplicitAccessExpression>(operators::DOT);
 }
 
 TEST_CASE("Prefix without operand") {

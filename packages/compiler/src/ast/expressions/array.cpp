@@ -46,18 +46,11 @@ auto ArrayExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserD
 
     // Perform last minute ident/size checks to reduce load on Sema
     TRY(parser.expect_peek(TokenType::RBRACE));
-    if (items.empty()) { return make_parser_unexpected(ParserError::EMPTY_ARRAY, start_token); }
-
     if (size) {
         const auto& size_expr = *(*size);
         if (size_expr.is<USizeIntegerExpression>()) {
             const auto& explicit_size = as<USizeIntegerExpression>(size_expr);
             const auto& size_token    = size_expr.get_token();
-
-            // Enforce non-empty arrays
-            if (explicit_size.get_value() == 0) {
-                return make_parser_unexpected(ParserError::EXPLICIT_ZERO_ARRAY_SIZE, size_token);
-            }
 
             // Enforce full initialization
             if (items.size() != explicit_size.get_value()) {

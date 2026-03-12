@@ -236,20 +236,26 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     NumberSuffix suffix{};
-    if (!(passed_decimal || passed_exponent) && pos_ < input_.size()) {
+    bool         forced_float = false;
+    if (pos_ < input_.size()) {
         auto c = current_byte_;
-        if (c == 'u' || c == 'U') {
-            suffix |= NumberSuffix::UNSIGNED;
+        if (c == 'f' || c == 'F') {
+            forced_float = true;
             read_character();
-        }
+        } else if (!(passed_decimal || passed_exponent)) {
+            if (c == 'u' || c == 'U') {
+                suffix |= NumberSuffix::UNSIGNED;
+                read_character();
+            }
 
-        c = current_byte_;
-        if (c == 'z' || c == 'Z') {
-            suffix |= NumberSuffix::SIZE;
-            read_character();
-        } else if (c == 'l' || c == 'L') {
-            suffix |= NumberSuffix::WIDE;
-            read_character();
+            c = current_byte_;
+            if (c == 'z' || c == 'Z') {
+                suffix |= NumberSuffix::SIZE;
+                read_character();
+            } else if (c == 'l' || c == 'L') {
+                suffix |= NumberSuffix::WIDE;
+                read_character();
+            }
         }
     }
 
@@ -267,8 +273,11 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     // Determine the input type
-    if (passed_decimal || passed_exponent) {
-        type = TokenType::FLOAT;
+    if (passed_decimal || passed_exponent || forced_float) {
+        if (base != Base::DECIMAL) {
+            return {type, input_.substr(start, length), start_line, start_col};
+        }
+        type = forced_float ? TokenType::FLOAT : TokenType::DOUBLE;
     } else {
         // Use an offset to increment the actual token type based on its base and width
         auto offset = base_idx(base);

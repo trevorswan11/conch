@@ -140,12 +140,21 @@ TEST_CASE("Byte parsing") {
 
 TEST_CASE("Floating point parsing") {
     using N = ast::FloatExpression;
-    helpers::test_primitive<N>("1023.0;", TokenType::FLOAT, 1023.0);
-    helpers::test_primitive<N>("1023.234612;", TokenType::FLOAT, 1023.234612);
-    helpers::test_primitive<N>("1023.234612e234;", TokenType::FLOAT, 1023.234612e234);
+    helpers::test_primitive<N>("1023.0f;", TokenType::FLOAT, 1023.0f);
+    helpers::test_primitive<N>("1023.234612f;", TokenType::FLOAT, 1023.234612f);
 
     helpers::test_primitive<N>(
-        "1023.234612e234000;", nullopt, ParserDiagnostic{ParserError::FLOAT_OVERFLOW, 1, 1});
+        "1023.234612e234000f;", nullopt, ParserDiagnostic{ParserError::FLOAT_OVERFLOW, 1, 1});
+}
+
+TEST_CASE("Double parsing") {
+    using N = ast::DoubleExpression;
+    helpers::test_primitive<N>("1023.0;", TokenType::DOUBLE, 1023.0);
+    helpers::test_primitive<N>("1023.234612;", TokenType::DOUBLE, 1023.234612);
+    helpers::test_primitive<N>("1023.234612e234;", TokenType::DOUBLE, 1023.234612e234);
+
+    helpers::test_primitive<N>(
+        "1023.234612e234000;", nullopt, ParserDiagnostic{ParserError::DOUBLE_OVERFLOW, 1, 1});
 }
 
 TEST_CASE("Bool parsing") {

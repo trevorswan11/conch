@@ -10,8 +10,6 @@
 
 namespace conch::ast {
 
-class TypeExpression;
-
 class ArrayExpression : public ExprBase<ArrayExpression> {
   public:
     static constexpr auto KIND = NodeKind::ARRAY_EXPRESSION;

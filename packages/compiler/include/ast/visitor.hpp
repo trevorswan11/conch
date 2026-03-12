@@ -17,9 +17,11 @@ namespace conch::ast {
     X(BinaryExpression)              \
     X(DotExpression)                 \
     X(RangeExpression)               \
+    X(ImplicitDereferenceExpression) \
     X(MatchExpression)               \
     X(ReferenceExpression)           \
     X(DereferenceExpression)         \
+    X(ImplicitAccessExpression)      \
     X(UnaryExpression)               \
     X(StringExpression)              \
     X(SignedIntegerExpression)       \
@@ -30,10 +32,12 @@ namespace conch::ast {
     X(USizeIntegerExpression)        \
     X(ByteExpression)                \
     X(FloatExpression)               \
+    X(DoubleExpression)              \
     X(BoolExpression)                \
     X(ScopeResolutionExpression)     \
     X(StructExpression)              \
     X(TypeExpression)                \
+    X(UnionExpression)               \
     X(WhileLoopExpression)           \
     X(BlockStatement)                \
     X(DeclStatement)                 \

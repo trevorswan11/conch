@@ -127,7 +127,6 @@ TEST_CASE("Array type requirement") {
                        ParserDiagnostic{ParserError::ILLEGAL_ARRAY_SIZE_TYPE, 1, 9});
     helpers::test_fail(R"(var a: ["e"]int;)",
                        ParserDiagnostic{ParserError::ILLEGAL_ARRAY_SIZE_TYPE, 1, 9});
-    helpers::test_fail("var a: [0uz]int;", ParserDiagnostic{ParserError::EMPTY_ARRAY, 1, 9});
 }
 
 TEST_CASE("Function type restrictions") {

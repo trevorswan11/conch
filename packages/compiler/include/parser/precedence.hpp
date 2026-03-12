@@ -65,6 +65,7 @@ constexpr auto ALL_BINDINGS = []() {
         {TokenType::NOT_ASSIGN, Precedence::ASSIGNMENT},
         {TokenType::XOR_ASSIGN, Precedence::ASSIGNMENT},
         {TokenType::DOT, Precedence::SCOPE_RESOLUTION},
+        {TokenType::ARROW, Precedence::SCOPE_RESOLUTION},
         {TokenType::COLON_COLON, Precedence::SCOPE_RESOLUTION},
     });
 

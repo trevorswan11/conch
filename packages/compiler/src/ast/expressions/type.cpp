@@ -57,9 +57,6 @@ auto ExplicitType::is_equal(const ExplicitType& other) const noexcept -> bool {
             if (!(*dimension)->any<USizeIntegerExpression, IdentifierExpression>()) {
                 return make_parser_unexpected(ParserError::ILLEGAL_ARRAY_SIZE_TYPE,
                                               (*dimension)->get_token());
-            } else if ((*dimension)->is<USizeIntegerExpression>() &&
-                       Node::as<USizeIntegerExpression>(**dimension).get_value() == 0) {
-                return make_parser_unexpected(ParserError::EMPTY_ARRAY, (*dimension)->get_token());
             }
             TRY(parser.expect_peek(TokenType::RBRACKET));
         }

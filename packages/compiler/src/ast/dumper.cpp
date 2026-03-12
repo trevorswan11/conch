@@ -12,12 +12,12 @@ namespace conch::ast {
         fmt::println(out_, #NodeType " ({})", magic_enum::enum_name(node.get_op())); \
         {                                                                            \
             const Indent::Guard g{indent_, false};                                   \
-            fmt::print(out_, "{}" #LeftLabel " ", indent_.current_branch());         \
+            fmt::print(out_, "{}" #LeftLabel ": ", indent_.current_branch());        \
             node.get_lhs().accept(*this);                                            \
         }                                                                            \
         {                                                                            \
             const Indent::Guard g{indent_, true};                                    \
-            fmt::print(out_, "{}" #RightLabel " ", indent_.current_branch());        \
+            fmt::print(out_, "{}" #RightLabel ": ", indent_.current_branch());       \
             node.get_rhs().accept(*this);                                            \
         }                                                                            \
     }
@@ -205,7 +205,15 @@ auto ASTDumper::visit(const FunctionExpression& node) -> void {
     }
 }
 
-MAKE_LEAF_DUMP(IdentifierExpression)
+auto ASTDumper::visit(const IdentifierExpression& node) -> void {
+    fmt::print(out_, "IdentifierExpression: {}", node);
+    if (node.get_token().is_builtin()) {
+        fmt::print(out_, " (builtin)");
+    } else if (node.get_token().is_primitive()) {
+        fmt::print(out_, " (primitive)");
+    }
+    fmt::println(out_, "");
+}
 
 auto ASTDumper::visit(const IfExpression& node) -> void {
     fmt::println(out_, "IfExpression");
@@ -251,12 +259,13 @@ MAKE_INFIX_DUMP(AssignmentExpression, Assignee, Value)
 MAKE_INFIX_DUMP(BinaryExpression, LHS, RHS)
 MAKE_INFIX_DUMP(DotExpression, Object, Member)
 MAKE_INFIX_DUMP(RangeExpression, Lower, Upper)
+MAKE_INFIX_DUMP(ImplicitDereferenceExpression, Object, Member)
 
 auto ASTDumper::visit(const MatchExpression& node) -> void {
     fmt::println(out_, "MatchExpression");
     {
         const Indent::Guard g{indent_, false};
-        fmt::print(out_, "{}Input: ", indent_.current_branch());
+        fmt::print(out_, "{}Matcher: ", indent_.current_branch());
         node.get_matcher().accept(*this);
     }
 
@@ -264,12 +273,23 @@ auto ASTDumper::visit(const MatchExpression& node) -> void {
         const Indent::Guard g{indent_, !node.has_catch_all()};
         fmt::println(out_, "{}Arms:", indent_.current_branch());
         dump_container(node.get_arms(), [this](const MatchArm& arm) {
-            fmt::println(out_, "{}Arm", indent_.current_branch());
+            fmt::println(out_, "{}Arm:", indent_.current_branch());
             {
                 const Indent::Guard g_pattern{indent_, false};
                 fmt::print(out_, "{}Pattern: ", indent_.current_branch());
                 arm.get_pattern().accept(*this);
             }
+
+            if (arm.has_capture_clause()) {
+                const Indent::Guard g_pattern{indent_, false};
+                fmt::print(out_, "{}Capture: ", indent_.current_branch());
+                if (arm.is_explicit_capture()) {
+                    arm.get_explicit_capture().accept(*this);
+                } else {
+                    fmt::println(out_, "<discarded>");
+                }
+            }
+
             {
                 const Indent::Guard g_result{indent_, true};
                 fmt::print(out_, "{}Dispatch: ", indent_.current_branch());
@@ -288,6 +308,7 @@ auto ASTDumper::visit(const MatchExpression& node) -> void {
 MAKE_PREFIX_DUMP(ReferenceExpression)
 MAKE_PREFIX_DUMP(DereferenceExpression)
 MAKE_PREFIX_DUMP(UnaryExpression)
+MAKE_PREFIX_DUMP(ImplicitAccessExpression)
 
 MAKE_LEAF_DUMP(StringExpression)
 MAKE_LEAF_DUMP(SignedIntegerExpression)
@@ -298,6 +319,7 @@ MAKE_LEAF_DUMP(UnsignedLongIntegerExpression)
 MAKE_LEAF_DUMP(USizeIntegerExpression)
 MAKE_LEAF_DUMP(ByteExpression)
 MAKE_LEAF_DUMP(FloatExpression)
+MAKE_LEAF_DUMP(DoubleExpression)
 MAKE_LEAF_DUMP(BoolExpression)
 
 auto ASTDumper::visit(const ScopeResolutionExpression& node) -> void {
@@ -327,9 +349,26 @@ auto ASTDumper::visit(const TypeExpression& node) -> void {
     }
 }
 
+auto ASTDumper::visit(const UnionExpression& node) -> void {
+    fmt::println(out_, "UnionExpression");
+    dump_container(node.get_fields(), [this](const UnionField& field) {
+        fmt::println(out_, "{}Field:", indent_.current_branch());
+        {
+            const Indent::Guard g_pattern{indent_, false};
+            fmt::print(out_, "{}Tag: ", indent_.current_branch());
+            field.get_ident().accept(*this);
+        }
+
+        {
+            const Indent::Guard g_result{indent_, true};
+            fmt::print(out_, "{}Type: ", indent_.current_branch());
+            dump_explicit_type(field.get_type(), false);
+        }
+    });
+}
+
 auto ASTDumper::visit(const WhileLoopExpression& node) -> void {
     fmt::println(out_, "WhileLoopExpression");
-
     {
         const Indent::Guard g{indent_, false};
         fmt::print(out_, "{}Condition: ", indent_.current_branch());

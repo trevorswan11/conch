@@ -53,6 +53,12 @@ auto ByteExpression::parse(Parser& parser) -> Expected<Box<Expression>, ParserDi
     return make_box<ByteExpression>(start_token, value);
 }
 
+template <typename T> auto approx_eq(T a, T b) -> bool {
+    const auto largest = std::max(std::abs(b), std::abs(a));
+    const auto diff    = std::abs(a - b);
+    return diff <= largest * std::numeric_limits<T>::epsilon();
+}
+
 auto FloatExpression::accept(Visitor& v) const -> void { v.visit(*this); }
 
 auto FloatExpression::is_equal(const Node& other) const noexcept -> bool {
@@ -60,10 +66,11 @@ auto FloatExpression::is_equal(const Node& other) const noexcept -> bool {
     return approx_eq(value_, casted.value_);
 }
 
-auto FloatExpression::approx_eq(value_type a, value_type b) -> bool {
-    const auto largest = std::max(std::abs(b), std::abs(a));
-    const auto diff    = std::abs(a - b);
-    return diff <= largest * std::numeric_limits<value_type>::epsilon();
+auto DoubleExpression::accept(Visitor& v) const -> void { v.visit(*this); }
+
+auto DoubleExpression::is_equal(const Node& other) const noexcept -> bool {
+    const auto& casted = as<DoubleExpression>(other);
+    return approx_eq(value_, casted.value_);
 }
 
 auto BoolExpression::accept(Visitor& v) const -> void { v.visit(*this); }

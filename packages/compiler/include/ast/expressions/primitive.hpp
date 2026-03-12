@@ -31,16 +31,15 @@ template <typename Derived, typename T> class PrimitiveExpression : public ExprB
     static auto parse(Parser& parser) -> Expected<Box<Expression>, ParserDiagnostic>
         requires(!disable_default_parse<Derived>::value)
     {
-        constexpr auto is_floating_point = std::is_same_v<value_type, f64>;
-        const auto     start_token       = parser.current_token();
-        const auto     base              = token_type::to_base(start_token.type);
+        const auto start_token = parser.current_token();
+        const auto base        = token_type::to_base(start_token.type);
 
         const auto* first = start_token.slice.cbegin() + (!base || *base == Base::DECIMAL ? 0 : 2);
         const auto* last  = start_token.slice.cend() - token_type::suffix_length(start_token.type);
 
         value_type             v;
         std::from_chars_result result;
-        if constexpr (is_floating_point) {
+        if constexpr (std::is_same_v<value_type, f64> || std::is_same_v<value_type, f32>) {
             result = std::from_chars(first, last, v);
         } else {
             result = std::from_chars(first, last, v, std::to_underlying(*base));
@@ -50,14 +49,20 @@ template <typename Derived, typename T> class PrimitiveExpression : public ExprB
         }
 
         if (result.ec == std::errc::result_out_of_range) {
-            const auto err =
-                is_floating_point ? ParserError::FLOAT_OVERFLOW : ParserError::INTEGER_OVERFLOW;
-            return make_parser_unexpected(err, start_token);
+            return make_parser_unexpected(std::is_same_v<value_type, f64>
+                                              ? ParserError::DOUBLE_OVERFLOW
+                                              : (std::is_same_v<value_type, f32>
+                                                     ? ParserError::FLOAT_OVERFLOW
+                                                     : ParserError::INTEGER_OVERFLOW),
+                                          start_token);
         }
 
-        const auto err =
-            is_floating_point ? ParserError::MALFORMED_FLOAT : ParserError::MALFORMED_INTEGER;
-        return make_parser_unexpected(err, start_token);
+        return make_parser_unexpected(std::is_same_v<value_type, f64>
+                                          ? ParserError::MALFORMED_DOUBLE
+                                          : (std::is_same_v<value_type, f32>
+                                                 ? ParserError::MALFORMED_FLOAT
+                                                 : ParserError::MALFORMED_INTEGER),
+                                      start_token);
     }
 
     MAKE_AST_GETTER(value, const value_type&, )
@@ -165,7 +170,7 @@ class ByteExpression : public PrimitiveExpression<ByteExpression, byte> {
 };
 template <> struct disable_default_parse<ByteExpression> : std::true_type {};
 
-class FloatExpression : public PrimitiveExpression<FloatExpression, f64> {
+class FloatExpression : public PrimitiveExpression<FloatExpression, f32> {
   public:
     static constexpr auto KIND = NodeKind::FLOAT_EXPRESSION;
 
@@ -176,9 +181,19 @@ class FloatExpression : public PrimitiveExpression<FloatExpression, f64> {
     auto accept(Visitor& v) const -> void override;
 
     auto is_equal(const Node& other) const noexcept -> bool override;
+};
 
-  private:
-    static auto approx_eq(value_type a, value_type b) -> bool;
+class DoubleExpression : public PrimitiveExpression<DoubleExpression, f64> {
+  public:
+    static constexpr auto KIND = NodeKind::DOUBLE_EXPRESSION;
+
+  public:
+    using PrimitiveExpression::PrimitiveExpression;
+    MAKE_AST_COPY_MOVE(DoubleExpression)
+
+    auto accept(Visitor& v) const -> void override;
+
+    auto is_equal(const Node& other) const noexcept -> bool override;
 };
 
 class BoolExpression : public PrimitiveExpression<BoolExpression, bool> {

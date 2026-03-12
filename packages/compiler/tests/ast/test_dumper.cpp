@@ -26,7 +26,7 @@ constexpr std::string_view input{R"(
     A::B::C;
     packed struct { var a: Foo = bar; const b := fn(*mut this, a: A, b: *B): C { c; }; };
     &a; &mut b; *a;
-    match (a) { b => { c; } } else d;
+    match (a) { b => |c| d; e => |_| f; g => h; } else d;
     loop { a; };
     (*arr[i][j]) = 2;
     if (a) { b; } else { c; };
@@ -36,6 +36,9 @@ constexpr std::string_view input{R"(
     @ptrAdd(a, 4uz);
     using T = int;
     a(&mut r, t, *[N]int);
+    a->b;
+    .a;
+    union { a: int, b: &mut T, };
 )"};
 
 constexpr std::string_view expected{

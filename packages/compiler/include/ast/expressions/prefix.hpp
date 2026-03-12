@@ -55,6 +55,7 @@ template <typename Derived> class PrefixExpression : public ExprBase<Derived> {
 DECLARE_PREFIX_EXPRESSION(UnaryExpression, NodeKind::UNARY_EXPRESSION)
 DECLARE_PREFIX_EXPRESSION(ReferenceExpression, NodeKind::REFERENCE_EXPRESSION)
 DECLARE_PREFIX_EXPRESSION(DereferenceExpression, NodeKind::DEREFERENCE_EXPRESSION)
+DECLARE_PREFIX_EXPRESSION(ImplicitAccessExpression, NodeKind::IMPLICIT_ACCESS_EXPRESSION)
 
 #undef DECLARE_PREFIX_EXPRESSION
 

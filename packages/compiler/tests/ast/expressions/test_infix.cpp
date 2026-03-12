@@ -290,6 +290,28 @@ TEST_CASE("Scope resolution precedence") {
                                   b, helpers::make_ident(b), helpers::make_ident(c)),
                               TokenType::LT,
                               helpers::make_ident(d)});
+
+    helpers::test_binary_expr(
+        "a or b.c >= d;",
+        helpers::ident_from(a),
+        TokenType::BOOLEAN_OR,
+        ast::BinaryExpression{
+            b,
+            make_box<ast::DotExpression>(
+                b, helpers::make_ident(b), TokenType::DOT, helpers::make_ident(c)),
+            TokenType::GT_EQ,
+            helpers::make_ident(d)});
+
+    helpers::test_binary_expr(
+        "a or b->c < d;",
+        helpers::ident_from(a),
+        TokenType::BOOLEAN_OR,
+        ast::BinaryExpression{
+            b,
+            make_box<ast::ImplicitDereferenceExpression>(
+                b, helpers::make_ident(b), TokenType::ARROW, helpers::make_ident(c)),
+            TokenType::LT,
+            helpers::make_ident(d)});
 }
 
 TEST_CASE("Illegal infix node") {

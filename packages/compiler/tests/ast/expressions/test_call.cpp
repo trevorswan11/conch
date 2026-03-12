@@ -22,8 +22,8 @@ TEST_CASE("Trailing comma") {
         "@sin(23.6, );",
         ast::CallExpression{func,
                             helpers::make_ident(func),
-                            helpers::make_vector<ast::CallArgument>(make_box<ast::FloatExpression>(
-                                Token{TokenType::FLOAT, "23.6"}, 23.6))});
+                            helpers::make_vector<ast::CallArgument>(make_box<ast::DoubleExpression>(
+                                Token{TokenType::DOUBLE, "23.6"}, 23.6))});
 }
 
 TEST_CASE("Builtin with multiple arguments") {

@@ -83,7 +83,7 @@ TEST_CASE("Basic next token and lexer consuming") {
             {TokenType::COMMA, ","},     {TokenType::IDENT, "ten"},
             {TokenType::RPAREN, ")"},    {TokenType::SEMICOLON, ";"},
             {TokenType::VAR, "var"},     {TokenType::IDENT, "four_and_some"},
-            {TokenType::WALRUS, ":="},   {TokenType::FLOAT, "4.2"},
+            {TokenType::WALRUS, ":="},   {TokenType::DOUBLE, "4.2"},
             {TokenType::SEMICOLON, ";"}, {TokenType::END, ""},
         });
 
@@ -109,16 +109,16 @@ TEST_CASE("Basic next token and lexer consuming") {
 
 TEST_CASE("Base-10 ints and floats") {
     SECTION("Correct numbers") {
-        Lexer l{"0 123 3.14 42.0 1e20 1.e-3 2.3901E4 1e."};
+        Lexer l{"0 123 3.14 42.0 1e20 1.e-3 2.3901E4f 1e."};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::INT_10, "0"},
             {TokenType::INT_10, "123"},
-            {TokenType::FLOAT, "3.14"},
-            {TokenType::FLOAT, "42.0"},
-            {TokenType::FLOAT, "1e20"},
-            {TokenType::FLOAT, "1.e-3"},
-            {TokenType::FLOAT, "2.3901E4"},
+            {TokenType::DOUBLE, "3.14"},
+            {TokenType::DOUBLE, "42.0"},
+            {TokenType::DOUBLE, "1e20"},
+            {TokenType::DOUBLE, "1.e-3"},
+            {TokenType::FLOAT, "2.3901E4f"},
             {TokenType::INT_10, "1"},
             {TokenType::IDENT, "e"},
             {TokenType::DOT, "."},
@@ -133,7 +133,7 @@ TEST_CASE("Base-10 ints and floats") {
     }
 
     SECTION("Illegal Floats") {
-        Lexer l{".0 1..2 3.4.5 3.4u"};
+        Lexer l{".0 1..2 3.4.5 3.4u 5f"};
 
         const auto expecteds = std::to_array<ExpectedLexeme>({
             {TokenType::DOT, "."},
@@ -141,11 +141,12 @@ TEST_CASE("Base-10 ints and floats") {
             {TokenType::INT_10, "1"},
             {TokenType::DOT_DOT, ".."},
             {TokenType::INT_10, "2"},
-            {TokenType::FLOAT, "3.4"},
+            {TokenType::DOUBLE, "3.4"},
             {TokenType::DOT, "."},
             {TokenType::INT_10, "5"},
-            {TokenType::FLOAT, "3.4"},
+            {TokenType::DOUBLE, "3.4"},
             {TokenType::IDENT, "u"},
+            {TokenType::FLOAT, "5f"},
             {TokenType::END, ""},
         });
 
@@ -265,8 +266,8 @@ TEST_CASE("Comments") {
             "   x + y;\n"
             "};\n\n"
             "var result := add(five, ten); // EOL\n"
-            "var four_and_some := 4.2;\n"
-            "work;"};
+            "var four_and_some := 4.2f;\n"
+            "work->more;"};
 
     const auto expecteds = std::to_array<ExpectedLexeme>({
         {TokenType::CONST, "const"},  {TokenType::IDENT, "five"},
@@ -289,8 +290,9 @@ TEST_CASE("Comments") {
         {TokenType::IDENT, "ten"},    {TokenType::RPAREN, ")"},
         {TokenType::SEMICOLON, ";"},  {TokenType::COMMENT, " EOL"},
         {TokenType::VAR, "var"},      {TokenType::IDENT, "four_and_some"},
-        {TokenType::WALRUS, ":="},    {TokenType::FLOAT, "4.2"},
+        {TokenType::WALRUS, ":="},    {TokenType::FLOAT, "4.2f"},
         {TokenType::SEMICOLON, ";"},  {TokenType::IDENT, "work"},
+        {TokenType::ARROW, "->"},     {TokenType::IDENT, "more"},
         {TokenType::SEMICOLON, ";"},  {TokenType::END, ""},
     });
 
