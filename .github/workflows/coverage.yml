@@ -1,0 +1,43 @@
+name: Coverage
+
+on:
+    push:
+        branches: [dev]
+        paths:
+            - ".github/workflows/coverage.yml"
+            - "src/**"
+            - "include/**"
+            - "tests/**"
+            - "build.zig"
+            - "build.zig.zon"
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    coverage:
+        permissions:
+            contents: write
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - uses: mlugg/setup-zig@v2
+              with:
+                  version: 0.15.2
+
+            - name: Run coverage reporter
+              run: |
+                  zig build coverage
+
+            - name: Deploy Badge to 'badges' branch
+              uses: JamesIves/github-pages-deploy-action@v4
+              with:
+                folder: zig-out
+                branch: badges
+                single-commit: true
