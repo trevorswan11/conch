@@ -10,9 +10,9 @@ const catch2 = @import("packages/third-party/catch2.zig");
 
 const KcovBuilder = @import("packages/third-party/kcov/KcovBuilder.zig");
 
-const LLVMBuilder = @import("packages/llvm/LLVMBuilder.zig");
-const ClangBuilder = @import("packages/llvm/ClangBuilder.zig");
-const LLDBuilder = @import("packages/llvm/LLDBuilder.zig");
+const LLVMBuilder = @import("packages/third-party/llvm/LLVMBuilder.zig");
+const ClangBuilder = @import("packages/third-party/llvm/ClangBuilder.zig");
+const LLDBuilder = @import("packages/third-party/llvm/LLDBuilder.zig");
 
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{
@@ -113,10 +113,12 @@ const ProjectPaths = struct {
     const test_runner = "packages/test_runner/";
     const compressor = "apps/compressor/";
 
-    const llvm_sources = "packages/llvm/sources/";
     const ThirdParty = struct {
         const root = "packages/third-party/";
         const root_sources = root ++ "sources";
+
+        const llvm_root = root ++ "llvm/";
+        const llvm_sources = llvm_root ++ "sources";
 
         const kcov_root = root ++ "kcov/";
         const kcov_gen = kcov_root ++ "gen";
@@ -883,7 +885,7 @@ const LOCCounter = struct {
         const b = step.owner;
 
         const dropped_filenames = try std.mem.concat(b.allocator, []const u8, &.{
-            try collectFiles(b, ProjectPaths.llvm_sources, dropped_file_config),
+            try collectFiles(b, ProjectPaths.ThirdParty.llvm_sources, dropped_file_config),
             try collectFiles(b, ProjectPaths.ThirdParty.root_sources, dropped_file_config),
             try collectFiles(b, ProjectPaths.ThirdParty.kcov_gen, dropped_file_config),
             try collectFiles(b, ProjectPaths.ThirdParty.kcov_sources, dropped_file_config),

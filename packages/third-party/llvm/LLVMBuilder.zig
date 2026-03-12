@@ -25,11 +25,11 @@ const text_api = @import("sources/llvm/text_api.zig");
 const transforms = @import("sources/llvm/transforms.zig");
 const xray = @import("sources/llvm/xray.zig");
 
-const Dependency = @import("../third-party/Dependency.zig");
+const Dependency = @import("../Dependency.zig");
 pub const Artifact = Dependency.Artifact;
-const libxml2 = @import("../third-party/libxml2.zig");
-const zstd = @import("../third-party/zstd.zig");
-const zlib = @import("../third-party/zlib.zig");
+const libxml2 = @import("../libxml2.zig");
+const zstd = @import("../zstd.zig");
+const zlib = @import("../zlib.zig");
 
 pub const default_optimize: std.builtin.OptimizeMode = .ReleaseSafe;
 

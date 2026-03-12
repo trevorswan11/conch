@@ -1,8 +1,8 @@
-packages/llvm/sources/** linguist-vendored
-packages/third-party/kcov/gen/**  linguist-vendored
-packages/third-party/kcov/sources/**  linguist-vendored
-packages/third-party/kcov/utils/**  linguist-vendored
-packages/third-party/sources/**  linguist-vendored
+packages/third-party/llvm/sources/**    linguist-vendored
+packages/third-party/kcov/gen/**        linguist-vendored
+packages/third-party/kcov/sources/**    linguist-vendored
+packages/third-party/kcov/utils/**      linguist-vendored
+packages/third-party/sources/**         linguist-vendored
 
 * text eol=lf
 
