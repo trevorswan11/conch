@@ -173,7 +173,7 @@ ExpressionStatement
     │       └─ Type: ExplicitType (modifier: PTR)
     │           └─ IdentifierExpression: B
     ├─ Returns: ExplicitType (modifier: BASE)
-    │   └─ IdentifierExpression: int
+    │   └─ IdentifierExpression: int (primitive)
     └─ Body: BlockStatement
         └─ ExpressionStatement
             └─ Expr: IdentifierExpression: c
@@ -194,7 +194,7 @@ ExpressionStatement
         └─ Value: IdentifierExpression: b
 ExpressionStatement
 └─ Expr: EnumExpression
-    ├─ Underlying: IdentifierExpression: ulong
+    ├─ Underlying: IdentifierExpression: ulong (primitive)
     └─ Enumerations:
         ├─ Name: IdentifierExpression: A
         │   └─ Default: UnsignedLongIntegerExpression: 1
@@ -203,14 +203,14 @@ ExpressionStatement
         └─ Name: IdentifierExpression: C
 ExpressionStatement
 └─ Expr: CallExpression
-    ├─ Callee: IdentifierExpression: @ptrAdd
+    ├─ Callee: IdentifierExpression: @ptrAdd (builtin)
     └─ Arguments: 
         ├─ IdentifierExpression: a
         └─ USizeIntegerExpression: 4
 UsingStatement
 ├─ Alias: IdentifierExpression: T
 └─ Type: ExplicitType (modifier: BASE)
-    └─ IdentifierExpression: int
+    └─ IdentifierExpression: int (primitive)
 ExpressionStatement
 └─ Expr: CallExpression
     ├─ Callee: IdentifierExpression: a
@@ -222,5 +222,5 @@ ExpressionStatement
             └─ ArrayType
                 ├─ Dimensions: IdentifierExpression: N
                 └─ ExplicitType (modifier: BASE)
-                    └─ IdentifierExpression: int
+                    └─ IdentifierExpression: int (primitive)
 )"

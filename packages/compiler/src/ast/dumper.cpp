@@ -205,7 +205,15 @@ auto ASTDumper::visit(const FunctionExpression& node) -> void {
     }
 }
 
-MAKE_LEAF_DUMP(IdentifierExpression)
+auto ASTDumper ::visit(const IdentifierExpression& node) -> void {
+    fmt::print(out_, "IdentifierExpression: {}", node);
+    if (node.get_token().is_builtin()) {
+        fmt::print(out_, " (builtin)");
+    } else if (node.get_token().is_primitive()) {
+        fmt::print(out_, " (primitive)");
+    }
+    fmt::println(out_, "");
+}
 
 auto ASTDumper::visit(const IfExpression& node) -> void {
     fmt::println(out_, "IfExpression");

@@ -167,6 +167,7 @@ enum class TokenType : u8 {
     PTR_ADD,
     PTR_SUB,
     PTR_FROM_ARRAY,
+    SLICE_FROM_PTR,
     PTR_IDX,
     PTR_FROM_INT,
     INT_FROM_PTR,

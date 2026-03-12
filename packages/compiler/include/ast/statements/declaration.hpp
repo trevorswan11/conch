@@ -105,9 +105,9 @@ class DeclStatement : public StmtBase<DeclStatement> {
                                              (DeclModifiers::EXTERN | DeclModifiers::EXPORT))) <= 1;
 
         // At most one access flag can be set
-        const auto valid_access = std::popcount(std::to_underlying(
-                                      modifiers & (DeclModifiers::PRIVATE | DeclModifiers::EXTERN |
-                                                   DeclModifiers::EXPORT))) <= 1;
+        const auto valid_access =
+            std::popcount(std::to_underlying(
+                modifiers & (DeclModifiers::PRIVATE | DeclModifiers::EXPORT))) <= 1;
         return valid_mut && valid_comptime && valid_abi && valid_access;
     }
 

@@ -65,6 +65,7 @@ constexpr Keyword ALIGNOF{"@alignOf", TokenType::ALIGNOF};
 constexpr Keyword PTR_ADD{"@ptrAdd", TokenType::PTR_ADD};
 constexpr Keyword PTR_SUB{"@ptrSub", TokenType::PTR_SUB};
 constexpr Keyword PTR_FROM_ARRAY{"@ptrFromArray", TokenType::PTR_FROM_ARRAY};
+constexpr Keyword SLICE_FROM_PTR{"@sliceFromPtr", TokenType::SLICE_FROM_PTR};
 constexpr Keyword PTR_IDX{"@ptrIdx", TokenType::PTR_IDX};
 constexpr Keyword PTR_FROM_INT{"@ptrFromInt", TokenType::PTR_FROM_INT};
 constexpr Keyword INT_FROM_PTR{"@intFromPtr", TokenType::INT_FROM_PTR};
@@ -135,16 +136,36 @@ constexpr auto ALL_PRIMITIVES = std::array{
 constexpr auto ALL_BUILTINS = []() {
     using namespace keywords;
     auto all_builtins = std::array{
-        builtins::TYPEOF,  builtins::SIZEOF,       builtins::ALIGNOF,
-        builtins::PTR_ADD, builtins::PTR_SUB,      builtins::PTR_FROM_ARRAY,
-        builtins::PTR_IDX, builtins::PTR_FROM_INT, builtins::INT_FROM_PTR,
-        builtins::SIN,     builtins::COS,          builtins::TAN,
-        builtins::SQRT,    builtins::LOG,          builtins::LOG_10,
-        builtins::LOG_2,   builtins::MIN,          builtins::MAX,
-        builtins::MOD,     builtins::DIVMOD,       builtins::TRUNC,
-        builtins::CAST,    builtins::CEIL,         builtins::FLOOR,
-        builtins::POW,     builtins::EXP,          builtins::EXP_2,
-        builtins::CLZ,     builtins::CTZ,
+        builtins::TYPEOF,
+        builtins::SIZEOF,
+        builtins::ALIGNOF,
+        builtins::PTR_ADD,
+        builtins::PTR_SUB,
+        builtins::PTR_FROM_ARRAY,
+        builtins::SLICE_FROM_PTR,
+        builtins::PTR_IDX,
+        builtins::PTR_FROM_INT,
+        builtins::INT_FROM_PTR,
+        builtins::SIN,
+        builtins::COS,
+        builtins::TAN,
+        builtins::SQRT,
+        builtins::LOG,
+        builtins::LOG_10,
+        builtins::LOG_2,
+        builtins::MIN,
+        builtins::MAX,
+        builtins::MOD,
+        builtins::DIVMOD,
+        builtins::TRUNC,
+        builtins::CAST,
+        builtins::CEIL,
+        builtins::FLOOR,
+        builtins::POW,
+        builtins::EXP,
+        builtins::EXP_2,
+        builtins::CLZ,
+        builtins::CTZ,
     };
 
     std::ranges::sort(all_builtins, {}, &Keyword::first);
