@@ -13,8 +13,6 @@ const ElfutilsBuilder = @import("ElfutilsBuilder.zig");
 const dwarf = @import("sources/dwarf.zig");
 const kcov = @import("sources/kcov.zig");
 
-var codesigned = false;
-
 const Metadata = struct {
     upstream: *std.Build.Dependency,
     config: Config,
@@ -136,7 +134,6 @@ fn buildKcovSOWrapper(self: *const Self) Artifact {
     });
 
     return b.addLibrary(.{
-        .linkage = .dynamic,
         .name = "kcov_sowrapper",
         .root_module = mod,
     });
@@ -155,7 +152,6 @@ fn buildBashExecveRedirector(self: *const Self) Artifact {
     });
 
     return b.addLibrary(.{
-        .linkage = .dynamic,
         .name = "bash_execve_redirector",
         .root_module = mod,
     });
@@ -173,7 +169,6 @@ fn buildBashTracefdCloexec(self: *const Self) Artifact {
     });
 
     return b.addLibrary(.{
-        .linkage = .dynamic,
         .name = "bash_tracefd_cloexec",
         .root_module = mod,
     });
@@ -188,7 +183,6 @@ fn buildKcovSystemLib(self: *const Self) Artifact {
     });
 
     return b.addLibrary(.{
-        .linkage = .dynamic,
         .name = "kcov_system_lib",
         .root_module = mod,
     });
@@ -323,18 +317,21 @@ pub const RunKcovReport = struct {
 pub fn runKcov(self: *Self, config: RunKcovConfig) !RunKcovReport {
     const b = self.b;
     const target = self.metadata.config.target;
-    blk: {
-        if (codesigned or !target.result.os.tag.isDarwin()) break :blk;
+    const signer: ?*std.Build.Step.Run = blk: {
+        if (!target.result.os.tag.isDarwin()) break :blk null;
         const codesign = b.findProgram(&.{"codesign"}, &.{"usr"}) catch return error.CodesignNotFound;
         const run = b.addSystemCommand(&.{codesign});
+        run.has_side_effects = true;
         run.addArgs(&.{ "-s", "-", "--entitlements" });
         run.addFileArg(self.metadata.root.path(b, "osx-entitlements.xml"));
         run.addArg("-f");
         run.addArtifactArg(self.kcov_exe);
         _ = run.captureStdOut();
-    }
+        break :blk run;
+    };
 
     const run = b.addRunArtifact(self.kcov_exe);
+    if (signer) |sign| run.step.dependOn(&sign.step);
     run.has_side_effects = true;
     if (config.include_patterns) |include_patterns| {
         const includes = std.mem.join(b.allocator, ",", include_patterns) catch @panic("OOM");
