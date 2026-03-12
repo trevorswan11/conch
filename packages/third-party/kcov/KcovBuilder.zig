@@ -44,6 +44,11 @@ rand: std.Random.DefaultPrng,
 /// Builds kcov from source.
 /// https://github.com/allyourcodebase/kcov
 pub fn build(b: *std.Build, config: Config) ?*Self {
+    switch (config.target.result.os.tag) {
+        .macos, .linux, .freebsd => {},
+        else => return null,
+    }
+
     const curl = CurlBuilder.build(b, config);
     const binutils = BinutilsBuilder.build(b, config);
     const elfutils = ElfutilsBuilder.build(b, config);
@@ -306,12 +311,16 @@ pub const RunKcovConfig = struct {
     artifact: Artifact,
 };
 
-// Runs kcov with the given configuration, returning the generated command and directory.
-pub fn runKcov(self: *Self, config: RunKcovConfig) !struct {
+pub const RunKcovReport = struct {
     runner: *std.Build.Step.Run,
     output_dir: std.Build.LazyPath,
     generated_dirname: []const u8,
-} {
+};
+
+/// Runs kcov with the given configuration, returning the generated command and directory.
+///
+/// Can only error on macos if the `codesign` tool is not found.
+pub fn runKcov(self: *Self, config: RunKcovConfig) !RunKcovReport {
     const b = self.b;
     const target = self.metadata.config.target;
     blk: {
@@ -344,5 +353,25 @@ pub fn runKcov(self: *Self, config: RunKcovConfig) !struct {
         .runner = run,
         .output_dir = output,
         .generated_dirname = gendir,
+    };
+}
+
+pub const MergeKcovResult = struct {
+    runner: *std.Build.Step.Run,
+    output_dir: std.Build.LazyPath,
+};
+
+pub fn mergeKcovReports(self: *Self, reports: []const RunKcovReport) MergeKcovResult {
+    const b = self.b;
+    const run = b.addRunArtifact(self.kcov_exe);
+    run.addArg("--merge");
+    const output = run.addOutputDirectoryArg(b.fmt("{d}", .{self.rand.next()}));
+    for (reports) |report| {
+        run.addDirectoryArg(report.output_dir);
+    }
+
+    return .{
+        .runner = run,
+        .output_dir = output,
     };
 }
