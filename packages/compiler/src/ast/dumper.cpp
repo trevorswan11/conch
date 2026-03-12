@@ -279,6 +279,17 @@ auto ASTDumper::visit(const MatchExpression& node) -> void {
                 fmt::print(out_, "{}Pattern: ", indent_.current_branch());
                 arm.get_pattern().accept(*this);
             }
+
+            if (arm.has_capture_clause()) {
+                const Indent::Guard g_pattern{indent_, false};
+                fmt::print(out_, "{}Capture: ", indent_.current_branch());
+                if (arm.is_explicit_capture()) {
+                    arm.get_explicit_capture().accept(*this);
+                } else {
+                    fmt::println(out_, "<discarded>");
+                }
+            }
+
             {
                 const Indent::Guard g_result{indent_, true};
                 fmt::print(out_, "{}Dispatch: ", indent_.current_branch());

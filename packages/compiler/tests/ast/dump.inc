@@ -131,11 +131,20 @@ ExpressionStatement
 └─ Expr: MatchExpression
     ├─ Input: IdentifierExpression: a
     ├─ Arms:
+    │   ├─ Arm
+    │   │   ├─ Pattern: IdentifierExpression: b
+    │   │   ├─ Capture: IdentifierExpression: c
+    │   │   └─ Dispatch: ExpressionStatement
+    │   │       └─ Expr: IdentifierExpression: d
+    │   ├─ Arm
+    │   │   ├─ Pattern: IdentifierExpression: e
+    │   │   ├─ Capture: <discarded>
+    │   │   └─ Dispatch: ExpressionStatement
+    │   │       └─ Expr: IdentifierExpression: f
     │   └─ Arm
-    │       ├─ Pattern: IdentifierExpression: b
-    │       └─ Dispatch: BlockStatement
-    │           └─ ExpressionStatement
-    │               └─ Expr: IdentifierExpression: c
+    │       ├─ Pattern: IdentifierExpression: g
+    │       └─ Dispatch: ExpressionStatement
+    │           └─ Expr: IdentifierExpression: h
     └─ Catch All: ExpressionStatement
         └─ Expr: IdentifierExpression: d
 ExpressionStatement

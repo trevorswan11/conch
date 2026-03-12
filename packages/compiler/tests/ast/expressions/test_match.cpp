@@ -13,7 +13,7 @@ TEST_CASE("Match without alternate") {
             Token{keywords::MATCH},
             helpers::make_ident("a"),
             helpers::make_vector<ast::MatchArm>(ast::MatchArm{
-                helpers::make_ident("b"), helpers::make_expr_stmt(helpers::ident_from("c"))}),
+                helpers::make_ident("b"), {}, helpers::make_expr_stmt(helpers::ident_from("c"))}),
             {}});
 
     helpers::test_expr_stmt(
@@ -22,21 +22,42 @@ TEST_CASE("Match without alternate") {
                              helpers::make_ident("a"),
                              helpers::make_vector<ast::MatchArm>(
                                  ast::MatchArm{helpers::make_ident("b"),
+                                               {},
                                                helpers::make_expr_stmt(helpers::ident_from("c"))},
                                  ast::MatchArm{helpers::make_ident("d"),
+                                               {},
                                                helpers::make_expr_stmt(helpers::ident_from("e"))}),
+                             {}});
+}
+
+TEST_CASE("Match with arm capture") {
+    helpers::test_expr_stmt(
+        "match (a) { b => |c| d; e => |_| f; g => h; };",
+        ast::MatchExpression{Token{keywords::MATCH},
+                             helpers::make_ident("a"),
+                             helpers::make_vector<ast::MatchArm>(
+                                 ast::MatchArm{helpers::make_ident("b"),
+                                               helpers::make_ident("c"),
+                                               helpers::make_expr_stmt(helpers::ident_from("d"))},
+                                 ast::MatchArm{helpers::make_ident("e"),
+                                               std::monostate{},
+                                               helpers::make_expr_stmt(helpers::ident_from("f"))},
+                                 ast::MatchArm{helpers::make_ident("g"),
+                                               {},
+                                               helpers::make_expr_stmt(helpers::ident_from("h"))}),
                              {}});
 }
 
 TEST_CASE("Match with alternate") {
     helpers::test_expr_stmt(
         "match (a) { b => { c; } } else d;",
-        ast::MatchExpression{
-            Token{keywords::MATCH},
-            helpers::make_ident("a"),
-            helpers::make_vector<ast::MatchArm>(ast::MatchArm{
-                helpers::make_ident("b"), helpers::make_expr_block_stmt(helpers::ident_from("c"))}),
-            helpers::make_expr_stmt(helpers::ident_from("d"))});
+        ast::MatchExpression{Token{keywords::MATCH},
+                             helpers::make_ident("a"),
+                             helpers::make_vector<ast::MatchArm>(ast::MatchArm{
+                                 helpers::make_ident("b"),
+                                 {},
+                                 helpers::make_expr_block_stmt(helpers::ident_from("c"))}),
+                             helpers::make_expr_stmt(helpers::ident_from("d"))});
 }
 
 TEST_CASE("Match without condition") {
