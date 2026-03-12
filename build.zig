@@ -1164,6 +1164,7 @@ const CoverageParser = struct {
         const precise_percentage = parsed.value.percent_covered;
         const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
         const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
+        self.curl.addArg("-s");
         self.curl.addArg(b.fmt("https://img.shields.io/badge/Coverage-{s}%25-pink", .{percentage}));
         std.log.info("Test Coverage: {s}%", .{percentage});
     }

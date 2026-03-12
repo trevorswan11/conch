@@ -38,6 +38,7 @@ kcov_exe: Artifact = undefined,
 
 bin_to_c_source_files: kcov.BinToCSourceFiles = undefined,
 rand: std.Random.DefaultPrng,
+signer: ?*std.Build.Step.Run = null,
 
 /// Builds kcov from source.
 /// https://github.com/allyourcodebase/kcov
@@ -317,21 +318,21 @@ pub const RunKcovReport = struct {
 pub fn runKcov(self: *Self, config: RunKcovConfig) !RunKcovReport {
     const b = self.b;
     const target = self.metadata.config.target;
-    const signer: ?*std.Build.Step.Run = blk: {
-        if (!target.result.os.tag.isDarwin()) break :blk null;
+    if (target.result.os.tag.isDarwin()) {
         const codesign = b.findProgram(&.{"codesign"}, &.{"usr"}) catch return error.CodesignNotFound;
         const run = b.addSystemCommand(&.{codesign});
-        run.has_side_effects = true;
         run.addArgs(&.{ "-s", "-", "--entitlements" });
         run.addFileArg(self.metadata.root.path(b, "osx-entitlements.xml"));
         run.addArg("-f");
         run.addArtifactArg(self.kcov_exe);
+
         _ = run.captureStdOut();
-        break :blk run;
-    };
+        _ = run.captureStdErr();
+        self.signer = run;
+    }
 
     const run = b.addRunArtifact(self.kcov_exe);
-    if (signer) |sign| run.step.dependOn(&sign.step);
+    if (self.signer) |signer| run.step.dependOn(&signer.step);
     run.has_side_effects = true;
     if (config.include_patterns) |include_patterns| {
         const includes = std.mem.join(b.allocator, ",", include_patterns) catch @panic("OOM");
