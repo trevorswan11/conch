@@ -8,6 +8,8 @@ const libarchive = @import("packages/third-party/libarchive.zig");
 const fmt = @import("packages/third-party/fmt.zig");
 const catch2 = @import("packages/third-party/catch2.zig");
 
+const KcovBuilder = @import("packages/third-party/kcov/KcovBuilder.zig");
+
 const LLVMBuilder = @import("packages/llvm/LLVMBuilder.zig");
 const ClangBuilder = @import("packages/llvm/ClangBuilder.zig");
 const LLDBuilder = @import("packages/llvm/LLDBuilder.zig");
@@ -70,6 +72,8 @@ pub fn build(b: *std.Build) !void {
         .llvm = llvm,
         .cxx_flags = package_flags.items,
     });
+
+    if (artifacts.tests) |tests| try addCoverageStep(b, tests);
 }
 
 const ProjectPaths = struct {
@@ -107,10 +111,18 @@ const ProjectPaths = struct {
 
     const stdlib = "packages/stdlib/";
     const test_runner = "packages/test_runner/";
-    const llvm = "packages/llvm/";
-    const third_party = "packages/third-party/";
-
     const compressor = "apps/compressor/";
+
+    const llvm_sources = "packages/llvm/sources/";
+    const ThirdParty = struct {
+        const root = "packages/third-party/";
+        const root_sources = root ++ "sources";
+
+        const kcov_root = root ++ "kcov/";
+        const kcov_gen = kcov_root ++ "gen";
+        const kcov_sources = kcov_root ++ "sources";
+        const kcov_utils = kcov_root ++ "utils";
+    };
 };
 
 const ExecutableBehavior = union(enum) {
@@ -776,7 +788,6 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.core.tests));
     cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.compiler.tests));
     cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.cli.tests));
-    cppcheck_run.addPrefixedDirectoryArg("-i", b.path(ProjectPaths.llvm));
 
     const cppcheck_cache_install = b.addInstallDirectory(.{
         .source_dir = cppcheck_cache,
@@ -847,6 +858,12 @@ const LOCCounter = struct {
         }
     };
 
+    const counted_extensions = [_][]const u8{ ".cpp", ".hpp", ".zig", ".conch" };
+    const dropped_file_config: CollectFilesConfig = .{
+        .allowed_extensions = &.{ ".zig", ".h", ".in" },
+        .return_basenames_only = true,
+    };
+
     step: std.Build.Step,
 
     pub fn init(b: *std.Build) *LOCCounter {
@@ -865,48 +882,38 @@ const LOCCounter = struct {
     fn count(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
         const b = step.owner;
 
-        const extensions = [_][]const u8{ ".cpp", ".hpp", ".zig", ".conch" };
-        var files: std.ArrayList([]const u8) = .empty;
-
-        const dropped_list = try collectFiles(b, ProjectPaths.llvm ++ "sources", .{
-            .allowed_extensions = &.{".zig"},
-            .return_basenames_only = true,
-            .extra_files = try collectFiles(b, ProjectPaths.third_party, .{
-                .allowed_extensions = &.{".zig"},
-                .return_basenames_only = true,
-            }),
+        const dropped_filenames = try std.mem.concat(b.allocator, []const u8, &.{
+            try collectFiles(b, ProjectPaths.llvm_sources, dropped_file_config),
+            try collectFiles(b, ProjectPaths.ThirdParty.root_sources, dropped_file_config),
+            try collectFiles(b, ProjectPaths.ThirdParty.kcov_gen, dropped_file_config),
+            try collectFiles(b, ProjectPaths.ThirdParty.kcov_sources, dropped_file_config),
+            try collectFiles(b, ProjectPaths.ThirdParty.kcov_utils, dropped_file_config),
         });
 
-        try files.appendSlice(
-            b.allocator,
+        const counted_files = try std.mem.concat(b.allocator, []const u8, &.{
             try collectFiles(b, "packages", .{
-                .allowed_extensions = &extensions,
+                .allowed_extensions = &counted_extensions,
                 .extra_files = &.{"build.zig"},
-                .dropped_files = dropped_list,
+                .dropped_files = dropped_filenames,
             }),
-        );
-
-        try files.appendSlice(
-            b.allocator,
-            try collectFiles(b, "apps", .{ .allowed_extensions = &extensions }),
-        );
+            try collectFiles(b, "apps", .{ .allowed_extensions = &counted_extensions }),
+        });
 
         const build_dir = b.build_root.handle;
         const buffer = try b.allocator.alloc(u8, 100 * 1024);
         var result: LOCResult = .init(b.allocator);
 
-        for (files.items) |file| {
+        for (counted_files) |file| {
             const contents = try build_dir.readFile(file, buffer);
             var it = std.mem.tokenizeAny(u8, contents, "\r\n");
 
             var lines: usize = 0;
             while (it.next()) |line| {
-                const trimmed = std.mem.trim(u8, line, " \t");
+                const trimmed = std.mem.trim(u8, line, " \t\n\r");
                 if (trimmed.len > 0 and !std.mem.startsWith(u8, trimmed, "//")) {
                     lines += 1;
                 }
             }
-
             try result.logFile(file, lines);
         }
 
@@ -948,7 +955,10 @@ fn addPackageStep(b: *std.Build, config: struct {
     llvm: *LLVMBuilder,
     cxx_flags: []const []const u8,
 }) !void {
-    const libarchive_dep = libarchive.build(b);
+    const libarchive_dep = libarchive.build(b, .{
+        .target = b.graph.host,
+        .optimize = .ReleaseFast,
+    });
     const compressor = createExecutable(b, .{
         .name = "compressor",
         .zig_main = b.path(ProjectPaths.compressor ++ "main.zig"),
@@ -1058,15 +1068,119 @@ fn addPackageStep(b: *std.Build, config: struct {
     }
 }
 
+/// Adds coverage reporting on supported platforms for all test artifacts
+fn addCoverageStep(b: *std.Build, tests: TestArtifacts) !void {
+    const kcov = KcovBuilder.build(b, .{
+        .target = b.graph.host,
+        .optimize = .ReleaseFast,
+    }) orelse return;
+    const reports = [_]KcovBuilder.RunKcovReport{
+        try kcov.runKcov(.{
+            .artifact = tests.runner_tests,
+            .include_patterns = &.{ProjectPaths.test_runner},
+        }),
+        try kcov.runKcov(.{
+            .artifact = tests.core_tests,
+            .include_patterns = &.{ ProjectPaths.core.src, ProjectPaths.core.inc },
+        }),
+        try kcov.runKcov(.{
+            .artifact = tests.compiler_tests,
+            .include_patterns = &.{ ProjectPaths.compiler.src, ProjectPaths.compiler.inc },
+        }),
+        try kcov.runKcov(.{
+            .artifact = tests.cli_tests,
+            .include_patterns = &.{ ProjectPaths.cli.src, ProjectPaths.cli.inc },
+        }),
+    };
+
+    const coverage = b.step("coverage", "Generate coverage report");
+    for (reports) |report| {
+        coverage.dependOn(&report.runner.step);
+    }
+    const merged = kcov.mergeKcovReports(&reports);
+
+    const curl = b.addRunArtifact(kcov.curl.execurl);
+    curl.addArg("-o");
+    const badge_file = curl.addOutputFileArg("coverage.svg");
+    const install = b.addInstallFile(badge_file, "coverage.svg");
+    curl.has_side_effects = true;
+
+    const parser: *CoverageParser = .init(b, merged.output_dir, curl);
+    parser.step.dependOn(&merged.runner.step);
+    curl.step.dependOn(&parser.step);
+    coverage.dependOn(&curl.step);
+    coverage.dependOn(&install.step);
+}
+
+const CoverageParser = struct {
+    const CoverageInfo = struct {
+        percent_covered: []const u8,
+    };
+    const ParsedCovInfo = std.json.Parsed(CoverageInfo);
+
+    step: std.Build.Step,
+    report: std.Build.LazyPath,
+    curl: *std.Build.Step.Run,
+
+    pub fn init(
+        b: *std.Build,
+        report: std.Build.LazyPath,
+        curl: *std.Build.Step.Run,
+    ) *CoverageParser {
+        const self = b.allocator.create(CoverageParser) catch @panic("OOM");
+        self.* = .{
+            .step = .init(.{
+                .id = .custom,
+                .name = "coverage-parse",
+                .owner = b,
+                .makeFn = coverageParse,
+            }),
+            .report = report,
+            .curl = curl,
+        };
+        return self;
+    }
+
+    fn coverageParse(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+        const self: *CoverageParser = @fieldParentPtr("step", step);
+
+        const b = step.owner;
+        const allocator = b.allocator;
+
+        const json_path = self.report.path(b, "kcov-merged/coverage.json").getPath3(b, step);
+        const contents = try b.build_root.handle.readFileAlloc(
+            allocator,
+            json_path.sub_path,
+            std.math.maxInt(usize),
+        );
+
+        const parsed: ParsedCovInfo = try std.json.parseFromSlice(
+            CoverageInfo,
+            allocator,
+            contents,
+            .{ .ignore_unknown_fields = true },
+        );
+
+        const precise_percentage = parsed.value.percent_covered;
+        const last_dot = std.mem.lastIndexOfScalar(u8, precise_percentage, '.');
+        const percentage = if (last_dot) |dot| precise_percentage[0..dot] else precise_percentage;
+        self.curl.addArg("-s");
+        self.curl.addArg(b.fmt("https://img.shields.io/badge/Coverage-{s}%25-pink", .{percentage}));
+        std.log.info("Test Coverage: {s}%", .{percentage});
+    }
+};
+
+const CollectFilesConfig = struct {
+    allowed_extensions: []const []const u8 = &.{".cpp"},
+    dropped_files: ?[]const []const u8 = null,
+    extra_files: ?[]const []const u8 = null,
+    return_basenames_only: bool = false,
+};
+
 fn collectFiles(
     b: *std.Build,
     directory: []const u8,
-    config: struct {
-        allowed_extensions: []const []const u8 = &.{".cpp"},
-        dropped_files: ?[]const []const u8 = null,
-        extra_files: ?[]const []const u8 = null,
-        return_basenames_only: bool = false,
-    },
+    config: CollectFilesConfig,
 ) ![]const []const u8 {
     var dir = try b.build_root.handle.openDir(directory, .{ .iterate = true });
     defer dir.close();

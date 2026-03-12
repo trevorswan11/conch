@@ -1,11 +1,11 @@
-<h1 align="center">conch</h1>
+<h1 align="center">🐚conch🐚</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/C%2B%2B-23-blue?logo=c%2B%2B&logoColor=white" alt="C++23" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+<img src="https://img.shields.io/badge/C%2B%2B-23-blue?logo=c%2B%2B&logoColor=white" alt="C++23" /> <a href="LICENSE"><img src="https://img.shields.io/github/license/trevorswan11/conch" alt="License" /></a> <img src="https://img.shields.io/github/last-commit/trevorswan11/conch" alt="Last Commit" /> <a href="https://github.com/trevorswan11/conch/actions/workflows/format.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/format.yml/badge.svg" alt="Formatting" /></a> <a href="https://github.com/trevorswan11/conch/actions/workflows/ci.yml"><img src="https://github.com/trevorswan11/conch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <img src="https://raw.githubusercontent.com/trevorswan11/conch/badges/coverage.svg" alt="Coverage" />
 </p>
 
 <p align="center">
-A programming language.
+A simple programming language.
 </p>
 
 # Motivation
@@ -32,6 +32,13 @@ The following are "standalone" dependencies, required and manually fetched by Co
     - [zlib](https://github.com/madler/zlib)
     - [zstd](https://github.com/facebook/zstd)
 6. [libarchive](https://github.com/libarchive/libarchive) is used for packaging releases, making use of zlib and zstd to create `zip` and `zst` archives. It is license under the BSD 2-Clause License, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
+7. [kcov](https://github.com/SimonKagstrom/kcov) is used for test coverage reporting. It has multiple dependencies, but they are all fetched lazily as kcov is only supported on Linux, MacOS, and FreeBSD:
+    - [curl](https://github.com/curl/curl) is required by all builds of kcov and is used for pulling the resulting badge. it has a single extra dependency which is chosen for cross-platform support:
+        - [mbedtls](https://github.com/Mbed-TLS/mbedtls)
+    - [binutils](https://sourceware.org/pub/binutils) is required for all kcov builds
+    - [elfutils](https://github.com/Techatrix/elfutils) is required on linux only. It has a single extra dependency:
+        - [argp-standalone](https://github.com/argp-standalone/argp-standalone)
+    - [libdwarf-code](https://github.com/davea42/libdwarf-code) is required on MacOS only.
 
 These are automatically downloaded by the zig build system, so building conch is as easy as running:
 ```sh

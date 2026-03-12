@@ -25,6 +25,10 @@ jobs:
               with:
                   version: 0.15.2
 
+            - name: Fetch dependencies
+              run: |
+                  zig build --fetch=all -j2
+
             - name: Build and package
               run: zig build package
 

@@ -3,6 +3,8 @@ const std = @import("std");
 const Dependency = @import("Dependency.zig");
 const Config = Dependency.Config;
 
+const zlib = @import("sources/zlib.zig");
+
 /// Compiles zlib from source as a static library
 /// https://github.com/allyourcodebase/zlib
 pub fn build(b: *std.Build, config: Config) Dependency {
@@ -24,7 +26,7 @@ pub fn build(b: *std.Build, config: Config) Dependency {
 
     mod.addCSourceFiles(.{
         .root = root,
-        .files = &sources,
+        .files = &zlib.sources,
         .flags = flags.items,
     });
     mod.addIncludePath(root);
@@ -40,27 +42,5 @@ pub fn build(b: *std.Build, config: Config) Dependency {
             "zlib.h",
         },
     });
-
-    return .{
-        .upstream = upstream,
-        .artifact = lib,
-    };
+    return .{ .upstream = upstream, .artifact = lib };
 }
-
-const sources = [_][]const u8{
-    "adler32.c",
-    "crc32.c",
-    "deflate.c",
-    "infback.c",
-    "inffast.c",
-    "inflate.c",
-    "inftrees.c",
-    "trees.c",
-    "zutil.c",
-    "compress.c",
-    "uncompr.c",
-    "gzclose.c",
-    "gzlib.c",
-    "gzread.c",
-    "gzwrite.c",
-};

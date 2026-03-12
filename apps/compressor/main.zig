@@ -17,7 +17,7 @@ pub fn main() !void {
 
     const args = try std.process.argsAlloc(allocator);
     if (args.len != 4) {
-        try stderr.print("Usage: compressor [zip|zst] [output_file] [input_dir]\n", .{});
+        try stderr.print("Usage: {s} [zip|zst] [output_file] [input_dir]\n", .{args[0]});
         try stderr.flush();
         return error.UsageError;
     }

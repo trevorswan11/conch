@@ -1,10 +1,10 @@
-name: Formatting
+name: Coverage
 
 on:
-    pull_request:
-        branches: [main, dev]
+    push:
+        branches: [main]
         paths:
-            - ".github/workflows/format.yml"
+            - ".github/workflows/coverage.yml"
             - "apps/**"
             - "packages/**"
             - "build.zig"
@@ -15,9 +15,9 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    fmt:
+    coverage:
         permissions:
-            contents: read
+            contents: write
         runs-on: ubuntu-latest
 
         steps:
@@ -36,7 +36,7 @@ jobs:
                 path: |
                   ${{ env.ZIG_LOCAL_CACHE_DIR }}
                   ${{ env.ZIG_GLOBAL_CACHE_DIR }}
-                key: ${{ runner.os }}-zig-${{ hashFiles('packages/llvm/**.zig') }}
+                key: zig-${{ runner.os }}-${{ hashFiles('build.zig.zon') }}
                 restore-keys: |
                   ${{ runner.os }}-zig-
 
@@ -44,8 +44,13 @@ jobs:
               run: |
                   zig build --fetch=all -j2
 
-            - name: Check formatting
-              run: zig build fmt-check
+            - name: Run coverage reporter
+              run: |
+                  zig build coverage
 
-            - name: Run static analysis
-              run: zig build check
+            - name: Deploy Badge to 'badges' branch
+              uses: JamesIves/github-pages-deploy-action@v4
+              with:
+                folder: zig-out
+                branch: badges
+                single-commit: true

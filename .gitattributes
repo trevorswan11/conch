@@ -1,5 +1,8 @@
 packages/llvm/sources/** linguist-vendored
-packages/third-party/**  linguist-vendored
+packages/third-party/kcov/gen/**  linguist-vendored
+packages/third-party/kcov/sources/**  linguist-vendored
+packages/third-party/kcov/utils/**  linguist-vendored
+packages/third-party/sources/**  linguist-vendored
 
 * text eol=lf
 
@@ -9,6 +12,8 @@ packages/third-party/**  linguist-vendored
 *.hpp    text eol=lf
 *.zig    text eol=lf
 *.zon    text eol=lf
+*.in     text eol=lf
+*.inc    text eol=lf
 
 .clangd        text eol=lf
 .clang-format  text eol=lf
