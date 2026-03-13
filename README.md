@@ -18,8 +18,8 @@ A hand-crafted systems programming language.
 ## About the Project
 Conch is a compiled systems language powered by LLVM, C++, and Zig. It attempts to combine select features from its more popular predecessors (i.e. Zig, Rust, C, C++) into a performant low-level language.
 
-### Built With
-![Zig](https://img.shields.io/badge/Zig-%23F7A41D.svg?style=for-the-badge&logo=zig&logoColor=white)
+### Built With Zig!
+
 Zig is used as the primary orchestrator for all things Conch. Conch uses Zig's `build.zig` to provide a hermetic build. Necessary dependencies are automatically fetched and all required dependencies are built from source. This unified build system manages LLVM compilation (including tools like clang-format), kcov coverage reporting (on supported platforms), and core maintainer tools such as a custom archiver for releases. Conch aims to be reproducible anywhere that has a valid and correctly versioned Zig. **No manual linking or hoop-jumping is required to build Conch, ever, on any platform**.
 
 ### Core Principles
