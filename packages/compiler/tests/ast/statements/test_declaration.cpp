@@ -3,7 +3,6 @@
 #include <string_view>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/format.h>
 
 #include "array.hpp"
 

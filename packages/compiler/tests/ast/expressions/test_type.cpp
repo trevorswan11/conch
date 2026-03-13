@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/format.h>
 
 #include "ast/helpers.hpp"
 
@@ -12,8 +11,6 @@
 
 namespace conch::tests {
 
-const Token colon{TokenType::COLON, ":"};
-
 namespace helpers {
 
 auto test_type_expr(std::string_view type_str, ast::ExplicitType&& expected) -> void {
@@ -21,7 +18,8 @@ auto test_type_expr(std::string_view type_str, ast::ExplicitType&& expected) -> 
     helpers::test_stmt(input,
                        ast::DeclStatement{Token{keywords::VAR},
                                           helpers::make_ident("a"),
-                                          make_box<ast::TypeExpression>(colon, std::move(expected)),
+                                          make_box<ast::TypeExpression>(
+                                              Token{TokenType::COLON, ":"}, std::move(expected)),
                                           nullopt,
                                           ast::DeclModifiers::VARIABLE});
 }

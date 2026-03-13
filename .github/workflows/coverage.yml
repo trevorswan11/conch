@@ -46,11 +46,11 @@ jobs:
 
             - name: Run coverage reporter
               run: |
-                  zig build coverage
+                  zig build coverage -Dinstall-merged
 
             - name: Deploy Badge to 'badges' branch
               uses: JamesIves/github-pages-deploy-action@v4
               with:
                 folder: zig-out
-                branch: badges
+                branch: coverage
                 single-commit: true

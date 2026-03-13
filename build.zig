@@ -699,7 +699,7 @@ fn addTooling(b: *std.Build, config: struct {
     cli: *std.Build.Step.Compile,
     cppcheck: *std.Build.Step.Compile,
 }) !void {
-    const tooling_sources = try collectToolingFiles(b);
+    const tooling_sources = try collectCXXToolingFiles(b);
 
     const cdb_step = b.step("cdb", "Generate " ++ CDBGenerator.cdb_filename);
     cdb_step.dependOn(&config.cdb_gen.step);
@@ -1101,6 +1101,29 @@ fn addCoverageStep(b: *std.Build, tests: TestArtifacts) !void {
     }
     const merged = kcov.mergeKcovReports(&reports);
 
+    const install_merged = b.option(
+        bool,
+        "install-merged",
+        "install merged kcov report",
+    ) orelse false;
+    if (install_merged) {
+        const merged_output_dirname = "merged";
+        const install = b.addInstallDirectory(.{
+            .source_dir = merged.output_dir,
+            .install_dir = .prefix,
+            .install_subdir = merged_output_dirname,
+        });
+
+        const remove = b.addRemoveDirTree(.{
+            .cwd_relative = b.pathJoin(&.{
+                b.install_prefix,
+                merged_output_dirname,
+            }),
+        });
+        install.step.dependOn(&remove.step);
+        coverage.dependOn(&install.step);
+    }
+
     const curl = b.addRunArtifact(kcov.curl.execurl);
     curl.addArg("-o");
     const badge_file = curl.addOutputFileArg("coverage.svg");
@@ -1215,7 +1238,7 @@ fn collectFiles(
     return paths.items;
 }
 
-fn collectToolingFiles(b: *std.Build) ![]const []const u8 {
+fn collectCXXToolingFiles(b: *std.Build) ![]const []const u8 {
     return std.mem.concat(b.allocator, []const u8, &.{
         try ProjectPaths.compiler.files(b),
         try ProjectPaths.cli.files(b),

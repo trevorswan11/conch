@@ -26,9 +26,9 @@ b: *std.Build,
 metadata: Metadata,
 
 curl: *CurlBuilder,
-binutils: *BinutilsBuilder,
-elfutils: *ElfutilsBuilder,
-libdwarf: Artifact,
+binutils: ?*BinutilsBuilder,
+elfutils: ?*ElfutilsBuilder,
+libdwarf: ?Artifact,
 
 kcov_sowrapper: Artifact = undefined,
 bash_execve_redirector: Artifact = undefined,
@@ -37,23 +37,36 @@ kcov_system_lib: Artifact = undefined,
 kcov_exe: Artifact = undefined,
 
 bin_to_c_source_files: kcov.BinToCSourceFiles = undefined,
-rand: std.Random.DefaultPrng,
 signer: ?*std.Build.Step.Run = null,
 
 /// Builds kcov from source.
 /// https://github.com/allyourcodebase/kcov
 pub fn build(b: *std.Build, config: Config) ?*Self {
-    switch (config.target.result.os.tag) {
+    const target = config.target;
+    switch (target.result.os.tag) {
         .macos, .linux, .freebsd => {},
         else => return null,
     }
 
+    var binutils: ?*BinutilsBuilder = null;
+    const needs_binutils = target.result.cpu.arch.isX86();
+    if (needs_binutils) binutils = BinutilsBuilder.build(b, config);
+    const awaiting_bu = binutils == null and needs_binutils;
+
+    var elfutils: ?*ElfutilsBuilder = null;
+    const needs_elfutils = target.result.os.tag == .linux;
+    if (needs_elfutils) elfutils = ElfutilsBuilder.build(b, config);
+    const awaiting_eu = elfutils == null and needs_elfutils;
+
+    var libdwarf: ?Artifact = null;
+    const needs_libdwarf = target.result.os.tag.isDarwin();
+    if (needs_libdwarf) libdwarf = buildDwarf(b, config);
+    const awaiting_libdwarf = libdwarf == null and needs_libdwarf;
+
+    const awaiting_platform_specific = awaiting_bu or awaiting_eu or awaiting_libdwarf;
     const curl = CurlBuilder.build(b, config);
-    const binutils = BinutilsBuilder.build(b, config);
-    const elfutils = ElfutilsBuilder.build(b, config);
-    const libdwarf = buildDwarf(b, config);
     const upstream = b.lazyDependency("kcov", .{});
-    if (curl == null or binutils == null or elfutils == null or libdwarf == null or upstream == null) return null;
+    if (curl == null or upstream == null or awaiting_platform_specific) return null;
 
     const self = b.allocator.create(Self) catch @panic("OOM");
     self.* = .{
@@ -65,10 +78,9 @@ pub fn build(b: *std.Build, config: Config) ?*Self {
             .include = upstream.?.path("src/include"),
         },
         .curl = curl.?,
-        .binutils = binutils.?,
-        .elfutils = elfutils.?,
-        .libdwarf = libdwarf.?,
-        .rand = .init(@intCast(std.time.microTimestamp())),
+        .binutils = binutils,
+        .elfutils = elfutils,
+        .libdwarf = libdwarf,
     };
 
     self.kcov_sowrapper = self.buildKcovSOWrapper();
@@ -213,9 +225,9 @@ fn buildKcov(self: *const Self) Artifact {
 
     mod.addCSourceFile(.{ .file = self.metadata.root.path(b, "src/writers/coveralls-writer.cc") });
 
-    if (target.result.cpu.arch.isX86()) {
-        mod.linkLibrary(self.binutils.libbfd);
-        mod.linkLibrary(self.binutils.libopcodes);
+    if (self.binutils) |binutils| {
+        mod.linkLibrary(binutils.libbfd);
+        mod.linkLibrary(binutils.libopcodes);
         mod.addCSourceFile(.{
             .file = self.metadata.root.path(b, "src/parsers/bfd-disassembler.cc"),
         });
@@ -287,11 +299,11 @@ fn buildKcov(self: *const Self) Artifact {
     const zlib_dep = zlib.build(b, self.metadata.config);
     mod.linkLibrary(zlib_dep.artifact);
 
-    if (target.result.os.tag == .linux) {
-        mod.linkLibrary(self.elfutils.libelf);
-        mod.linkLibrary(self.elfutils.libdw);
-    } else if (target.result.os.tag.isDarwin()) {
-        mod.linkLibrary(self.libdwarf);
+    if (self.elfutils) |elfutils| {
+        mod.linkLibrary(elfutils.libelf);
+        mod.linkLibrary(elfutils.libdw);
+    } else if (self.libdwarf) |libdwarf| {
+        mod.linkLibrary(libdwarf);
     }
 
     return b.addExecutable(.{
@@ -344,7 +356,7 @@ pub fn runKcov(self: *Self, config: RunKcovConfig) !RunKcovReport {
         run.addArg(b.fmt("--exclude-pattern={s}", .{excludes}));
     }
 
-    const gendir = b.fmt("{d}", .{self.rand.next()});
+    const gendir = b.fmt("kcov-{s}", .{config.artifact.name});
     const output = run.addOutputDirectoryArg(gendir);
     run.addArtifactArg(config.artifact);
     return .{
@@ -363,13 +375,10 @@ pub fn mergeKcovReports(self: *Self, reports: []const RunKcovReport) MergeKcovRe
     const b = self.b;
     const run = b.addRunArtifact(self.kcov_exe);
     run.addArg("--merge");
-    const output = run.addOutputDirectoryArg(b.fmt("{d}", .{self.rand.next()}));
+    const output = run.addOutputDirectoryArg("kcov-merged");
     for (reports) |report| {
         run.addDirectoryArg(report.output_dir);
     }
 
-    return .{
-        .runner = run,
-        .output_dir = output,
-    };
+    return .{ .runner = run, .output_dir = output };
 }
