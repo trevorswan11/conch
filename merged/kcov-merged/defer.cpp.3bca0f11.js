@@ -1,0 +1,32 @@
+var data = {lines:[
+{"lineNum":"    1","line":"#include \"ast/statements/defer.hpp\""},
+{"lineNum":"    2","line":""},
+{"lineNum":"    3","line":"#include \"ast/statements/block.hpp\""},
+{"lineNum":"    4","line":"#include \"ast/statements/discard.hpp\""},
+{"lineNum":"    5","line":"#include \"ast/statements/expression.hpp\""},
+{"lineNum":"    6","line":"#include \"ast/visitor.hpp\""},
+{"lineNum":"    7","line":""},
+{"lineNum":"    8","line":"namespace conch::ast {"},
+{"lineNum":"    9","line":""},
+{"lineNum":"   10","line":"auto DeferStatement::accept(Visitor& v) const -> void { v.visit(*this); }","class":"lineCov","hits":"1","order":"857",},
+{"lineNum":"   11","line":""},
+{"lineNum":"   12","line":"auto DeferStatement::parse(Parser& parser) -> Expected<Box<Statement>, ParserDiagnostic> {","class":"lineCov","hits":"1","order":"854",},
+{"lineNum":"   13","line":"    const auto start_token = parser.current_token();","class":"lineCov","hits":"1","order":"853",},
+{"lineNum":"   14","line":"    if (parser.peek_token_is(TokenType::END) || parser.peek_token_is(TokenType::SEMICOLON)) {","class":"lineCov","hits":"1","order":"851",},
+{"lineNum":"   15","line":"        return make_parser_unexpected(ParserError::DEFER_MISSING_DEFERREE, start_token);","class":"lineCov","hits":"1","order":"855",},
+{"lineNum":"   16","line":"    }"},
+{"lineNum":"   17","line":"    parser.advance();","class":"lineCov","hits":"1","order":"849",},
+{"lineNum":"   18","line":"    auto stmt = TRY(parser.parse_statement());","class":"lineCov","hits":"1","order":"848",},
+{"lineNum":"   19","line":""},
+{"lineNum":"   20","line":"    // The statement has different restrictions from expression alternates"},
+{"lineNum":"   21","line":"    if (!stmt->any<ExpressionStatement, DiscardStatement, BlockStatement>()) {","class":"lineCov","hits":"1","order":"856",},
+{"lineNum":"   22","line":"        return make_parser_unexpected(ParserError::ILLEGAL_DEFERRED_STATEMENT, stmt->get_token());","class":"lineCov","hits":"1","order":"847",},
+{"lineNum":"   23","line":"    }"},
+{"lineNum":"   24","line":"    return make_box<DeferStatement>(start_token, std::move(stmt));","class":"lineCov","hits":"1","order":"852",},
+{"lineNum":"   25","line":"}","class":"lineCov","hits":"1","order":"850",},
+{"lineNum":"   26","line":""},
+{"lineNum":"   27","line":"} // namespace conch::ast"},
+]};
+var percent_low = 25;var percent_high = 75;
+var header = { "command" : "", "date" : "2026-03-13 16:31:19", "instrumented" : 11, "covered" : 11,};
+var merged_data = [];
