@@ -45,7 +45,7 @@ TEST_CASE("Free function resolved access") {
 
 TEST_CASE("Enum resolved access") {
     auto [ctx, idx] = setup_access_test(R"(
-var bar_e: other::BarE = .{};
+var bar_e: other::BarE = .A;
 const e1 := other::BarE.A;
 const e2 := bar_e.bar('a');
 )");

@@ -122,6 +122,14 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::AssignmentExpression&) -> void;
     auto visit(ast::NodeID, const ast::BinaryExpression&) -> void;
 
+    // Attempts to access the given member in the provided user type
+    [[nodiscard]] auto
+    resolve_user_type_access(Type&                         object_type,
+                             ast::IdentifierHandle         member,
+                             SourceLocation                object_location,
+                             opt::Option<std::string_view> object_name = opt::none)
+        -> Result<mem::NonNull<Type>, Diagnostic>;
+
     // Retrieve's the rightmost identifier name from the accessor
     auto get_outer_access_inner_name(ast::OuterAccessHandle handle) noexcept -> std::string_view;
     template <traits::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
@@ -201,13 +209,15 @@ class TypeResolver {
     }
 
   private:
-    mod::Module&       resolving_;
-    usize              table_idx_;
-    SymbolTableStack   table_stack_;
-    UserTypeStack      user_type_stack_;
+    mod::Module&     resolving_;
+    usize            table_idx_;
+    SymbolTableStack table_stack_;
+    UserTypeStack    user_type_stack_;
+    UserTypeStack    implicit_type_stack_;
+    NamedTests       named_tests_; // Named tests of the currently resolving module
+
     Context&           ctx_;
     opt::Option<Type&> last_type_;
-    NamedTests         named_tests_; // Named tests of the currently resolving module
 };
 
 } // namespace porpoise::sema

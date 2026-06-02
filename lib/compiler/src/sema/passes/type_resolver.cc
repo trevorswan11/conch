@@ -268,9 +268,7 @@ auto TypeResolver::resolve_call_args(std::span<const ast::CallExpression::Argume
         any_poison |= std::visit(
             [this](auto id) {
                 resolve(id);
-                const auto is_poison = last_type_->is_poison();
-                last_type_.reset();
-                return is_poison;
+                return last_type_.take()->is_poison();
             },
             arg.id);
     }
@@ -319,11 +317,6 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
     }
     resolving_.set_sema_type(call.function, callee_type);
 
-    // There's no need to check any further if the arguments are poisoned
-    if (resolve_call_args(call.arguments) == ResolveResult::POISONED) {
-        return last_type_.emplace(ctx_.poison_node(resolving_, id));
-    }
-
     // Verify that the type in the function is callable and store the return type
     if (auto function_type = callee_type.as_opt<types::Function>()) {
         const auto has_implicit_self =
@@ -331,7 +324,8 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
 
         // Check the arity of the function against params before resetting last type
         const auto& params         = function_type->params;
-        const auto  expected_arity = params.size() - (has_implicit_self ? 1 : 0);
+        const usize param_offset   = has_implicit_self ? 1 : 0;
+        const auto  expected_arity = params.size() - param_offset;
         if (call.arguments.size() != expected_arity) {
             return last_type_.emplace(ctx_.poison_node(
                 resolving_,
@@ -341,6 +335,19 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
                 Error::ARITY_MISMATCH,
                 resolving_.ast.location_of(call.function)));
         }
+
+        bool any_arg_poison = false;
+        for (auto [param_type, arg] :
+             std::views::zip(function_type->params.subspan(param_offset), call.arguments)) {
+            const UserTypeStack::Guard g{implicit_type_stack_, *param_type};
+            any_arg_poison |= std::visit(
+                [this](auto id) {
+                    resolve(id);
+                    return last_type_.take()->is_poison();
+                },
+                arg.id);
+        }
+        if (any_arg_poison) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
         // Functions that return a type cannot be resolved until the constant evaluator
         if (function_type->return_type.get_kind() == TypeKind::TYPE) {
@@ -355,6 +362,11 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         resolving_.set_sema_type(id, function_type->return_type);
         last_type_.emplace(function_type->return_type);
     } else if (auto builtin_type = callee_type.as_opt<types::BuiltinFunction>()) {
+        // There's no need to check any further if the arguments are poisoned
+        if (resolve_call_args(call.arguments) == ResolveResult::POISONED) {
+            return last_type_.emplace(ctx_.poison_node(resolving_, id));
+        }
+
         // Poison the call if there's an error early
         auto result = resolve_builtin_call(id, call, *builtin_type);
         if (!result) {
@@ -765,7 +777,11 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InfiniteLoopExpression& loop
 
 auto TypeResolver::visit(ast::NodeID id, const ast::AssignmentExpression& assign) -> void {
     TRY_RESOLVE(assign.lhs);
-    TRY_RESOLVE(assign.rhs);
+    auto& lhs_type = *last_type_.take();
+    {
+        const UserTypeStack::Guard g{implicit_type_stack_, lhs_type};
+        TRY_RESOLVE(assign.rhs);
+    }
 
     // Only pass 3 can verify assignment allowance due to mutability semantics
     resolving_.set_sema_type(id, *last_type_);
@@ -775,6 +791,76 @@ auto TypeResolver::visit(ast::NodeID id, const ast::BinaryExpression& binary) ->
     TRY_RESOLVE(binary.lhs);
     TRY_RESOLVE(binary.rhs);
     resolving_.set_sema_type(id, *last_type_);
+}
+
+auto TypeResolver::resolve_user_type_access(Type&                         object_type,
+                                            ast::IdentifierHandle         member,
+                                            SourceLocation                object_location,
+                                            opt::Option<std::string_view> object_name)
+    -> Result<mem::NonNull<Type>, Diagnostic> {
+    // Early validation to simplify error handling
+    const auto enum_type   = object_type.as_opt<types::Enum>();
+    const auto struct_type = object_type.as_opt<types::Struct>();
+    const auto union_type  = object_type.as_opt<types::Union>();
+    if (!enum_type && !struct_type && !union_type) {
+        return make_sema_err(
+            fmt::format(
+                "Can only access inner objects inside of structs, unions, and enums; found '{}'",
+                type_kind_display_name(object_type.get_kind())),
+            Error::TYPE_MISMATCH,
+            object_location);
+    }
+
+    ASSERT(object_type.has_symbol_table_idx(),
+           "User type should have a resolved symbol table index");
+    const auto table_idx = object_type.get_symbol_table_idx();
+    auto&      table     = ctx_.registry.get(table_idx);
+
+    const auto& member_ident = resolving_.ast.get_as<ast::IdentifierExpression>(member);
+    const Scope s{table_stack_, table_idx, table_idx_};
+    auto        symbol_proxy = table.get_proxy_opt(member_ident.name);
+
+    if (!symbol_proxy) {
+        return make_sema_err(
+            object_name
+                .transform([&](std::string_view name) {
+                    return fmt::format(
+                        "Type '{}' has no field named '{}'", name, member_ident.name);
+                })
+                .value_or(fmt::format("Type has no field named '{}'", member_ident.name)),
+            Error::UNDECLARED_IDENTIFIER,
+            resolving_.ast.location_of(member));
+    }
+
+    auto& [member_symbol, member_idx] = *symbol_proxy;
+    if (member_symbol.get_status() == SymbolStatus::RESOLVING) {
+        return make_sema_err("Cyclic dependency detected",
+                             Error::CYCLIC_DEPENDENCY,
+                             resolving_.ast.location_of(member));
+    }
+
+    mem::NonNull<Type> result_type = ctx_.get_poison();
+    if (member_symbol.get_kind() == SymbolKind::POISONED) { return result_type; }
+
+    if (enum_type) {
+        // The index location entirely depends on the number of variants which always come first
+        if (member_idx < enum_type->enumeration_count) {
+            result_type = object_type;
+        } else {
+            result_type = enum_type->members[member_idx - enum_type->enumeration_count];
+        }
+    } else if (struct_type) {
+        // The type can be retrieved directly from its index in its table directly
+        result_type = struct_type->members[member_idx];
+    } else if (union_type) {
+        // The index location entirely depends on the number of fields which always come first
+        if (member_idx < union_type->fields.size()) {
+            result_type = union_type->fields[member_idx];
+        } else {
+            result_type = union_type->members[member_idx - union_type->fields.size()];
+        }
+    }
+    return result_type;
 }
 
 auto TypeResolver::get_outer_access_inner_name(ast::OuterAccessHandle handle) noexcept
@@ -801,84 +887,19 @@ auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
     if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); }
     auto& object_type = *last_type_.take();
 
-    // Early validation to simplify error handling
-    const auto enum_type   = object_type.as_opt<types::Enum>();
-    const auto struct_type = object_type.as_opt<types::Struct>();
-    const auto union_type  = object_type.as_opt<types::Union>();
-    if (!enum_type && !struct_type && !union_type) {
-        return last_type_.emplace(ctx_.poison_node(
-            resolving_,
-            id,
-            fmt::format(
-                "Dot operator '.' can only be applied to structs, unions, or enums; found '{}'",
-                type_kind_display_name(object_type.get_kind())),
-            Error::TYPE_MISMATCH,
-            resolving_.ast.location_of(dot.object)));
+    auto result = resolve_user_type_access(object_type,
+                                           dot.member,
+                                           resolving_.ast.location_of(dot.object),
+                                           get_outer_access_inner_name(dot.object));
+    if (!result) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
     }
 
-    const auto table_idx = object_type.get_symbol_table_idx();
-    auto&      table     = ctx_.registry.get(table_idx);
-
-    const auto& member_ident = resolving_.ast.get_as<ast::IdentifierExpression>(dot.member);
-    const Scope s{table_stack_, table_idx, table_idx_};
-    auto        symbol_proxy = table.get_proxy_opt(member_ident.name);
-
-    if (!symbol_proxy) {
-        const auto object_name = get_outer_access_inner_name(dot.object);
-        return last_type_.emplace(ctx_.poison_node(
-            resolving_,
-            id,
-            fmt::format("Type '{}' has no field named '{}'", object_name, member_ident.name),
-            Error::UNDECLARED_IDENTIFIER,
-            resolving_.ast.location_of(dot.member)));
-    }
-
-    auto& [member_symbol, member_idx] = *symbol_proxy;
-    if (member_symbol.get_status() == SymbolStatus::RESOLVING) {
-        return last_type_.emplace(ctx_.poison_node(resolving_,
-                                                   id,
-                                                   "Cyclic dependency detected",
-                                                   Error::CYCLIC_DEPENDENCY,
-                                                   resolving_.ast.location_of(dot.member)));
-    }
-
-    if (member_symbol.get_kind() == SymbolKind::POISONED) {
-        return last_type_.emplace(ctx_.poison_node(resolving_, id));
-    }
-
-    if (enum_type) {
-        // The index location entirely depends on the number of variants which always come first
-        if (member_idx < enum_type->enumeration_count) {
-            resolving_.set_sema_type(dot.member, object_type);
-            resolving_.set_sema_type(id, object_type);
-            last_type_.emplace(object_type);
-        } else {
-            auto& member_type = *enum_type->members[member_idx - enum_type->enumeration_count];
-            resolving_.set_sema_type(dot.member, member_type);
-            resolving_.set_sema_type(id, member_type);
-            last_type_.emplace(member_type);
-        }
-    } else if (struct_type) {
-        // The type can be retrieved directly from its index in its table directly
-        auto& member_type = *struct_type->members[member_idx];
-
-        // Otherwise there's no modifications that need to be made to the accessor
-        resolving_.set_sema_type(dot.member, member_type);
-        resolving_.set_sema_type(id, member_type);
-        last_type_.emplace(member_type);
-    } else if (union_type) {
-        // The index location entirely depends on the number of fields which always come first
-        if (member_idx < union_type->fields.size()) {
-            resolving_.set_sema_type(dot.member, object_type);
-            resolving_.set_sema_type(id, object_type);
-            last_type_.emplace(object_type);
-        } else {
-            auto& member_type = *union_type->members[member_idx - union_type->fields.size()];
-            resolving_.set_sema_type(dot.member, member_type);
-            resolving_.set_sema_type(id, member_type);
-            last_type_.emplace(member_type);
-        }
-    }
+    // The user type resolver returns poisoned types in error conditions which can be bubbled here
+    auto& member_type = *result.value();
+    resolving_.set_sema_type(dot.member, member_type);
+    resolving_.set_sema_type(id, member_type);
+    last_type_.emplace(member_type);
 }
 
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_dot, DotExpression)
@@ -903,99 +924,76 @@ auto TypeResolver::visit(ast::NodeID id, const ast::RangeExpression& range) -> v
 
 auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init) -> void {
     // Resolve the object first so it can be tied to the member's types
-    opt::Option<Type&> object_type;
+    opt::Option<Type&> object_type_opt;
     if (init.object_type) {
         TRY_RESOLVE(*init.object_type);
-        object_type = *last_type_.take();
+        object_type_opt.emplace(*last_type_.take());
+    } else if (const auto implicit_type = implicit_type_stack_.peek()) {
+        object_type_opt.emplace(*implicit_type);
+    } else {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "Initializer expression requires a known type; provide an explicit "
+                             "type or use in a typed context",
+                             Error::TYPE_MISMATCH,
+                             resolving_.ast.location_of(id)));
+    }
 
-        if (object_type->as_opt<types::Enum>()) {
-            return last_type_.emplace(
-                ctx_.poison_node(resolving_,
-                                 id,
-                                 "Enums cannot be initialized with an initializer expression as "
-                                 "they lack member variables",
-                                 Error::TYPE_MISMATCH,
-                                 resolving_.ast.location_of(*init.object_type)));
-        }
+    Type& object_type = *object_type_opt;
+    if (object_type.as_opt<types::Enum>()) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "Enums cannot be initialized with an initializer expression as "
+                             "they lack member variables",
+                             Error::TYPE_MISMATCH,
+                             resolving_.ast.location_of(id)));
+    }
 
-        // This is a restriction naturally imposed by the definition of a union in theory
-        if (object_type->as_opt<types::Union>() && init.initializers.size() != 1) {
-            return last_type_.emplace(ctx_.poison_node(
-                resolving_,
-                id,
-                fmt::format("Union initializer lists must list exactly one field; found {}",
-                            init.initializers.size()),
-                Error::ARITY_MISMATCH,
-                resolving_.ast.location_of(*init.object_type)));
-        }
+    // This is a restriction naturally imposed by the definition of a union in theory
+    if (object_type.as_opt<types::Union>() && init.initializers.size() != 1) {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            fmt::format("Union initializer lists must list exactly one field; found {}",
+                        init.initializers.size()),
+            Error::ARITY_MISMATCH,
+            resolving_.ast.location_of(id)));
+    }
 
-        if (!object_type->as_opt<types::Struct>() && !object_type->as_opt<types::Union>()) {
-            return last_type_.emplace(
-                ctx_.poison_node(resolving_,
-                                 id,
-                                 fmt::format("Only struct and union types may be used in "
-                                             "initialized expressions; found '{}'",
-                                             type_kind_display_name(object_type->get_kind())),
-                                 Error::TYPE_MISMATCH,
-                                 resolving_.ast.location_of(*init.object_type)));
-        }
+    if (!object_type.as_opt<types::Struct>() && !object_type.as_opt<types::Union>()) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             fmt::format("Only struct and union types may be used in "
+                                         "initialized expressions; found '{}'",
+                                         type_kind_display_name(object_type.get_kind())),
+                             Error::TYPE_MISMATCH,
+                             resolving_.ast.location_of(id)));
     }
 
     for (const auto& [accessor, value] : init.initializers) {
-        TRY_RESOLVE(value);
+        // The accessor is always a lookup into the stack
+        {
+            const UserTypeStack::Guard g{implicit_type_stack_, object_type};
+            TRY_RESOLVE(accessor);
+        }
 
-        if (object_type) {
-            const auto table_idx = object_type->get_symbol_table_idx();
-            auto&      table     = ctx_.registry.get(table_idx);
+        // The value might be a necessary implicit access
+        auto& member_type = resolving_.get_sema_type(accessor);
+        if (member_type.is_poison()) {
+            return last_type_.emplace(ctx_.poison_node(resolving_, id));
+        }
 
-            const auto& implicit_access =
-                resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
-            const auto  member       = implicit_access.member;
-            const auto& member_ident = resolving_.ast.get_as<ast::IdentifierExpression>(member);
-            auto        symbol_proxy = table.get_proxy_opt(member_ident.name);
-
-            if (!symbol_proxy) {
-                return last_type_.emplace(
-                    ctx_.poison_node(resolving_,
-                                     id,
-                                     fmt::format("Type has no field named '{}'", member_ident.name),
-                                     Error::UNDECLARED_IDENTIFIER,
-                                     resolving_.ast.location_of(member)));
-            }
-
-            auto& [member_symbol, member_idx] = *symbol_proxy;
-            if (member_symbol.get_kind() == SymbolKind::POISONED) {
-                return last_type_.emplace(ctx_.poison_node(resolving_, id));
-            }
-
-            if (const auto struct_data = object_type->as_opt<types::Struct>()) {
-                auto& member_type = *struct_data->members[member_idx];
-                resolving_.set_sema_type(member, member_type);
-            } else if (const auto union_data = object_type->as_opt<types::Union>()) {
-                if (member_idx >= union_data->fields.size()) {
-                    return last_type_.emplace(ctx_.poison_node(
-                        resolving_,
-                        id,
-                        fmt::format("'{}' is not a field of this union", member_ident.name),
-                        Error::TYPE_MISMATCH,
-                        resolving_.ast.location_of(member)));
-                }
-
-                auto& member_type = *union_data->fields[member_idx];
-                resolving_.set_sema_type(member, member_type);
-            }
+        {
+            const UserTypeStack::Guard g{implicit_type_stack_, member_type};
+            TRY_RESOLVE(value);
         }
     }
 
-    if (object_type) {
-        resolving_.set_sema_type(id, *object_type);
-        last_type_.emplace(*object_type);
-    } else {
-        // Without an object type it must be inferred from the LHS
-        auto& auto_type = ctx_.get_builtin_resolved_type(TypeKind::AUTO);
-        resolving_.set_sema_type(id, auto_type);
-        last_type_.emplace(auto_type);
-    }
+    resolving_.set_sema_type(id, object_type);
+    last_type_.emplace(object_type);
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> void {
@@ -1154,10 +1152,28 @@ auto TypeResolver::visit(ast::NodeID id, const ast::UnaryExpression& node) -> vo
     resolving_.set_sema_type(id, *last_type_);
 }
 
-auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& node) -> void {
-    // TODO: This needs to do something to think about the implicit type, or defer to pass 3
-    TRY_RESOLVE(node.member);
-    resolving_.set_sema_type(id, *last_type_);
+auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& implicit_access)
+    -> void {
+    const auto implicit_type = implicit_type_stack_.peek();
+    if (!implicit_type) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "Implicit access expression used outside of a typed context",
+                             Error::TYPE_MISMATCH,
+                             resolving_.ast.location_of(id)));
+    }
+
+    auto result = resolve_user_type_access(
+        *implicit_type, implicit_access.member, resolving_.ast.location_of(id));
+    if (!result) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
+    }
+
+    auto& member_type = *result.value();
+    resolving_.set_sema_type(implicit_access.member, member_type);
+    resolving_.set_sema_type(id, member_type);
+    last_type_.emplace(member_type);
 }
 
 // String literals are just constant arrays of bytes
@@ -1438,18 +1454,24 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
         resolving_.set_sema_type(id, *last_type_);
     };
 
-    // With an explicit type, the ident should always adopt that exact type
-    if (decl.explicit_type) {
-        resolve(*decl.explicit_type);
-        if (last_type_->is_poison()) { return poison_out(); }
-        resolving_.set_sema_type(id, *last_type_.take());
-    }
+    {
+        opt::Option<UserTypeStack::Guard> type_guard;
 
-    // Only update the decl value type if it hasn't been set
-    if (decl.value) {
-        resolve(*decl.value);
-        if (last_type_->is_poison()) { return poison_out(); }
-        resolving_.set_sema_type_if(id, *last_type_.take());
+        // With an explicit type, the ident should always adopt that exact type
+        if (decl.explicit_type) {
+            resolve(*decl.explicit_type);
+            if (last_type_->is_poison()) { return poison_out(); }
+            auto& explicit_type = *last_type_.take();
+            type_guard.emplace(implicit_type_stack_, explicit_type);
+            resolving_.set_sema_type(id, explicit_type);
+        }
+
+        // Only update the decl value type if it hasn't been set
+        if (decl.value) {
+            resolve(*decl.value);
+            if (last_type_->is_poison()) { return poison_out(); }
+            resolving_.set_sema_type_if(id, *last_type_.take());
+        }
     }
 
     // The symbol's kind can be fully resolved with knowledge of the declarations type
