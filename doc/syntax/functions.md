@@ -70,7 +70,7 @@ _ = baz(&mut b);    // Illegal, cannot mutate const
     - If calling a member function, the syntax is similar to other languages (`instance.func(args...)`)
         - This requires the function to have a self parameter, as discussed in the struct, enum, and union documentation
         - The callee must have mutability that matches the explicit self parameter
-    - If calling a static struct function, the syntax uses the dot operator (`Struct.func(args...)`)
+    - If calling a 'static' struct function (one without a self parameter), the syntax uses the dot operator (`Struct.func(args...)`)
 
 ## Types
 - Function's signatures are their types, including parameter modifiers and the return type

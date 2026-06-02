@@ -52,13 +52,11 @@ var c := &mut a;    // Illegal, cannot take mutable reference of constant
     - `pub`: When used inside of a struct, this opens access to non-struct-local functions (i.e. member functions). When used on a top-level declaration, this lets importing files access the declaration. The presence of this keyword correctly implies that all declarations are *private* unless explicitly stated otherwise.
     - `extern`: Denotes a declaration as relating to a symbol yet-to-be defined (i.e. external linkage). This currently supports only C symbols. This keyword cannot be combined with the `export` modifier. 
     - `export`: Forwards the declaration to the 'outside world'. This means that the symbol is treated as a C symbol. This keyword cannot be combined with the `extern` modifier.
-    - `static`: This keyword is only valid for struct members. It denotes a symbol as being owned (namespaced) by the struct itself, not by instances of said struct.
 
 ```porpoise
 pub var c := 2;          // Allowed, symbol can be imported
 extern const a: i32;     // Allowed, externs must be explicitly typed without values
 export var b := 1;       // Allowed
-static var c := 33;      // Illegal, cannot use static on a non-struct member
 extern constexpr a: i32; // Illegal, inherently contradictory
 ```
 

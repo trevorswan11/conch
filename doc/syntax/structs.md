@@ -2,13 +2,15 @@
 - Structs are defined using the standard declaration syntax or with a `using` statement
     - In the event that the standard declaration syntax is used, it must be `const`
 - Struct definitions must be `const`
-- Struct members are simply declarations
-    - Members cannot be marked `extern` or `export`
-    - Members can be marked `pub` to allow external access
-    - Members can be marked `static`, denoting struct-level ownership (as opposed to instance)
-        - This can be done for any declaration, though it is redundant for functions that do not have a self parameter
-        - A member function with a self parameter cannot be marked `static`
-        - `static` is only ever meaningful for non-member, non-function declarations. All other use cases are simply to convey meaning to the programmer
+- Structs may have a comma-separated list of fields that are owned by instances of the struct
+    - These must be the first thing to appear in the struct
+    - They are declared with an optional `pub` to mark access modifiers, followed by the name, type, and optional default value: e.g. `pub foo: i32 = 23`
+    - Members do not have an individual idea of mutability, simply inheriting the mutability of their enclosing object when used
+        - This is of course only applied to value types as pointers and references enforce local immutability
+- Structs can also have member declarations
+    - Once the first declaration is hit, there may not be any more instance members
+    - Decls here cannot be marked `extern` or `export`
+    - Decls here can be marked `pub` to allow external access
     - Member functions have a first argument which is an instance of the struct: `self`
         - A member function can provide this keyword in five different ways:
             1. `self` denotes a pass by value (copy)
@@ -19,21 +21,21 @@
         - This parameter _must_ be the first parameter of the function's parameter list
         - This parameter is conventionally named `self` but is allowed to assume any non-reserved keyword
         - This parameter has the underlying type of the directly enclosing struct
+    - Declared functions without a self parameter can be thought of as `static` in other languages
     - Functions are considered to be top-level within the struct and must be `const`
-    - Members can be declared in any order, the compiler is order independent and is free to reorder to optimize
-- Struct 'members' can also be `using` or `import` statements
-- Static members are resolved using the `.` operator
-- Instance members are resolved using the `.` operator
+    - Declarations must always come after a list of instance members (which may be empty)
+- Struct 'declarations' can also be `using` or `import` statements
+- All internal accesses are resolved using the `.` operator
 
 ```porpoise
 const Foo := struct {           // Standard declaration with type inference
-    var bar: i32;               // Mutable member variable
-    const baz: []byte = "baz";  // Constant member variable, must be initialized in-line
+    bar: i32,                   // Private field without default value (must appear in initializer list)
+    pub boo: u32 = 4u,          // Public field with default value
 
-    pub var boo := 4u;          // Members are private by default
-    static const foo := 3.4;    // Static variables are struct globals and are not instance specific
+    pub var foo := 3.4;         // Decl variables are struct globals and are not instance specific
+    const baz: []byte = "baz";  // Constant decl, must be initialized in-line
 
-    const worker_one := fn(&self): void {           // Functions have an explicit 'self' parameter
+    const worker_one := fn(&self): void {           // Functions can have an explicit 'self' parameter
         // ...
     };
 
@@ -41,7 +43,7 @@ const Foo := struct {           // Standard declaration with type inference
         // ...
     };
 
-    pub const worker_three = fn(): void {        // Functions without 'self' parameter are static
+    pub const worker_three = fn(): void {        // Functions without 'self' parameter cannot take an instance of the struct
         // ...
     };
 
@@ -50,11 +52,15 @@ const Foo := struct {           // Standard declaration with type inference
     //
     // };
 
-    pub const fee := "Hello, World!";           // Members can be placed anywhere in the struct definition
+    pub const fee := "Hello, World!";           // Decls can be placed anywhere after the fields
 };
 
-Foo.foo;                                           // Members (static and non-static) are resolved using the '.' operator
+Foo.foo;                                           // All members are resolved using the '.' operator
 Foo.worker_three();                                // The same goes for functions
+
+var foo: Foo = .{ .bar = 42, };
+Foo.worker_two(&mut foo);   // Member functions may be called explicitly 
+foo.worker_two();           // Or with this shorthand
 ```
 
 - There is no inheritance

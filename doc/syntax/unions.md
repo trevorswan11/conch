@@ -32,9 +32,7 @@ match (h1) {
 };
 ```
 - You can put declarations inside of an union as you would with a struct
-    - These can be member functions, static functions, or static variables only
-        - Member functions have a first argument which is an instance of the union as explained in the struct documentation
-    - Attempting to emplace an instance variable in an union is not supported
-        - This means that all non-function declarations must be explicitly marked `static`
+    - Member functions have a first argument which is an instance of the enum as explained in the struct documentation
+    - There is no concept of an instance field in an enum
     - These members must appear after all fields
 - Union 'members' can also be `using` or `import` statements
