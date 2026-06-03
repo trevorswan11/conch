@@ -684,7 +684,6 @@ auto MatchExpression::parse(syntax::Parser& parser)
             }
             pattern_opt.emplace(pattern_raw);
         }
-        i += 1;
 
         const MatchPatternHandle pattern{*pattern_opt};
         TRY(parser.expect_peek(syntax::TokenType::FAT_ARROW));
@@ -717,6 +716,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
         const auto consequence =
             TRY(parser.parse_restricted_statement(syntax::Error::ILLEGAL_MATCH_ARM, false));
         arms.emplace_back(pattern, capture, consequence);
+        i += 1;
     }
 
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));

@@ -31,6 +31,7 @@ pub const BarU := union {
 };
 
 pub const BarS := struct {
+    A: i32,
     pub var baz: i32 = 23;
     pub const bar := fn(&self, c: u8): []u8 {};
 };
@@ -99,9 +100,10 @@ const func := other::BarU.bar;
 
 TEST_CASE("Struct resolved access") {
     auto [ctx, idx] = setup_access_test(R"(
-var s1: other::BarS = .{ .baz = 42, };
-const s2 := s1.baz;
-const s3 := s1.bar('a');
+var s1: other::BarS = .{ .A = 42, };
+const s2 := other::BarS{ .A = 1, };
+const s3 := s1.baz;
+const s4 := s1.bar('a');
 
 const member := other::BarS.baz;
 const func := other::BarS.bar;
@@ -111,8 +113,9 @@ const func := other::BarS.bar;
     const auto& member_type = ctx->get_type(sema::TypeKind::I32);
 
     check_access_decl(*ctx, idx, "s1", struct_type);
-    check_access_decl(*ctx, idx, "s2", member_type);
-    check_access_decl(*ctx, idx, "s3", u8_slice_type(*ctx));
+    check_access_decl(*ctx, idx, "s2", struct_type);
+    check_access_decl(*ctx, idx, "s3", member_type);
+    check_access_decl(*ctx, idx, "s4", u8_slice_type(*ctx));
     check_access_decl(*ctx, idx, "member", member_type);
     check_access_decl(*ctx, idx, "func", bar_fn_type(*ctx, 8));
 }

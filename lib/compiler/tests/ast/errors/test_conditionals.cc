@@ -49,7 +49,7 @@ TEST_CASE("Armless match expression") {
                                                  std::pair{0uz, 0uz}});
 }
 
-TEST_CASE("Malformed arm LHS") {
+TEST_CASE("Malformed arm pattern") {
     helpers::test_parser_fail(
         "match {  => c; };",
         syntax::Diagnostic{
@@ -57,9 +57,15 @@ TEST_CASE("Malformed arm LHS") {
         syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
                            syntax::Error::MISSING_PREFIX_PARSER,
                            std::pair{0uz, 15uz}});
+
+    helpers::test_parser_fail(
+        "match (a) { for (0..3) |i| { var a: i32; } => |b| c };",
+        syntax::Diagnostic{"Unmatchable expression 'for loop' used as a match arm pattern",
+                           syntax::Error::ILLEGAL_MATCH_PATTERN,
+                           std::pair{0uz, 12uz}});
 }
 
-TEST_CASE("Illegal match arm rhs") {
+TEST_CASE("Illegal match arm dispatch") {
     helpers::test_parser_fail("match (a) { b => import std; };",
                               syntax::Diagnostic{syntax::Error::ILLEGAL_MATCH_ARM, 0, 17});
 }
@@ -82,6 +88,15 @@ TEST_CASE("Illegal match catch-all") {
         syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
                            syntax::Error::MISSING_PREFIX_PARSER,
                            std::pair{0uz, 36uz}});
+
+    helpers::test_parser_fail(
+        "match (a) { _ => |b| c; };",
+        syntax::Diagnostic{"Catch-all match arms may not have a capture clause",
+                           syntax::Error::ILLEGAL_MATCH_CATCH_ALL,
+                           std::pair{0uz, 18uz}},
+        syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
+                           syntax::Error::MISSING_PREFIX_PARSER,
+                           std::pair{0uz, 24uz}});
 }
 
 } // namespace porpoise::tests
