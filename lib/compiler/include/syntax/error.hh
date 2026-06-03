@@ -4,7 +4,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 enum class Error : u8 {
     UNEXPECTED_TOKEN,
@@ -77,4 +77,4 @@ template <typename... Args>
     return make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

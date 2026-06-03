@@ -1,5 +1,5 @@
 # Enums
-- Enums are extremely simple in porpoise, consisting of:
+- Enums are extremely simple in ghoti, consisting of:
     - An optional backing integral type
     - Variants
     - Optional default values for variants
@@ -11,13 +11,13 @@
 - Enums can be casted to and from their underlying type by using the `@cast` builtin
 - For an enum to accept values that are outside of the values of its internal enumerations, you must end the enumeration list with an underscore `_`
     - You cannot access these via the dot operator, and their value may only be retrieved via a cast as in C++
-```porpoise
+```ghoti
 const Colors := enum { red, blue = 3, green };
 const Shapes := enum : u64 { circle, square, _ };
 ```
 - Enum variants are namespaced, meaning they do not leak into their outer scope as they would in C
 - To access an enum's variants and members, the `.` operator is used
-```porpoise
+```ghoti
 const a := Colors.red;
 const a: Colors = .red; // Equivalent
 ```

@@ -9,7 +9,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace ast {
 
@@ -185,4 +185,4 @@ static_assert(sizeof(opt::Option<ast::Handle<ast::NodeKind::ARRAY_EXPRESSION>>) 
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

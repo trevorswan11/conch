@@ -10,7 +10,7 @@
 #include "string.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 LineOffsets::LineOffsets(std::string_view input) {
     offsets_.emplace_back(0);
@@ -60,4 +60,4 @@ auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
     return {substr, std::move(caret_line)};
 }
 
-} // namespace porpoise
+} // namespace ghoti

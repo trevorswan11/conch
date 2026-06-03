@@ -5,10 +5,10 @@
 [
     {
         "adapter": "CodeLLDB",
-        "label": "porpoise (C++)",
+        "label": "ghoti (C++)",
         "request": "launch",
-        "name": "porpoise",
-        "program": "zig-out/bin/porpoise",
+        "name": "ghoti",
+        "program": "zig-out/bin/ghoti",
         "args": [
             "debug"
         ],

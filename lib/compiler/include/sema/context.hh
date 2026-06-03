@@ -13,7 +13,7 @@
 #include "result.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // A contextual wrapper around sematic steps
 //
@@ -87,4 +87,4 @@ struct Context {
     [[nodiscard]] auto get_builtin_resolved_type(TypeKind kind) -> Type&;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

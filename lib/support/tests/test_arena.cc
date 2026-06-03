@@ -6,7 +6,7 @@
 #include "arena.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 constexpr usize MARKER{42};
 
@@ -47,4 +47,4 @@ TEST_CASE("Arena array construction") {
     for (const auto& i : array) { CHECK(i == 0); }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -13,7 +13,7 @@
 
 #include "result.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 auto FileLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {
     if (!std::filesystem::exists(path)) {
@@ -42,4 +42,4 @@ auto FileLoader::normalize(const std::filesystem::path& path)
     return canonical_path;
 }
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

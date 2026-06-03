@@ -11,7 +11,7 @@
 
 #include "option.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
@@ -73,4 +73,4 @@ TEST_CASE("Illegal for loop iterable type") {
                          std::pair{0uz, 5uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

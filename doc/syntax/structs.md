@@ -27,7 +27,7 @@
 - Struct 'declarations' can also be `using` or `import` statements
 - All internal accesses are resolved using the `.` operator
 
-```porpoise
+```ghoti
 const Foo := struct {           // Standard declaration with type inference
     bar: i32,                   // Private field without default value (must appear in initializer list)
     pub boo: u32 = 4u,          // Public field with default value
@@ -71,7 +71,7 @@ foo.worker_two();           // Or with this shorthand
     - You may use the structs name followed by a braced list of implicit access declarations assigned to values
     - You may use the `.{}` syntax followed by the same list as above
 - The below example demonstrates both of these mechanisms
-```porpoise
+```ghoti
 const S = struct { var a: int; };
 
 const s1 := S{ .a = 3 };

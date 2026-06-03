@@ -17,7 +17,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
 using Parsed = std::variant<Unit, cmd::Debug>;
 
@@ -41,4 +41,4 @@ class Parser {
 #endif
 };
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

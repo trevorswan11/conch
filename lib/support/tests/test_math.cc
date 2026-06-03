@@ -4,7 +4,7 @@
 #include "math.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEMPLATE_TEST_CASE("Ceil power of two sizes", "", u8, u16, u32, u64, usize) {
     CHECK(ceil_power_of_two<TestType>(0) == 1);
@@ -20,4 +20,4 @@ TEST_CASE("Ceil power of two bounds") {
     CHECK(ceil_power_of_two<u64>(0xF000000000000000) == 0);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

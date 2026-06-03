@@ -5,7 +5,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace porpoise::traits {
+namespace ghoti::traits {
 
 template <typename T>
 concept Integral = std::is_integral_v<T> && !std::same_as<T, bool>;
@@ -37,4 +37,4 @@ template <typename T> constexpr auto is_const_v = std::is_const_v<std::remove_re
 template <typename Self, typename T>
 using const_dispatch_t = std::conditional_t<is_const_v<Self>, const T, T>;
 
-} // namespace porpoise::traits
+} // namespace ghoti::traits

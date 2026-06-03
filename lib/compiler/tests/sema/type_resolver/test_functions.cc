@@ -16,7 +16,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
@@ -185,4 +185,4 @@ TEST_CASE("Non-callable expression") {
     ctx->check_poisoned<syms::Node>("foo", idx);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

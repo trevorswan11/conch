@@ -14,7 +14,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using syntax::TokenType;
 using ExpectedLexeme = std::pair<TokenType, std::string_view>;
@@ -410,4 +410,4 @@ TEST_CASE("Lexing illegal builtin") {
     CHECK(input == illegal.slice);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

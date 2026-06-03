@@ -2,7 +2,7 @@
 
 #include <fmt/color.h>
 
-namespace porpoise::style {
+namespace ghoti::style {
 
 constexpr fmt::text_style BASE;
 constexpr auto            BOLD = fmt::emphasis::bold;
@@ -17,4 +17,4 @@ constexpr auto GREEN_BOLD       = GREEN | BOLD;
 constexpr auto LIGHT_GREEN      = fmt::fg(fmt::color::light_green);
 constexpr auto LIGHT_GREEN_BOLD = LIGHT_GREEN | BOLD;
 
-} // namespace porpoise::style
+} // namespace ghoti::style

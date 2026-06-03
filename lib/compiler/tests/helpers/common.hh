@@ -15,7 +15,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
 // Checks if the error list is empty, dumping the list's contents otherwise.
 template <typename E> auto check_errors(std::span<const E> errors) {
@@ -92,4 +92,4 @@ template <Unwrappable U> auto unwrap_err(U&& u) -> decltype(auto) {
     }
 }
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

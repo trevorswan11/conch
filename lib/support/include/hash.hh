@@ -9,7 +9,7 @@
 #include "string.hh"
 #include "types.hh"
 
-namespace porpoise::hash {
+namespace ghoti::hash {
 
 namespace wyhash {
 
@@ -170,4 +170,4 @@ class Hasher {
     u64 hash_{0xA0761D6478BD642FULL};
 };
 
-} // namespace porpoise::hash
+} // namespace ghoti::hash

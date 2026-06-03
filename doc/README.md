@@ -1,5 +1,5 @@
-# Porpoise Language Reference
-A WIP reference of the porpoise programming language
+# Ghoti Language Reference
+A WIP reference of the ghoti programming language
 
 ## Syntax
 - [arrays](syntax/arrays.md)

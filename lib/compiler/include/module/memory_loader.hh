@@ -10,7 +10,7 @@
 
 #include "result.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 // A mock loader used for in-memory files that can't be referenced relatively
 class MemoryLoader : public SourceLoader {
@@ -30,4 +30,4 @@ class MemoryLoader : public SourceLoader {
     ankerl::unordered_dense::map<std::filesystem::path, std::string> files_;
 };
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

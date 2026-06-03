@@ -6,7 +6,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Variant visitor") {
     std::variant<std::string, i32, f64> one_of_many;
@@ -28,4 +28,4 @@ TEST_CASE("Variant visitor") {
     CHECK(std::visit(visitor, one_of_many));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

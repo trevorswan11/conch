@@ -26,7 +26,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 auto Parser::reset(std::string_view input) noexcept -> void {
     ast_.reset();
@@ -314,4 +314,4 @@ auto Parser::get_location_of(ast::ExplicitTypeID id) -> SourceLocation {
     return ast_->location_of(id);
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

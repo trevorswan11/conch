@@ -5,7 +5,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace ast {
 
@@ -262,4 +262,4 @@ KIND_OF_TRAIT(ExplicitArrayType, ARRAY)
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

@@ -11,7 +11,7 @@
 #include "string.hh"
 #include "style.hh"
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
 auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std::string {
     auto subcmds = app->get_subcommands({});
@@ -57,4 +57,4 @@ auto Fmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mo
     return ss.str();
 }
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

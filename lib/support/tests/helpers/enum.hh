@@ -2,7 +2,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
 enum class MockEnum : u8 {
     A,
@@ -32,4 +32,4 @@ enum class NonMonotonicEnum : u8 {
     D = 23,
 };
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

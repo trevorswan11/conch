@@ -14,7 +14,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 template <traits::IndexableID ID, typename Data> struct DataPoolBase {
     std::vector<Data>           pool;
@@ -121,4 +121,4 @@ class AST {
     DataPool<ExplicitTypeID, TypeData> explicit_types_;
 };
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

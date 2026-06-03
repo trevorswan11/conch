@@ -5,7 +5,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Empty do-while") {
     helpers::test_parser_fail(
@@ -100,4 +100,4 @@ TEST_CASE("Illegal while-else clause") {
                                                  std::pair{0uz, 31uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

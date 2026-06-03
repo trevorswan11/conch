@@ -10,15 +10,15 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockFile;
 
 TEST_CASE("Import aliases correctly used") {
     auto [ctx, idx] = helpers::collect_and_check(
-        R"(import foo as A; import "f.porp" as F; const foo := bar;)",
-        helpers::make_vector<MockFile>(MockFile{"foo.porp", "const foo := bar;", "foo"},
-                                       MockFile{"f.porp", "const foo := bar;"}));
+        R"(import foo as A; import "f.gh" as F; const foo := bar;)",
+        helpers::make_vector<MockFile>(MockFile{"foo.gh", "const foo := bar;", "foo"},
+                                       MockFile{"f.gh", "const foo := bar;"}));
 
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 3);
@@ -40,7 +40,7 @@ TEST_CASE("Import aliases correctly used") {
 TEST_CASE("Public import query") {
     auto [ctx, idx] = helpers::collect_and_check(
         "pub import std;",
-        helpers::make_vector<MockFile>(MockFile{"std.porp", "var a: i32;", "std"}));
+        helpers::make_vector<MockFile>(MockFile{"std.gh", "var a: i32;", "std"}));
 
     auto&       table      = helpers::unwrap(ctx->analyzer.get_table_opt(idx));
     const auto& std_import = helpers::unwrap(table.get_opt("std"));
@@ -49,14 +49,14 @@ TEST_CASE("Public import query") {
 
 namespace {
 
-constexpr std::string_view a_porp{R"(pub import "b.porp" as b;)"};
-constexpr std::string_view b_porp{R"(pub import "a.porp" as a;)"};
+constexpr std::string_view a_gh{R"(pub import "b.gh" as b;)"};
+constexpr std::string_view b_gh{R"(pub import "a.gh" as a;)"};
 
 } // namespace
 
 TEST_CASE("Circular imports") {
-    auto [ctx, _] = helpers::collect_and_check(
-        a_porp, helpers::make_vector<MockFile>(MockFile{"b.porp", b_porp}));
+    auto [ctx, _] =
+        helpers::collect_and_check(a_gh, helpers::make_vector<MockFile>(MockFile{"b.gh", b_gh}));
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 2);
 
@@ -66,22 +66,22 @@ TEST_CASE("Circular imports") {
 
 namespace {
 
-constexpr std::string_view importer_porp{R"(
-    import "a.porp" as a;
-    import "b.porp" as b;
+constexpr std::string_view importer_gh{R"(
+    import "a.gh" as a;
+    import "b.gh" as b;
 )"};
 
 constexpr std::string_view diamond{R"(import std;)"};
-constexpr std::string_view std_porp{R"(pub import "io.porp" as io;)"};
+constexpr std::string_view std_gh{R"(pub import "io.gh" as io;)"};
 
 } // namespace
 
 TEST_CASE("Diamond dependencies") {
     auto [ctx, _] = helpers::collect_and_check(
-        importer_porp,
-        helpers::make_vector<MockFile>(MockFile{"a.porp", diamond},
-                                       MockFile{"b.porp", diamond},
-                                       MockFile{"std.porp", std_porp, "std"}));
+        importer_gh,
+        helpers::make_vector<MockFile>(MockFile{"a.gh", diamond},
+                                       MockFile{"b.gh", diamond},
+                                       MockFile{"std.gh", std_gh, "std"}));
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 4);
 
@@ -93,7 +93,7 @@ TEST_CASE("Diamond dependencies") {
 }
 
 TEST_CASE("Self import") {
-    helpers::SemaTestContext ctx{{}, "self.porp", R"(import "self.porp" as self;)"};
+    helpers::SemaTestContext ctx{{}, "self.gh", R"(import "self.gh" as self;)"};
     REQUIRE_FALSE(ctx.root_mod->has_parser_diagnostics());
     ctx.analyzer.collect_symbols(*ctx.root_mod);
     REQUIRE_FALSE(ctx.root_mod->has_sema_diagnostics());
@@ -104,15 +104,15 @@ TEST_CASE("Self import") {
 
 TEST_CASE("Unknown file module") {
     std::stringstream ss;
-    auto ctx = helpers::analyze(helpers::TEST_FILENAME, ss, R"(import "a.porp" as a;)");
+    auto              ctx = helpers::analyze(helpers::TEST_FILENAME, ss, R"(import "a.gh" as a;)");
     REQUIRE(ctx->root_mod->has_sema_diagnostics());
 
     constexpr std::string_view expected{
-        R"(test.porp:1:8: error: Could not find path 'a.porp' in virtual file system
-    import "a.porp" as a;
+        R"(test.gh:1:8: error: Could not find path 'a.gh' in virtual file system
+    import "a.gh" as a;
            ^
 )"};
     CHECK(ss.view() == expected);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

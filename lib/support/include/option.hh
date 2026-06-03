@@ -13,7 +13,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace traits {
 
@@ -390,9 +390,9 @@ concept OptSize = is_opt_size_v<T>;
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <> struct ankerl::unordered_dense::hash<porpoise::opt::Size> {
+template <> struct ankerl::unordered_dense::hash<ghoti::opt::Size> {
     using is_avalanching = void;
-    [[nodiscard]] auto operator()(const porpoise::opt::Size& o) const noexcept { return o.hash(); }
+    [[nodiscard]] auto operator()(const ghoti::opt::Size& o) const noexcept { return o.hash(); }
 };

@@ -19,7 +19,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 auto ASTDumper::visit(NodeID, const ArrayExpression& array) -> void {
     fmt::println(out_, "ArrayExpression");
@@ -792,4 +792,4 @@ auto ASTDumper::visit(ExplicitTypeID, const ExplicitArrayType& array) -> void {
     }
 }
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

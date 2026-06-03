@@ -23,7 +23,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // An AST walker that performs 0 type checking
 class SymbolCollector {
@@ -151,4 +151,4 @@ class SymbolCollector {
     DefaultCounter in_label_scope_;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

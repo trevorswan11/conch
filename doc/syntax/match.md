@@ -1,5 +1,5 @@
 # Match
-- In addition to `if` control flow, porpoise has match expressions
+- In addition to `if` control flow, ghoti has match expressions
 - Match expressions can easily switch over enum values, but are also helpful when working with unions
 - When matching a union, you must use a capture group with each match arm
     - This will capture the active field value of the union
@@ -14,7 +14,7 @@
     - Expression statement
     - Block statement
 - Loops are expressions and must be terminated by a semicolon
-```porpoise
+```ghoti
 match (a) { 2 => { c; } _ => d }; // Standard match on a non-union value
 match (a) { .b => |b| { c; } }; // Match on a union value that has a field `b`
 ```

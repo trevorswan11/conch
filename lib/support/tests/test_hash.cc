@@ -2,7 +2,7 @@
 
 #include "hash.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Order dependent hashing") {
     hash::Hasher h1{1}, h2{2};
@@ -11,4 +11,4 @@ TEST_CASE("Order dependent hashing") {
     CHECK_FALSE(h1.finalize() == h2.finalize());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

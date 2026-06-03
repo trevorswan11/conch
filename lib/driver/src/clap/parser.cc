@@ -18,7 +18,7 @@
 
 #include <config.h>
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
 Parser::Parser(i32 argc, byte** argv, std::ostream& os, bool ensure_utf8) noexcept
     : argc_{argc}, os_{os} {
@@ -28,8 +28,8 @@ Parser::Parser(i32 argc, byte** argv, std::ostream& os, bool ensure_utf8) noexce
 }
 
 auto Parser::parse() -> Result<void, i32> {
-    app_.usage("Usage: porpoise [command] [options]");
-    app_.set_version_flag("-v,--version", fmt::format("porpoise v{} ({})", VERSION_STR, GIT_INFO));
+    app_.usage("Usage: ghoti [command] [options]");
+    app_.set_version_flag("-v,--version", fmt::format("ghoti v{} ({})", VERSION_STR, GIT_INFO));
     app_.require_subcommand(1);
 
     const auto* ast_app = app_.add_subcommand("debug", "Run the CLI interactive debugger");
@@ -50,4 +50,4 @@ auto Parser::parse() -> Result<void, i32> {
     return {};
 }
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

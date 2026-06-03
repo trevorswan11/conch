@@ -6,7 +6,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::fixed::detail {
+namespace ghoti::fixed::detail {
 
 // Non-default constructible object use a raw byte array initialized on the fly
 template <typename Data, usize Capacity> struct Storage {
@@ -27,4 +27,4 @@ template <traits::DefaultConstructible Data, usize Capacity> struct Storage<Data
     }
 };
 
-} // namespace porpoise::fixed::detail
+} // namespace ghoti::fixed::detail

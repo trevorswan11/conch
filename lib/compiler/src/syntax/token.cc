@@ -8,7 +8,7 @@
 #include "assert.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 auto Token::materialize_string() const -> std::string {
     ASSERT(type == TokenType::STRING || type == TokenType::MULTILINE_STRING);
@@ -59,4 +59,4 @@ auto Token::is_member_token() const noexcept -> bool {
     }
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

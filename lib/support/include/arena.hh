@@ -9,7 +9,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::mem {
+namespace ghoti::mem {
 
 // Do not free returned memory directly!
 class Arena {
@@ -76,4 +76,4 @@ class Arena {
     Block* current_{nullptr};
 };
 
-} // namespace porpoise::mem
+} // namespace ghoti::mem

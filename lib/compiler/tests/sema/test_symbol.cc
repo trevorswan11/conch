@@ -14,7 +14,7 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -75,4 +75,4 @@ TEST_CASE("Safety checked registry operations") {
     CHECK_FALSE(registry.get_from_opt(1, "a"));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

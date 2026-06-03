@@ -24,7 +24,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 auto ArrayExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
@@ -939,4 +939,4 @@ auto WhileLoopExpression::parse(syntax::Parser& parser)
         start_token, condition, continuation, block, non_break);
 }
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

@@ -8,7 +8,7 @@
 
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 template <typename Enum>
 concept ValidEnum = std::is_enum_v<Enum>;
@@ -89,4 +89,4 @@ template <BoundedEnum E> consteval auto enum_range() noexcept {
         return static_cast<EnumType>(~std::to_underlying(op));                           \
     }
 
-} // namespace porpoise
+} // namespace ghoti

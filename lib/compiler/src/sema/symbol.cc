@@ -18,7 +18,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 auto symbols::Label::from(Symbol& symbol) -> Label& {
     auto label_data = symbol.as_opt<symbols::Label>();
@@ -128,4 +128,4 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
     return {};
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

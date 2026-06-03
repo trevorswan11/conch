@@ -3,7 +3,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // A simple counter that with RAII-based up/down counting
 template <traits::Integral Underlying> class Counter {
@@ -60,4 +60,4 @@ template <traits::Integral Underlying> class Counter {
 
 using DefaultCounter = Counter<usize>;
 
-} // namespace porpoise
+} // namespace ghoti

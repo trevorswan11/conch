@@ -6,7 +6,7 @@
 - This function must take in a single parameter of type `[][:0]u8` representing the passed command line args
     - This is conventionally named `args` but can be named to your choosing
     - Note that these args are null terminated to respect C-interop with minimal friction
-```porpoise
+```ghoti
 import std;
 
 pub const main := fn(args: [][:0]u8): void {
@@ -47,11 +47,11 @@ pub const main := fn(args: [][:0]u8): void {
     - Expression statement
     - Block statement
 - If the consequence and alternate statements are both expression statements, then the resulting value is returned
-```porpoise
+```ghoti
 a = if (a) b; else c; // Assigns a conditionally
 ```
 - Conditionals can be evaluated at compile time with a syntax similar to C++
-```porpoise
+```ghoti
 if constexpr (true) {
     ...
 } else {
@@ -66,7 +66,7 @@ if constexpr (true) {
 - They are executed in reverse order with respect to their declaration
 - A defer statement can be an expression, block, or discard statement
     - All other inner statement variants are disallowed
-```porpoise
+```ghoti
 import std;
 
 const main := fn(): void {

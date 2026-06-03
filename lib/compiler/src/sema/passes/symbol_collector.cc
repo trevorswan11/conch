@@ -29,7 +29,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 auto SymbolCollector::collect_symbols(mod::Module& module, Context& ctx) -> mod::ModuleState {
     if (module.is_collectable()) {
@@ -513,4 +513,4 @@ auto SymbolCollector::visit(ast::ExplicitTypeID, const ast::ExplicitArrayType& a
     collect(array.inner_explicit_type);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

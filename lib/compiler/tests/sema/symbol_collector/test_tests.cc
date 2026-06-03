@@ -8,7 +8,7 @@
 #include "sema/error.hh"
 #include "sema/type.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Test statement symbol collection") {
     auto [ctx, idx]      = helpers::collect_and_check(R"(test "foo" { const foo := bar; })");
@@ -38,4 +38,4 @@ TEST_CASE("Illegal test location") {
                                                   std::pair{0uz, 29uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

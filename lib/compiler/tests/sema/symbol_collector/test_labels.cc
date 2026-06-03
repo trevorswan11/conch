@@ -11,7 +11,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -58,4 +58,4 @@ TEST_CASE("Label shadowing") {
                          std::pair{0uz, 18uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

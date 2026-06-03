@@ -20,7 +20,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 enum class TypeKind : u8 {
     POISON,
@@ -194,15 +194,15 @@ constexpr auto CONSTANT_VOLATILE = CONSTANT | VOLATILE;
 
 } // namespace types
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema
 
-template <> struct ankerl::unordered_dense::hash<porpoise::sema::types::Key> {
+template <> struct ankerl::unordered_dense::hash<ghoti::sema::types::Key> {
     using is_avalanching = void;
-    using Key            = porpoise::sema::types::Key;
+    using Key            = ghoti::sema::types::Key;
     [[nodiscard]] auto operator()(const Key& key) const noexcept { return key.hash(); }
 };
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // A semantic type that is entirely owned by an arena of types
 class Type {
@@ -352,10 +352,10 @@ class TypePool {
     ankerl::unordered_dense::map<types::Key, Type*> cache_;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema
 
-template <> struct ankerl::unordered_dense::hash<porpoise::sema::Type> {
+template <> struct ankerl::unordered_dense::hash<ghoti::sema::Type> {
     using is_avalanching = void;
-    using Type           = porpoise::sema::Type;
+    using Type           = ghoti::sema::Type;
     [[nodiscard]] auto operator()(const Type& type) const noexcept { return type.hash(); }
 };

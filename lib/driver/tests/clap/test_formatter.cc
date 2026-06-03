@@ -5,7 +5,7 @@
 
 #include "memory.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Formatter provides output") {
     CLI::App app;
@@ -19,4 +19,4 @@ TEST_CASE("Formatter provides output") {
     CHECK_FALSE(formatter->make_help(&app, "name", CLI::AppFormatMode::All).empty());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

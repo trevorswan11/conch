@@ -10,7 +10,7 @@
 #include "helpers/raii_tracker.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Metadata helpers") {
     using fixed::detail::Metadata;
@@ -239,4 +239,4 @@ TEST_CASE("HashMap ranges compatibility") {
     CHECK(iter_count == 3);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

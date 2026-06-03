@@ -11,7 +11,7 @@
 #include "assert.hh"
 #include "option.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace mem {
 
@@ -196,14 +196,20 @@ template <typename T> struct is_box : std::false_type {};
 template <typename T, typename D> struct is_box<mem::Box<T, D>> : std::true_type {};
 template <typename T> constexpr bool is_box_v = is_box<T>::value;
 
+template <typename T> using is_ptr            = std::is_pointer<T>;
+template <typename T> constexpr auto is_ptr_v = is_ptr<T>::value;
+
+template <typename T>
+constexpr auto is_ptr_like_v = is_nullable_box_v<T> || is_box_v<T> || is_ptr_v<T>;
+
 } // namespace traits
 
 template <typename T, typename D> class opt::detail::Ref<mem::Box<T, D>&> {
     static_assert(false, "Use a NullableBox<T, D> to accomplish this!");
 };
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <typename T, typename D> class std::optional<porpoise::mem::Box<T, D>> {
+template <typename T, typename D> class std::optional<ghoti::mem::Box<T, D>> {
     static_assert(false, "Use a NullableBox<T, D> to accomplish this!");
 };

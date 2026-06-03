@@ -16,7 +16,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 namespace {
 
@@ -129,4 +129,4 @@ auto UndefinedExpression::parse(syntax::Parser& parser)
     return parser.add_expr<UndefinedExpression>(parser.get_current_token());
 }
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

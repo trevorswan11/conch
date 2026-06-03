@@ -9,7 +9,7 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
@@ -79,4 +79,4 @@ TEST_CASE("Duplicate test name") {
                          std::pair{0uz, 31uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

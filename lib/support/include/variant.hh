@@ -3,7 +3,7 @@
 #include <utility> // IWYU pragma: export
 #include <variant> // IWYU pragma: export
 
-namespace porpoise {
+namespace ghoti {
 
 using Unit = std::monostate;
 
@@ -30,4 +30,4 @@ template <class... Ts> struct Overloaded : Ts... {
                           std::forward<decltype(self)>(self).member);   \
     }
 
-} // namespace porpoise
+} // namespace ghoti

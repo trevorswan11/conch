@@ -10,7 +10,7 @@
 #include "enum.hh"
 #include "fixed/enum_map.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 namespace {
 
@@ -87,4 +87,4 @@ constexpr auto MODIFIERS = [] {
 
 TypeModifier::TypeModifier(const syntax::Token& tok) noexcept : underlying_{MODIFIERS[tok.type]} {}
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

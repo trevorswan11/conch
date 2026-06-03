@@ -7,7 +7,7 @@
 
 #include <fmt/ostream.h>
 
-namespace porpoise {
+namespace ghoti {
 
 namespace detail {
 
@@ -44,16 +44,16 @@ constexpr auto unreachable_impl(std::source_location loc, std::string_view messa
 } // namespace detail
 
 #ifndef NDEBUG
-#    define ASSERT_1(expression)         \
-        ::porpoise::detail::assert_impl( \
+#    define ASSERT_1(expression)      \
+        ::ghoti::detail::assert_impl( \
             std::source_location::current(), static_cast<bool>(expression), "", #expression)
-#    define ASSERT_2(expression, message)                                \
-        ::porpoise::detail::assert_impl(std::source_location::current(), \
-                                        static_cast<bool>(expression),   \
-                                        (message),                       \
-                                        #expression)
-#    define UNREACHABLE(message)                                                          \
-        ::porpoise::detail::unreachable_impl(std::source_location::current(), (message)); \
+#    define ASSERT_2(expression, message)                             \
+        ::ghoti::detail::assert_impl(std::source_location::current(), \
+                                     static_cast<bool>(expression),   \
+                                     (message),                       \
+                                     #expression)
+#    define UNREACHABLE(message)                                                       \
+        ::ghoti::detail::unreachable_impl(std::source_location::current(), (message)); \
         std::unreachable()
 #else
 #    define ASSERT_1(expression)                         \
@@ -69,4 +69,4 @@ constexpr auto unreachable_impl(std::source_location loc, std::string_view messa
 #define GET_ASSERT_MACRO(_1, _2, NAME, ...) NAME
 #define ASSERT(...) GET_ASSERT_MACRO(__VA_ARGS__, ASSERT_2, ASSERT_1)(__VA_ARGS__)
 
-} // namespace porpoise
+} // namespace ghoti

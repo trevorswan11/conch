@@ -11,7 +11,7 @@
 #include "assert.hh"
 #include "result.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 auto MemoryLoader::add(const std::filesystem::path& path, const std::string& content) -> void {
     const auto normalized = normalize(path);
@@ -31,4 +31,4 @@ auto MemoryLoader::load(const std::filesystem::path& path) -> Result<std::string
     return it->second;
 }
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

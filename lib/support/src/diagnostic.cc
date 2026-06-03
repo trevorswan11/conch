@@ -11,7 +11,7 @@
 #include "style.hh"
 #include "utility.hh"
 
-namespace porpoise::detail {
+namespace ghoti::detail {
 
 auto format_diagnostic(std::ostream&                   os,
                        FormattableDiagnostic&&         diag,
@@ -46,4 +46,4 @@ auto format_diagnostic(std::ostream&                   os,
     return os;
 }
 
-} // namespace porpoise::detail
+} // namespace ghoti::detail

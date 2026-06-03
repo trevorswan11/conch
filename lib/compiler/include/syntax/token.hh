@@ -8,7 +8,7 @@
 #include "diagnostic.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace syntax {
 
@@ -51,4 +51,4 @@ template <> struct SourceInfo<syntax::Token> {
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

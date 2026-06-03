@@ -9,7 +9,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 namespace {
 
@@ -70,4 +70,4 @@ auto get_operator_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
     return ALL_OPERATORS.get_opt(sv).materialize();
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

@@ -3,9 +3,9 @@
 #include "assert.hh"
 #include "types.hh"
 
-namespace porpoise::mem {
+namespace ghoti::mem {
 
-// https://github.com/trevorswan11/porpoise/blob/772707146faa9315c24fb079fd759f3715442db1/old/src/util/arena.c
+// https://github.com/trevorswan11/ghoti/blob/772707146faa9315c24fb079fd759f3715442db1/old/src/util/arena.c
 auto Arena::alloc(usize size, usize align) -> void* {
     if (current_) {
         auto        raw_addr    = reinterpret_cast<uptr>(current_ + 1);
@@ -53,4 +53,4 @@ auto Arena::Block::alloc(Arena& a, usize size, usize align) -> void* {
     return a.alloc(size, align);
 }
 
-} // namespace porpoise::mem
+} // namespace ghoti::mem

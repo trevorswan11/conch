@@ -30,9 +30,9 @@
 #include "types.hh"
 #include "utility.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
-constexpr std::string_view TEST_FILENAME{"test.porp"};
+constexpr std::string_view TEST_FILENAME{"test.gh"};
 
 struct MockFile {
     std::string_view              path;
@@ -262,4 +262,4 @@ auto test_resolver_fail(std::string_view failing, Ds&&... expected_diagnostics) 
     return test_resolver_fail(failing, {}, std::forward<Ds>(expected_diagnostics)...);
 }
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

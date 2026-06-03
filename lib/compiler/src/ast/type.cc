@@ -15,7 +15,7 @@
 #include "option.hh"
 #include "result.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 auto ExplicitFunctionType::parse(syntax::Parser& parser)
     -> Result<ExplicitFunctionType, syntax::Diagnostic> {
@@ -230,4 +230,4 @@ auto ExplicitType::parse_opt_init(syntax::Parser& parser)
     return std::pair{type, initialized};
 }
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

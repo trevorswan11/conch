@@ -1,11 +1,11 @@
 # Loops
-- There are 4 different loops in porpoise
+- There are 4 different loops in ghoti
 
 ## Do-while Loops
 - Equivalent to the C/C++ do-while
 - The loop's body is guaranteed to be evaluated at least once before the condition is tested
 - The loop's body cannot be empty
-```porpoise
+```ghoti
 do { a; } while (b != c);
 ```
 
@@ -18,7 +18,7 @@ do { a; } while (b != c);
     - Body: The loop body, which encloses all values from the outer scope and captures
     - Non-break: An `else` clause that is located after the loop that only runs if the loop reached the end of execution naturally (i.e. there was not a break statement)
 - The loop's body cannot be empty
-```porpoise
+```ghoti
 for (arr, l, p) |i, &mut j, _| { ... }; // Captures can have modifiers or be discarded
 for (0..4) |i| { ... } else return b; // The return statement only runs if the loop body does not break
 for (0..4) |i, j| { ... } else { return b; } // Illegal, the number of captures and iterables must match
@@ -28,7 +28,7 @@ for (0..4) |i, j| { ... } else { return b; } // Illegal, the number of captures 
 - The equivalent to a `while (true)` loop in C
 - These loops are never intended to end naturally, requiring an explicit control flow statement to exit execution
 - The loop's body cannot be empty
-```porpoise
+```ghoti
 loop { a; };
 ```
 
@@ -40,7 +40,7 @@ loop { a; };
     - Body: The loop body, which encloses all values from the outer scope
     - Non-break: An `else` clause that is located after the loop that only runs if the loop reached the end of execution naturally (i.e. there was not a break statement)
 - The loop's body cannot be empty unless there is a continuation clause
-```porpoise
+```ghoti
 while (true) : (i += 1) {a;}; // (i += 1) is evaluated evaluated in between loop iterations
 while (true) {a;} else return b; // The return statement only runs if the loop body does not break
 ```

@@ -2,7 +2,7 @@
 
 #include "type_traits.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // Returns the rounded-up power of two given the unsigned value
 template <traits::Unsigned U> [[nodiscard]] constexpr auto ceil_power_of_two(U val) noexcept -> U {
@@ -29,4 +29,4 @@ template <traits::Unsigned U> [[nodiscard]] constexpr auto is_power_of_two(U val
     return (val > 0) && ((val & (val - 1)) == 0);
 }
 
-} // namespace porpoise
+} // namespace ghoti

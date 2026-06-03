@@ -6,7 +6,7 @@
 
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 using Operator = TypedIdentifier;
 
@@ -66,4 +66,4 @@ constexpr Operator NULL_TERMINATED{":0", TokenType::NULL_TERMINATED};
 [[nodiscard]] auto max_operator_length() noexcept -> usize;
 [[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

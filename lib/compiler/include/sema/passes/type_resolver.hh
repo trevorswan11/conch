@@ -30,7 +30,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // Resolves all types and symbol uses without type checking
 class TypeResolver {
@@ -219,4 +219,4 @@ class TypeResolver {
     opt::Option<Type&> last_type_;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

@@ -8,7 +8,7 @@
 #include "syntax/error.hh"
 #include "syntax/parser.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 constexpr std::string_view input{R"(
     [_:0]*N{a, b, c, d, e, 3, "54" };
@@ -83,4 +83,4 @@ TEST_CASE("Comprehensive dump") {
     CHECK(expected == oss.view());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -7,7 +7,7 @@
 
 #include <fmt/ostream.h>
 
-namespace porpoise {
+namespace ghoti {
 
 #define MAKE_GETTER_2(name, ReturnType) \
     [[nodiscard]] auto get_##name() const noexcept -> ReturnType { return name##_; }
@@ -56,8 +56,8 @@ constexpr auto todo_impl(std::source_location loc, [[maybe_unused]] Args&&... ar
 
 } // namespace detail
 
-#define TODO(...)                                                                \
-    ::porpoise::detail::todo_impl(std::source_location::current(), __VA_ARGS__); \
+#define TODO(...)                                                             \
+    ::ghoti::detail::todo_impl(std::source_location::current(), __VA_ARGS__); \
     std::unreachable()
 
-} // namespace porpoise
+} // namespace ghoti

@@ -10,7 +10,7 @@
 #include "sema/error.hh"
 #include "syntax/builtins.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockFile;
 
@@ -50,7 +50,7 @@ TEST_CASE("Prefix expression collection") {
 TEST_CASE("Duplicate identifiers") {
     helpers::test_collector_fail(
         "const a := 2; import a;",
-        helpers::make_vector<MockFile>(MockFile{"a.porp", "const foo := bar;", "a"}),
+        helpers::make_vector<MockFile>(MockFile{"a.gh", "const foo := bar;", "a"}),
         sema::Diagnostic{"Redeclaration of symbol 'a'; previous declaration here: 1:1",
                          sema::Error::IDENTIFIER_REDECLARATION,
                          std::pair{0uz, 14uz}});
@@ -119,4 +119,4 @@ TEST_CASE("Restricted non-const member types") {
     }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

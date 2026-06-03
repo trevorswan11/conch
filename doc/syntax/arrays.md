@@ -6,7 +6,7 @@
     - Items: These items must be of the type specified, and must match the provided size if provided
 - Arrays are immutably sized, though internal elements can be mutable based on the provided type
 - A trailing comma is allowed, but not required
-```porpoise
+```ghoti
 [_]*N{a, b, c, d, e, }; // Inferred Size
 [2uz]i32{A, B, }; // Explicit size
 [1uz]i32{2, 3}; // Illegal - size mismatch
@@ -15,7 +15,7 @@
 - Arrays do not decay to pointers implicitly as they do in C
 - To call a C function that takes in a pointer that is actually an array, you can use the builtin `@ptrFromArray`
     - This erases the underlying size of the array and is not trivially reversible. It is only recommended for use with C interop
-- If you have a pointer and its size, you can recreate a porpoise-style slice using the `@sliceFromPtr` builtin
+- If you have a pointer and its size, you can recreate a ghoti-style slice using the `@sliceFromPtr` builtin
 
 ## Types
 - There are two types of Array types 
@@ -30,7 +30,7 @@
     - Values of type 'slice' also have this `len` field, but are equipped with a second field called `ptr` to access the pointer directly
     - Values of either type can be used with array-related builtins
 - Array types can have modifiers
-```porpoise
+```ghoti
 var a: &[S]&*mut T; // Normal array type
 var a: &[]&*mut T; // Analogous slice type
 ```
@@ -55,7 +55,7 @@ var a: &[]&*mut T; // Analogous slice type
 - Arrays and slices of bytes are not implicitly null terminated
     - If you wish to make a non-null terminated slice a null terminated one, you must do so explicitly
     - You can indicate that a slice or array is null terminated by annotating the size with `:0`
-```porpoise
+```ghoti
 const a := [_:0]u8{'a', 'b', '\0' }; // Inferred Size ending with a null byte
 var a: [:0]i32; // Null terminated slice type
 var a: [5uz:0]i32; // Null terminated array type
@@ -75,13 +75,13 @@ var a: [5uz:0]i32; // Null terminated array type
     - Looping through all possible index values (i.e. manually walking an index from low -> high)
     - Looping through the array/slice directly
 - An array/slice can be directly iterated over such that items are constant in the loop body:
-```porpoise
+```ghoti
 const a := [_]i32{1, 2, 3, 4};
 for (a) |b| { ... };
 ```
 - An array/slice can be mutable iterated over if the array/slice is mutable and the underlying type is also mutable (i.e. not a constant pointer/reference)
 - Arrays that hold value types inherit the mutability of the array itself when being iterated
-```porpoise
+```ghoti
 var a := [_]i32{1, 2, 3, 4};
 for (a) |&mut b| { ... };
 

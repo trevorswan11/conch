@@ -19,9 +19,9 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::ast { class AST; } // namespace porpoise::ast
+namespace ghoti::ast { class AST; } // namespace ghoti::ast
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 class Parser {
   public:
@@ -159,4 +159,4 @@ class Parser {
     opt::Option<ast::AST&> ast_;
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

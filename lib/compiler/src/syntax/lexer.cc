@@ -15,7 +15,7 @@
 #include "string.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
@@ -461,4 +461,4 @@ auto Lexer::read_comment() noexcept -> Token {
     return {TokenType::COMMENT, string::substr(input_, start, pos_ - start), start_line, start_col};
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

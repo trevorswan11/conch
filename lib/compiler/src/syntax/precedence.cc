@@ -5,7 +5,7 @@
 #include "fixed/enum_map.hh"
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 namespace {
 
@@ -60,4 +60,4 @@ auto Binding::try_get_from(TokenType tt) noexcept -> opt::Option<Binding> {
     return ALL_BINDINGS[tt];
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

@@ -10,7 +10,7 @@
 #include "assert.hh"
 #include "option.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 namespace detail {
 
@@ -46,4 +46,4 @@ struct SideTables {
     }
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

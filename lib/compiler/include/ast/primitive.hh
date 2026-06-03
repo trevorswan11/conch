@@ -9,7 +9,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -92,4 +92,4 @@ concept LightPrimitiveNode = is_light_primitive_v<T>;
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

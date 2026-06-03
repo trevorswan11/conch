@@ -13,7 +13,7 @@
 #include "memory.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -89,4 +89,4 @@ TEST_CASE("Shadowing member/field declarations") {
     helpers::test_collector_fail("const a := union { b: i32 const a := 2; };", expected_diag(26));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

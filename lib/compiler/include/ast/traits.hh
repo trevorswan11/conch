@@ -6,7 +6,7 @@
 #include "ast/id.hh"
 #include "ast/kind.hh"
 
-namespace porpoise::traits {
+namespace ghoti::traits {
 
 template <typename T> struct is_node_id : std::false_type {};
 template <> struct is_node_id<ast::NodeID> : std::true_type {};
@@ -36,4 +36,4 @@ concept IndexableTypeID = is_explicit_type_id_v<T>;
 template <typename T>
 concept IndexableID = IndexableTypeID<T> || IndexableNodeID<T>;
 
-} // namespace porpoise::traits
+} // namespace ghoti::traits

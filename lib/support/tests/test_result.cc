@@ -7,7 +7,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Result traits") {
     STATIC_CHECK(traits::is_result<Result<i32, i64>>::value);
@@ -35,4 +35,4 @@ TEST_CASE("Try macro usage") {
     CHECK(err->error() == str);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

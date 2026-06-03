@@ -5,7 +5,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Empty enum") {
     const auto expected_diag = [] {
@@ -102,4 +102,4 @@ TEST_CASE("Illegal type aliasing/definition") {
     helpers::test_parser_fail("using E = *enum { a };", expected_diag());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

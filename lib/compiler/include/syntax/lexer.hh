@@ -10,7 +10,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 class Lexer {
   public:
@@ -111,4 +111,4 @@ class Lexer {
     friend class Parser;
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

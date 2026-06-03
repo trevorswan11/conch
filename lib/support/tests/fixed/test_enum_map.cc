@@ -8,7 +8,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockEnum;
 using helpers::MockNegativeEnum;
@@ -87,4 +87,4 @@ TEST_CASE("EnumMap ranges compatibility") {
     std::ranges::for_each(map, [](usize value) { CHECK(value == 0xDEADBEEF); });
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

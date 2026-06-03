@@ -2,7 +2,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
 // Non-thread-safe tracker for memory-critical testing
 struct RAIITracker {
@@ -41,4 +41,4 @@ struct RAIITracker {
     }
 };
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

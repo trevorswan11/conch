@@ -5,7 +5,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("If without condition") {
     helpers::test_parser_fail("if () b;",
@@ -99,4 +99,4 @@ TEST_CASE("Illegal match catch-all") {
                            std::pair{0uz, 24uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

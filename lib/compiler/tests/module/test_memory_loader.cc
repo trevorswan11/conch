@@ -6,7 +6,7 @@
 #include "module/error.hh"
 #include "module/memory_loader.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Correct add/load cycle") {
     const std::string expected_content = "This is a file";
@@ -37,4 +37,4 @@ TEST_CASE("Missing path in VFS") {
     CHECK(actual == expected);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

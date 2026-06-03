@@ -12,7 +12,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using OkNullableBox     = mem::NullableBox<bool>;
 using NotNullableBox    = bool;
@@ -121,4 +121,4 @@ TEST_CASE("NonNull conversions") {
     CHECK(cd_ptr->y == 20);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

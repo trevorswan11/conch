@@ -16,10 +16,10 @@
 
 #include "string.hh"
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 auto Debug::run() -> void {
-    const std::filesystem::path stdin_path = "stdin.porp";
+    const std::filesystem::path stdin_path = "stdin.gh";
     while (true) {
         fmt::print(">>> ");
         line_.clear();
@@ -53,4 +53,4 @@ auto Debug::run() -> void {
     }
 }
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

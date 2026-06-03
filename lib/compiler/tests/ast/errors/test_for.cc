@@ -5,7 +5,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Non-terminated iterables") {
     helpers::test_parser_fail("for (0..4 |i| { a; } else return b;",
@@ -84,4 +84,4 @@ TEST_CASE("Illegal for-else clause") {
                               syntax::Diagnostic{syntax::Error::ILLEGAL_LOOP_NON_BREAK, 0, 27});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

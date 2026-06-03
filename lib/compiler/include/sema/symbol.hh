@@ -27,7 +27,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 class Type;
 class Symbol;
@@ -352,4 +352,4 @@ class SymbolTableRegistry {
 
 #undef OPTIONAL_RETURN_TYPE
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

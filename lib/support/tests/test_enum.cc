@@ -6,7 +6,7 @@
 #include "helpers/enum.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockEnum;
 using helpers::MockNegativeEnum;
@@ -51,4 +51,4 @@ TEST_CASE("Non-monotonic enum range") {
     for (usize i = 0; const auto v : enum_range<NonMonotonicEnum>()) { CHECK(v == expected[i++]); }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

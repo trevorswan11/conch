@@ -9,7 +9,7 @@
 
 #include "assert.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 auto Context::get_poison() -> Type& {
     auto& poison = pool[{TypeKind::POISON, types::mut::CONSTANT}];
@@ -147,4 +147,4 @@ auto Context::get_builtin_resolved_type(TypeKind kind) -> Type& {
     return type;
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

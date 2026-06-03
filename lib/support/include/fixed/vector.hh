@@ -13,7 +13,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::fixed {
+namespace ghoti::fixed {
 
 // A fixed-size zero-allocation container with a vector-like interface
 template <typename Item, usize Capacity> class Vector {
@@ -155,4 +155,4 @@ template <typename Item, usize Capacity> class Vector {
     usize                           size_{0};
 };
 
-} // namespace porpoise::fixed
+} // namespace ghoti::fixed

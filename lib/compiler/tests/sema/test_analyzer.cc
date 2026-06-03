@@ -14,7 +14,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockFile;
 namespace syms  = sema::symbols;
@@ -22,7 +22,7 @@ namespace types = sema::types;
 
 namespace {
 
-constexpr std::string_view main_porp{R"(
+constexpr std::string_view main_gh{R"(
 import std;
 
 pub const main := fn(args: [][:0]u8): i32 {
@@ -32,11 +32,11 @@ pub const main := fn(args: [][:0]u8): i32 {
 };
 )"};
 
-constexpr std::string_view std_porp{R"(
-pub import "io.porp" as io;
+constexpr std::string_view std_gh{R"(
+pub import "io.gh" as io;
 )"};
 
-constexpr std::string_view io_porp{R"(
+constexpr std::string_view io_gh{R"(
 pub const println := fn(str: []u8): void {};
 )"};
 
@@ -62,10 +62,8 @@ pub const println := fn(str: []u8): void {};
 } // namespace
 
 TEST_CASE("Full sema pipeline") {
-    auto ctx = helpers::analyze_and_check("main.porp",
-                                          main_porp,
-                                          MockFile{"std.porp", std_porp, "std"},
-                                          MockFile{"io.porp", io_porp});
+    auto ctx = helpers::analyze_and_check(
+        "main.gh", main_gh, MockFile{"std.gh", std_gh, "std"}, MockFile{"io.gh", io_gh});
     ctx->verify_registry_resolved();
 
     REQUIRE(ctx->analyzer.get_registry().size() == 6);
@@ -197,4 +195,4 @@ TEST_CASE("Full sema pipeline") {
     }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

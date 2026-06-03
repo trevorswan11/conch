@@ -11,7 +11,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Ref construction checks") {
     STATIC_CHECK_FALSE(std::is_constructible_v<opt::detail::Ref<i32>, i32&&>);
@@ -252,4 +252,4 @@ TEST_CASE("Enum-std optional conversion") {
     CHECK_FALSE(my_i.has_value());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

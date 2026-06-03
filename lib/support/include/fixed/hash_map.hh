@@ -21,7 +21,7 @@
 #include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::fixed {
+namespace ghoti::fixed {
 
 namespace detail {
 
@@ -152,7 +152,7 @@ class HashMapIterator {
 };
 
 // Heavily inspired by Zig's hash map implementation and trevor's C version:
-// https://github.com/trevorswan11/porpoise/blob/4577f3279f5ab09e32a13b8cacb044da686e64bd/src/util/containers/hash_map.c
+// https://github.com/trevorswan11/ghoti/blob/4577f3279f5ab09e32a13b8cacb044da686e64bd/src/util/containers/hash_map.c
 template <typename Key, typename Value, usize Capacity, typename Hash, typename Equal>
     requires(is_power_of_two(Capacity))
 class HashMap {
@@ -430,4 +430,4 @@ template <traits::InsertablePair... Pairs>
     return map;
 }
 
-} // namespace porpoise::fixed
+} // namespace ghoti::fixed

@@ -3,7 +3,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -40,4 +40,4 @@ TEST_CASE("Floating point overflow") {
                               overflow_error(syntax::Error::DOUBLE_OVERFLOW));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -13,7 +13,7 @@
 #include "result.hh"
 #include "type_traits.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -319,4 +319,4 @@ struct WhileLoopExpression {
 
 } // namespace ast
 
-} // namespace porpoise
+} // namespace ghoti

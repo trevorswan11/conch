@@ -7,9 +7,9 @@
 #include "module/error.hh"
 #include "module/file_loader.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
-constexpr std::string_view expected_contents{"This is porpoise-ful\n"};
+constexpr std::string_view expected_contents{"This is ghoti-ful\n"};
 
 TEST_CASE("Reading file off of disk correctly") {
     mod::FileLoader loader;
@@ -40,4 +40,4 @@ TEST_CASE("Path load on directory on disk") {
     CHECK(actual == expected);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

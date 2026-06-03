@@ -16,7 +16,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace ast {
 
@@ -162,7 +162,7 @@ class TypeModifier {
   private:
     Modifier underlying_{Modifier::VALUE};
 
-    friend struct fmt::formatter<porpoise::ast::TypeModifier>;
+    friend struct fmt::formatter<ghoti::ast::TypeModifier>;
 };
 
 // A compact id for all AST explicit types
@@ -253,4 +253,4 @@ template <> struct Nullable<ast::ExplicitTypeID> {
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

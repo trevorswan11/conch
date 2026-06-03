@@ -8,7 +8,7 @@
 #    include "platform/win32.hh"
 #    include "types.hh"
 
-namespace porpoise::win32 {
+namespace ghoti::win32 {
 
 namespace {
 
@@ -48,6 +48,6 @@ RichConsole::~RichConsole() {
     }
 }
 
-} // namespace porpoise::win32
+} // namespace ghoti::win32
 
 #endif

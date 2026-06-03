@@ -11,7 +11,7 @@
 #include "result.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 auto Analyzer::analyze(const std::filesystem::path& entry_path) -> Result<void, Diagnostic> {
     auto module_result = modules_.try_get_file_module(entry_path);
@@ -39,4 +39,4 @@ auto Analyzer::resolve_types(mod::Module& module) -> mod::ModuleState {
     return TypeResolver::resolve_types(module, ctx_);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

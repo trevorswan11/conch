@@ -34,7 +34,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // Performs the resolution and poison check & bubble & return operation
 #define TRY_RESOLVE(resolvable_expr)                                                       \
@@ -1669,4 +1669,4 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitArrayType& a
     last_type_.emplace(final_type);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

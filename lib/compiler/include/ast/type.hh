@@ -11,7 +11,7 @@
 #include "option.hh"
 #include "result.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -43,4 +43,4 @@ struct ExplicitType {
 
 } // namespace ast
 
-} // namespace porpoise
+} // namespace ghoti

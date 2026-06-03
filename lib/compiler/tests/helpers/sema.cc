@@ -23,7 +23,7 @@
 #include "syntax/error.hh"
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
 auto test_common_decl_collection(const sema::SymbolTableRegistry& registry,
                                  const mod::Module&               module,
@@ -127,4 +127,4 @@ auto resolve_and_check(std::string_view input, const std::vector<MockFile>& impo
     return {std::move(ctx), idx};
 }
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

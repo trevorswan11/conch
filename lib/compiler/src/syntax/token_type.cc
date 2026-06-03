@@ -11,7 +11,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 auto base_idx(Base base) noexcept -> i32 {
     switch (base) {
@@ -123,4 +123,4 @@ auto suffix_length(TokenType tt) noexcept -> usize {
 
 } // namespace token_type
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

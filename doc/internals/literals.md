@@ -1,5 +1,5 @@
 # Literals
-Porpoise has numeric and identifier literals that carry intrinsic type information with their usage. 
+Ghoti has numeric and identifier literals that carry intrinsic type information with their usage. 
 
 ## Identifiers
 ### Booleans
@@ -14,8 +14,8 @@ This literal is used to explicitly denote that the assignee's value is undefined
 This can be assigned to any type, including as a call argument or member initializer. There are no restrictions on the usage of this literal for initialization.
 
 ## Numeric Literals
-All numbers in porpoise can be broken into sections with an underscore. The underscore may be placed in between any two digits, meaning it can neither lead or end any part of a literal (exponent included). For example:
-```porpoise
+All numbers in ghoti can be broken into sections with an underscore. The underscore may be placed in between any two digits, meaning it can neither lead or end any part of a literal (exponent included). For example:
+```ghoti
 0b1100_0011;   // Legal
 0b1100_0011_;  // Illegal
 3.14_15_92;    // Legal

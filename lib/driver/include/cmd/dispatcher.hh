@@ -4,7 +4,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 class Debug;
 
@@ -14,4 +14,4 @@ class Dispatcher {
     static auto operator()(Unit) noexcept -> Result<void, i32> { return {}; }
 };
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

@@ -7,7 +7,7 @@
 
 #include "result.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 class SourceLoader {
   public:
@@ -20,4 +20,4 @@ class SourceLoader {
         -> Result<std::filesystem::path, Error> = 0;
 };
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

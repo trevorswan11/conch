@@ -6,7 +6,7 @@
 #include <CLI/CLI.hpp>
 #include <CLI/Formatter.hpp>
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
 class Fmt : public CLI::Formatter {
   public:
@@ -24,4 +24,4 @@ class Fmt : public CLI::Formatter {
                                  CLI::AppFormatMode mode) const -> std::string override;
 };
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

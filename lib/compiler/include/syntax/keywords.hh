@@ -7,7 +7,7 @@
 
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 using Keyword = TypedIdentifier;
 
@@ -78,4 +78,4 @@ constexpr auto ALL_PRIMITIVES = std::array{
     keywords::VOID.type,
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

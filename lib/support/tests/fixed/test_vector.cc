@@ -11,7 +11,7 @@
 #include "memory.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("StaticVector type checks") {
     STATIC_REQUIRE(traits::TriviallyDestructible<fixed::Vector<mem::NonNull<i32>, 4>>);
@@ -174,4 +174,4 @@ TEST_CASE("StaticVector ranges compatibility") {
     CHECK(sum == 6);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

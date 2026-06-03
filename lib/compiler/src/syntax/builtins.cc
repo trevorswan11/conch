@@ -8,7 +8,7 @@
 #include "fixed/hash_map.hh"
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 namespace {
 
@@ -63,4 +63,4 @@ auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
     return ALL_BUILTINS_BY_SV.get_opt(sv).materialize();
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

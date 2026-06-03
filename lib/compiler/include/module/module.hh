@@ -28,7 +28,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 enum class ModuleState : u8 {
     PARSED,
@@ -199,10 +199,10 @@ class ModuleManager {
     SourceLoader&                                                         loader_;
     ankerl::unordered_dense::map<std::filesystem::path, mem::Box<Module>> modules_;
 
-    // Maps physical porpoise modules to their path on disk
+    // Maps physical ghoti modules to their path on disk
     ankerl::unordered_dense::
         map<std::string, std::filesystem::path, hash::StringTransparentHash, std::equal_to<>>
             module_lut_;
 };
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

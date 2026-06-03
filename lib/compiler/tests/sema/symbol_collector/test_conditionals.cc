@@ -11,7 +11,7 @@
 #include "sema/symbol.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -97,4 +97,4 @@ TEST_CASE("Match dispatch shadowing") {
                          std::pair{0uz, 34uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

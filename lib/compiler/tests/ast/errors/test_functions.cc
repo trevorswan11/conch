@@ -9,7 +9,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Function missing return type") {
     helpers::test_parser_fail(
@@ -105,4 +105,4 @@ TEST_CASE("Non-terminated parameter list") {
                               syntax::Diagnostic{syntax::Error::ILLEGAL_IDENTIFIER, 0, 9});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

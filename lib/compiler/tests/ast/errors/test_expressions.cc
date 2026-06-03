@@ -7,7 +7,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Array size token requirement") {
     helpers::test_parser_fail(
@@ -191,4 +191,4 @@ TEST_CASE("Illegal outer object of dot expression") {
                            std::pair{0uz, 0uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

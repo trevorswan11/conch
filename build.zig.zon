@@ -1,8 +1,8 @@
 .{
-    .name = .porpoise,
+    .name = .ghoti,
     .version = "0.0.1",
     .minimum_zig_version = "0.16.0",
-    .fingerprint = 0x163d96e87b8b5b3f,
+    .fingerprint = 0x2f146abfbb7f6400,
     .dependencies = .{
         .catch2 = .{
             .url = "https://github.com/catchorg/Catch2/archive/refs/tags/v3.12.0.tar.gz",
@@ -86,7 +86,7 @@
     },
     .paths = .{
         "lib",
-        "porpoise",
+        "ghoti",
         "tools",
         "third-party",
         "build.zig",

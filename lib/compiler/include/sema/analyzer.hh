@@ -14,7 +14,7 @@
 #include "types.hh"
 #include "utility.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 // The manager for all steps of semantic analysis.
 class Analyzer {
@@ -59,4 +59,4 @@ class Analyzer {
     Context ctx_;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

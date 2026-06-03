@@ -9,7 +9,7 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::driver {
+namespace ghoti::driver {
 
 auto launch(i32 argc, byte** argv) -> Result<void, i32> {
     clap::Parser parser{argc, argv};
@@ -20,4 +20,4 @@ auto launch(i32 argc, byte** argv) -> Result<void, i32> {
     return {};
 }
 
-} // namespace porpoise::driver
+} // namespace ghoti::driver

@@ -14,7 +14,7 @@
 #include "sema/type.hh"
 #include "syntax/builtins.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
@@ -206,4 +206,4 @@ TEST_CASE("Other builtin quick type mismatch") {
                          std::pair{0uz, 27uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

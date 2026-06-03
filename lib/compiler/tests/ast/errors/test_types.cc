@@ -7,7 +7,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Function type restrictions") {
     constexpr auto illegal_inputs = std::to_array<std::string_view>({
@@ -53,4 +53,4 @@ TEST_CASE("Function return type restrictions") {
                                                  std::pair{0uz, 13uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -11,7 +11,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 enum class TokenType : u8 {
     END,
@@ -312,27 +312,26 @@ template <std::size_t I>
     }
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax
 
-template <> struct ankerl::unordered_dense::hash<porpoise::syntax::TypedIdentifier> {
+template <> struct ankerl::unordered_dense::hash<ghoti::syntax::TypedIdentifier> {
     using is_avalanching  = void;
-    using TypedIdentifier = porpoise::syntax::TypedIdentifier;
+    using TypedIdentifier = ghoti::syntax::TypedIdentifier;
 
     [[nodiscard]] auto operator()(const TypedIdentifier& type) const noexcept {
-        porpoise::hash::Hasher hasher{type.type};
+        ghoti::hash::Hasher hasher{type.type};
         hasher.combine(type.name);
         return hasher.finalize();
     }
 };
 
 template <>
-struct std::tuple_size<porpoise::syntax::TypedIdentifier> : std::integral_constant<std::size_t, 2> {
-};
+struct std::tuple_size<ghoti::syntax::TypedIdentifier> : std::integral_constant<std::size_t, 2> {};
 
-template <> struct std::tuple_element<0, porpoise::syntax::TypedIdentifier> {
+template <> struct std::tuple_element<0, ghoti::syntax::TypedIdentifier> {
     using type = std::string_view;
 };
 
-template <> struct std::tuple_element<1, porpoise::syntax::TypedIdentifier> {
-    using type = porpoise::syntax::TokenType;
+template <> struct std::tuple_element<1, ghoti::syntax::TypedIdentifier> {
+    using type = ghoti::syntax::TokenType;
 };

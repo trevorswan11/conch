@@ -8,7 +8,7 @@
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 namespace {
 
@@ -101,4 +101,4 @@ auto TypePool::strip_volatile(const Type& type) -> Type& {
     return strip_modifiers(*this, type, types::mut::VOLATILE);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

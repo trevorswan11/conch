@@ -14,7 +14,7 @@
 
 #include "option.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
@@ -96,4 +96,4 @@ TEST_CASE("Illegal index target") {
     ctx->check_poisoned<syms::Node>("b", idx);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

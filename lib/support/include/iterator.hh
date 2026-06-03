@@ -5,7 +5,7 @@
 
 #include "type_traits.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // Similar to a std::pair, but the Visitor may be a function pointer
 template <typename Iterable, typename Visitor> struct IterPair {
@@ -42,4 +42,4 @@ concept InsertablePair = requires {
     using Alias = Container;                    \
     MAKE_UNALIASED_ITERATOR(Alias, member)
 
-} // namespace porpoise
+} // namespace ghoti

@@ -5,11 +5,11 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 auto Dispatcher::operator()(Debug& dump) -> Result<void, i32> {
     dump.run();
     return {};
 }
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

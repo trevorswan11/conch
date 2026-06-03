@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace porpoise {
+namespace ghoti {
 
 template <typename E> using Err = std::__1::unexpected<E>;
 
@@ -92,4 +92,4 @@ concept Result = is_result_v<T>;
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

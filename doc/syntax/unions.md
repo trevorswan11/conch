@@ -1,5 +1,5 @@
 # Unions
-- Unions in porpoise act very similar to tagged unions in other languages
+- Unions in ghoti act very similar to tagged unions in other languages
 - Unions are defined using the standard declaration syntax or with a `using` statement
     - In the event that the standard declaration syntax is used, it must be `const`
 - A union is defined by a a comma separated list of key-value pairs, where:
@@ -12,7 +12,7 @@
 - The inner types of a union are not restricted to any subset or superset of the language (i.e. you are not restricted to only primitive types nor are you prohibited from using user-defined types)
 - Initializing a union is done through the exact same mechanism as structs, using the `Name{.field = value}` syntax (shorthand `.{.field = value}`)
 - To access a union's members, the `.` operator is used
-```porpoise
+```ghoti
 const Hand := union {
     card: bool,
     pen: i32,

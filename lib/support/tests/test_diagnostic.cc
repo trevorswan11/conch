@@ -5,7 +5,7 @@
 #include "diagnostic.hh"
 #include "option.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 struct SomethingLocationed {};
 struct SomethingElseLocationed {};
@@ -48,13 +48,13 @@ TEST_CASE("Custom locateable") {
 
 TEST_CASE("Error messages with associated files") {
     Diagnostic<TestEnum> d{"message", TestEnum::SAD};
-    CHECK("foo.porp: error: message" == d.to_string("foo.porp", false));
+    CHECK("foo.gh: error: message" == d.to_string("foo.gh", false));
 }
 
 TEST_CASE("Locateable Error messages with associated files") {
     SomethingLocationed  l;
     Diagnostic<TestEnum> d{"message", TestEnum::SAD, l};
-    CHECK("foo.porp:1:43: error: message" == d.to_string("foo.porp", false));
+    CHECK("foo.gh:1:43: error: message" == d.to_string("foo.gh", false));
 }
 
 TEST_CASE("Move constructor with new error") {
@@ -75,4 +75,4 @@ TEST_CASE("Move constructor with new location") {
 
 } // namespace tests
 
-} // namespace porpoise
+} // namespace ghoti

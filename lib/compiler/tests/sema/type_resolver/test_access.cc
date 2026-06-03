@@ -10,14 +10,14 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 using helpers::MockFile;
 namespace syms = sema::symbols;
 
 namespace {
 
-constexpr std::string_view other_porp{R"(
+constexpr std::string_view other_gh{R"(
 pub const foo := fn(c: u8): []u8 {};
 
 pub const BarE := enum {
@@ -39,8 +39,8 @@ pub const BarS := struct {
 
 [[nodiscard]] auto setup_access_test(std::string_view input) -> helpers::CtxIdxPair {
     return helpers::resolve_and_check(
-        fmt::format(R"(import "other.porp" as other; {})", input),
-        helpers::make_vector<MockFile>(MockFile{"other.porp", other_porp}));
+        fmt::format(R"(import "other.gh" as other; {})", input),
+        helpers::make_vector<MockFile>(MockFile{"other.gh", other_gh}));
 }
 
 [[nodiscard]] auto u8_slice_type(helpers::SemaTestContext& ctx) -> sema::Type& {
@@ -120,4 +120,4 @@ const func := other::BarS.bar;
     check_access_decl(*ctx, idx, "func", bar_fn_type(*ctx, 8));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

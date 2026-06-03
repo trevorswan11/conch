@@ -13,7 +13,7 @@
 #include "memory.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -144,4 +144,4 @@ TEST_CASE("Shadowing in loops") {
                          std::pair{0uz, 26uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

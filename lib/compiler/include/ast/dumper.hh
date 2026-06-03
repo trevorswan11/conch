@@ -15,7 +15,7 @@
 #include "assert.hh"
 #include "indent.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 class ASTDumper {
   public:
@@ -63,4 +63,4 @@ class ASTDumper {
     Indent        indent_;
 };
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

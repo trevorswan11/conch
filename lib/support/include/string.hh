@@ -10,7 +10,7 @@
 
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace traits {
 
@@ -98,4 +98,4 @@ template <traits::StringLike S>
 
 } // namespace string
 
-} // namespace porpoise
+} // namespace ghoti

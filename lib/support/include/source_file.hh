@@ -10,7 +10,7 @@
 #include "types.hh"
 #include "utility.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // A map from 0-indexed line number to the start of the line
 class LineOffsets {
@@ -61,4 +61,4 @@ class SourceFile {
     LineOffsets offsets_;
 };
 
-} // namespace porpoise
+} // namespace ghoti

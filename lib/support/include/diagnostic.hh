@@ -21,7 +21,7 @@
 #include "types.hh"
 #include "utility.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // Should be zero indexed and only 1-indexed at print time
 struct SourceLocation {
@@ -200,20 +200,20 @@ template <traits::DiagnosticType D> class DiagnosticList {
     opt::Option<bool> in_terminal_;
 };
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <> struct fmt::formatter<porpoise::SourceLocation> {
+template <> struct fmt::formatter<ghoti::SourceLocation> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const porpoise::SourceLocation& loc, F& ctx) {
+    template <typename F> static auto format(const ghoti::SourceLocation& loc, F& ctx) {
         return fmt::format_to(ctx.out(), "{}:{}", loc.line + 1, loc.column + 1);
     }
 };
 
-template <typename E> struct fmt::formatter<porpoise::Diagnostic<E>> {
+template <typename E> struct fmt::formatter<ghoti::Diagnostic<E>> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const porpoise::Diagnostic<E>& d, F& ctx) {
+    template <typename F> static auto format(const ghoti::Diagnostic<E>& d, F& ctx) {
         return fmt::format_to(ctx.out(), "{}", d.to_string());
     }
 };

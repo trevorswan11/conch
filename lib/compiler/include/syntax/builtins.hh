@@ -7,7 +7,7 @@
 #include "enum.hh"
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 using Builtin = TypedIdentifier;
 
@@ -61,4 +61,4 @@ constexpr auto ALL_TOKEN_TYPES =
 [[nodiscard]] auto get_builtin_opt(TokenType tok) noexcept -> opt::Option<std::string_view>;
 [[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

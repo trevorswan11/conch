@@ -4,7 +4,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 enum class Error : u8 {
     IDENTIFIER_REDECLARATION,
@@ -37,4 +37,4 @@ template <typename... Args>
     return make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

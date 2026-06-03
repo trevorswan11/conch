@@ -21,7 +21,7 @@
 #include "option.hh"
 #include "result.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     const auto start_token = parser.get_current_token();
@@ -341,4 +341,4 @@ auto UsingStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
     return parser.add_stmt<UsingStatement>(start_token, alias, type);
 }
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

@@ -16,7 +16,7 @@
 #include "result.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -142,8 +142,8 @@ struct UsingStatement {
 
 } // namespace ast
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <> struct magic_enum::customize::enum_range<porpoise::ast::DeclModifiers> {
+template <> struct magic_enum::customize::enum_range<ghoti::ast::DeclModifiers> {
     static constexpr bool is_flags = true;
 };

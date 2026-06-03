@@ -24,7 +24,7 @@
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 auto format_module_diagnostic(std::ostream&                   os,
                               detail::FormattableDiagnostic&& diag,
@@ -122,4 +122,4 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     return ptr;
 }
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

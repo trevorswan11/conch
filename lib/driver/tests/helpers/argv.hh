@@ -8,7 +8,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
+namespace ghoti::tests::helpers {
 
 class MockArgv {
   public:
@@ -27,4 +27,4 @@ class MockArgv {
     std::vector<byte*>       pointers_;
 };
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

@@ -14,7 +14,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace keywords = syntax::keywords;
 
@@ -274,4 +274,4 @@ TEST_CASE("Illegal identifier alias") {
             "Expected token IDENT, found TYPE_TYPE", syntax::Error::UNEXPECTED_TOKEN, 0, 6});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -9,7 +9,7 @@
 #include "source_file.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 // clang-format off
 constexpr std::string_view source{
@@ -72,4 +72,4 @@ TEST_CASE("Out of range line diagnostics") {
     helpers::test_diag_strings({10uz, 0uz}, "<invalid line>", opt::none);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests
