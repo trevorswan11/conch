@@ -46,17 +46,19 @@ template <typename Data> struct DataPool<NodeID, Data> : public DataPoolBase<Nod
 // A collection of multiple AST tree structures
 class AST {
   public:
+    struct DataPoolSizes {
+        usize nodes_size;
+        usize types_size;
+    };
+
+  public:
     MAKE_UNALIASED_ITERATOR(std::vector<NodeID>, nodes_.roots)
 
   public:
     constexpr auto add_root(NodeID id) -> void { nodes_.roots.push_back(id); }
-    // Returns the node root ID at the requested index
-    [[nodiscard]] constexpr auto operator[](u64 idx) const noexcept -> NodeID {
-        return nodes_.roots[idx];
-    }
 
-    [[nodiscard]] constexpr auto total_nodes() const noexcept -> usize {
-        return nodes_.pool.size();
+    [[nodiscard]] constexpr auto get_pool_sizes() const noexcept -> DataPoolSizes {
+        return {nodes_.pool.size(), explicit_types_.pool.size()};
     }
 
     template <traits::ASTNode Data>

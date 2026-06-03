@@ -39,10 +39,11 @@ struct CallExpression {
         }
 
         // Unpacks T from the variant ID only if T is currently active
-        template <typename T, typename Self> [[nodiscard]] auto as_opt(this Self&& self) noexcept {
-            using ReturnType = opt::Option<traits::const_dispatch_t<Self, T>&>;
-            if (!std::holds_alternative<T>(self.id)) { return ReturnType{opt::none}; }
-            return ReturnType{std::get<T>(self.id)};
+        template <typename T, typename Self>
+        [[nodiscard]] auto as_opt(this Self&& self) noexcept
+            -> opt::Option<traits::const_dispatch_t<Self, T>&> {
+            if (!std::holds_alternative<T>(self.id)) { return opt::none; }
+            return std::get<T>(self.id);
         }
     };
 

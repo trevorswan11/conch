@@ -3,7 +3,6 @@
 #include <ranges>
 #include <span>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
@@ -129,10 +128,11 @@ class Symbol {
     }
 
     // Tries to unpack T, returning an empty option instead of throwing an exception
-    template <typename T, typename Self> [[nodiscard]] auto as_opt(this Self&& self) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, T>&>;
-        if (!std::holds_alternative<T>(self.data_)) { return ReturnType{opt::none}; }
-        return ReturnType{std::get<T>(self.data_)};
+    template <typename T, typename Self>
+    [[nodiscard]] auto as_opt(this Self&& self) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, T>&> {
+        if (!std::holds_alternative<T>(self.data_)) { return opt::none; }
+        return std::get<T>(self.data_);
     }
 
     MAKE_VARIANT_MATCHER(data_)
@@ -167,8 +167,10 @@ class SymbolTable {
     };
 
     // Used for returning pseudo reference types from get operations, avoided in iterators
-    template <typename Self>
-    using ReferenceProxy = std::tuple<traits::const_dispatch_t<Self, Symbol>&, usize>;
+    template <typename Self> struct ReferenceProxy {
+        traits::const_dispatch_t<Self, Symbol>& symbol;
+        usize                                   index;
+    };
 
     using Table = ankerl::unordered_dense::map<std::string_view, ValueProxy>;
     MAKE_UNALIASED_ITERATOR(Table, symbols_)
@@ -201,33 +203,34 @@ class SymbolTable {
     }
 
     // Differs from `get_proxy_opt` by asserting that the name is present.
-    [[nodiscard]] auto get_proxy(this auto&& self, std::string_view name) noexcept {
+    template <typename Self>
+    [[nodiscard]] auto get_proxy(this Self&& self, std::string_view name) noexcept {
         auto it = self.symbols_.find(name);
         ASSERT(it != self.symbols_.end(), "Illegal get on missing key");
-        return std::tie(it->second.symbol, it->second.idx);
+        return ReferenceProxy<Self>{it->second.symbol, it->second.idx};
     }
 
     // Returns optional referential metadata of the symbol if present
     template <typename Self>
-    [[nodiscard]] auto get_proxy_opt(this Self&& self, std::string_view name) noexcept {
-        auto it          = self.symbols_.find(name);
-        using ReturnType = opt::Option<ReferenceProxy<Self>>;
-        if (it == self.symbols_.end()) { return ReturnType{opt::none}; }
-        return ReturnType{std::tie(it->second.symbol, it->second.idx)};
+    [[nodiscard]] auto get_proxy_opt(this Self&& self, std::string_view name) noexcept
+        -> opt::Option<ReferenceProxy<Self>> {
+        auto it = self.symbols_.find(name);
+        if (it == self.symbols_.end()) { return opt::none; }
+        return ReferenceProxy<Self>{it->second.symbol, it->second.idx};
     }
 
     // Differs from `get_opt` by asserting that the name is present.
     [[nodiscard]] auto get(this auto&& self, std::string_view name) noexcept -> auto& {
-        return std::get<0>(self.get_proxy(name));
+        return self.get_proxy(name).symbol;
     }
 
     // Returns an optional containing a mutable or const reference to a symbol depending on context.
     template <typename Self>
-    [[nodiscard]] auto get_opt(this Self&& self, std::string_view name) noexcept {
+    [[nodiscard]] auto get_opt(this Self&& self, std::string_view name) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
         const auto proxy = self.get_proxy_opt(name);
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, Symbol>&>;
-        if (!proxy) { return ReturnType{opt::none}; }
-        return ReturnType{std::get<0>(*proxy)};
+        if (!proxy) { return opt::none; }
+        return proxy->symbol;
     }
 
   private:
@@ -308,10 +311,11 @@ class SymbolTableRegistry {
 
     [[nodiscard]] auto get(this auto&& self, usize idx) -> auto& { return self.tables_.at(idx); }
 
-    template <typename Self> [[nodiscard]] auto get_opt(this Self&& self, usize idx) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, SymbolTable>&>;
-        if (idx >= self.tables_.size()) { return ReturnType{opt::none}; }
-        return ReturnType{self.tables_[idx]};
+    template <typename Self>
+    [[nodiscard]] auto get_opt(this Self&& self, usize idx) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, SymbolTable>&> {
+        if (idx >= self.tables_.size()) { return opt::none; }
+        return self.tables_[idx];
     }
 
     [[nodiscard]] auto get_from(this auto&& self, usize idx, std::string_view name) -> auto& {
@@ -319,9 +323,9 @@ class SymbolTableRegistry {
     }
 
     template <typename Self>
-    [[nodiscard]] auto get_from_opt(this Self&& self, usize idx, std::string_view name) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, Symbol>&>;
-        if (idx >= self.tables_.size()) { return ReturnType{opt::none}; }
+    [[nodiscard]] auto get_from_opt(this Self&& self, usize idx, std::string_view name) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
+        if (idx >= self.tables_.size()) { return opt::none; }
         return self.tables_[idx].get_opt(name);
     }
 
@@ -334,20 +338,12 @@ class SymbolTableRegistry {
     // Looks up all levels of the stack for the queried name
     template <typename Self>
     [[nodiscard]] auto
-    lookup(this Self&& self, const SymbolTableStack& stack, std::string_view name) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, Symbol>&>;
+    lookup(this Self&& self, const SymbolTableStack& stack, std::string_view name) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
         for (const auto idx : std::views::reverse(stack)) {
             if (auto symbol = self.tables_[idx].get_opt(name)) { return symbol; }
         }
-        return ReturnType{opt::none};
-    }
-
-    // Looks up at the specific index for the queried name
-    template <typename Self>
-    [[nodiscard]] auto lookup_at(this Self&& self, usize idx, std::string_view name) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, Symbol>&>;
-        if (auto symbol = self.tables_[idx].get_opt(name)) { return symbol; }
-        return ReturnType{opt::none};
+        return opt::none;
     }
 
   private:

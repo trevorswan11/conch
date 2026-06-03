@@ -113,7 +113,7 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     syntax::Parser p{mod->source};
     auto           diagnostics = p.consume(mod->ast);
 
-    mod->sema_side_tables.resize(mod->ast.total_nodes());
+    mod->sema_side_tables.resize(mod->ast.get_pool_sizes());
     mod->state       = diagnostics.empty() ? ModuleState::PARSED : ModuleState::ERRORED;
     mod->diagnostics = std::move(diagnostics);
 

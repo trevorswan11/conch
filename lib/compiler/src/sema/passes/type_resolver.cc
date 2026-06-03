@@ -1210,7 +1210,7 @@ auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope
 
         // Step into the module's scope for lookup
         const auto& inner_ident = resolving_.ast.get_as<ast::IdentifierExpression>(scope.inner);
-        auto        symbol = ctx_.registry.lookup_at(*inner_mod.root_table_idx, inner_ident.name);
+        auto symbol = ctx_.registry.get_from_opt(*inner_mod.root_table_idx, inner_ident.name);
         if (!symbol) {
             return last_type_.emplace(
                 ctx_.poison_node(resolving_,

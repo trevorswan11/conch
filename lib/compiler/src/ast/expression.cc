@@ -654,7 +654,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
     std::vector<Arm> arms;
     opt::Size        catch_all_idx;
-    usize            i = 0;
+    usize            arm_idx = 0;
 
     // Current token is either the LBRACE at the start or a comma before parsing
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
@@ -671,7 +671,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
             pattern_opt.emplace(
                 parser.add_node<DiscardableIdentHandle, Unit>(parser.get_current_token()));
-            catch_all_idx.emplace(i);
+            catch_all_idx.emplace(arm_idx);
         } else {
             const auto pattern_tok = parser.get_current_token();
             const auto pattern_raw = TRY(parser.parse_expression());
@@ -705,7 +705,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
             TRY(parser.expect_peek(syntax::TokenType::BW_OR));
         }
 
-        if (catch_all_idx == i && capture) {
+        if (catch_all_idx == arm_idx && capture) {
             return make_syntax_err("Catch-all match arms may not have a capture clause",
                                    syntax::Error::ILLEGAL_MATCH_CATCH_ALL,
                                    parser.get_location_of(*capture));
@@ -716,7 +716,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
         const auto consequence =
             TRY(parser.parse_restricted_statement(syntax::Error::ILLEGAL_MATCH_ARM, false));
         arms.emplace_back(pattern, capture, consequence);
-        i += 1;
+        arm_idx += 1;
     }
 
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));

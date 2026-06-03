@@ -241,12 +241,11 @@ class Type {
     }
 
     // Tries to unpack T, returning an empty option instead of throwing an exception
-    template <typename T, typename Self> [[nodiscard]] auto as_opt(this Self&& self) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, T>&>;
-        if (!self.resolved_ || !std::holds_alternative<T>(*self.resolved_)) {
-            return ReturnType{opt::none};
-        }
-        return ReturnType{std::get<T>(*self.resolved_)};
+    template <typename T, typename Self>
+    [[nodiscard]] auto as_opt(this Self&& self) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, T>&> {
+        if (!self.resolved_ || !std::holds_alternative<T>(*self.resolved_)) { return opt::none; }
+        return std::get<T>(*self.resolved_);
     }
 
     // Intended for use on pass 1 only

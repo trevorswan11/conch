@@ -274,10 +274,10 @@ class HashMap {
 
     // Returns a reference to the value at the key or none if the key is not present
     template <typename Self>
-    [[nodiscard]] constexpr auto get_opt(this Self&& self, const Key& key) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, Value>&>;
-        const auto idx   = self.index_of(key);
-        return idx ? ReturnType{*(self.value_data() + *idx)} : ReturnType{};
+    [[nodiscard]] constexpr auto get_opt(this Self&& self, const Key& key) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, Value>&> {
+        if (const auto idx = self.index_of(key)) { return *(self.value_data() + *idx); }
+        return opt::none;
     }
 
     // Removes the key value pair from the map, NOOP if not present

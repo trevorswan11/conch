@@ -31,15 +31,10 @@ concept ScopedEnum = std::is_scoped_enum_v<T>;
 template <typename T>
 concept Reference = std::is_reference_v<T>;
 
-template <class T>
-concept PairLike = requires {
-    typename std::tuple_size<std::decay_t<T>>::type;
-    requires std::tuple_size_v<std::decay_t<T>> == 2;
-};
+template <typename T> constexpr auto is_const_v = std::is_const_v<std::remove_reference_t<T>>;
 
 // Returns `const T` if Self is const, `T` otherwise
 template <typename Self, typename T>
-using const_dispatch_t =
-    std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const T, T>;
+using const_dispatch_t = std::conditional_t<is_const_v<Self>, const T, T>;
 
 } // namespace porpoise::traits

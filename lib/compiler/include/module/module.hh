@@ -24,7 +24,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "source_file.hh"
-#include "type_traits.hh"
 #include "types.hh"
 #include "utility.hh"
 #include "variant.hh"
@@ -119,13 +118,12 @@ struct Module {
         return sema_side_tables.match_arm_types[arm.pattern].has_value();
     }
 
-    template <traits::IndexableID ID, typename Self>
-    [[nodiscard]] constexpr auto get_sema_type_opt(this Self&& self, ID id) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, sema::Type&>>;
+    template <traits::IndexableID ID>
+    [[nodiscard]] constexpr auto get_sema_type_opt(this auto&& self, ID id) noexcept {
         if constexpr (traits::IndexableNodeID<ID>) {
-            return ReturnType{self.sema_side_tables.node_types[id]};
+            return self.sema_side_tables.node_types[id];
         } else {
-            return ReturnType{self.sema_side_tables.explicit_types[id]};
+            return self.sema_side_tables.explicit_types[id];
         }
     }
 
@@ -134,11 +132,9 @@ struct Module {
         return *self.get_sema_type_opt(id);
     }
 
-    template <typename Self>
-    [[nodiscard]] auto get_sema_type_opt(this Self&&                      self,
+    [[nodiscard]] auto get_sema_type_opt(this auto&&                      self,
                                          const ast::MatchExpression::Arm& arm) noexcept {
-        using ReturnType = opt::Option<traits::const_dispatch_t<Self, sema::Type&>>;
-        return ReturnType{self.sema_side_tables.match_arm_types[arm.pattern]};
+        return self.sema_side_tables.match_arm_types[arm.pattern];
     }
 
     [[nodiscard]] auto get_sema_type(const ast::MatchExpression::Arm& arm) const noexcept -> auto& {

@@ -1,3 +1,4 @@
+#include <ranges>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -25,7 +26,8 @@ namespace {
     const auto mod_result = manager.try_get_library_module("a");
     const auto module     = *mod_result;
     REQUIRE_FALSE(module->is_errored());
-    const auto import_handle = ast::ImportHandle{module->ast[0]};
+    const auto first_node    = module->ast | std::views::take(1);
+    const auto import_handle = ast::ImportHandle{*first_node.begin()};
 
     return std::tuple{module, import_handle, std::pair{std::move(loader), std::move(manager)}};
 }
