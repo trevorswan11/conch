@@ -74,9 +74,14 @@ TEST_CASE("Arm missing fat arrow") {
                            std::pair{0uz, 17uz}});
 }
 
-TEST_CASE("Illegal match alternate") {
-    helpers::test_parser_fail("match (a) { b => c; } else import std;",
-                              syntax::Diagnostic{syntax::Error::ILLEGAL_MATCH_CATCH_ALL, 0, 27});
+TEST_CASE("Illegal match catch-all") {
+    helpers::test_parser_fail(
+        "match (a) { b => c; _ => f; _ => g; };",
+        syntax::Diagnostic{
+            "Duplicate catch-all match arm", syntax::Error::ILLEGAL_MATCH_CATCH_ALL, 0, 28},
+        syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
+                           syntax::Error::MISSING_PREFIX_PARSER,
+                           std::pair{0uz, 36uz}});
 }
 
 } // namespace porpoise::tests

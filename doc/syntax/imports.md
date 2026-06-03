@@ -42,7 +42,7 @@ std::io::println(...);
 ```porpoise
 pub const ArrayList := fn(T: type): type {...};
 ```
-- This can be used just like any other function through the scope resolution operator:
+- This can be used just like any other function through the module access operator (`::`):
 ```porpoise
 var a: std::array_list::ArrayList(i32);
 var a: std::ArrayList(i32); // Allowed due to function declaration alias

@@ -232,14 +232,14 @@ struct LabelExpression {
 
 struct MatchExpression {
     struct Arm {
-        ExpressionHandle                    pattern;
+        MatchPatternHandle                  pattern;
         opt::Option<DiscardableIdentHandle> capture;
         StatementHandle                     dispatch;
     };
 
-    ExpressionHandle             matcher;
-    std::vector<Arm>             arms;
-    opt::Option<StatementHandle> catch_all;
+    ExpressionHandle matcher;
+    std::vector<Arm> arms;
+    opt::Size        catch_all_idx; // The arm index which is the catch-all
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
@@ -266,7 +266,7 @@ struct ImplicitAccessExpression {
 
 #undef DECLARE_PREFIX_EXPRESSION
 
-struct ScopeResolutionExpression {
+struct ModuleAccessExpression {
     OuterAccessHandle outer;
     IdentifierHandle  inner;
 

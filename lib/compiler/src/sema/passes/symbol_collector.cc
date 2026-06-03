@@ -65,7 +65,7 @@ auto SymbolCollector::collect_symbols(mod::Module& module, Context& ctx) -> mod:
     X(BoolExpression)           \
     X(VoidExpression)           \
     X(UndefinedExpression)      \
-    X(ScopeResolutionExpression)
+    X(ModuleAccessExpression)
 
 #define COLLECTOR_NOOP_X(NodeType) AST_NODE_VISITOR_NOOP(SymbolCollector, NodeType)
 MAKE_COLLECTOR_NOOPS(COLLECTOR_NOOP_X)
@@ -250,7 +250,6 @@ auto SymbolCollector::visit(ast::NodeID, const ast::MatchExpression& match) -> v
         last_type_->set_symbol_table_idx(new_idx);
         collecting_.set_sema_type(arm, *last_type_.take());
     }
-    if (match.catch_all) { collect(*match.catch_all); }
 }
 
 #define MAKE_PREFIX_COLLECTOR(NodeType)                                           \
@@ -496,7 +495,7 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::UsingStatement& using_stm
 }
 
 AST_TYPE_VISITOR_NOOP(SymbolCollector, IdentifierExpression)
-AST_TYPE_VISITOR_NOOP(SymbolCollector, ScopeResolutionExpression)
+AST_TYPE_VISITOR_NOOP(SymbolCollector, ModuleAccessExpression)
 AST_TYPE_VISITOR_NOOP(SymbolCollector, DotExpression)
 
 auto SymbolCollector::visit(ast::ExplicitTypeID, const ast::CallExpression& call) -> void {

@@ -292,7 +292,7 @@ constexpr auto INFIX_FNS = [] {
     fns[TokenType::SHR_ASSIGN]     = ast::AssignmentExpression::parse;
     fns[TokenType::NOT_ASSIGN]     = ast::AssignmentExpression::parse;
     fns[TokenType::XOR_ASSIGN]     = ast::AssignmentExpression::parse;
-    fns[TokenType::COLON_COLON]    = ast::ScopeResolutionExpression::parse;
+    fns[TokenType::COLON_COLON]    = ast::ModuleAccessExpression::parse;
     fns[TokenType::COLON]          = ast::LabelExpression::parse;
 
     return fns;

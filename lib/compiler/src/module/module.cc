@@ -11,7 +11,7 @@
 
 #include "ast/expression.hh"
 #include "module/error.hh"
-#include "sema/attachments.hh"
+#include "sema/side_tables.hh"
 #include "source_file.hh"
 #include "syntax/parser.hh"
 

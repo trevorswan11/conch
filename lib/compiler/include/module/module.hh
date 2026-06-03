@@ -15,8 +15,8 @@
 #include "ast/traits.hh"
 #include "module/error.hh"
 #include "module/source_loader.hh"
-#include "sema/attachments.hh"
 #include "sema/error.hh"
+#include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
 #include "hash.hh"

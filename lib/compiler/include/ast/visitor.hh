@@ -34,7 +34,7 @@ using NodeData = std::variant<FOREACH_AST_NODE(X) Unit>;
     auto Class::visit(porpoise::ast::ExplicitTypeID, const porpoise::ast::NodeType&) -> void {}
 
 using TypeData = std::variant<IdentifierExpression,
-                              ScopeResolutionExpression,
+                              ModuleAccessExpression,
                               DotExpression,
                               CallExpression,
                               ExplicitFunctionType,

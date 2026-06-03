@@ -73,7 +73,7 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::BoolExpression&) -> void;
     auto visit(ast::NodeID, const ast::VoidExpression&) -> void;
     auto visit(ast::NodeID, const ast::UndefinedExpression&) -> void;
-    auto visit(ast::NodeID, const ast::ScopeResolutionExpression&) -> void;
+    auto visit(ast::NodeID, const ast::ModuleAccessExpression&) -> void;
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
     template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
     auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
@@ -96,7 +96,7 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::UsingStatement&) -> void;
 
     auto visit(ast::ExplicitTypeID, const ast::IdentifierExpression&) -> void;
-    auto visit(ast::ExplicitTypeID, const ast::ScopeResolutionExpression&) -> void;
+    auto visit(ast::ExplicitTypeID, const ast::ModuleAccessExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::DotExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::CallExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::ExplicitFunctionType&) -> void;

@@ -128,9 +128,9 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         if (parser.peek_token_is(syntax::TokenType::COLON_COLON) ||
             parser.peek_token_is(syntax::TokenType::LPAREN)) {
             const auto parsed = TRY(parser.parse_expression(syntax::Precedence::TYPE));
-            if (parsed.is<ScopeResolutionExpression>()) {
-                return parser.add_type<ScopeResolutionExpression>(
-                    modifier_token, modifier, parser.get_node<ScopeResolutionExpression>(*parsed));
+            if (parsed.is<ModuleAccessExpression>()) {
+                return parser.add_type<ModuleAccessExpression>(
+                    modifier_token, modifier, parser.get_node<ModuleAccessExpression>(*parsed));
             } else if (parsed.is<DotExpression>()) {
                 return parser.add_type<DotExpression>(
                     modifier_token, modifier, parser.get_node<DotExpression>(*parsed));

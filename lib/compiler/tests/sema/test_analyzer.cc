@@ -9,9 +9,9 @@
 #include "helpers/sema.hh"
 #include "module/module.hh"
 #include "sema/symbol.hh"
+#include "sema/type.hh"
 
 #include "option.hh"
-#include "sema/type.hh"
 #include "types.hh"
 
 namespace porpoise::tests {
@@ -136,22 +136,22 @@ TEST_CASE("Full sema pipeline") {
             auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
             CHECK(arg_type == msg_type);
 
-            const auto& scope_expr = helpers::unwrap(
-                root_module.ast.get_as_opt<ast::ScopeResolutionExpression>(call_expr.function));
+            const auto& access_expr = helpers::unwrap(
+                root_module.ast.get_as_opt<ast::ModuleAccessExpression>(call_expr.function));
             const auto& println_fn_type =
-                helpers::unwrap(root_module.get_sema_type_opt(scope_expr.inner));
+                helpers::unwrap(root_module.get_sema_type_opt(access_expr.inner));
             CHECK(println_fn_type == ctx->get_type(sema::TypeKind::FUNCTION, 3));
 
             // The outer part of resolution should be two modules
-            const auto& scope_outer_expr = helpers::unwrap(
-                root_module.ast.get_as_opt<ast::ScopeResolutionExpression>(scope_expr.outer));
-            const auto& scope_std_expr =
-                helpers::unwrap(root_module.get_sema_type_opt(scope_outer_expr.outer));
-            CHECK(scope_std_expr == std_module_type);
+            const auto& access_outer = helpers::unwrap(
+                root_module.ast.get_as_opt<ast::ModuleAccessExpression>(access_expr.outer));
+            const auto& access_std_expr =
+                helpers::unwrap(root_module.get_sema_type_opt(access_outer.outer));
+            CHECK(access_std_expr == std_module_type);
 
-            const auto& scope_io_expr =
-                helpers::unwrap(root_module.get_sema_type_opt(scope_outer_expr.inner));
-            CHECK(scope_io_expr == io_module_type);
+            const auto& access_io_expr =
+                helpers::unwrap(root_module.get_sema_type_opt(access_outer.inner));
+            CHECK(access_io_expr == io_module_type);
         }
     }
 

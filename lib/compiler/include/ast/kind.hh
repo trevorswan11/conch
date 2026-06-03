@@ -45,7 +45,7 @@ enum class NodeKind : u8 {
     BOOL_EXPRESSION,
     VOID_EXPRESSION,
     UNDEFINED_EXPRESSION,
-    SCOPE_RESOLUTION_EXPRESSION,
+    MODULE_ACCESS_EXPRESSION,
     STRUCT_EXPRESSION,
     UNION_EXPRESSION,
     WHILE_LOOP_EXPRESSION,
@@ -65,45 +65,45 @@ enum class NodeKind : u8 {
     DISCARDED, // Represented by Unit
 };
 
-#define FOREACH_AST_EXPR(X)      \
-    X(ArrayExpression)           \
-    X(CallExpression)            \
-    X(DoWhileLoopExpression)     \
-    X(EnumExpression)            \
-    X(ForLoopExpression)         \
-    X(FunctionExpression)        \
-    X(IdentifierExpression)      \
-    X(IfExpression)              \
-    X(IndexExpression)           \
-    X(InfiniteLoopExpression)    \
-    X(AssignmentExpression)      \
-    X(BinaryExpression)          \
-    X(DotExpression)             \
-    X(RangeExpression)           \
-    X(InitializerExpression)     \
-    X(LabelExpression)           \
-    X(MatchExpression)           \
-    X(ReferenceExpression)       \
-    X(AddressOfExpression)       \
-    X(DereferenceExpression)     \
-    X(UnaryExpression)           \
-    X(ImplicitAccessExpression)  \
-    X(StringExpression)          \
-    X(I32Expression)             \
-    X(I64Expression)             \
-    X(ISizeExpression)           \
-    X(U32Expression)             \
-    X(U64Expression)             \
-    X(USizeExpression)           \
-    X(U8Expression)              \
-    X(F32Expression)             \
-    X(F64Expression)             \
-    X(BoolExpression)            \
-    X(VoidExpression)            \
-    X(UndefinedExpression)       \
-    X(ScopeResolutionExpression) \
-    X(StructExpression)          \
-    X(UnionExpression)           \
+#define FOREACH_AST_EXPR(X)     \
+    X(ArrayExpression)          \
+    X(CallExpression)           \
+    X(DoWhileLoopExpression)    \
+    X(EnumExpression)           \
+    X(ForLoopExpression)        \
+    X(FunctionExpression)       \
+    X(IdentifierExpression)     \
+    X(IfExpression)             \
+    X(IndexExpression)          \
+    X(InfiniteLoopExpression)   \
+    X(AssignmentExpression)     \
+    X(BinaryExpression)         \
+    X(DotExpression)            \
+    X(RangeExpression)          \
+    X(InitializerExpression)    \
+    X(LabelExpression)          \
+    X(MatchExpression)          \
+    X(ReferenceExpression)      \
+    X(AddressOfExpression)      \
+    X(DereferenceExpression)    \
+    X(UnaryExpression)          \
+    X(ImplicitAccessExpression) \
+    X(StringExpression)         \
+    X(I32Expression)            \
+    X(I64Expression)            \
+    X(ISizeExpression)          \
+    X(U32Expression)            \
+    X(U64Expression)            \
+    X(USizeExpression)          \
+    X(U8Expression)             \
+    X(F32Expression)            \
+    X(F64Expression)            \
+    X(BoolExpression)           \
+    X(VoidExpression)           \
+    X(UndefinedExpression)      \
+    X(ModuleAccessExpression)   \
+    X(StructExpression)         \
+    X(UnionExpression)          \
     X(WhileLoopExpression)
 
 #define FOREACH_AST_STMT(X) \
@@ -141,16 +141,16 @@ enum class ExplicitTypeKind : u8 {
     ARRAY,
 };
 
-#define FOREACH_AST_TYPE(X)      \
-    X(IdentifierExpression)      \
-    X(ScopeResolutionExpression) \
-    X(DotExpression)             \
-    X(CallExpression)            \
-    X(ExplicitFunctionType)      \
-    X(ExplicitTypeID)            \
-    X(StructExpression)          \
-    X(EnumExpression)            \
-    X(UnionExpression)           \
+#define FOREACH_AST_TYPE(X)   \
+    X(IdentifierExpression)   \
+    X(ModuleAccessExpression) \
+    X(DotExpression)          \
+    X(CallExpression)         \
+    X(ExplicitFunctionType)   \
+    X(ExplicitTypeID)         \
+    X(StructExpression)       \
+    X(EnumExpression)         \
+    X(UnionExpression)        \
     X(ExplicitArrayType)
 
 class ExplicitTypeID;
@@ -210,7 +210,7 @@ NODE_KIND_OF_TRAIT(F64Expression, F64_EXPRESSION)
 NODE_KIND_OF_TRAIT(BoolExpression, BOOL_EXPRESSION)
 NODE_KIND_OF_TRAIT(VoidExpression, VOID_EXPRESSION)
 NODE_KIND_OF_TRAIT(UndefinedExpression, UNDEFINED_EXPRESSION)
-NODE_KIND_OF_TRAIT(ScopeResolutionExpression, SCOPE_RESOLUTION_EXPRESSION)
+NODE_KIND_OF_TRAIT(ModuleAccessExpression, MODULE_ACCESS_EXPRESSION)
 NODE_KIND_OF_TRAIT(StructExpression, STRUCT_EXPRESSION)
 NODE_KIND_OF_TRAIT(UnionExpression, UNION_EXPRESSION)
 NODE_KIND_OF_TRAIT(WhileLoopExpression, WHILE_LOOP_EXPRESSION)
@@ -248,7 +248,7 @@ concept ASTExplicitType = requires {
     };
 
 KIND_OF_TRAIT(IdentifierExpression, IDENT)
-KIND_OF_TRAIT(ScopeResolutionExpression, SCOPE)
+KIND_OF_TRAIT(ModuleAccessExpression, SCOPE)
 KIND_OF_TRAIT(DotExpression, DOT)
 KIND_OF_TRAIT(CallExpression, CALL)
 KIND_OF_TRAIT(ExplicitFunctionType, FUNCTION)

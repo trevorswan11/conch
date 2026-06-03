@@ -98,8 +98,8 @@ DeclStatement
                         └─ ExplicitType (modifier: PTR)
                             └─ IdentifierExpression: E
 ExpressionStatement
-└─ Expr: ScopeResolutionExpression
-    ├─ Outer: ScopeResolutionExpression
+└─ Expr: ModuleAccessExpression
+    ├─ Outer: ModuleAccessExpression
     │   ├─ Outer: IdentifierExpression: A
     │   └─ Inner: IdentifierExpression: B
     └─ Inner: IdentifierExpression: C
@@ -145,23 +145,25 @@ ExpressionStatement
 ExpressionStatement
 └─ Expr: MatchExpression
     ├─ Matcher: IdentifierExpression: a
-    ├─ Arms:
-    │   ├─ Arm:
-    │   │   ├─ Pattern: IdentifierExpression: b
-    │   │   ├─ Capture: IdentifierExpression: c
-    │   │   └─ Dispatch: ExpressionStatement
-    │   │       └─ Expr: IdentifierExpression: d
-    │   ├─ Arm:
-    │   │   ├─ Pattern: IdentifierExpression: e
-    │   │   ├─ Capture: <discarded>
-    │   │   └─ Dispatch: ExpressionStatement
-    │   │       └─ Expr: IdentifierExpression: f
-    │   └─ Arm:
-    │       ├─ Pattern: IdentifierExpression: g
-    │       └─ Dispatch: ExpressionStatement
-    │           └─ Expr: IdentifierExpression: h
-    └─ Catch All: ExpressionStatement
-        └─ Expr: IdentifierExpression: d
+    └─ Arms:
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: b
+        │   ├─ Capture: IdentifierExpression: c
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: d
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: e
+        │   ├─ Capture: <discarded>
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: f
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: g
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: h
+        └─ Catch-All Arm:
+            ├─ Pattern: <discarded>
+            └─ Dispatch: ExpressionStatement
+                └─ Expr: IdentifierExpression: d
 ExpressionStatement
 └─ Expr: InfiniteLoopExpression
     └─ ExpressionStatement
@@ -423,8 +425,8 @@ TestStatement
     │   └─ Library: IdentifierExpression: other
     └─ ExpressionStatement
         └─ Expr: CallExpression
-            ├─ Callee: ScopeResolutionExpression
-            │   ├─ Outer: ScopeResolutionExpression
+            ├─ Callee: ModuleAccessExpression
+            │   ├─ Outer: ModuleAccessExpression
             │   │   ├─ Outer: IdentifierExpression: std
             │   │   └─ Inner: IdentifierExpression: testing
             │   └─ Inner: IdentifierExpression: expect
@@ -437,7 +439,7 @@ DeclStatement
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
     └─ CallExpression
-        ├─ Callee: ScopeResolutionExpression
+        ├─ Callee: ModuleAccessExpression
         │   ├─ Outer: IdentifierExpression: std
         │   └─ Inner: IdentifierExpression: ArrayList
         └─ Arguments:
@@ -446,7 +448,7 @@ DeclStatement
 ├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
-    └─ ScopeResolutionExpression
+    └─ ModuleAccessExpression
         ├─ Outer: IdentifierExpression: std
         └─ Inner: IdentifierExpression: Io
 DeclStatement

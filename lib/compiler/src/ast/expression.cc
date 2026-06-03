@@ -6,6 +6,8 @@
 #include <variant>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "ast/handle.hh"
 #include "ast/id.hh"
 #include "ast/kind.hh"
@@ -19,6 +21,7 @@
 
 #include "option.hh"
 #include "result.hh"
+#include "types.hh"
 #include "variant.hh"
 
 namespace porpoise::ast {
@@ -545,7 +548,7 @@ MAKE_INFIX_PARSER(BinaryExpression)
 
 auto DotExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
-    if (!outer.any<IdentifierExpression, ScopeResolutionExpression, DotExpression>()) {
+    if (!outer.any<IdentifierExpression, ModuleAccessExpression, DotExpression>()) {
         return make_syntax_err("Dot expressions must have outer accessors or identifiers",
                                syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
                                parser.get_location_of(*outer));
@@ -650,12 +653,40 @@ auto MatchExpression::parse(syntax::Parser& parser)
     }
 
     std::vector<Arm> arms;
+    opt::Size        catch_all_idx;
+    usize            i = 0;
+
     // Current token is either the LBRACE at the start or a comma before parsing
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
 
-        const auto pattern = TRY(parser.parse_expression());
+        opt::Option<MatchPatternHandle> pattern_opt;
+        if (parser.current_token_is(syntax::TokenType::UNDERSCORE)) {
+            if (catch_all_idx) {
+                return make_syntax_err("Duplicate catch-all match arm",
+                                       syntax::Error::ILLEGAL_MATCH_CATCH_ALL,
+                                       parser.get_current_token());
+            }
+
+            pattern_opt.emplace(
+                parser.add_node<DiscardableIdentHandle, Unit>(parser.get_current_token()));
+            catch_all_idx.emplace(i);
+        } else {
+            const auto pattern_tok = parser.get_current_token();
+            const auto pattern_raw = TRY(parser.parse_expression());
+            if (!MatchPatternHandle::any_compatible(pattern_raw->get_kind())) {
+                return make_syntax_err(
+                    fmt::format("Unmatchable expression '{}' used as a match arm pattern",
+                                pattern_raw->display_name()),
+                    syntax::Error::ILLEGAL_MATCH_PATTERN,
+                    pattern_tok);
+            }
+            pattern_opt.emplace(pattern_raw);
+        }
+        i += 1;
+
+        const MatchPatternHandle pattern{*pattern_opt};
         TRY(parser.expect_peek(syntax::TokenType::FAT_ARROW));
 
         // There is an optional capture for every arm
@@ -675,17 +706,21 @@ auto MatchExpression::parse(syntax::Parser& parser)
             TRY(parser.expect_peek(syntax::TokenType::BW_OR));
         }
 
+        if (catch_all_idx == i && capture) {
+            return make_syntax_err("Catch-all match arms may not have a capture clause",
+                                   syntax::Error::ILLEGAL_MATCH_CATCH_ALL,
+                                   parser.get_location_of(*capture));
+        }
+
         // The resulting statement must be restricted like an if branch
         parser.advance();
         const auto consequence =
             TRY(parser.parse_restricted_statement(syntax::Error::ILLEGAL_MATCH_ARM, false));
         arms.emplace_back(pattern, capture, consequence);
     }
-    TRY(parser.expect_peek(syntax::TokenType::RBRACE));
-    const auto catch_all =
-        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_MATCH_CATCH_ALL));
 
-    return parser.add_expr<MatchExpression>(start_token, matcher, std::move(arms), catch_all);
+    TRY(parser.expect_peek(syntax::TokenType::RBRACE));
+    return parser.add_expr<MatchExpression>(start_token, matcher, std::move(arms), catch_all_idx);
 }
 
 namespace {
@@ -750,19 +785,18 @@ auto StringExpression::parse(syntax::Parser& parser)
     return parser.add_expr<StringExpression>(start_token, start_token.materialize_string());
 }
 
-auto ScopeResolutionExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
+auto ModuleAccessExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
-    if (!outer.any<IdentifierExpression, ScopeResolutionExpression, DotExpression>()) {
-        return make_syntax_err(
-            "Scope resolution expressions must have outer accessors or identifiers",
-            syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
-            parser.get_location_of(*outer));
+    if (!outer.any<IdentifierExpression, ModuleAccessExpression, DotExpression>()) {
+        return make_syntax_err("Module access expressions must have outer accessors or identifiers",
+                               syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
+                               parser.get_location_of(*outer));
     }
 
     const auto start_token = parser.get_current_token();
     TRY(parser.expect_peek(syntax::TokenType::IDENT));
     const IdentifierHandle inner = TRY(IdentifierExpression::parse(parser));
-    return parser.add_expr<ScopeResolutionExpression>(start_token, outer, inner);
+    return parser.add_expr<ModuleAccessExpression>(start_token, outer, inner);
 }
 
 auto StructExpression::parse(syntax::Parser& parser)

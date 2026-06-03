@@ -159,8 +159,8 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::UndefinedExpression&) -> void;
 
     template <traits::IndexableID ID>
-    auto resolve_scope(ID, const ast::ScopeResolutionExpression&) -> void;
-    auto visit(ast::NodeID, const ast::ScopeResolutionExpression&) -> void;
+    auto resolve_scope(ID, const ast::ModuleAccessExpression&) -> void;
+    auto visit(ast::NodeID, const ast::ModuleAccessExpression&) -> void;
 
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
     template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
@@ -189,7 +189,7 @@ class TypeResolver {
     auto apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_type) -> Type&;
 
     auto visit(ast::ExplicitTypeID, const ast::IdentifierExpression&) -> void;
-    auto visit(ast::ExplicitTypeID, const ast::ScopeResolutionExpression&) -> void;
+    auto visit(ast::ExplicitTypeID, const ast::ModuleAccessExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::DotExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::CallExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::ExplicitFunctionType&) -> void;

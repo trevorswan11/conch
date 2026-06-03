@@ -164,7 +164,7 @@ TEST_CASE("Illegal inner scope of resolution expression") {
 TEST_CASE("Illegal outer scope of resolution expression") {
     helpers::test_parser_fail(
         "2::A;",
-        syntax::Diagnostic{"Scope resolution expressions must have outer accessors or identifiers",
+        syntax::Diagnostic{"Module access expressions must have outer accessors or identifiers",
                            syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
                            std::pair{0uz, 0uz}});
 }

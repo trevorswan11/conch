@@ -19,23 +19,25 @@ template <NodeKind... AllowedKinds> class Handle {
     constexpr explicit Handle(NodeID id) noexcept : id_{id} {
         ASSERT(id.is_valid(), "Attempt to create Handle from invalid NodeID");
 #ifndef NDEBUG
-        const auto actual_kind = id.get_kind();
-        const auto is_allowed  = ((actual_kind == AllowedKinds) || ...);
-        ASSERT(is_allowed, "Assigned invalid NodeKind to Handle");
+        ASSERT(any_compatible(id.get_kind()), "Assigned invalid NodeKind to Handle");
 #endif
     }
 
     template <NodeKind... OtherKinds>
     constexpr Handle(Handle<OtherKinds...> other) noexcept : id_{*other} {
         // Shallow verify at compile time to enforce possible construction
-        constexpr auto check_compat   = []<NodeKind K> { return ((K == AllowedKinds) || ...); };
-        constexpr auto any_compatible = (check_compat.template operator()<OtherKinds>() || ...);
-        static_assert(any_compatible, "No requested kinds are compatible with provided ones");
+        static_assert((any_compatible(OtherKinds) || ...),
+                      "No requested kinds are compatible with provided ones");
 
         // Runtime checks can be more specific to the actual state
         ASSERT(other.is_valid(), "Attempt to create Handle from invalid Handle");
         ASSERT(((other.operator->()->get_kind() == AllowedKinds) || ...),
                "Provided kind does not match");
+    }
+
+    // Checks if the provided kind is compatible with any allowed kind
+    [[nodiscard]] constexpr static auto any_compatible(NodeKind kind) noexcept -> bool {
+        return ((kind == AllowedKinds) || ...);
     }
 
     [[nodiscard]] constexpr auto operator*() const noexcept -> NodeID { return id_; }
@@ -103,7 +105,7 @@ using ExpressionHandle = Handle<NodeKind::ARRAY_EXPRESSION,
                                 NodeKind::VOID_EXPRESSION,
                                 NodeKind::UNDEFINED_EXPRESSION,
                                 NodeKind::RANGE_EXPRESSION,
-                                NodeKind::SCOPE_RESOLUTION_EXPRESSION,
+                                NodeKind::MODULE_ACCESS_EXPRESSION,
                                 NodeKind::STRUCT_EXPRESSION,
                                 NodeKind::UNION_EXPRESSION,
                                 NodeKind::WHILE_LOOP_EXPRESSION>;
@@ -113,8 +115,31 @@ using DiscardableIdentHandle = Handle<NodeKind::IDENTIFIER_EXPRESSION, NodeKind:
 using ImplicitAccessHandle   = Handle<NodeKind::IMPLICIT_ACCESS_EXPRESSION>;
 using StringHandle           = Handle<NodeKind::STRING_EXPRESSION>;
 using OuterAccessHandle      = Handle<NodeKind::IDENTIFIER_EXPRESSION,
-                                      NodeKind::SCOPE_RESOLUTION_EXPRESSION,
+                                      NodeKind::MODULE_ACCESS_EXPRESSION,
                                       NodeKind::DOT_EXPRESSION>;
+
+using MatchPatternHandle = Handle<NodeKind::CALL_EXPRESSION,
+                                  NodeKind::DOT_EXPRESSION,
+                                  NodeKind::IDENTIFIER_EXPRESSION,
+                                  NodeKind::INDEX_EXPRESSION,
+                                  NodeKind::UNARY_EXPRESSION,
+                                  NodeKind::REFERENCE_EXPRESSION,
+                                  NodeKind::DEREFERENCE_EXPRESSION,
+                                  NodeKind::ADDRESS_OF_EXPRESSION,
+                                  NodeKind::IMPLICIT_ACCESS_EXPRESSION,
+                                  NodeKind::STRING_EXPRESSION,
+                                  NodeKind::I32_EXPRESSION,
+                                  NodeKind::I64_EXPRESSION,
+                                  NodeKind::ISIZE_EXPRESSION,
+                                  NodeKind::U32_EXPRESSION,
+                                  NodeKind::U64_EXPRESSION,
+                                  NodeKind::USIZE_EXPRESSION,
+                                  NodeKind::U8_EXPRESSION,
+                                  NodeKind::F32_EXPRESSION,
+                                  NodeKind::F64_EXPRESSION,
+                                  NodeKind::BOOL_EXPRESSION,
+                                  NodeKind::MODULE_ACCESS_EXPRESSION,
+                                  NodeKind::DISCARDED>;
 
 using StatementHandle = Handle<NodeKind::BLOCK_STATEMENT,
                                NodeKind::DECL_STATEMENT,

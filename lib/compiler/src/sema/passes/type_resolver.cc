@@ -855,7 +855,7 @@ auto TypeResolver::get_outer_access_inner_name(ast::OuterAccessHandle handle) no
         if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(current)) {
             return ident->name;
         } else if (const auto scope =
-                       resolving_.ast.get_as_opt<ast::ScopeResolutionExpression>(current)) {
+                       resolving_.ast.get_as_opt<ast::ModuleAccessExpression>(current)) {
             current = scope->outer;
             continue;
         } else if (const auto dot = resolving_.ast.get_as_opt<ast::DotExpression>(current)) {
@@ -1040,11 +1040,6 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
         try_set_first_type();
     }
 
-    if (match.catch_all) {
-        TRY_RESOLVE(*match.catch_all);
-        try_set_first_type();
-    }
-
     // In the rare case that a type could not be found we have to poison
     if (first_type) {
         resolving_.set_sema_type(id, *first_type);
@@ -1195,7 +1190,7 @@ MAKE_PRIMITIVE_RESOLVER(F32Expression, F32)
 MAKE_PRIMITIVE_RESOLVER(F64Expression, F64)
 
 template <traits::IndexableID ID>
-auto TypeResolver::resolve_scope(ID id, const ast::ScopeResolutionExpression& scope) -> void {
+auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope) -> void {
     // Resolving the right hand side recurses down to the identifier level
     resolve(scope.outer);
     if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); }
@@ -1250,9 +1245,8 @@ auto TypeResolver::resolve_scope(ID id, const ast::ScopeResolutionExpression& sc
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
-            fmt::format(
-                "Use the dot operator '.' to access {} members, found scope resolution '::'",
-                type_kind_display_name(outer_type.get_kind())),
+            fmt::format("Use the dot operator '.' to access {} members, found module access '::'",
+                        type_kind_display_name(outer_type.get_kind())),
             Error::TYPE_MISMATCH,
             resolving_.ast.location_of(scope.outer)));
     }
@@ -1260,15 +1254,15 @@ auto TypeResolver::resolve_scope(ID id, const ast::ScopeResolutionExpression& sc
     return last_type_.emplace(ctx_.poison_node(
         resolving_,
         id,
-        fmt::format("Scope resolution operator '::' can only be applied to modules; found '{}'",
+        fmt::format("Module access operator '::' can only be applied to modules; found '{}'",
                     type_kind_display_name(outer_type.get_kind())),
         Error::TYPE_MISMATCH,
         resolving_.ast.location_of(scope.outer)));
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, resolve_scope, ScopeResolutionExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_scope, ModuleAccessExpression)
 
-auto TypeResolver::visit(ast::NodeID id, const ast::ScopeResolutionExpression& scope) -> void {
+auto TypeResolver::visit(ast::NodeID id, const ast::ModuleAccessExpression& scope) -> void {
     resolve_scope(id, scope);
 }
 
@@ -1618,7 +1612,7 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
     }
 
 MAKE_MODIFIED_RESOLVER(IdentifierExpression, resolve_ident)
-MAKE_MODIFIED_RESOLVER(ScopeResolutionExpression, resolve_scope)
+MAKE_MODIFIED_RESOLVER(ModuleAccessExpression, resolve_scope)
 MAKE_MODIFIED_RESOLVER(DotExpression, resolve_dot)
 MAKE_MODIFIED_RESOLVER(CallExpression, resolve_call)
 

@@ -16,6 +16,7 @@
 #include "syntax/token_type.hh"
 
 #include "indent.hh"
+#include "types.hh"
 #include "variant.hh"
 
 namespace porpoise::ast {
@@ -360,12 +361,19 @@ auto ASTDumper::visit(NodeID, const MatchExpression& match) -> void {
         dump(match.matcher);
     }
 
-    const auto has_catch_all = match.catch_all.has_value();
     {
-        const Indent::Guard g{indent_, !has_catch_all};
+        const Indent::Guard g{indent_, true};
+        usize               idx = 0;
+
         fmt::println(out_, "{}Arms:", indent_.current_branch());
-        dump_container(match.arms, [this](const MatchExpression::Arm& arm) {
-            fmt::println(out_, "{}Arm:", indent_.current_branch());
+        dump_container(match.arms, [&](const MatchExpression::Arm& arm) {
+            if (match.catch_all_idx && idx == *match.catch_all_idx) {
+                fmt::println(out_, "{}Catch-All Arm:", indent_.current_branch());
+            } else {
+                fmt::println(out_, "{}Arm:", indent_.current_branch());
+            }
+            idx += 1;
+
             {
                 const Indent::Guard g_inner{indent_, false};
                 fmt::print(out_, "{}Pattern: ", indent_.current_branch());
@@ -384,12 +392,6 @@ auto ASTDumper::visit(NodeID, const MatchExpression& match) -> void {
                 dump(arm.dispatch);
             }
         });
-    }
-
-    if (has_catch_all) {
-        const Indent::Guard g{indent_, true};
-        fmt::print(out_, "{}Catch All: ", indent_.current_branch());
-        dump(*match.catch_all);
     }
 }
 
@@ -443,17 +445,17 @@ auto ASTDumper::visit(NodeID, const UndefinedExpression&) -> void {
 }
 
 // Safe to call with invalid ID in type dispatch
-auto ASTDumper::visit(NodeID, const ScopeResolutionExpression& scope_resolve) -> void {
-    fmt::println(out_, "ScopeResolutionExpression");
+auto ASTDumper::visit(NodeID, const ModuleAccessExpression& module_access) -> void {
+    fmt::println(out_, "ModuleAccessExpression");
     {
         const Indent::Guard g{indent_, false};
         fmt::print(out_, "{}Outer: ", indent_.current_branch());
-        dump(scope_resolve.outer);
+        dump(module_access.outer);
     }
     {
         const Indent::Guard g{indent_, true};
         fmt::print(out_, "{}Inner: ", indent_.current_branch());
-        dump(scope_resolve.inner);
+        dump(module_access.inner);
     }
 }
 
@@ -725,7 +727,7 @@ auto ASTDumper::visit(ExplicitTypeID id, const IdentifierExpression& ident) -> v
     fmt::println(out_, "");
 }
 
-MAKE_EXPLICIT_TYPE_DUMP(ScopeResolutionExpression)
+MAKE_EXPLICIT_TYPE_DUMP(ModuleAccessExpression)
 MAKE_EXPLICIT_TYPE_DUMP(DotExpression)
 MAKE_EXPLICIT_TYPE_DUMP(CallExpression)
 
