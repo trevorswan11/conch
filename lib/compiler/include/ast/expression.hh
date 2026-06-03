@@ -34,7 +34,7 @@ struct CallExpression {
         std::variant<ExpressionHandle, ExplicitTypeID> id;
 
         // Unpacks T from the variant ID assuming T is currently active
-        template <typename T, typename Self> [[nodiscard]] auto as(this Self&& self) -> auto& {
+        template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
             return std::get<T>(self.id);
         }
 

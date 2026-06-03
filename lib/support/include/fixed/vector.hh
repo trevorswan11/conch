@@ -102,19 +102,14 @@ template <typename Item, usize Capacity> class Vector {
         return {data(), size_};
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto operator[](this Self&& self, usize idx) noexcept
+    [[nodiscard]] constexpr auto operator[](this auto&& self, usize idx) noexcept
         -> decltype(auto) {
         ASSERT(idx < self.size_, "StaticVector index out of bounds");
         return self.data()[idx];
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto begin(this Self&& self) noexcept -> auto* {
-        return self.data();
-    }
-
-    template <typename Self> [[nodiscard]] constexpr auto end(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto begin(this auto&& self) noexcept -> auto* { return self.data(); }
+    [[nodiscard]] constexpr auto end(this auto&& self) noexcept -> auto* {
         return self.data() + self.size_;
     }
 
@@ -122,7 +117,7 @@ template <typename Item, usize Capacity> class Vector {
     [[nodiscard]] constexpr auto size() const noexcept -> usize { return size_; }
     [[nodiscard]] constexpr auto capacity() const noexcept -> usize { return Capacity; }
 
-    template <typename Self> [[nodiscard]] constexpr auto data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto data(this auto&& self) noexcept -> auto* {
         return self.items_.data();
     }
 

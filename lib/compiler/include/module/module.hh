@@ -129,8 +129,8 @@ struct Module {
         }
     }
 
-    template <traits::IndexableID ID, typename Self>
-    [[nodiscard]] constexpr auto get_sema_type(this Self&& self, ID id) noexcept -> auto& {
+    template <traits::IndexableID ID>
+    [[nodiscard]] constexpr auto get_sema_type(this auto&& self, ID id) noexcept -> auto& {
         return *self.get_sema_type_opt(id);
     }
 

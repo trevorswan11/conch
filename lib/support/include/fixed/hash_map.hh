@@ -266,8 +266,7 @@ class HashMap {
     }
 
     // Returns a reference to the value at the key if present
-    template <typename Self>
-    [[nodiscard]] constexpr auto get(this Self&& self, const Key& key) -> auto& {
+    [[nodiscard]] constexpr auto get(this auto&& self, const Key& key) -> auto& {
         const auto idx = self.index_of(key);
         if (!idx) { throw std::out_of_range{"Illegal get on missing key"}; }
         return *(self.value_data() + *idx);
@@ -305,13 +304,11 @@ class HashMap {
         return HashMapIterator<std::remove_reference_t<Self>, Key, Value, Capacity>{self, Capacity};
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto key_data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto key_data(this auto&& self) noexcept -> auto* {
         return self.keys_.data();
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto value_data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto value_data(this auto&& self) noexcept -> auto* {
         return self.values_.data();
     }
 

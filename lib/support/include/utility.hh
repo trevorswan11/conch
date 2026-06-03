@@ -17,13 +17,11 @@ namespace porpoise {
 #define GET_GETTER_MACRO(_1, _2, _3, NAME, ...) NAME
 #define MAKE_GETTER(...) GET_GETTER_MACRO(__VA_ARGS__, MAKE_GETTER_3, MAKE_GETTER_2)(__VA_ARGS__)
 
-#define MAKE_DEDUCING_2(name, ReturnType)                                                        \
-    template <typename Self> [[nodiscard]] auto get_##name(this Self&& self) noexcept -> auto& { \
-        return self.name##_;                                                                     \
-    }
-#define MAKE_DEDUCING_3(name, ReturnType, getter)                                                \
-    template <typename Self> [[nodiscard]] auto get_##name(this Self&& self) noexcept -> auto& { \
-        return getter(self.name##_);                                                             \
+#define MAKE_DEDUCING_2(name, ReturnType) \
+    [[nodiscard]] auto get_##name(this auto&& self) noexcept -> auto& { return self.name##_; }
+#define MAKE_DEDUCING_3(name, ReturnType, getter)                       \
+    [[nodiscard]] auto get_##name(this auto&& self) noexcept -> auto& { \
+        return getter(self.name##_);                                    \
     }
 
 #define GET_DEDUCING_GETTER_MACRO(_1, _2, _3, NAME, ...) NAME

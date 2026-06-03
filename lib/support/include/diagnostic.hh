@@ -181,12 +181,11 @@ template <traits::DiagnosticType D> class DiagnosticList {
         diagnostics_.emplace_back(std::forward<Args>(args)...);
     }
 
-    template <typename Self>
-    [[nodiscard]] auto operator[](this Self&& self, usize idx) noexcept -> auto& {
+    [[nodiscard]] auto operator[](this auto&& self, usize idx) noexcept -> auto& {
         return self.diagnostics_[idx];
     }
 
-    template <typename Self> [[nodiscard]] auto at(this Self&& self, usize idx) -> auto& {
+    [[nodiscard]] auto at(this auto&& self, usize idx) -> auto& {
         return self.diagnostics_.at(idx);
     }
 

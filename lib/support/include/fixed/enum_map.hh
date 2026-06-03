@@ -31,8 +31,7 @@ template <MappableEnum E, traits::TriviallyDestructible Value> class EnumMap {
     constexpr explicit EnumMap(Value default_value) noexcept { map_.fill(default_value); }
 
     // Asserts that the key is a valid enumeration
-    template <typename Self>
-    [[nodiscard]] constexpr auto operator[](this Self&& self, E key) noexcept -> decltype(auto) {
+    [[nodiscard]] constexpr auto operator[](this auto&& self, E key) noexcept -> decltype(auto) {
         const auto index = magic_enum::enum_index(key);
         ASSERT(index, "Key must be a valid enumeration");
         return self.map_[*index];

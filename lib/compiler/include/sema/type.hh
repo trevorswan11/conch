@@ -236,7 +236,7 @@ class Type {
     [[nodiscard]] auto get_kind() const noexcept -> TypeKind { return key_.get_kind(); }
 
     // Unpacks T from the resolved type assuming the type has been resolved to T
-    template <typename T, typename Self> [[nodiscard]] auto as(this Self&& self) -> auto& {
+    template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
         return std::get<T>(self.resolved_.value());
     }
 

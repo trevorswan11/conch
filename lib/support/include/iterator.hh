@@ -27,19 +27,14 @@ concept InsertablePair = requires {
 } // namespace traits
 
 // Gives the enclosing type an iterator interface based on an iterator-capable type
-#define MAKE_UNALIASED_ITERATOR(Container, member)                                           \
-    using iterator       = typename Container::iterator;                                     \
-    using const_iterator = typename Container::const_iterator;                               \
-                                                                                             \
-    template <typename Self> [[nodiscard]] constexpr auto begin(this Self&& self) noexcept { \
-        return self.member.begin();                                                          \
-    }                                                                                        \
-                                                                                             \
-    template <typename Self> [[nodiscard]] constexpr auto end(this Self&& self) noexcept {   \
-        return self.member.end();                                                            \
-    }                                                                                        \
-                                                                                             \
-    [[nodiscard]] constexpr auto size() const noexcept -> usize { return member.size(); }    \
+#define MAKE_UNALIASED_ITERATOR(Container, member)                                                \
+    using iterator       = typename Container::iterator;                                          \
+    using const_iterator = typename Container::const_iterator;                                    \
+                                                                                                  \
+    [[nodiscard]] constexpr auto begin(this auto&& self) noexcept { return self.member.begin(); } \
+    [[nodiscard]] constexpr auto end(this auto&& self) noexcept { return self.member.end(); }     \
+                                                                                                  \
+    [[nodiscard]] constexpr auto size() const noexcept -> usize { return member.size(); }         \
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return member.empty(); }
 
 // Gives the enclosing type an iterator interface and type alias based on an iterator-capable type

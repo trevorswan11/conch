@@ -93,8 +93,7 @@ template <typename T> class Ref {
     [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return get(); }
 
     // Applies F to to underlying reference if present
-    template <typename Self, class F>
-    [[nodiscard]] constexpr auto transform(this Self&& self, F&& f) {
+    template <typename F> [[nodiscard]] constexpr auto transform(this auto&& self, F&& f) {
         using ResCV = std::invoke_result_t<F, T&>;
         using Res   = std::remove_cv_t<ResCV>;
 
@@ -112,8 +111,8 @@ template <typename T> class Ref {
         return Ret{};
     }
 
-    template <typename Self, typename Or>
-    [[nodiscard]] constexpr auto value_or(this Self&& self, Or& or_value) -> T& {
+    template <typename Or>
+    [[nodiscard]] constexpr auto value_or(this auto&& self, Or& or_value) -> T& {
         static_assert(
             requires(T& t) { static_cast<Or&>(t); }, "value_or: Or& must be convertible to T&");
         return self.has_value() ? self.get() : static_cast<T&>(or_value);
@@ -183,8 +182,7 @@ template <traits::Compactable T> class CompactOpt {
     [[nodiscard]] friend auto    operator==(const CompactOpt& lhs, const CompactOpt& rhs) noexcept
         -> bool = default;
 
-    template <typename Self, typename F>
-    [[nodiscard]] constexpr auto transform(this Self&& self, F&& f) {
+    template <typename F> [[nodiscard]] constexpr auto transform(this auto&& self, F&& f) {
         using Res = std::remove_cv_t<std::invoke_result_t<F, T>>;
 
         // This is straight from clang's stdc++ C++23 optional implementation
@@ -199,8 +197,8 @@ template <traits::Compactable T> class CompactOpt {
         return self.has_value() ? Ret{std::forward<F>(f)(self.value())} : Ret{};
     }
 
-    template <typename Self, typename Or>
-    [[nodiscard]] constexpr auto value_or(this Self&& self, Or&& or_value) -> T {
+    template <typename Or>
+    [[nodiscard]] constexpr auto value_or(this auto&& self, Or&& or_value) -> T {
         // This is straight from clang's stdc++ C++23 optional implementation
         static_assert(std::is_copy_constructible_v<Or>, "value_or: Or must be copy constructible");
         static_assert(

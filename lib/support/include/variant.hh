@@ -23,10 +23,11 @@ template <class... Ts> struct Overloaded : Ts... {
     }
 
 // Provides std::visit-like access to the internal node
-#define MAKE_VARIANT_MATCHER(member)                                                        \
-    template <typename Self, class Matcher>                                                 \
-    auto match(this Self&& self, Matcher&& matcher) -> decltype(auto) {                     \
-        return std::visit(std::forward<Matcher>(matcher), std::forward<Self>(self).member); \
+#define MAKE_VARIANT_MATCHER(member)                                    \
+    template <typename Matcher>                                         \
+    auto match(this auto&& self, Matcher&& matcher) -> decltype(auto) { \
+        return std::visit(std::forward<Matcher>(matcher),               \
+                          std::forward<decltype(self)>(self).member);   \
     }
 
 } // namespace porpoise

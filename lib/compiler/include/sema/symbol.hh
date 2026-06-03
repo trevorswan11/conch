@@ -124,7 +124,7 @@ class Symbol {
     MAKE_GETTER(data, const Symbol::Data&)
 
     // Unpacks T from the resolved type assuming the type has been resolved to T
-    template <typename T, typename Self> [[nodiscard]] auto as(this Self&& self) -> auto& {
+    template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
         return std::get<T>(self.data_);
     }
 
@@ -201,8 +201,7 @@ class SymbolTable {
     }
 
     // Differs from `get_proxy_opt` by asserting that the name is present.
-    template <typename Self>
-    [[nodiscard]] auto get_proxy(this Self&& self, std::string_view name) noexcept {
+    [[nodiscard]] auto get_proxy(this auto&& self, std::string_view name) noexcept {
         auto it = self.symbols_.find(name);
         ASSERT(it != self.symbols_.end(), "Illegal get on missing key");
         return std::tie(it->second.symbol, it->second.idx);
@@ -218,8 +217,7 @@ class SymbolTable {
     }
 
     // Differs from `get_opt` by asserting that the name is present.
-    template <typename Self>
-    [[nodiscard]] auto get(this Self&& self, std::string_view name) noexcept -> auto& {
+    [[nodiscard]] auto get(this auto&& self, std::string_view name) noexcept -> auto& {
         return std::get<0>(self.get_proxy(name));
     }
 
@@ -308,9 +306,7 @@ class SymbolTableRegistry {
                                    std::string_view    name,
                                    const Symbol::Data& data) -> Result<void, Diagnostic>;
 
-    template <typename Self> [[nodiscard]] auto get(this Self&& self, usize idx) -> auto& {
-        return self.tables_.at(idx);
-    }
+    [[nodiscard]] auto get(this auto&& self, usize idx) -> auto& { return self.tables_.at(idx); }
 
     template <typename Self> [[nodiscard]] auto get_opt(this Self&& self, usize idx) noexcept {
         using ReturnType = opt::Option<traits::const_dispatch_t<Self, SymbolTable>&>;
@@ -318,8 +314,7 @@ class SymbolTableRegistry {
         return ReturnType{self.tables_[idx]};
     }
 
-    template <typename Self>
-    [[nodiscard]] auto get_from(this Self&& self, usize idx, std::string_view name) -> auto& {
+    [[nodiscard]] auto get_from(this auto&& self, usize idx, std::string_view name) -> auto& {
         return self.tables_.at(idx).get(name);
     }
 

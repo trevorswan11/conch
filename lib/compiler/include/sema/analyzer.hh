@@ -31,12 +31,11 @@ class Analyzer {
     // Runs the entire sema pipeline
     auto analyze(const std::filesystem::path& entry_path) -> Result<void, Diagnostic>;
 
-    template <typename Self> [[nodiscard]] auto get_table(this Self&& self, usize idx) -> auto& {
+    [[nodiscard]] auto get_table(this auto&& self, usize idx) -> auto& {
         return self.registry_.get(idx);
     }
 
-    template <typename Self>
-    [[nodiscard]] auto get_table_opt(this Self&& self, usize idx) noexcept {
+    [[nodiscard]] auto get_table_opt(this auto&& self, usize idx) noexcept {
         return self.registry_.get_opt(idx);
     }
 

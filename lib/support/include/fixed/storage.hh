@@ -22,7 +22,7 @@ template <typename Data, usize Capacity> struct Storage {
 template <traits::DefaultConstructible Data, usize Capacity> struct Storage<Data, Capacity> {
     std::array<Data, Capacity> items{};
 
-    template <typename Self> [[nodiscard]] constexpr auto data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto data(this auto&& self) noexcept -> auto* {
         return self.items.data();
     }
 };
