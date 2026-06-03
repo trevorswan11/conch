@@ -147,9 +147,23 @@ namespace {
     }
 }
 
-template <typename MemberValidator>
-[[nodiscard]] auto parse_members(syntax::Parser& parser, MemberValidator&& validator)
-    -> Result<Members, syntax::Diagnostic> {
+// Returns an actual value only if a terminal condition was found
+[[nodiscard]] auto validate_member_decl(syntax::Parser& parser, MemberHandle member) noexcept
+    -> opt::Option<std::string_view> {
+    return std::visit(
+        Overloaded{[](const DeclStatement& decl) -> opt::Option<std::string_view> {
+                       // Members that violate this wouldn't be usable with C
+                       if (decl.has_modifier(DeclModifiers::EXTERN) ||
+                           decl.has_modifier(DeclModifiers::EXPORT)) {
+                           return "Member declarations may neither be marked extern nor export";
+                       }
+                       return opt::none;
+                   },
+                   [](const auto&) -> opt::Option<std::string_view> { return opt::none; }},
+        parser.get_ast()[*member]);
+}
+
+[[nodiscard]] auto parse_members(syntax::Parser& parser) -> Result<Members, syntax::Diagnostic> {
     Members members;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
@@ -158,44 +172,14 @@ template <typename MemberValidator>
 
         // Downcast the parsed member into the specific member variant and check
         const auto member = TRY(deconstruct_member(parser, parsed_member));
-        if (const auto msg = std::forward<MemberValidator>(validator)(member)) {
-            return make_syntax_err(
-                std::string{*msg}, syntax::Error::INVALID_MEMBER, parser.get_location_of(*member));
+        if (const auto err_msg = validate_member_decl(parser, member)) {
+            return make_syntax_err(std::string{*err_msg},
+                                   syntax::Error::INVALID_MEMBER,
+                                   parser.get_location_of(*member));
         }
         members.emplace_back(member);
     }
     return members;
-}
-
-// Returns an actual value only if a terminal condition was found
-[[nodiscard]] auto validate_common_member_decl(const DeclStatement& decl) noexcept
-    -> opt::Option<std::string_view> {
-    // Members that violate this wouldn't be usable with C
-    if (decl.has_modifier(DeclModifiers::EXTERN) || decl.has_modifier(DeclModifiers::EXPORT)) {
-        return "Members may neither be marked extern nor export";
-    }
-    return opt::none;
-}
-
-[[nodiscard]] auto validate_struct_member_decl(const DeclStatement& decl) noexcept
-    -> opt::Option<std::string_view> {
-    // A non-static member must always be a variable to simplify the mental model
-    if (const auto result = validate_common_member_decl(decl)) { return result; }
-    if (decl.value && decl.value->is<FunctionExpression>()) { return opt::none; }
-    if (!decl.has_modifier(DeclModifiers::STATIC) && !decl.has_modifier(DeclModifiers::VARIABLE)) {
-        return "Non-static non-mutable struct members are illegal";
-    }
-    return opt::none;
-}
-
-[[nodiscard]] auto validate_non_struct_member_decl(const DeclStatement& decl) noexcept
-    -> opt::Option<std::string_view> {
-    if (const auto result = validate_common_member_decl(decl)) { return result; }
-    if (decl.value && decl.value->is<FunctionExpression>()) { return opt::none; }
-    if (!decl.has_modifier(DeclModifiers::STATIC)) {
-        return "All non-function members must be static in unions and enums";
-    }
-    return opt::none;
 }
 
 } // namespace
@@ -210,10 +194,28 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
     }
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
+    bool                     non_exhaustive = false;
     std::vector<Enumeration> enumerations;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         if (parser.get_peek_token().is_member_token()) { break; }
+
+        if (parser.peek_token_is(syntax::TokenType::UNDERSCORE)) {
+            parser.advance();
+            if (parser.peek_token_is(syntax::TokenType::COMMA)) { parser.advance(); }
+
+            // The non exhaustive marker must be the final 'enumeration'
+            if (parser.get_peek_token().is_member_token() ||
+                parser.peek_token_is(syntax::TokenType::RBRACE)) {
+                non_exhaustive = true;
+                break;
+            }
+
+            return make_syntax_err(
+                "The underscore in non-exhaustive enums must be the last enumeration",
+                syntax::Error::ILLEGAL_NON_EXHAUSTIVE_ENUM,
+                parser.get_current_token());
+        }
 
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
         const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
@@ -230,23 +232,17 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
         parser.advance();
     }
 
-    auto members = TRY(parse_members(parser, [&parser](const MemberHandle& member) {
-        return std::visit(
-            Overloaded{
-                [](const DeclStatement& decl) { return validate_non_struct_member_decl(decl); },
-                [](const auto&) -> opt::Option<std::string_view> { return opt::none; }},
-            parser.get_ast()[*member]);
-    }));
+    auto members = TRY(parse_members(parser));
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
 
     // Validate here so that there aren't 3 errors spawning from an empty enum with decls
-    if (enumerations.empty()) {
+    if (!non_exhaustive && enumerations.empty()) {
         return make_syntax_err("Enums must be declared with at least one enumeration",
                                syntax::Error::EMPTY_ENUM,
                                start_token);
     }
     return parser.add_expr<EnumExpression>(
-        start_token, underlying, std::move(enumerations), std::move(members));
+        start_token, underlying, std::move(enumerations), non_exhaustive, std::move(members));
 }
 
 auto ForLoopExpression::parse(syntax::Parser& parser)
@@ -773,15 +769,52 @@ auto StructExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     const auto start_token = parser.get_current_token();
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
-    auto members = TRY(parse_members(parser, [&parser](const MemberHandle& member) {
-        return std::visit(
-            Overloaded{[](const DeclStatement& decl) { return validate_struct_member_decl(decl); },
-                       [](const auto&) -> opt::Option<std::string_view> { return opt::none; }},
-            parser.get_ast()[*member]);
-    }));
+    std::vector<Field> fields;
+    while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
+           !parser.peek_token_is(syntax::TokenType::END)) {
+        bool is_public = false;
 
+        if (parser.peek_token_is(syntax::TokenType::PUBLIC)) {
+            // Use a transaction to preserve the public modifier
+            syntax::Parser::Transaction transaction{parser};
+            parser.advance();
+            if (parser.get_peek_token().is_member_token()) {
+                // With two modifiers a decl is required
+                break;
+            } else {
+                // There must an ident here since pub is the only modifier
+                is_public = true;
+                transaction.commit();
+                TRY(parser.expect_peek(syntax::TokenType::IDENT));
+            }
+        } else if (parser.get_peek_token().is_member_token()) {
+            break;
+        } else {
+            TRY(parser.expect_peek(syntax::TokenType::IDENT));
+        }
+
+        IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+        TRY(parser.expect_peek(syntax::TokenType::COLON));
+        const auto type = TRY(ExplicitType::parse(parser));
+
+        opt::Option<ExpressionHandle> value;
+        if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
+            parser.advance(2);
+            value.emplace(TRY(parser.parse_expression()));
+        }
+
+        // The identifier holds public information to save space in the field
+        if (is_public) { ident->set_token_type(syntax::TokenType::PUBLIC); }
+        fields.emplace_back(ident, type, value);
+
+        // No comma means that its the end or that there is a decl list starting
+        if (!parser.peek_token_is(syntax::TokenType::COMMA)) { break; }
+        parser.advance();
+    }
+
+    auto members = TRY(parse_members(parser));
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
-    return parser.add_expr<StructExpression>(start_token, std::move(members));
+    return parser.add_expr<StructExpression>(start_token, std::move(fields), std::move(members));
 }
 
 auto UnionExpression::parse(syntax::Parser& parser)
@@ -807,13 +840,7 @@ auto UnionExpression::parse(syntax::Parser& parser)
         parser.advance();
     }
 
-    auto members = TRY(parse_members(parser, [&parser](const MemberHandle& member) {
-        return std::visit(
-            Overloaded{
-                [](const DeclStatement& decl) { return validate_non_struct_member_decl(decl); },
-                [](const auto&) -> opt::Option<std::string_view> { return opt::none; }},
-            parser.get_ast()[*member]);
-    }));
+    auto members = TRY(parse_members(parser));
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
 
     // Validate here so that there aren't 3 errors spawning from an empty union with decls

@@ -39,7 +39,11 @@ template <NodeKind... AllowedKinds> class Handle {
     }
 
     [[nodiscard]] constexpr auto operator*() const noexcept -> NodeID { return id_; }
-    [[nodiscard]] constexpr auto operator->() const noexcept -> const NodeID* { return &id_; }
+
+    template <typename Self>
+    [[nodiscard]] constexpr auto operator->(this Self&& self) noexcept -> auto* {
+        return &self.id_;
+    }
 
     [[nodiscard]] constexpr auto        is_valid() const noexcept -> bool { return id_.is_valid(); }
     [[nodiscard]] static constexpr auto make_invalid() noexcept -> Handle {

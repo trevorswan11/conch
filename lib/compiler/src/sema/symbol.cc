@@ -36,17 +36,20 @@ namespace {
                    [&module](const symbols::Label& label) {
                        return module.ast.location_of(label.get_definition());
                    },
+                   [&module](const symbols::StructField& inner) {
+                       return module.ast.location_of(inner.name);
+                   },
                    [&module](const symbols::UnionField& inner) {
-                       return module.ast.location_of(inner.ident);
+                       return module.ast.location_of(inner.name);
                    },
                    [&module](const symbols::Enumeration& inner) {
                        return module.ast.location_of(inner.name);
                    },
                    [&module](const symbols::SelfParameter& inner) {
-                       return module.ast.location_of(inner.ident);
+                       return module.ast.location_of(inner.name);
                    },
                    [&module](const symbols::Parameter& inner) {
-                       return module.ast.location_of(inner.ident);
+                       return module.ast.location_of(inner.name);
                    },
                    [&module](const symbols::ForLoopCapture& inner) {
                        return module.ast.location_of(inner.payload);

@@ -54,7 +54,6 @@ constexpr Keyword EXTERN{"extern", TokenType::EXTERN};
 constexpr Keyword EXPORT{"export", TokenType::EXPORT};
 constexpr Keyword VOLATILE{"volatile", TokenType::VOLATILE};
 constexpr Keyword MUT_VOLATILE{"mut_volatile", TokenType::MUT_VOLATILE};
-constexpr Keyword STATIC{"static", TokenType::STATIC};
 constexpr Keyword NORETURN{"noreturn", TokenType::NORETURN};
 constexpr Keyword NULLPTR{"nullptr", TokenType::NULLPTR};
 constexpr Keyword USING{"using", TokenType::USING};

@@ -99,7 +99,7 @@ TEST_CASE("Full sema pipeline") {
         {
             const auto [param_sym, param_sym_data, param_type] =
                 ctx->get_type_sym_info<syms::Parameter>(
-                    "args", fn_idx, root_module, &syms::Parameter::ident);
+                    "args", fn_idx, root_module, &syms::Parameter::name);
             CHECK(param_sym.get_kind_opt() == sema::SymbolKind::VALUE);
             CHECK(param_type == u8_slice_slice_type);
 
@@ -178,7 +178,7 @@ TEST_CASE("Full sema pipeline") {
         {
             const auto [param_sym, param_sym_data, param_type] =
                 ctx->get_type_sym_info<syms::Parameter>(
-                    "str", fn_idx, io_module, &syms::Parameter::ident);
+                    "str", fn_idx, io_module, &syms::Parameter::name);
             CHECK(param_sym.get_kind_opt() == sema::SymbolKind::VALUE);
             CHECK(param_type == u8_slice_type);
 

@@ -40,7 +40,11 @@ auto test_user_type(std::string_view input, sema::TypeKind kind, usize expected_
 } // namespace
 
 TEST_CASE("Struct hollow types") {
-    auto ctx = test_user_type("const a := struct { var foo := bar; };", sema::TypeKind::STRUCT, 2);
+    auto ctx =
+        test_user_type("const a := struct { b: i32, var foo := bar; };", sema::TypeKind::STRUCT, 2);
+    const auto& registry = ctx->analyzer.get_registry();
+    const auto& field    = helpers::unwrap(registry.get_from_opt(1, "b"));
+    REQUIRE(field.as_opt<sema::symbols::StructField>());
     ctx->test_common_decl_collection(1);
 }
 
@@ -54,8 +58,8 @@ TEST_CASE("Enum hollow types") {
 }
 
 TEST_CASE("Union hollow types") {
-    auto ctx = test_user_type(
-        "const a := union { b: i32, static const foo := bar; };", sema::TypeKind::UNION, 2);
+    auto ctx =
+        test_user_type("const a := union { b: i32, const foo := bar; };", sema::TypeKind::UNION, 2);
     const auto& registry = ctx->analyzer.get_registry();
     const auto& field    = helpers::unwrap(registry.get_from_opt(1, "b"));
     REQUIRE(field.as_opt<sema::symbols::UnionField>());
@@ -71,35 +75,18 @@ TEST_CASE("Public using query") {
 }
 
 TEST_CASE("Shadowing member/field declarations") {
-    helpers::test_collector_fail(
-        "const a := struct { var a := 2; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                         sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 20uz}});
+    const auto expected_diag = [](usize col) {
+        return sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
+                                sema::Error::SHADOWING_DECLARATION,
+                                std::pair{0uz, col}};
+    };
 
-    helpers::test_collector_fail(
-        "const a := enum {a};",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                         sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 17uz}});
-
-    helpers::test_collector_fail(
-        "const a := enum {b static const a := 2; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                         sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 19uz}});
-
-    helpers::test_collector_fail(
-        "const a := union { a: i32 };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                         sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 19uz}});
-
-    helpers::test_collector_fail(
-        "const a := union { b: i32 static const a := 2; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                         sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 26uz}});
+    helpers::test_collector_fail("const a := struct { var a := 2; };", expected_diag(20));
+    helpers::test_collector_fail("const a := struct { a: i32, var b := 2; };", expected_diag(20));
+    helpers::test_collector_fail("const a := enum {a};", expected_diag(17));
+    helpers::test_collector_fail("const a := enum {b const a := 2; };", expected_diag(19));
+    helpers::test_collector_fail("const a := union { a: i32 };", expected_diag(19));
+    helpers::test_collector_fail("const a := union { b: i32 const a := 2; };", expected_diag(26));
 }
 
 } // namespace porpoise::tests

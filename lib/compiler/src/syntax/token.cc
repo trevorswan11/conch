@@ -46,7 +46,6 @@ auto Token::is_decl_token() const noexcept -> bool {
     case TokenType::CONSTEXPR:
     case TokenType::PUBLIC:
     case TokenType::EXTERN:
-    case TokenType::STATIC:
     case TokenType::EXPORT:    return true;
     default:                   return false;
     }

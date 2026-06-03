@@ -113,7 +113,6 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
     inject_function(bis::MUL_ADD, BP{t_type, t_auto, t_auto, t_auto}, t_auto);
     inject_function(bis::CLZ, BP{t_auto}, t_usize);
     inject_function(bis::CTZ, BP{t_auto}, t_usize);
-    inject_function(bis::DIV_MOD, BP{t_type, t_auto, t_auto}, t_auto);
     inject_function(bis::POP_COUNT, BP{t_auto}, t_usize);
     inject_function(bis::SQRT, BP{t_auto}, t_auto);
     inject_function(bis::SIN, BP{t_auto}, t_auto);

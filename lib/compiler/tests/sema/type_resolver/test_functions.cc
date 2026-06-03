@@ -40,8 +40,8 @@ TEST_CASE("Function declaration and call type resolution") {
         CHECK(a_decl_sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
 
         const auto check_param_type = [&](std::string_view name, const sema::Type& expected_type) {
-            const auto [sym, sym_data, type] = ctx->get_type_sym_info<syms::Parameter>(
-                name, 1, opt::none, &syms::Parameter::ident);
+            const auto [sym, sym_data, type] =
+                ctx->get_type_sym_info<syms::Parameter>(name, 1, opt::none, &syms::Parameter::name);
             CHECK(sym.get_kind_opt() == sema::SymbolKind::VALUE);
             CHECK(type == expected_type);
         };

@@ -53,13 +53,12 @@ enum class DeclModifiers : u8 {
     PUBLIC    = 1 << 3,
     EXTERN    = 1 << 4,
     EXPORT    = 1 << 5,
-    STATIC    = 1 << 6,
 };
 
 MAKE_ENUM_OPERATORS(DeclModifiers)
 
 struct DeclStatement {
-    IdentifierHandle              ident;
+    IdentifierHandle              name;
     opt::Option<ExplicitTypeID>   explicit_type;
     opt::Option<ExpressionHandle> value;
     DeclModifiers                 modifiers;

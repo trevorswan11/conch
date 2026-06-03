@@ -5,11 +5,14 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
 
 #include "helpers/ast.hh"
 #include "helpers/common.hh"
 #include "syntax/error.hh"
 #include "syntax/keywords.hh"
+
+#include "types.hh"
 
 namespace porpoise::tests {
 
@@ -36,17 +39,18 @@ auto test_decl_fail(std::initializer_list<syntax::Keyword> modifiers,
 } // namespace
 
 TEST_CASE("Mutability restrictions") {
-    const auto expected_diag = [] {
-        return syntax::Diagnostic{"Exactly one mutability modifier may be used",
-                                  syntax::Error::ILLEGAL_DECL_MODIFIERS,
-                                  std::pair{0uz, 0uz}};
+    const auto expected_diag = [](usize mod_count = 2) {
+        return syntax::Diagnostic{
+            fmt::format("Exactly one mutability modifier may be used; found {}", mod_count),
+            syntax::Error::ILLEGAL_DECL_MODIFIERS,
+            std::pair{0uz, 0uz}};
     };
 
     constexpr std::array contending_mut{keywords::CONSTEXPR, keywords::VAR, keywords::CONSTANT};
     for (const auto& mut : helpers::combinations(contending_mut)) {
         test_decl_fail({mut.first, mut.second}, expected_diag());
     }
-    test_decl_fail({keywords::CONSTEXPR, keywords::VAR, keywords::CONSTANT}, expected_diag());
+    test_decl_fail({keywords::CONSTEXPR, keywords::VAR, keywords::CONSTANT}, expected_diag(3));
 }
 
 TEST_CASE("Constexpr restrictions") {
@@ -56,25 +60,19 @@ TEST_CASE("Constexpr restrictions") {
                                   std::pair{0uz, 0uz}};
     };
 
-    constexpr std::array contending_mut{keywords::EXTERN, keywords::CONSTEXPR};
-    for (const auto& mut : helpers::combinations(contending_mut)) {
-        test_decl_fail({mut.first, mut.second}, expected_diag());
-    }
+    test_decl_fail({keywords::CONSTEXPR, keywords::EXTERN}, expected_diag());
     test_decl_fail({keywords::EXTERN, keywords::CONSTEXPR}, expected_diag());
 }
 
 TEST_CASE("ABI/Linkage restrictions") {
     const auto expected_diag = [] {
-        return syntax::Diagnostic{"Exactly one mutability modifier may be used",
+        return syntax::Diagnostic{"At most one ABI-related modifier may be used; found 2",
                                   syntax::Error::ILLEGAL_DECL_MODIFIERS,
                                   std::pair{0uz, 0uz}};
     };
 
-    constexpr std::array contending_mut{keywords::EXTERN, keywords::EXPORT};
-    for (const auto& mut : helpers::combinations(contending_mut)) {
-        test_decl_fail({mut.first, mut.second}, expected_diag());
-    }
-    test_decl_fail({keywords::EXTERN, keywords::EXPORT}, expected_diag());
+    test_decl_fail({keywords::EXPORT, keywords::EXTERN, keywords::VAR}, expected_diag());
+    test_decl_fail({keywords::EXTERN, keywords::EXPORT, keywords::VAR}, expected_diag());
 }
 
 TEST_CASE("Extern requirements") {

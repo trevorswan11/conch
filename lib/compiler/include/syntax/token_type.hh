@@ -160,7 +160,6 @@ enum class TokenType : u8 {
     EXPORT,
     VOLATILE,
     MUT_VOLATILE,
-    STATIC,
     NORETURN,
     NULLPTR,
 
@@ -184,7 +183,6 @@ enum class TokenType : u8 {
     BUILTIN_MUL_ADD,
     BUILTIN_CLZ, // Count leading zeroes
     BUILTIN_CTZ, // Count trailing zeroes
-    BUILTIN_DIV_MOD,
     BUILTIN_POP_COUNT,
     BUILTIN_SQRT,
     BUILTIN_SIN,

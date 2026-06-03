@@ -160,10 +160,9 @@ class TypeResolver {
 
     template <traits::IndexableID ID>
     auto resolve_scope(ID, const ast::ScopeResolutionExpression&) -> void;
-
     auto visit(ast::NodeID, const ast::ScopeResolutionExpression&) -> void;
+
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
-    [[nodiscard]] auto resolve_union_field(const ast::UnionExpression::Field&) -> Type&;
     template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
     auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
 

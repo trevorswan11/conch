@@ -27,7 +27,7 @@ TEST_CASE("Array resolution with explicit type") {
     const auto& item_type  = ctx->get_type(sema::TypeKind::I32);
     const auto& array_type = ctx->get_type(sema::TypeKind::ARRAY, false, opt::Size{}, item_type);
     CHECK(type == array_type);
-    const auto& ident_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(node_data.ident));
+    const auto& ident_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(node_data.name));
     CHECK(ident_type == array_type);
     const auto& et_type =
         helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.explicit_type));
@@ -59,7 +59,7 @@ TEST_CASE("Array resolution with implicit type") {
     const auto& item_type          = ctx->get_type(sema::TypeKind::U64);
     const auto& array_literal_type = ctx->get_type(sema::TypeKind::ARRAY, false, 4, item_type);
     CHECK(type == array_literal_type);
-    const auto& ident_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(node_data.ident));
+    const auto& ident_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(node_data.name));
     CHECK(ident_type == array_literal_type);
     const auto& value_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
     CHECK(value_type == array_literal_type);

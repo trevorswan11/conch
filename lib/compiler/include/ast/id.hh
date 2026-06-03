@@ -36,6 +36,12 @@ class NodeID {
         return static_cast<NodeKind>((raw_ & KIND_MASK) >> KIND_OFFSET);
     }
 
+    // Useful when the token type holds information about a node that is not known at creation
+    constexpr auto set_token_type(syntax::TokenType type) noexcept -> void {
+        raw_ &= ~TOKEN_TYPE_MASK;
+        raw_ |= static_cast<u64>(type) << TOKEN_TYPE_OFFSET;
+    }
+
     [[nodiscard]] constexpr auto get_token_type() const noexcept -> syntax::TokenType {
         return static_cast<syntax::TokenType>((raw_ & TOKEN_TYPE_MASK) >> TOKEN_TYPE_OFFSET);
     }

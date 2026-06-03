@@ -18,7 +18,7 @@ constexpr std::string_view input{R"(
     return enum { RED };
     import std;
     pub import "ast/node.p" as node;
-    _ = enum { RED };
+    _ = enum { RED, _ };
     constexpr SIZE := 2uz;
     { a; b; 2; c; };
     while (true) : (i += 1) {a;} else return b;
@@ -50,7 +50,7 @@ constexpr std::string_view input{R"(
     .{.a = 3};
     TT{.adfasf = a};
     .{};
-    union { a: struct { var b: Foo = bar; }, const b := fn(&self, a: A): C { c; }; };
+    union { a: struct { b: Foo = bar, pub c: i32, var d: u32; }, const b := fn(&self, a: A): C { c; }; };
     enum : i64 { A = 2l, const b := fn(&self, a: A): C { c; }; };
     const a := {};
     test "dump" { import other; std::testing::expect(a == true); }

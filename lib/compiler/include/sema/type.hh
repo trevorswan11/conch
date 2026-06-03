@@ -86,6 +86,7 @@ struct Reference {
 
 struct Enum {
     usize                         enumeration_count;
+    bool                          non_exhaustive;
     Type&                         underlying;
     std::span<mem::NonNull<Type>> members;
 };
@@ -96,6 +97,7 @@ struct Union {
 };
 
 struct Struct {
+    std::span<mem::NonNull<Type>> fields;
     std::span<mem::NonNull<Type>> members;
 };
 

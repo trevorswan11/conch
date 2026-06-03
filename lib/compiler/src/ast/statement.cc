@@ -5,6 +5,8 @@
 #include <string_view>
 #include <utility>
 
+#include <fmt/format.h>
+
 #include "ast/ast.hh"
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -99,25 +101,28 @@ constexpr auto LEGAL_MODIFIERS = [] {
     modifiers[TokenType::PUBLIC]    = DeclModifiers::PUBLIC;
     modifiers[TokenType::EXTERN]    = DeclModifiers::EXTERN;
     modifiers[TokenType::EXPORT]    = DeclModifiers::EXPORT;
-    modifiers[TokenType::STATIC]    = DeclModifiers::STATIC;
     return modifiers;
 }();
 
 [[nodiscard]] constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept
-    -> opt::Option<std::string_view> {
-    const auto valid_mut = std::popcount(std::to_underlying(
-                               modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT |
-                                            DeclModifiers::CONSTEXPR))) == 1;
-    if (!valid_mut) { return "Exactly one mutability modifier may be used"; }
+    -> opt::Option<std::string> {
+    const auto mut_count = std::popcount(
+        std::to_underlying(modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT |
+                                        DeclModifiers::CONSTEXPR)));
+    if (mut_count != 1) {
+        return fmt::format("Exactly one mutability modifier may be used; found {}", mut_count);
+    }
 
     const auto valid_constexpr =
         std::popcount(std::to_underlying(modifiers &
                                          (DeclModifiers::EXTERN | DeclModifiers::CONSTEXPR))) <= 1;
     if (!valid_constexpr) { return "Extern values cannot be known at compile time"; }
 
-    const auto valid_abi = std::popcount(std::to_underlying(
-                               modifiers & (DeclModifiers::EXTERN | DeclModifiers::EXPORT))) <= 1;
-    if (!valid_abi) { return "At most one ABI-related modifier may be used"; }
+    const auto abi_count = std::popcount(
+        std::to_underlying(modifiers & (DeclModifiers::EXTERN | DeclModifiers::EXPORT)));
+    if (abi_count > 1) {
+        return fmt::format("At most one ABI-related modifier may be used; found {}", abi_count);
+    }
     return opt::none;
 }
 
@@ -138,9 +143,9 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
         modifiers |= *current_modifier;
     }
 
-    if (const auto msg = validate_modifiers(modifiers)) {
+    if (auto msg = validate_modifiers(modifiers)) {
         return make_syntax_err(
-            std::string{*msg}, syntax::Error::ILLEGAL_DECL_MODIFIERS, start_token);
+            std::move(msg).value(), syntax::Error::ILLEGAL_DECL_MODIFIERS, start_token);
     }
 
     TRY(parser.expect_peek(syntax::TokenType::IDENT));

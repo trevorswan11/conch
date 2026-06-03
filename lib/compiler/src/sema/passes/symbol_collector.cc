@@ -156,14 +156,14 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::FunctionExpression& fn) -
 
     // Parameters belong to the parent scope
     if (fn.self) {
-        const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(fn.self->ident);
+        const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(fn.self->name);
         try_declare<symbols::SelfParameter>(ident.name, fn.self.get());
     }
 
     // The parameter's type should be collected first to prevent self-referential types
     for (const auto& param : fn.parameters) {
         collect(param.explicit_type);
-        const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(param.ident);
+        const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(param.name);
         try_declare<symbols::Parameter>(ident.name, param);
     }
     collect(fn.explicit_return_type);
@@ -268,6 +268,16 @@ template <traits::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::StructExpression& struct_expr) -> void {
     const auto scope_idx =
         visit_scopes(TypeKind::STRUCT,
+                     IterPair{struct_expr.fields,
+                              [this](const ast::StructExpression::Field& field) {
+                                  if (field.default_value) { collect(*field.default_value); }
+                                  collect(field.explicit_type);
+
+                                  // Resolve the ident last to prevent self-referential values
+                                  const auto& ident =
+                                      collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
+                                  try_declare<symbols::StructField>(ident.name, field);
+                              }},
                      IterPair{struct_expr.members,
                               [this](const ast::MemberHandle& member) { collect(*member); }});
     last_type_->set_symbol_table_idx(scope_idx);
@@ -278,19 +288,19 @@ VISITOR_TEMPLATE_INIT(SymbolCollector, visit, StructExpression)
 
 template <traits::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> void {
-    const auto scope_idx = visit_scopes(
-        TypeKind::UNION,
-        IterPair{union_expr.fields,
-                 [this](const ast::UnionExpression::Field& field) {
-                     // Resolve the ident second to prevent self-referential values
-                     collect(field.explicit_type);
+    const auto scope_idx =
+        visit_scopes(TypeKind::UNION,
+                     IterPair{union_expr.fields,
+                              [this](const ast::UnionExpression::Field& field) {
+                                  // Resolve the ident second to prevent self-referential values
+                                  collect(field.explicit_type);
 
-                     const auto& ident =
-                         collecting_.ast.get_as<ast::IdentifierExpression>(field.ident);
-                     try_declare<symbols::UnionField>(ident.name, field);
-                 }},
-        IterPair{union_expr.members,
-                 [this](const ast::MemberHandle& member) { collect(*member); }});
+                                  const auto& ident =
+                                      collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
+                                  try_declare<symbols::UnionField>(ident.name, field);
+                              }},
+                     IterPair{union_expr.members,
+                              [this](const ast::MemberHandle& member) { collect(*member); }});
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
@@ -352,7 +362,7 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::ContinueStatement&) -> vo
 
 auto SymbolCollector::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void {
     // We can stop analyzing early if there's no value
-    const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(decl.ident);
+    const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(decl.name);
     const auto  name  = ident.name;
     if (!try_declare<symbols::Node>(name, id)) { return; };
     if (!decl.value) { return; }

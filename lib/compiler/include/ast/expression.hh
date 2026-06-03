@@ -7,6 +7,7 @@
 #include "ast/handle.hh"
 #include "ast/id.hh"
 #include "syntax/error.hh"
+#include "syntax/token_type.hh"
 
 #include "option.hh"
 #include "result.hh"
@@ -68,6 +69,7 @@ struct EnumExpression {
 
     opt::Option<IdentifierHandle> underlying;
     std::vector<Enumeration>      enumerations;
+    bool                          non_exhaustive;
     Members                       members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
@@ -91,7 +93,7 @@ struct ForLoopExpression {
 
 struct SelfParameter {
     TypeModifier     modifier;
-    IdentifierHandle ident;
+    IdentifierHandle name;
 };
 
 } // namespace ast
@@ -104,7 +106,7 @@ template <> struct Nullable<ast::SelfParameter> {
     }
 
     [[nodiscard]] static constexpr auto is_valid(const ast::SelfParameter& self) noexcept -> bool {
-        return self.ident.is_valid();
+        return self.name.is_valid();
     }
 };
 
@@ -117,7 +119,7 @@ namespace ast {
 
 struct FunctionExpression {
     struct Parameter {
-        IdentifierHandle ident;
+        IdentifierHandle name;
         ExplicitTypeID   explicit_type;
     };
 
@@ -273,7 +275,19 @@ struct ScopeResolutionExpression {
 };
 
 struct StructExpression {
-    Members members;
+    // Field publicity is baked into the identifier's token type
+    struct Field {
+        IdentifierHandle              name;
+        ExplicitTypeID                explicit_type;
+        opt::Option<ExpressionHandle> default_value;
+
+        [[nodiscard]] constexpr auto is_public() const noexcept -> bool {
+            return name->get_token_type() == syntax::TokenType::PUBLIC;
+        }
+    };
+
+    std::vector<Field> fields;
+    Members            members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
@@ -281,7 +295,7 @@ struct StructExpression {
 
 struct UnionExpression {
     struct Field {
-        IdentifierHandle ident;
+        IdentifierHandle name;
         ExplicitTypeID   explicit_type;
     };
 

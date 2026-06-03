@@ -95,15 +95,13 @@ auto ASTDumper::visit(NodeID, const EnumExpression& enum_expr) -> void {
         dump(*enum_expr.underlying);
     }
 
-    const auto has_members = !enum_expr.members.empty();
-    {
-        const Indent::Guard g{indent_, !has_members};
+    if (!enum_expr.enumerations.empty()) {
+        const Indent::Guard g{indent_, false};
         fmt::println(out_, "{}Enumerations:", indent_.current_branch());
         dump_container(enum_expr.enumerations,
                        [this](const EnumExpression::Enumeration& enumeration) {
-                           fmt::print(out_, "{}", indent_.current_branch());
                            {
-                               fmt::print(out_, "Name: ");
+                               fmt::print(out_, "{}Name: ", indent_.current_branch());
                                const Indent::Guard g_name{indent_, !enumeration.value};
                                dump(enumeration.name);
                            }
@@ -114,6 +112,13 @@ auto ASTDumper::visit(NodeID, const EnumExpression& enum_expr) -> void {
                                dump(*enumeration.value);
                            }
                        });
+    }
+
+    const auto has_members = !enum_expr.members.empty();
+    {
+        const Indent::Guard g{indent_, !has_members};
+        fmt::println(
+            out_, "{}Non-Exhaustive: {}", indent_.current_branch(), enum_expr.non_exhaustive);
     }
 
     if (has_members) {
@@ -165,7 +170,7 @@ auto ASTDumper::visit(NodeID, const FunctionExpression& function) -> void {
     if (function.self) {
         const Indent::Guard g{indent_, false};
         fmt::print(out_, "{}", indent_.current_branch());
-        const auto& ident = ast_.get_as<IdentifierExpression>(*function.self->ident);
+        const auto& ident = ast_.get_as<IdentifierExpression>(*function.self->name);
         fmt::println(out_, "Self: {} (modifier: {})", ident, function.self->modifier);
     }
 
@@ -177,7 +182,7 @@ auto ASTDumper::visit(NodeID, const FunctionExpression& function) -> void {
             {
                 const Indent::Guard g_name{indent_, false};
                 fmt::print(out_, "{}Name: ", indent_.current_branch());
-                dump(*parameter.ident);
+                dump(*parameter.name);
             }
 
             {
@@ -455,7 +460,43 @@ auto ASTDumper::visit(NodeID, const ScopeResolutionExpression& scope_resolve) ->
 // Safe to call with invalid ID in type dispatch
 auto ASTDumper::visit(NodeID, const StructExpression& struct_expr) -> void {
     fmt::println(out_, "StructExpression");
-    dump_node_list(struct_expr.members);
+    if (struct_expr.fields.empty() && struct_expr.members.empty()) { return; }
+
+    const auto has_members = !struct_expr.members.empty();
+    if (!struct_expr.fields.empty()) {
+        const Indent::Guard g{indent_, !has_members};
+        fmt::println(out_, "{}Fields:", indent_.current_branch());
+        dump_container(struct_expr.fields, [this](const StructExpression::Field& field) {
+            {
+                fmt::print(out_, "{}Name: ", indent_.current_branch());
+                dump(field.name);
+            }
+
+            {
+                const Indent::Guard g_ident{indent_, false};
+                fmt::println(out_, "{}Public: {}", indent_.current_branch(), field.is_public());
+            }
+
+            const auto has_default = field.default_value.has_value();
+            {
+                const Indent::Guard g_type{indent_, !has_default};
+                fmt::print(out_, "{}Type: ", indent_.current_branch());
+                dump(field.explicit_type);
+            }
+
+            if (has_default) {
+                const Indent::Guard g_val{indent_, true};
+                fmt::print(out_, "{}Default: ", indent_.current_branch());
+                dump(*field.default_value);
+            }
+        });
+    }
+
+    if (has_members) {
+        const Indent::Guard g{indent_, true};
+        fmt::println(out_, "{}Members:", indent_.current_branch());
+        dump_node_list(struct_expr.members);
+    }
 }
 
 // Safe to call with invalid ID in type dispatch
@@ -471,7 +512,7 @@ auto ASTDumper::visit(NodeID, const UnionExpression& union_expr) -> void {
             {
                 const Indent::Guard g_pattern{indent_, false};
                 fmt::print(out_, "{}Tag: ", indent_.current_branch());
-                dump(field.ident);
+                dump(field.name);
             }
 
             {
@@ -560,7 +601,7 @@ auto ASTDumper::visit(NodeID, const DeclStatement& decl) -> void {
     {
         const Indent::Guard g{indent_, false};
         fmt::print(out_, "{}Name: ", indent_.current_branch());
-        dump(decl.ident);
+        dump(decl.name);
     }
 
     {

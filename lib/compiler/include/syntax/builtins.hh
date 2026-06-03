@@ -37,7 +37,6 @@ constexpr Builtin MEMMOVE{"@memmove", TokenType::BUILTIN_MEMMOVE};
 constexpr Builtin MUL_ADD{"@mulAdd", TokenType::BUILTIN_MUL_ADD};
 constexpr Builtin CLZ{"@clz", TokenType::BUILTIN_CLZ};
 constexpr Builtin CTZ{"@ctz", TokenType::BUILTIN_CTZ};
-constexpr Builtin DIV_MOD{"@divMod", TokenType::BUILTIN_DIV_MOD};
 constexpr Builtin POP_COUNT{"@popCount", TokenType::BUILTIN_POP_COUNT};
 constexpr Builtin SQRT{"@sqrt", TokenType::BUILTIN_SQRT};
 constexpr Builtin SIN{"@sin", TokenType::BUILTIN_SIN};

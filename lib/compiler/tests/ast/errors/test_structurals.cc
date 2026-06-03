@@ -40,34 +40,20 @@ TEST_CASE("Out of order enum") {
                                                  std::pair{0uz, 65uz}});
 }
 
-TEST_CASE("Non-static non-function enum decl") {
-    helpers::test_parser_fail(
-        "enum { A = i32{} const b := 2; };",
-        syntax::Diagnostic{"All non-function members must be static in unions and enums",
-                           syntax::Error::INVALID_MEMBER,
-                           std::pair{0uz, 17uz}});
-}
-
 TEST_CASE("Illegal struct members") {
     helpers::test_parser_fail(
-        "struct { const foo := bar; };",
-        syntax::Diagnostic{"Non-static non-mutable struct members are illegal",
+        "struct { extern var foo: bar; };",
+        syntax::Diagnostic{"Member declarations may neither be marked extern nor export",
                            syntax::Error::INVALID_MEMBER,
                            std::pair{0uz, 9uz}});
 
-    helpers::test_parser_fail("struct { extern var foo: bar; };",
-                              syntax::Diagnostic{"Members may neither be marked extern nor export",
-                                                 syntax::Error::INVALID_MEMBER,
-                                                 std::pair{0uz, 9uz}});
-
-    helpers::test_parser_fail(
-        "struct { defer {}; };",
-        syntax::Diagnostic{"Members must be declarations, `using` aliases, or imports",
-                           syntax::Error::INVALID_MEMBER,
-                           std::pair{0uz, 9uz}},
-        syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
-                           syntax::Error::MISSING_PREFIX_PARSER,
-                           std::pair{0uz, 19uz}});
+    helpers::test_parser_fail("struct { defer {}; };",
+                              syntax::Diagnostic{"Expected token IDENT, found DEFER",
+                                                 syntax::Error::UNEXPECTED_TOKEN,
+                                                 std::pair{0uz, 9uz}},
+                              syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
+                                                 syntax::Error::MISSING_PREFIX_PARSER,
+                                                 std::pair{0uz, 19uz}});
 }
 
 TEST_CASE("Illegal union field name") {
@@ -101,14 +87,6 @@ TEST_CASE("Out of order union") {
                               syntax::Diagnostic{"Expected token SEMICOLON, found COMMA",
                                                  syntax::Error::UNEXPECTED_TOKEN,
                                                  std::pair{0uz, 60uz}});
-}
-
-TEST_CASE("Non-static non-function union decl") {
-    helpers::test_parser_fail(
-        "union { a: i32, const b := 2; };",
-        syntax::Diagnostic{"All non-function members must be static in unions and enums",
-                           syntax::Error::INVALID_MEMBER,
-                           std::pair{0uz, 16uz}});
 }
 
 TEST_CASE("Illegal type aliasing/definition") {

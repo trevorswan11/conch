@@ -92,6 +92,7 @@ class Label {
 };
 
 using MatchCapture   = ast::IdentifierHandle;
+using StructField    = ast::StructExpression::Field;
 using UnionField     = ast::UnionExpression::Field;
 using Enumeration    = ast::EnumExpression::Enumeration;
 using SelfParameter  = ast::SelfParameter;
@@ -106,6 +107,7 @@ class Symbol {
                               symbols::Node,
                               symbols::Label,
                               symbols::MatchCapture,
+                              symbols::StructField,
                               symbols::UnionField,
                               symbols::Enumeration,
                               symbols::SelfParameter,

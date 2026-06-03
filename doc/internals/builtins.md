@@ -151,13 +151,6 @@ Count the number of leading zeros in the expression's bit representation.
 
 Count the number of trailing zeros in the expression's bit representation.
 
-### @divMod
-```porpoise
-@divMod(T: type, lhs: T, rhs: T): struct { var quotient: T; var modulo: T; }
-```
-
-Computes the truncated quotient and modulo of the operations `lhs / rhs` and `lhs % rhs`.
-
 ### @popCount
 ```porpoise
 @popCount(expression: auto): usize

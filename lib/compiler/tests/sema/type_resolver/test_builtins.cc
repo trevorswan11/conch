@@ -164,11 +164,6 @@ TEST_CASE("Builtin arithmetic") {
         bis::MUL_ADD, "f64, 1.0, 2.0, 3.0", [](helpers::SemaTestContext& ctx) -> sema::Type& {
             return ctx.get_type(sema::TypeKind::F64);
         });
-
-    test_builtin_resolve(
-        bis::DIV_MOD, "f32, 2.0f, 6.0f", [](helpers::SemaTestContext& ctx) -> sema::Type& {
-            return ctx.get_type(sema::TypeKind::STRUCT, ctx.get_type(sema::TypeKind::F32));
-        });
 }
 
 TEST_CASE("Builtin control flow") {

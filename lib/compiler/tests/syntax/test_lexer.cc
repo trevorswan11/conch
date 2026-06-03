@@ -227,7 +227,7 @@ TEST_CASE("Lexing illegal underscored numbers") {
 }
 
 TEST_CASE("Lexing keywords") {
-    test_lexer("and or pub extern export volatile mut_volatile static "
+    test_lexer("and or pub extern export volatile mut_volatile "
                "i32 i64 isize u32 u64 usize f32 f64 u8 bool void type test",
                {
                    {TokenType::BOOLEAN_AND, "and"},
@@ -237,7 +237,6 @@ TEST_CASE("Lexing keywords") {
                    {TokenType::EXPORT, "export"},
                    {TokenType::VOLATILE, "volatile"},
                    {TokenType::MUT_VOLATILE, "mut_volatile"},
-                   {TokenType::STATIC, "static"},
                    {TokenType::I32_TYPE, "i32"},
                    {TokenType::I64_TYPE, "i64"},
                    {TokenType::ISIZE_TYPE, "isize"},
