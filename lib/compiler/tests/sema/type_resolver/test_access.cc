@@ -262,7 +262,6 @@ TEST_CASE("Illegal circular module-based access resolution") {
         auto [ctx, idx] = helpers::resolve(
             R"(import "a.gh" as a; using A = a::A;)",
             helpers::make_vector<MockFile>(MockFile{"a.gh", a_gh}, MockFile{"b.gh", b_gh}));
-        // auto& test_module = *helpers::unwrap(ctx->manager.try_get_file_module("test.gh"));
         auto& a_module = *helpers::unwrap(ctx->manager.try_get_file_module("a.gh"));
         auto& b_module = *helpers::unwrap(ctx->manager.try_get_file_module("b.gh"));
 
@@ -274,8 +273,6 @@ TEST_CASE("Illegal circular module-based access resolution") {
                              sema::Error::CYCLIC_DEPENDENCY,
                              std::pair{0uz, 54uz}});
 
-        // TODO(test_module, "Fix issue with resolution status assignment");
-        // ctx->check_poisoned<syms::Node>("A", idx, test_module);
         ctx->check_poisoned<syms::Node>("A", 1, a_module);
         ctx->check_poisoned<syms::Node>("B", 2, b_module);
     }
