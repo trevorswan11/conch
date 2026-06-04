@@ -1577,19 +1577,25 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ExpressionStatement& expr) -
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ImportStatement& import_stmt) -> void {
-    const auto name   = import_stmt.get_name(resolving_.ast);
-    auto&      symbol = ctx_.registry.get_from(table_idx_, name);
+    const auto [ident_id, name] = import_stmt.get_name(resolving_.ast);
+    auto& symbol                = ctx_.registry.get_from(table_idx_, name);
+
+    const auto poison_out = [&] {
+        last_type_.emplace(ctx_.get_poison());
+        resolving_.set_sema_type(ident_id, *last_type_);
+        ctx_.poison_symbol(symbol);
+    };
 
     // Updating this type reflects on the symbol in the actual table as well
     auto& import_type = resolving_.get_sema_type(id);
-    if (import_type.is_poison()) { return symbol.set_kind(SymbolKind::POISONED); }
+    if (import_type.is_poison()) { return poison_out(); }
     ASSERT(import_type.has_resolved(), "Import types should be resolved on pass 1");
     auto& module = import_type.as<types::Module>();
 
     // There's no need to poison the import type since it would lose all of the module information
     Context new_ctx = ctx_;
     resolve_types(module.imported, new_ctx);
-    if (module.imported.is_poisoned()) { return symbol.set_kind(SymbolKind::POISONED); }
+    if (module.imported.is_poisoned()) { return poison_out(); }
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
@@ -1634,17 +1640,21 @@ auto TypeResolver::visit(ast::NodeID id, const ast::UsingStatement& using_stmt) 
         return last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
     }
 
+    const auto poison_out = [&] {
+        resolving_.set_sema_type(using_stmt.alias, *last_type_);
+        resolving_.set_sema_type(id, *last_type_);
+        ctx_.poison_symbol(*symbol);
+    };
+
     // Bind the resolved type to the symbol now that its been collected
     symbol->set_status(SymbolStatus::RESOLVING);
     resolve(using_stmt.explicit_type);
-    if (last_type_->is_poison()) {
-        symbol->set_kind(SymbolKind::POISONED);
-        return resolving_.set_sema_type(id, *last_type_);
-    }
+    if (last_type_->is_poison()) { return poison_out(); }
     resolving_.set_sema_type(id, *last_type_.take());
 
     symbol->set_status(SymbolStatus::RESOLVED);
-    TRY_RESOLVE(using_stmt.alias);
+    resolve(using_stmt.alias);
+    if (last_type_->is_poison()) { return poison_out(); }
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
@@ -1684,14 +1694,6 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
     UNREACHABLE("A new type modifier was likely added yet unaccounted for");
 }
 
-#define MAKE_MODIFIED_RESOLVER(NodeType, resolver)                                        \
-    auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::NodeType& node) -> void { \
-        resolver(id, node);                                                               \
-        auto& resolved = apply_explicit_modifiers(id, *last_type_.take());                \
-        resolving_.set_sema_type(id, resolved);                                           \
-        last_type_.emplace(resolved);                                                     \
-    }
-
 auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::IdentifierExpression& ident) -> void {
     auto symbol_opt = ctx_.registry.lookup(table_stack_, ident.name);
     if (!symbol_opt) {
@@ -1711,6 +1713,14 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::IdentifierExpression
     resolving_.set_sema_type(id, resolved);
     last_type_.emplace(resolved);
 }
+
+#define MAKE_MODIFIED_RESOLVER(NodeType, resolver)                                        \
+    auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::NodeType& node) -> void { \
+        resolver(id, node);                                                               \
+        auto& resolved = apply_explicit_modifiers(id, *last_type_.take());                \
+        resolving_.set_sema_type(id, resolved);                                           \
+        last_type_.emplace(resolved);                                                     \
+    }
 
 MAKE_MODIFIED_RESOLVER(ModuleAccessExpression, resolve_module_access)
 MAKE_MODIFIED_RESOLVER(DotExpression, resolve_dot)

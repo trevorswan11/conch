@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <magic_enum/magic_enum.hpp>
@@ -110,7 +111,8 @@ struct ImportStatement {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<StatementHandle, syntax::Diagnostic>;
 
-    [[nodiscard]] auto get_name(const AST& tree) const noexcept -> std::string_view;
+    [[nodiscard]] auto get_name(const AST& tree) const noexcept
+        -> std::pair<ast::IdentifierHandle, std::string_view>;
 };
 
 struct ReturnStatement {
