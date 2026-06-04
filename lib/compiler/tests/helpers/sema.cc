@@ -56,7 +56,7 @@ auto SemaTestContext::verify_registry_resolved() -> void {
             const auto& symbol = proxy.symbol;
             CHECK(symbol.get_status() == sema::SymbolStatus::RESOLVED);
             if (symbol.get_status() != sema::SymbolStatus::RESOLVED) {
-                FAIL(name << " was not resolved in table " << i);
+                FAIL(name << " was not resolved in table idx " << i);
             }
         }
         i++;

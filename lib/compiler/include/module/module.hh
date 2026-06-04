@@ -19,6 +19,7 @@
 #include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
+#include "assert.hh"
 #include "hash.hh"
 #include "memory.hh"
 #include "option.hh"
@@ -33,10 +34,12 @@ namespace ghoti::mod {
 enum class ModuleState : u8 {
     PARSED,
     SYMBOLS_COLLECTED,
+    TYPE_RESOLVING,
     TYPE_RESOLVED,
     TYPE_CHECKED,
 
     POISONED_SYMBOL_COLLECTION,
+    POISONED_TYPE_RESOLVING,
     POISONED_TYPE_RESOLVED,
     POISONED_TYPE_CHECKED,
     ERRORED,
@@ -50,7 +53,7 @@ using DiagnosticListVariant = std::variant<Unit, syntax::Diagnostics, sema::Diag
     [[nodiscard]] auto CONCAT(get_, name)() const noexcept -> const DiagType& { \
         try {                                                                   \
             return std::get<DiagType>(diagnostics);                             \
-        } catch (...) { std::unreachable(); }                                   \
+        } catch (...) { UNREACHABLE("Unchecked variant access"); }              \
     }                                                                           \
                                                                                 \
     [[nodiscard]] auto CONCAT(has_, name)() const noexcept -> bool {            \

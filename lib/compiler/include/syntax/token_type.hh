@@ -7,6 +7,7 @@
 
 #include <ankerl/unordered_dense.h>
 
+#include "assert.hh"
 #include "hash.hh"
 #include "option.hh"
 #include "types.hh"
@@ -249,7 +250,7 @@ enum class IntegerCategory : u8 {
     case TokenType::UZINT_8:
     case TokenType::UZINT_10:
     case TokenType::UZINT_16: return IntegerCategory::UNSIGNED_SIZE;
-    default:                  std::unreachable();
+    default:                  UNREACHABLE("Int-ness is assumed in this function");
     }
 }
 

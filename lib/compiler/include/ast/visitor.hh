@@ -49,10 +49,10 @@ using TypeData = std::variant<IdentifierExpression,
     AST_TYPE_VISITOR_DEF_GEN()
 
 // Creates the template instantiation for a ID-templated, Node/ExplicitType ID visitor
-#define VISITOR_TEMPLATE_INIT(ClassName, fn_name, NodeType)                                    \
-    template auto ClassName::fn_name<ghoti::ast::NodeID>(ghoti::ast::NodeID,                   \
-                                                         const ghoti::ast::NodeType&) -> void; \
-    template auto ClassName::fn_name<ghoti::ast::ExplicitTypeID>(                              \
-        ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void;
+#define VISITOR_TEMPLATE_INIT(ClassName, fn_name, NodeType)                                   \
+    template auto ClassName::fn_name<ghoti::ast::NodeID>(ghoti::ast::NodeID, NodeType)->void; \
+    template auto ClassName::fn_name<ghoti::ast::ExplicitTypeID>(ghoti::ast::ExplicitTypeID,  \
+                                                                 NodeType)                    \
+        ->void;
 
 } // namespace ghoti::ast

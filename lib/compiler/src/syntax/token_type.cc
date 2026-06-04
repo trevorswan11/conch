@@ -8,6 +8,7 @@
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
 
+#include "assert.hh"
 #include "option.hh"
 #include "types.hh"
 
@@ -28,7 +29,7 @@ auto digit_in_base(byte c, Base base) noexcept -> bool {
     case Base::OCTAL:       return c >= '0' && c <= '7';
     case Base::DECIMAL:     return std::isdigit(c);
     case Base::HEXADECIMAL: return std::isxdigit(c);
-    default:                std::unreachable();
+    default:                UNREACHABLE("Unknown base");
     }
 }
 

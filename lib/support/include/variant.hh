@@ -3,6 +3,8 @@
 #include <utility> // IWYU pragma: export
 #include <variant> // IWYU pragma: export
 
+#include "assert.hh"
+
 namespace ghoti {
 
 using Unit = std::monostate;
@@ -15,7 +17,7 @@ template <class... Ts> struct Overloaded : Ts... {
     [[nodiscard]] auto get_##name() const noexcept -> const ReturnType& {  \
         try {                                                              \
             return getter<InnerType>(member);                              \
-        } catch (...) { std::unreachable(); }                              \
+        } catch (...) { UNREACHABLE("Unchecked variant access"); }         \
     }                                                                      \
                                                                            \
     [[nodiscard]] auto is_##name() const noexcept -> bool {                \

@@ -2,6 +2,7 @@
 
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
@@ -85,6 +86,26 @@ class TypeResolver {
         std::vector<mem::NonNull<Type>> stack_;
     };
 
+    // Resolves the provided type and unresolves upon desctruction if not committed
+    template <typename Resolvee> class CommittableResolution {
+      public:
+        template <typename... Args>
+        CommittableResolution(Type& type, Args&&... resolvee) : type_{type} {
+            type_.resolve<Resolvee>(std::forward<Args>(resolvee)...);
+        }
+
+        ~CommittableResolution() {
+            if (!committed_) { type_.unresolve(); }
+        }
+
+        // This action cannot be undone, defer until the very end!
+        auto commit() noexcept -> void { committed_ = true; }
+
+      private:
+        Type& type_;
+        bool  committed_{false};
+    };
+
   private:
     auto visit(ast::NodeID, const ast::ArrayExpression&) -> void;
 
@@ -105,13 +126,15 @@ class TypeResolver {
     auto                                   visit(ast::NodeID, const ast::CallExpression&) -> void;
     auto visit(ast::NodeID, const ast::DoWhileLoopExpression&) -> void;
 
-    [[nodiscard]] auto resolve_members(std::span<const ast::MemberHandle> members)
+    [[nodiscard]] auto resolve_members(std::span<mem::NonNull<Type>>      buf,
+                                       std::span<const ast::MemberHandle> members)
         -> opt::Option<std::span<mem::NonNull<Type>>>;
     template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
     auto visit(ast::NodeID, const ast::FunctionExpression&) -> void;
 
+    template <traits::IndexableID ID> auto resolve_symbol(ID, Symbol&) -> void;
     template <traits::IndexableID ID>
     auto resolve_ident(ID, const ast::IdentifierExpression&) -> void;
 
@@ -131,7 +154,7 @@ class TypeResolver {
         -> Result<mem::NonNull<Type>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
-    auto get_outer_access_inner_name(ast::OuterAccessHandle handle) noexcept -> std::string_view;
+    auto get_rightmost_name(ast::OuterAccessHandle handle) noexcept -> std::string_view;
     template <traits::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::DotExpression&) -> void;
@@ -159,7 +182,7 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::UndefinedExpression&) -> void;
 
     template <traits::IndexableID ID>
-    auto resolve_scope(ID, const ast::ModuleAccessExpression&) -> void;
+    auto resolve_module_access(ID, const ast::ModuleAccessExpression&) -> void;
     auto visit(ast::NodeID, const ast::ModuleAccessExpression&) -> void;
 
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;

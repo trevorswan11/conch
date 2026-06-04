@@ -48,14 +48,15 @@ auto format_module_diagnostic(std::ostream&                   os,
 
 auto Module::print_diagnostics(std::ostream& os) const -> void {
     if (is_ok()) { return; }
-    match(Overloaded{[this, &os](const auto& list) {
-                         for (const auto& diag : list) {
-                             format_module_diagnostic(
-                                 os, diag.to_formattable(), *this, list.get_terminal_status())
-                                 << "\n";
-                         }
-                     },
-                     [](const Unit&) { std::unreachable(); }});
+    match(Overloaded{
+        [this, &os](const auto& list) {
+            for (const auto& diag : list) {
+                format_module_diagnostic(
+                    os, diag.to_formattable(), *this, list.get_terminal_status())
+                    << "\n";
+            }
+        },
+        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); }});
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,

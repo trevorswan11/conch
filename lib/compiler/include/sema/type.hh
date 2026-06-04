@@ -10,6 +10,7 @@
 #include "module/module.hh"
 
 #include "arena.hh"
+#include "assert.hh"
 #include "enum.hh"
 #include "fixed/vector.hh"
 #include "hash.hh"
@@ -89,16 +90,37 @@ struct Enum {
     bool                          non_exhaustive;
     Type&                         underlying;
     std::span<mem::NonNull<Type>> members;
+
+    [[nodiscard]] auto type_at(usize idx, Type& object_type) const noexcept -> Type& {
+        // The index location entirely depends on the number of variants which always come first
+        ASSERT(idx < enumeration_count + members.size(), "Index exceeds enum's types");
+        if (idx < enumeration_count) { return object_type; }
+        return *members[idx - enumeration_count];
+    }
 };
 
 struct Union {
     std::span<mem::NonNull<Type>> fields;
     std::span<mem::NonNull<Type>> members;
+
+    // The index location entirely depends on the number of fields which always come first
+    [[nodiscard]] auto type_at(usize idx) const noexcept -> Type& {
+        ASSERT(idx < fields.size() + members.size(), "Index exceeds union's types");
+        if (idx < fields.size()) { return *fields[idx]; }
+        return *members[idx - fields.size()];
+    }
 };
 
 struct Struct {
     std::span<mem::NonNull<Type>> fields;
     std::span<mem::NonNull<Type>> members;
+
+    // The index location entirely depends on the number of fields which always come first
+    [[nodiscard]] auto type_at(usize idx) const noexcept -> Type& {
+        ASSERT(idx < fields.size() + members.size(), "Index exceeds struct's types");
+        if (idx < fields.size()) { return *fields[idx]; }
+        return *members[idx - fields.size()];
+    }
 };
 
 struct Function {
@@ -259,6 +281,7 @@ class Type {
     template <typename Resolvee, typename... Args> auto resolve(Args&&... args) noexcept -> void {
         resolved_.emplace(Resolvee{std::forward<Args>(args)...});
     }
+    auto unresolve() noexcept -> void { resolved_.reset(); }
 
     // Resolves only if not already resolved, returning true if modified
     template <typename Resolvee, typename... Args>

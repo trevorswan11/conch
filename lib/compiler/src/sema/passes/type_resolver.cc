@@ -36,20 +36,14 @@
 
 namespace ghoti::sema {
 
-// Performs the resolution and poison check & bubble & return operation
-#define TRY_RESOLVE(resolvable_expr)                                                       \
-    do {                                                                                   \
-        resolve(resolvable_expr);                                                          \
-        if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); } \
-    } while (0)
-
 auto TypeResolver::resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState {
     // Poisoned collection should flush the diagnostics
-    if (module.state == mod::ModuleState::POISONED_SYMBOL_COLLECTION) {
-        module.print_diagnostics(ctx.error_stream);
-    }
+    const auto poisoned_collection = module.state == mod::ModuleState::POISONED_SYMBOL_COLLECTION;
+    if (poisoned_collection) { module.print_diagnostics(ctx.error_stream); }
 
     if (module.is_resolvable()) {
+        module.state = poisoned_collection ? mod::ModuleState::POISONED_TYPE_RESOLVING
+                                           : mod::ModuleState::TYPE_RESOLVING;
         ctx.inject_prelude();
 
         TypeResolver resolver{module, ctx};
@@ -71,10 +65,26 @@ auto TypeResolver::resolve_types(mod::Module& module, Context& ctx) -> mod::Modu
         if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); } \
     } while (0)
 
+namespace {
+
+[[nodiscard]] auto incomplete_array_item(const SourceLocation& location) -> Diagnostic {
+    return Diagnostic{
+        "Array elements cannot have an incomplete type", Error::CYCLIC_DEPENDENCY, location};
+}
+
+} // namespace
+
 auto TypeResolver::visit(ast::NodeID id, const ast::ArrayExpression& array) -> void {
     for (const auto& item : array.items) { resolve(item); }
     resolve(array.item_explicit_type);
     auto& item_type = *last_type_.take();
+
+    if (!item_type.has_resolved()) {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            incomplete_array_item(resolving_.ast.location_of(array.item_explicit_type))));
+    }
 
     const auto items_size      = array.items.size();
     const auto null_terminated = array.null_terminated;
@@ -267,28 +277,25 @@ auto TypeResolver::resolve_call_args(std::span<const ast::CallExpression::Argume
 
 auto TypeResolver::get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
     -> mem::NonNull<Type> {
-    return std::visit(
-        Overloaded{[this](ast::ExpressionHandle id) -> auto& {
-                       // Labels store their actual type in nested node data
-                       if (const auto label = resolving_.ast.get_as_opt<ast::LabelExpression>(id)) {
-                           ASSERT(resolving_.has_sema_type(label->name),
-                                  "Labels should be typed when resolved");
-                           auto& type = resolving_.get_sema_type(label->name);
-                           ASSERT(type.has_resolved(),
-                                  "Label-derived argument was not already resolved");
-                           return type;
-                       }
+    return std::visit(Overloaded{[this](ast::ExpressionHandle id) -> auto& {
+                                     // Labels store their actual type in nested node data
+                                     if (const auto label =
+                                             resolving_.ast.get_as_opt<ast::LabelExpression>(id)) {
+                                         auto type = resolving_.get_sema_type_opt(label->name);
+                                         ASSERT(type, "Labeled call arg was not typed");
+                                         return *type;
+                                     }
 
-                       auto& type = resolving_.get_sema_type(id);
-                       ASSERT(type.has_resolved(), "Call argument was not already resolved");
-                       return type;
-                   },
-                   [this](ast::ExplicitTypeID id) -> auto& {
-                       auto& type = resolving_.get_sema_type(id);
-                       ASSERT(type.has_resolved(), "Call argument was not already resolved");
-                       return type;
-                   }},
-        arg.id);
+                                     auto type = resolving_.get_sema_type_opt(id);
+                                     ASSERT(type, "Call argument was not typed");
+                                     return *type;
+                                 },
+                                 [this](ast::ExplicitTypeID id) -> auto& {
+                                     auto type = resolving_.get_sema_type_opt(id);
+                                     ASSERT(type, "Call argument was not typed");
+                                     return *type;
+                                 }},
+                      arg.id);
 }
 
 auto TypeResolver::get_call_arg_location(const ast::CallExpression::Argument& arg)
@@ -371,7 +378,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
     }
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, resolve_call, CallExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_call, const ast::CallExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::CallExpression& call) -> void {
     resolve_call(id, call);
@@ -390,20 +397,18 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do_wh
     last_type_.emplace(loop_type);
 }
 
-auto TypeResolver::resolve_members(std::span<const ast::MemberHandle> members)
+auto TypeResolver::resolve_members(std::span<mem::NonNull<Type>>      buf,
+                                   std::span<const ast::MemberHandle> members)
     -> opt::Option<std::span<mem::NonNull<Type>>> {
-    // The member types need to be preallocated and can be left freely on error
-    auto member_types = ctx_.pool.get_many_unsafe(members.size());
-
     // Only poison the enum once all members are collected
     for (usize i = 0; const auto& member : members) {
         // The resolved statement type is in last_type_ unlike in the symbol collector
         resolve(*member);
         auto& member_type = resolving_.get_sema_type(member);
         if (member_type.is_poison()) { return opt::none; }
-        member_types[i++] = member_type;
+        buf[i++] = member_type;
     }
-    return member_types;
+    return buf;
 }
 
 template <traits::IndexableID ID>
@@ -430,15 +435,21 @@ auto TypeResolver::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
         symbol->set_status(SymbolStatus::RESOLVED);
     }
 
-    auto member_types = resolve_members(enum_expr.members);
-    if (!member_types) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+    auto member_types = ctx_.pool.get_many_unsafe(enum_expr.members.size());
+    CommittableResolution<types::Enum> resolution{enum_type,
+                                                  enum_expr.enumerations.size(),
+                                                  enum_expr.non_exhaustive,
+                                                  underlying_type,
+                                                  member_types};
+    if (!resolve_members(member_types, enum_expr.members)) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id));
+    }
 
-    enum_type.template resolve<types::Enum>(
-        enum_expr.enumerations.size(), enum_expr.non_exhaustive, underlying_type, *member_types);
+    resolution.commit();
     last_type_.emplace(enum_type);
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, visit, EnumExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::EnumExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr) -> void {
     ASSERT(for_expr.iterables.size() == for_expr.captures.size());
@@ -586,6 +597,119 @@ auto TypeResolver::resolve_symbol_info(ast::IdentifierHandle handle, opt::Option
         });
 }
 
+namespace {
+
+template <typename T>
+concept HasName = requires(T t) { t.name; };
+
+template <typename T>
+concept HasType = requires(T t) { t.explicit_type; };
+
+template <typename T>
+concept HasNameOnly = HasName<T> && !HasType<T>;
+
+template <typename T>
+concept HasBothNameAndType = HasName<T> && HasType<T>;
+
+} // namespace
+
+namespace {
+
+// Forwards an incomplete aggregate type to safely break cycles if possible
+[[nodiscard]] auto forward_type(const mod::Module&             target_mod,
+                                opt::Option<ast::TypeModifier> mod,
+                                Symbol& symbol) noexcept -> opt::Option<Type&> {
+    const auto node = symbol.as_opt<symbols::Node>();
+    if (!node) { return opt::none; }
+
+    if (const auto decl = target_mod.ast.get_as_opt<ast::DeclStatement>(*node)) {
+        if (!decl->value) { return opt::none; }
+
+        const bool is_aggregate = decl->value->is<ast::StructExpression>() ||
+                                  decl->value->is<ast::UnionExpression>() ||
+                                  decl->value->is<ast::EnumExpression>();
+        if ((!mod || (!mod->is_ptr() && !mod->is_ref())) && !is_aggregate) { return opt::none; }
+        return target_mod.get_sema_type_opt(*decl->value);
+    } else if (const auto alias = target_mod.ast.get_as_opt<ast::UsingStatement>(*node)) {
+        return target_mod.get_sema_type_opt(alias->explicit_type);
+    }
+    return opt::none;
+}
+
+} // namespace
+
+template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbol& symbol) -> void {
+    switch (symbol.get_status()) {
+    case SymbolStatus::RESOLVED:
+        // Identifier handles are not unique in the tree, but their symbol can be used to find root
+        resolving_.set_sema_type_if(
+            id,
+            symbol.match(Overloaded{
+                [](symbols::Builtin& builtin) -> Type& { return builtin.get_type(); },
+                [this](symbols::Label label) -> Type& {
+                    const auto defn = label.get_definition();
+                    ASSERT(resolving_.has_sema_type(defn), "Resolved node has no type");
+                    return resolving_.get_sema_type(defn);
+                },
+                [this](auto& sym) -> Type& {
+                    ASSERT(resolving_.has_sema_type(sym),
+                           "Directly indexable symbol was never typed");
+                    return resolving_.get_sema_type(sym);
+                },
+                [this](HasBothNameAndType auto& sym) -> Type& {
+                    ASSERT(resolving_.has_sema_type(sym.name), "Symbol was never typed");
+                    auto& type = resolving_.get_sema_type(sym.name);
+                    ASSERT(type == resolving_.get_sema_type_opt(sym.explicit_type),
+                           "Symbol was resolved with mismatched type");
+                    return type;
+                },
+                [this](HasNameOnly auto& sym) -> Type& {
+                    ASSERT(resolving_.has_sema_type(sym.name), "Name-only sym was never typed");
+                    return resolving_.get_sema_type(sym.name);
+                },
+                [this](symbols::ForLoopCapture& capture) -> Type& {
+                    ASSERT(capture.payload.is<ast::IdentifierExpression>(),
+                           "Capture payload must be an ident");
+                    ASSERT(resolving_.has_sema_type(capture.payload),
+                           "For loop capture was never typed");
+                    return resolving_.get_sema_type(capture.payload);
+                }}));
+        break;
+    case SymbolStatus::RESOLVING:
+        if (const auto forwarded_type = forward_type(resolving_, opt::none, symbol)) {
+            resolving_.set_sema_type_if(id, *forwarded_type);
+            return last_type_.emplace(*forwarded_type);
+        }
+
+        symbol.set_status(SymbolStatus::RESOLVED);
+        symbol.set_kind(SymbolKind::POISONED);
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            fmt::format("'{}' is used during its own resolution", symbol.get_name()),
+            Error::CYCLIC_DEPENDENCY,
+            resolving_.ast.location_of(id)));
+    case SymbolStatus::UNRESOLVED: {
+        symbol.set_status(SymbolStatus::RESOLVING);
+
+        // All other symbol data kinds are independently resolved
+        const auto node = symbol.as_opt<symbols::Node>();
+        ASSERT(node, "Unresolved symbol is not AST-associated");
+        resolve(*node);
+        resolving_.set_sema_type(id, *last_type_.take());
+        break;
+    }
+    default: UNREACHABLE("Symbol status should only be 1 of 3 states");
+    }
+
+    if (symbol.get_kind() == SymbolKind::POISONED) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id));
+    }
+    last_type_.emplace(resolving_.get_sema_type(id));
+}
+
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_symbol, Symbol&)
+
 template <traits::IndexableID ID>
 auto TypeResolver::resolve_ident(ID id, const ast::IdentifierExpression& ident) -> void {
     const auto name       = ident.name;
@@ -600,95 +724,10 @@ auto TypeResolver::resolve_ident(ID id, const ast::IdentifierExpression& ident) 
                              Error::UNDECLARED_IDENTIFIER,
                              resolving_.ast.location_of(id)));
     }
-    auto& symbol = *symbol_opt;
-
-    switch (symbol.get_status()) {
-    case SymbolStatus::RESOLVED:
-        // Identifier handles are not unique in the tree, but their symbol can be used to find root
-        resolving_.set_sema_type_if(
-            id,
-            symbol.match(Overloaded{
-                [](symbols::Builtin& builtin) -> Type& { return builtin.get_type(); },
-                [this](symbols::Node node) -> Type& {
-                    ASSERT(resolving_.has_sema_type(node), "Resolved node has no type");
-                    return resolving_.get_sema_type(node);
-                },
-                [this](symbols::Label label) -> Type& {
-                    const auto defn = label.get_definition();
-                    ASSERT(resolving_.has_sema_type(defn), "Resolved node has no type");
-                    return resolving_.get_sema_type(defn);
-                },
-                [this](symbols::MatchCapture& capture) -> Type& {
-                    ASSERT(resolving_.has_sema_type(capture), "Match arm was never typed");
-                    return resolving_.get_sema_type(capture);
-                },
-                [this](symbols::StructField& field) -> Type& {
-                    ASSERT(resolving_.has_sema_type(field.name), "Struct field was never typed");
-                    ASSERT(resolving_.get_sema_type_opt(field.name) ==
-                               resolving_.get_sema_type_opt(field.explicit_type),
-                           "Struct field was resolved with mismatched type");
-                    return resolving_.get_sema_type(field.name);
-                },
-                [this](symbols::UnionField& field) -> Type& {
-                    ASSERT(resolving_.has_sema_type(field.name), "Union field was never typed");
-                    ASSERT(resolving_.get_sema_type_opt(field.name) ==
-                               resolving_.get_sema_type_opt(field.explicit_type),
-                           "Union field was resolved with mismatched type");
-                    return resolving_.get_sema_type(field.name);
-                },
-                [this](symbols::Enumeration& enumeration) -> Type& {
-                    ASSERT(resolving_.has_sema_type(enumeration.name),
-                           "Enumeration was never typed");
-                    return resolving_.get_sema_type(enumeration.name);
-                },
-                [this](symbols::SelfParameter& self) -> Type& {
-                    ASSERT(resolving_.has_sema_type(self.name), "Self param was never typed");
-                    return resolving_.get_sema_type(self.name);
-                },
-                [this](symbols::Parameter& parameter) -> Type& {
-                    ASSERT(resolving_.has_sema_type(parameter.name), "Parameter was never typed");
-                    ASSERT(resolving_.get_sema_type_opt(parameter.name) ==
-                               resolving_.get_sema_type_opt(parameter.explicit_type),
-                           "Parameter was resolved with mismatched type");
-                    return resolving_.get_sema_type(parameter.name);
-                },
-                [this](symbols::ForLoopCapture& capture) -> Type& {
-                    ASSERT(capture.payload.is<ast::IdentifierExpression>(),
-                           "Capture payload must be an ident");
-                    ASSERT(resolving_.has_sema_type(capture.payload),
-                           "For loop capture was never typed");
-                    return resolving_.get_sema_type(capture.payload);
-                }}));
-        break;
-    case SymbolStatus::RESOLVING:
-        symbol.set_status(SymbolStatus::RESOLVED);
-        symbol.set_kind(SymbolKind::POISONED);
-        return last_type_.emplace(
-            ctx_.poison_node(resolving_,
-                             id,
-                             fmt::format("Cycle: '{}' is used during its own resolution", name),
-                             Error::CYCLIC_DEPENDENCY,
-                             resolving_.ast.location_of(id)));
-    case SymbolStatus::UNRESOLVED: {
-        symbol.set_status(SymbolStatus::RESOLVING);
-
-        // All other symbol data kinds are independently resolved
-        const auto node = symbol.as_opt<symbols::Node>();
-        ASSERT(node, "Unresolved symbol is not AST-associated");
-        resolve(*node);
-        resolving_.set_sema_type(id, *last_type_.take());
-        break;
-    }
-    default: std::unreachable();
-    }
-
-    if (symbol.get_kind() == SymbolKind::POISONED) {
-        return last_type_.emplace(ctx_.poison_node(resolving_, id));
-    }
-    last_type_.emplace(resolving_.get_sema_type(id));
+    resolve_symbol(id, *symbol_opt);
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, resolve_ident, IdentifierExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_ident, const ast::IdentifierExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::IdentifierExpression& ident) -> void {
     resolve_ident(id, ident);
@@ -814,55 +853,29 @@ auto TypeResolver::resolve_user_type_access(Type&                         object
     }
 
     auto& [member_symbol, member_idx] = *symbol_proxy;
-    if (member_symbol.get_status() == SymbolStatus::RESOLVING) {
-        return make_sema_err("Cyclic dependency detected",
-                             Error::CYCLIC_DEPENDENCY,
-                             resolving_.ast.location_of(member));
-    }
-
-    mem::NonNull<Type> result_type = ctx_.get_poison();
+    mem::NonNull<Type> result_type    = ctx_.get_poison();
     if (member_symbol.get_kind() == SymbolKind::POISONED) { return result_type; }
 
-    if (enum_type) {
-        // The index location entirely depends on the number of variants which always come first
-        if (member_idx < enum_type->enumeration_count) {
-            result_type = object_type;
-        } else {
-            result_type = enum_type->members[member_idx - enum_type->enumeration_count];
-        }
-    } else if (struct_type) {
-        // The index location entirely depends on the number of fields which always come first
-        if (member_idx < struct_type->fields.size()) {
-            result_type = struct_type->fields[member_idx];
-        } else {
-            result_type = struct_type->members[member_idx - struct_type->fields.size()];
-        }
-    } else if (union_type) {
-        // The index location entirely depends on the number of fields which always come first
-        if (member_idx < union_type->fields.size()) {
-            result_type = union_type->fields[member_idx];
-        } else {
-            result_type = union_type->members[member_idx - union_type->fields.size()];
-        }
-    }
-    return result_type;
+    if (enum_type) { return enum_type->type_at(member_idx, object_type); }
+    if (struct_type) { return struct_type->type_at(member_idx); }
+    if (union_type) { return union_type->type_at(member_idx); }
+    UNREACHABLE("Error handling failed to catch invalid type");
 }
 
-auto TypeResolver::get_outer_access_inner_name(ast::OuterAccessHandle handle) noexcept
-    -> std::string_view {
+auto TypeResolver::get_rightmost_name(ast::OuterAccessHandle handle) noexcept -> std::string_view {
     auto current = handle;
     while (true) {
         if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(current)) {
             return ident->name;
         } else if (const auto scope =
                        resolving_.ast.get_as_opt<ast::ModuleAccessExpression>(current)) {
-            current = scope->outer;
+            current = scope->inner;
             continue;
         } else if (const auto dot = resolving_.ast.get_as_opt<ast::DotExpression>(current)) {
-            current = dot->object;
+            current = dot->member;
             continue;
         }
-        std::unreachable();
+        UNREACHABLE("OuterAccessHandle has violated an invariant of the Handle class");
     }
 }
 
@@ -875,7 +888,7 @@ auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
     auto result = resolve_user_type_access(object_type,
                                            dot.member,
                                            resolving_.ast.location_of(dot.object),
-                                           get_outer_access_inner_name(dot.object));
+                                           get_rightmost_name(dot.object));
     if (!result) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
     }
@@ -887,7 +900,7 @@ auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
     last_type_.emplace(member_type);
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, resolve_dot, DotExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_dot, const ast::DotExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DotExpression& dot) -> void {
     resolve_dot(id, dot);
@@ -926,6 +939,14 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
     }
 
     Type& object_type = *object_type_opt;
+    if (!object_type.has_resolved()) {
+        return last_type_.emplace(ctx_.poison_node(resolving_,
+                                                   id,
+                                                   "Cannot initialize an incomplete type",
+                                                   Error::CYCLIC_DEPENDENCY,
+                                                   resolving_.ast.location_of(id)));
+    }
+
     if (object_type.as_opt<types::Enum>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
@@ -1012,7 +1033,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> v
 
 auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> void {
     TRY_RESOLVE(match.matcher);
-    auto& matcher_type = *last_type_.take();
+    auto&                      matcher_type = *last_type_.take();
+    const UserTypeStack::Guard g{implicit_type_stack_, matcher_type};
 
     // The expression must resolve to a single type on pass 3
     opt::Option<Type&> first_type;
@@ -1059,7 +1081,7 @@ namespace {
     case TokenType::AND_MUT:   return types::mut::MUTABLE;
     case TokenType::CARET:     return types::mut::CONSTANT;
     case TokenType::CARET_MUT: return types::mut::MUTABLE;
-    default:                   std::unreachable();
+    default:                   UNREACHABLE("Invalid token types should be pruned prior to this function");
     }
 }
 
@@ -1190,13 +1212,12 @@ MAKE_PRIMITIVE_RESOLVER(F32Expression, F32)
 MAKE_PRIMITIVE_RESOLVER(F64Expression, F64)
 
 template <traits::IndexableID ID>
-auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope) -> void {
+auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpression& access) -> void {
     // Resolving the right hand side recurses down to the identifier level
-    resolve(scope.outer);
+    resolve(access.outer);
     if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); }
     auto& outer_type = *last_type_.take();
 
-    // User types use the dot operator so this is trivial to verify
     if (const auto module = outer_type.as_opt<types::Module>()) {
         // The module may not have been resolved yet due to order independence
         auto& inner_mod = module->imported;
@@ -1209,35 +1230,63 @@ auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope
         }
 
         // Step into the module's scope for lookup
-        const auto& inner_ident = resolving_.ast.get_as<ast::IdentifierExpression>(scope.inner);
+        const auto& inner_ident = resolving_.ast.get_as<ast::IdentifierExpression>(access.inner);
         auto symbol = ctx_.registry.get_from_opt(*inner_mod.root_table_idx, inner_ident.name);
         if (!symbol) {
             return last_type_.emplace(
                 ctx_.poison_node(resolving_,
                                  id,
                                  fmt::format("Module '{}' has no member named '{}'",
-                                             get_outer_access_inner_name(scope.outer),
+                                             get_rightmost_name(access.outer),
                                              inner_ident.name),
                                  Error::UNDECLARED_IDENTIFIER,
-                                 resolving_.ast.location_of(scope.inner)));
-        }
-
-        if (symbol->get_status() == SymbolStatus::RESOLVING) {
-            return last_type_.emplace(ctx_.poison_node(resolving_,
-                                                       id,
-                                                       "Cyclic dependency detected across modules",
-                                                       Error::CYCLIC_DEPENDENCY,
-                                                       resolving_.ast.location_of(scope.inner)));
+                                 resolving_.ast.location_of(access.inner)));
         }
 
         const auto symbol_node = symbol->as_opt<symbols::Node>();
         if (!symbol_node) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+
+        opt::Option<ast::TypeModifier> mod;
+        if constexpr (traits::is_explicit_type_id_v<ID>) { mod = id.get_modifier(); }
+        switch (symbol->get_status()) {
+        case SymbolStatus::RESOLVING: {
+            const auto poison_out = [&] {
+                symbol->set_status(SymbolStatus::RESOLVED);
+                symbol->set_kind(SymbolKind::POISONED);
+                last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    fmt::format(
+                        "Cross-module cyclic dependency detected while resolving symbol '{}'",
+                        inner_ident.name),
+                    Error::CYCLIC_DEPENDENCY,
+                    resolving_.ast.location_of(access.inner)));
+            };
+
+            // Explicitly reject infinite size cycles across modules before forwarding
+            if (!mod || (!mod->is_ptr() && !mod->is_ref())) { return poison_out(); }
+            if (const auto forwarded_type = forward_type(inner_mod, mod, *symbol)) {
+                resolving_.set_sema_type(access.inner, *forwarded_type);
+                resolving_.set_sema_type(id, *forwarded_type);
+                return last_type_.emplace(*forwarded_type);
+            }
+
+            return poison_out();
+        }
+        case SymbolStatus::UNRESOLVED: {
+            TypeResolver inner_resolver{inner_mod, ctx_};
+            inner_resolver.resolve(*symbol_node);
+            break;
+        }
+        case SymbolStatus::RESOLVED: break;
+        }
+
         if (symbol->get_kind() == SymbolKind::POISONED || !inner_mod.has_sema_type(*symbol_node)) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id));
         }
 
         auto& ident_type = inner_mod.get_sema_type(*symbol_node);
-        resolving_.set_sema_type(scope.inner, ident_type);
+        resolving_.set_sema_type(access.inner, ident_type);
         resolving_.set_sema_type(id, ident_type);
         return last_type_.emplace(ident_type);
     } else if (outer_type.as_opt<types::Struct>() || outer_type.as_opt<types::Enum>() ||
@@ -1245,10 +1294,10 @@ auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
-            fmt::format("Use the dot operator '.' to access {} members, found module access '::'",
+            fmt::format("Use the dot operator '.' to access {} fields; found module access '::'",
                         type_kind_display_name(outer_type.get_kind())),
             Error::TYPE_MISMATCH,
-            resolving_.ast.location_of(scope.outer)));
+            resolving_.ast.location_of(access.outer)));
     }
 
     return last_type_.emplace(ctx_.poison_node(
@@ -1257,14 +1306,26 @@ auto TypeResolver::resolve_scope(ID id, const ast::ModuleAccessExpression& scope
         fmt::format("Module access operator '::' can only be applied to modules; found '{}'",
                     type_kind_display_name(outer_type.get_kind())),
         Error::TYPE_MISMATCH,
-        resolving_.ast.location_of(scope.outer)));
+        resolving_.ast.location_of(access.outer)));
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, resolve_scope, ModuleAccessExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, resolve_module_access, const ast::ModuleAccessExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ModuleAccessExpression& scope) -> void {
-    resolve_scope(id, scope);
+    resolve_module_access(id, scope);
 }
+
+namespace {
+
+[[nodiscard]] auto incomplete_field(std::string_view name, const SourceLocation& location)
+    -> Diagnostic {
+    return Diagnostic{
+        fmt::format("Field '{}' has an incomplete type; creates an infinite size cycle", name),
+        Error::CYCLIC_DEPENDENCY,
+        location};
+}
+
+} // namespace
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> void {
@@ -1282,20 +1343,30 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
         TRY_RESOLVE(field.explicit_type);
         auto& field_type = *last_type_.take();
 
+        if (!field_type.has_resolved()) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                incomplete_field(ident.name, resolving_.ast.location_of(field.explicit_type))));
+        }
+
         resolving_.set_sema_type(field.name, field_type);
         symbol->set_kind(SymbolKind::VALUE);
         symbol->set_status(SymbolStatus::RESOLVED);
         field_types[i++] = field_type;
     }
 
-    auto member_types = resolve_members(struct_expr.members);
-    if (!member_types) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+    auto member_types = ctx_.pool.get_many_unsafe(struct_expr.members.size());
+    CommittableResolution<types::Struct> resolution{struct_type, field_types, member_types};
+    if (!resolve_members(member_types, struct_expr.members)) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id));
+    }
 
-    struct_type.template resolve<types::Struct>(field_types, *member_types);
+    resolution.commit();
     last_type_.emplace(struct_type);
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, visit, StructExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::StructExpression&)
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void {
@@ -1312,20 +1383,30 @@ auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void 
         TRY_RESOLVE(field.explicit_type);
         auto& field_type = *last_type_.take();
 
+        if (!field_type.has_resolved()) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                incomplete_field(ident.name, resolving_.ast.location_of(field.explicit_type))));
+        }
+
         resolving_.set_sema_type(field.name, field_type);
         symbol->set_kind(SymbolKind::VALUE);
         symbol->set_status(SymbolStatus::RESOLVED);
         field_types[i++] = field_type;
     }
 
-    auto member_types = resolve_members(union_expr.members);
-    if (!member_types) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+    auto member_types = ctx_.pool.get_many_unsafe(union_expr.members.size());
+    CommittableResolution<types::Union> resolution{union_type, field_types, member_types};
+    if (!resolve_members(member_types, union_expr.members)) {
+        return last_type_.emplace(ctx_.poison_node(resolving_, id));
+    }
 
-    union_type.template resolve<types::Union>(field_types, *member_types);
+    resolution.commit();
     last_type_.emplace(union_type);
 }
 
-VISITOR_TEMPLATE_INIT(TypeResolver, visit, UnionExpression)
+VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::UnionExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::WhileLoopExpression& while_loop) -> void {
     TRY_RESOLVE(while_loop.condition);
@@ -1600,7 +1681,7 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         new_vol_type.resolve_if<Type::Resolved>(inner_type.get_resolved());
         return new_vol_type;
     }
-    std::unreachable();
+    UNREACHABLE("A new type modifier was likely added yet unaccounted for");
 }
 
 #define MAKE_MODIFIED_RESOLVER(NodeType, resolver)                                        \
@@ -1611,8 +1692,27 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         last_type_.emplace(resolved);                                                     \
     }
 
-MAKE_MODIFIED_RESOLVER(IdentifierExpression, resolve_ident)
-MAKE_MODIFIED_RESOLVER(ModuleAccessExpression, resolve_scope)
+auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::IdentifierExpression& ident) -> void {
+    auto symbol_opt = ctx_.registry.lookup(table_stack_, ident.name);
+    if (!symbol_opt) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             fmt::format("Use of undeclared identifier '{}'", ident.name),
+                             Error::UNDECLARED_IDENTIFIER,
+                             resolving_.ast.location_of(id)));
+    }
+    auto& symbol = *symbol_opt;
+
+    const auto forwarded_type = forward_type(resolving_, id.get_modifier(), symbol);
+    forwarded_type ? last_type_.emplace(*forwarded_type) : resolve_ident(id, ident);
+
+    auto& resolved = apply_explicit_modifiers(id, *last_type_.take());
+    resolving_.set_sema_type(id, resolved);
+    last_type_.emplace(resolved);
+}
+
+MAKE_MODIFIED_RESOLVER(ModuleAccessExpression, resolve_module_access)
 MAKE_MODIFIED_RESOLVER(DotExpression, resolve_dot)
 MAKE_MODIFIED_RESOLVER(CallExpression, resolve_call)
 
@@ -1653,6 +1753,14 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitArrayType& a
 
     const auto null_terminated = array.null_terminated;
     if (array.dimension) {
+        // This is not an error for slices since slices are just pointers with length
+        if (!item_type.has_resolved()) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                incomplete_array_item(resolving_.ast.location_of(array.inner_explicit_type))));
+        }
+
         TRY_RESOLVE(*array.dimension);
         const opt::Size placeholder_size;
         last_type_.emplace(ctx_.pool[{

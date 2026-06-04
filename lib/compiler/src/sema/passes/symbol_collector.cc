@@ -120,7 +120,7 @@ auto SymbolCollector::visit(ID id, const ast::EnumExpression& enum_expr) -> void
     collecting_.set_sema_type(id, *last_type_);
 }
 
-VISITOR_TEMPLATE_INIT(SymbolCollector, visit, EnumExpression)
+VISITOR_TEMPLATE_INIT(SymbolCollector, visit, const ast::EnumExpression&)
 
 auto SymbolCollector::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr) -> void {
     // The guard shouldn't enclose the else clause
@@ -283,7 +283,7 @@ auto SymbolCollector::visit(ID id, const ast::StructExpression& struct_expr) -> 
     collecting_.set_sema_type(id, *last_type_);
 }
 
-VISITOR_TEMPLATE_INIT(SymbolCollector, visit, StructExpression)
+VISITOR_TEMPLATE_INIT(SymbolCollector, visit, const ast::StructExpression&)
 
 template <traits::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> void {
@@ -304,7 +304,7 @@ auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> vo
     collecting_.set_sema_type(id, *last_type_);
 }
 
-VISITOR_TEMPLATE_INIT(SymbolCollector, visit, UnionExpression)
+VISITOR_TEMPLATE_INIT(SymbolCollector, visit, const ast::UnionExpression&)
 
 auto SymbolCollector::visit(ast::NodeID id, const ast::WhileLoopExpression& while_expr) -> void {
     // The guard shouldn't enclose the else clause or condition

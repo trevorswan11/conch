@@ -254,7 +254,7 @@ class SymbolTableStack {
       public:
         Scope(SymbolTableStack& s, usize new_idx, usize& old_idx) noexcept
             : guard_{s, new_idx}, idx_ref_{old_idx}, old_idx_{old_idx} {
-            old_idx = new_idx;
+            idx_ref_ = new_idx;
         }
         ~Scope() { idx_ref_ = old_idx_; }
 

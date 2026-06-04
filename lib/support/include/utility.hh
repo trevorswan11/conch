@@ -56,8 +56,6 @@ constexpr auto todo_impl(std::source_location loc, [[maybe_unused]] Args&&... ar
 
 } // namespace detail
 
-#define TODO(...)                                                             \
-    ::ghoti::detail::todo_impl(std::source_location::current(), __VA_ARGS__); \
-    std::unreachable()
+#define TODO(...) ::ghoti::detail::todo_impl(std::source_location::current(), __VA_ARGS__);
 
 } // namespace ghoti
