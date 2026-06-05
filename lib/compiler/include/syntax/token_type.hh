@@ -177,6 +177,7 @@ enum class TokenType : u8 {
     BUILTIN_ALIGN_OF,
     BUILTIN_SIZE_OF,
     BUILTIN_TYPE_OF,
+    BUILTIN_THIS,
     BUILTIN_TAG_NAME,
     BUILTIN_MEMCPY,
     BUILTIN_MEMSET,
@@ -303,7 +304,7 @@ struct TypedIdentifier {
     TokenType        type;
 };
 
-// Helper for ADL std::get in fixed::HashMap
+// Helper for ADL tuple get in fixed::HashMap
 template <std::size_t I>
 [[nodiscard]] constexpr auto get(const syntax::TypedIdentifier& typed) noexcept -> auto& {
     if constexpr (I == 0) {

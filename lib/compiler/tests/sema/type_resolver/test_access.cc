@@ -130,11 +130,11 @@ const func := other::BarS.bar;
     check_access_decl(*ctx, idx, "func", bar_fn_type(*ctx, 8));
 }
 
-TEST_CASE("Indirection in user type resolution") {
+TEST_CASE("Indirection in structural type resolution") {
     helpers::resolve_and_check("const A := struct { a: *B, }; const B := struct { b: *A, };");
     helpers::resolve_and_check("const A := struct { a: *A, };");
     helpers::resolve_and_check("const A := struct { a: *A, const b := fn(c: A): i32 {}; };");
-    helpers::resolve_and_check("const A := struct { a: *A, const b := fn(c: *A): i32 {}; };");
+    helpers::resolve_and_check("const A := struct { a: *@this(), const b := fn(c: *A): i32 {}; };");
     helpers::resolve_and_check(
         R"(const A := struct {
             a: *A,
@@ -143,9 +143,6 @@ TEST_CASE("Indirection in user type resolution") {
                 using uA = A;
             };
         };)");
-
-    helpers::resolve_and_check("const A := struct { a: i32, const b := [_]A{}; };");
-    helpers::resolve_and_check("const A := struct { a: []A, };");
 }
 
 TEST_CASE("Legal circular module-based access resolution") {
@@ -226,29 +223,16 @@ TEST_CASE("Incomplete type used during resolution") {
 
     SECTION("Structs") {
         helpers::test_resolver_fail("const A := struct { a: A, };", expected_diag(23));
+        helpers::test_resolver_fail("const A := struct { a: @this(), };", expected_diag(23));
         helpers::test_resolver_fail("const A := struct { a: B, }; const B := struct { b: A, };",
                                     expected_diag(23));
     }
 
     SECTION("Unions") {
         helpers::test_resolver_fail("const A := union { a: A, };", expected_diag(22));
+        helpers::test_resolver_fail("const A := union { a: @this(), };", expected_diag(22));
         helpers::test_resolver_fail("const A := union { a: B, }; const B := union { b: A, };",
                                     expected_diag(22));
-    }
-
-    SECTION("Arrays") {
-        const auto expected_array_diag = [](usize col) {
-            return sema::Diagnostic{"Array elements cannot have an incomplete type",
-                                    sema::Error::CYCLIC_DEPENDENCY,
-                                    std::pair{0uz, col}};
-        };
-
-        helpers::test_resolver_fail("const A := struct { a: [3]A, };", expected_array_diag(26));
-        helpers::test_resolver_fail("const A := struct { a: @typeOf([3]A), };",
-                                    expected_array_diag(34));
-        helpers::test_resolver_fail("const A := union { a: [1]A, };", expected_array_diag(25));
-        helpers::test_resolver_fail("const A := union { a: @typeOf([1]A), };",
-                                    expected_array_diag(33));
     }
 }
 
@@ -258,27 +242,28 @@ TEST_CASE("Illegal circular module-based access resolution") {
     constexpr std::string_view b_gh{
         R"(import "a.gh" as a; pub const B := struct { field: a::A, };)"};
 
-    SECTION("Real diag") {
-        auto [ctx, idx] = helpers::resolve(
-            R"(import "a.gh" as a; using A = a::A;)",
-            helpers::make_vector<MockFile>(MockFile{"a.gh", a_gh}, MockFile{"b.gh", b_gh}));
-        // auto& test_module = *helpers::unwrap(ctx->manager.try_get_file_module("test.gh"));
-        auto& a_module = *helpers::unwrap(ctx->manager.try_get_file_module("a.gh"));
-        auto& b_module = *helpers::unwrap(ctx->manager.try_get_file_module("b.gh"));
+    auto [ctx, idx] = helpers::resolve(
+        R"(import "a.gh" as a; using A = a::A;)",
+        helpers::make_vector<MockFile>(MockFile{"a.gh", a_gh}, MockFile{"b.gh", b_gh}));
+    auto& test_module = *helpers::unwrap(ctx->manager.try_get_file_module("test.gh"));
+    auto& a_module    = *helpers::unwrap(ctx->manager.try_get_file_module("a.gh"));
+    auto& b_module    = *helpers::unwrap(ctx->manager.try_get_file_module("b.gh"));
 
-        REQUIRE(b_module.has_sema_diagnostics());
-        const auto& errors = b_module.get_sema_diagnostics();
-        helpers::check_errors_against<sema::Diagnostic>(
-            errors,
-            sema::Diagnostic{"Cross-module cyclic dependency detected while resolving symbol 'B'",
-                             sema::Error::CYCLIC_DEPENDENCY,
-                             std::pair{0uz, 54uz}});
+    REQUIRE(b_module.has_sema_diagnostics());
+    const auto& errors = b_module.get_sema_diagnostics();
+    helpers::check_errors_against<sema::Diagnostic>(
+        errors,
+        sema::Diagnostic{"Cross-module cyclic dependency detected while resolving symbol 'B'",
+                         sema::Error::CYCLIC_DEPENDENCY,
+                         std::pair{0uz, 54uz}});
 
-        // TODO(test_module, "Fix issue with resolution status assignment");
-        // ctx->check_poisoned<syms::Node>("A", idx, test_module);
-        ctx->check_poisoned<syms::Node>("A", 1, a_module);
-        ctx->check_poisoned<syms::Node>("B", 2, b_module);
-    }
+    ctx->check_poisoned<syms::Node>("A", idx, test_module);
+    ctx->check_poisoned<syms::Node>("A", 1, a_module);
+    ctx->check_poisoned<syms::Node>("B", 2, b_module);
+
+    // Errors dont get bubbled up to simplify handling, so only one module is poisoned
+    const auto [sym, _] = ctx->get_symbol<syms::Node>("b", 1);
+    ctx->check_poisoned(sym);
 }
 
 } // namespace ghoti::tests

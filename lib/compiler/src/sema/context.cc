@@ -104,6 +104,7 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
     inject_function(bis::ALIGN_OF, BP{t_auto}, t_usize);
     inject_function(bis::SIZE_OF, BP{t_auto}, t_usize);
     inject_function(bis::TYPE_OF, BP{t_auto}, t_type);
+    inject_function(bis::THIS, BP{}, t_type);
     inject_function(bis::TAG_NAME, BP{t_auto}, t_c_str);
 
     inject_function(bis::MEMCPY, BP{t_auto, t_auto}, t_void);

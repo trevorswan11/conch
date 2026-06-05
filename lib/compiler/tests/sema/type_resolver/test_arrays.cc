@@ -13,6 +13,7 @@
 #include "sema/type.hh"
 
 #include "option.hh"
+#include "types.hh"
 
 namespace ghoti::tests {
 
@@ -87,6 +88,15 @@ TEST_CASE("Indexing with slice accessor") {
     CHECK(type == slice_type);
 }
 
+TEST_CASE("Well-formed arrays with structural types") {
+    helpers::resolve_and_check("const A := struct { a: i32, const b := [_]A{}; };");
+    helpers::resolve_and_check("const A := struct { a: []A, };");
+    helpers::resolve_and_check(
+        "const A := struct { a: [6]&@this(), const b := fn(c: *@this()): i32 {}; };");
+    helpers::resolve_and_check("const A := union { a: [4]*@this(), };");
+    helpers::resolve_and_check("const A := union { a: []@this(), };");
+}
+
 TEST_CASE("Illegal index target") {
     auto [ctx, idx] = helpers::test_resolver_fail(
         "var a: u32; const b := a[0];",
@@ -94,6 +104,20 @@ TEST_CASE("Illegal index target") {
                          sema::Error::TYPE_MISMATCH,
                          std::pair{0uz, 23uz}});
     ctx->check_poisoned<syms::Node>("b", idx);
+}
+
+TEST_CASE("Illegal arrays dependent on incomplete types") {
+    const auto expected_diag = [](usize col) {
+        return sema::Diagnostic{"Array elements cannot have an incomplete type",
+                                sema::Error::CYCLIC_DEPENDENCY,
+                                std::pair{0uz, col}};
+    };
+
+    helpers::test_resolver_fail("const A := struct { a: [3]A, };", expected_diag(26));
+    helpers::test_resolver_fail("const A := struct { a: [3]@this(), };", expected_diag(26));
+    helpers::test_resolver_fail("const A := struct { a: @typeOf([3]A), };", expected_diag(34));
+    helpers::test_resolver_fail("const A := union { a: [1]A, };", expected_diag(25));
+    helpers::test_resolver_fail("const A := union { a: @typeOf([1]A), };", expected_diag(33));
 }
 
 } // namespace ghoti::tests

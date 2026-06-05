@@ -159,6 +159,35 @@ TEST_CASE("Function explicit type resolution") {
     CHECK(type == expected_type);
 }
 
+TEST_CASE("Function with syntactically ambiguous arguments") {
+    auto [ctx, idx] = helpers::resolve_and_check(R"(
+        using a = @typeOf(*i32);
+        using b = @typeOf(*mut i32);
+        using c = @typeOf(&i32);
+        using d = @typeOf(&mut i32);
+        using e = @typeOf(**i32);
+        using f = @typeOf(*mut *i32);
+    )");
+
+    const auto check_ambiguous = [&](std::string_view name, const sema::Type& instance_type) {
+        const auto& meta_type     = ctx->get_type(sema::TypeKind::TYPE, instance_type);
+        const auto [sym, _, type, data] = ctx->get_full_type_sym_info<syms::Node, sema::types::MetaType>(name, idx);
+        fmt::println("{}", magic_enum::enum_name(data.instance.get_kind()));
+        CHECK(type == meta_type);
+    };
+
+    namespace mut             = sema::types::mut;
+    const auto& i32_type      = ctx->get_type(sema::TypeKind::I32);
+    const auto& i32_const_ptr = ctx->get_type(sema::TypeKind::POINTER, i32_type);
+
+    check_ambiguous("a", i32_const_ptr);
+    check_ambiguous("b", ctx->get_type<mut::MUTABLE>(sema::TypeKind::POINTER, i32_type));
+    check_ambiguous("c", ctx->get_type(sema::TypeKind::REFERENCE, i32_type));
+    check_ambiguous("d", ctx->get_type<mut::MUTABLE>(sema::TypeKind::REFERENCE, i32_type));
+    check_ambiguous("e", ctx->get_type(sema::TypeKind::POINTER, i32_const_ptr));
+    check_ambiguous("f", ctx->get_type<mut::MUTABLE>(sema::TypeKind::POINTER, i32_const_ptr));
+}
+
 TEST_CASE("Self parameters in non-structural types") {
     auto [ctx, idx] = helpers::test_resolver_fail(
         "const foo := fn(&self): void {};",

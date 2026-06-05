@@ -98,6 +98,13 @@ Computes the size of the provided expression in bytes.
 
 Returns the type of the provided expression.
 
+### @this
+```ghoti
+@this(): type
+```
+
+Returns the type of the current enclosing structural type (i.e. struct, enum, union). Invalid in all other contexts.
+
 ### @tagName
 ```ghoti
 @tagName(expression: auto): [:0]u8

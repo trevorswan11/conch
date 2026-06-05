@@ -2,12 +2,14 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
 
-#include "fmt/format.h"
 #include "helpers/sema.hh"
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
+
+#include "types.hh"
 
 namespace ghoti::tests {
 
@@ -77,6 +79,18 @@ TEST_CASE("Duplicate test name") {
         sema::Diagnostic{"Duplicate test block named 'TEST ME'; previous declaration here: 1:1",
                          sema::Error::DUPLICATE_TEST_NAME,
                          std::pair{0uz, 31uz}});
+}
+
+TEST_CASE("Illegal initializer targets") {
+    const auto expected_diag = [](usize col) {
+        return sema::Diagnostic{
+            "Only struct and union types may be used in initializer expressions; found 'i32'",
+            sema::Error::TYPE_MISMATCH,
+            std::pair{0uz, col}};
+    };
+
+    helpers::test_resolver_fail("i32{};", expected_diag(3));
+    helpers::test_resolver_fail("const a: i32 = .{};", expected_diag(16));
 }
 
 } // namespace ghoti::tests

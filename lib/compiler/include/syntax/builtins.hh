@@ -28,6 +28,7 @@ constexpr Builtin SLICE_FROM_PTR{"@sliceFromPtr", TokenType::BUILTIN_SLICE_FROM_
 constexpr Builtin ALIGN_OF{"@alignOf", TokenType::BUILTIN_ALIGN_OF};
 constexpr Builtin SIZE_OF{"@sizeOf", TokenType::BUILTIN_SIZE_OF};
 constexpr Builtin TYPE_OF{"@typeOf", TokenType::BUILTIN_TYPE_OF};
+constexpr Builtin THIS{"@this", TokenType::BUILTIN_THIS};
 constexpr Builtin TAG_NAME{"@tagName", TokenType::BUILTIN_TAG_NAME};
 
 constexpr Builtin MEMCPY{"@memcpy", TokenType::BUILTIN_MEMCPY};

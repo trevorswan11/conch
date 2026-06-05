@@ -168,6 +168,16 @@ template <traits::IndexableID ID>
         }
         break;
     }
+    // @this returns a type as per docs, but it's really a structural type with full determinism
+    case TokenType::BUILTIN_THIS:
+        if (const auto user_type = user_type_stack_.peek()) {
+            return_type = *user_type;
+            break;
+        }
+
+        return make_sema_err("@this() may only be used inside of structs, unions, and enums",
+                             Error::TYPE_MISMATCH,
+                             resolving_.ast.location_of(id));
     case TokenType::BUILTIN_PTR_FROM_ARRAY: {
         auto& array_type = *get_resolved_call_arg_type(call.arguments[0]);
         if (const auto& array_data = array_type.as_opt<types::Array>()) {
@@ -336,7 +346,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         bool any_arg_poison = false;
         for (auto [param_type, arg] :
              std::views::zip(function_type->params.subspan(param_offset), call.arguments)) {
-            const UserTypeStack::Guard g{implicit_type_stack_, *param_type};
+            const StructuralGuard g{implicit_type_stack_, *param_type};
             any_arg_poison |= std::visit(
                 [this](auto id) {
                     resolve(id);
@@ -415,9 +425,9 @@ template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
     if (enum_expr.underlying) { resolve(*enum_expr.underlying); }
 
-    auto&                      enum_type = resolving_.get_sema_type(id);
-    const Scope                s{table_stack_, enum_type.get_symbol_table_idx(), table_idx_};
-    const UserTypeStack::Guard g{user_type_stack_, enum_type};
+    auto&                 enum_type = resolving_.get_sema_type(id);
+    const Scope           s{table_stack_, enum_type.get_symbol_table_idx(), table_idx_};
+    const StructuralGuard g{user_type_stack_, enum_type};
 
     // The underlying type defaults to an i32 as it would in C or C++
     auto& underlying_type = enum_expr.underlying ? resolving_.get_sema_type(*enum_expr.underlying)
@@ -681,8 +691,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
             return last_type_.emplace(*forwarded_type);
         }
 
-        symbol.set_status(SymbolStatus::RESOLVED);
-        symbol.set_kind(SymbolKind::POISONED);
+        ctx_.poison_symbol(symbol);
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
@@ -799,7 +808,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AssignmentExpression& assign
     TRY_RESOLVE(assign.lhs);
     auto& lhs_type = *last_type_.take();
     {
-        const UserTypeStack::Guard g{implicit_type_stack_, lhs_type};
+        const StructuralGuard g{implicit_type_stack_, lhs_type};
         TRY_RESOLVE(assign.rhs);
     }
 
@@ -813,10 +822,10 @@ auto TypeResolver::visit(ast::NodeID id, const ast::BinaryExpression& binary) ->
     resolving_.set_sema_type(id, *last_type_);
 }
 
-auto TypeResolver::resolve_user_type_access(Type&                         object_type,
-                                            ast::IdentifierHandle         member,
-                                            SourceLocation                object_location,
-                                            opt::Option<std::string_view> object_name)
+auto TypeResolver::resolve_structural_access(Type&                         object_type,
+                                             ast::IdentifierHandle         member,
+                                             SourceLocation                object_location,
+                                             opt::Option<std::string_view> object_name)
     -> Result<mem::NonNull<Type>, Diagnostic> {
     // Early validation to simplify error handling
     const auto enum_type   = object_type.as_opt<types::Enum>();
@@ -831,8 +840,7 @@ auto TypeResolver::resolve_user_type_access(Type&                         object
             object_location);
     }
 
-    ASSERT(object_type.has_symbol_table_idx(),
-           "User type should have a resolved symbol table index");
+    ASSERT(object_type.has_symbol_table_idx(), "Structural should have a resolved table index");
     const auto table_idx = object_type.get_symbol_table_idx();
     auto&      table     = ctx_.registry.get(table_idx);
 
@@ -885,15 +893,15 @@ auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
     if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); }
     auto& object_type = *last_type_.take();
 
-    auto result = resolve_user_type_access(object_type,
-                                           dot.member,
-                                           resolving_.ast.location_of(dot.object),
-                                           get_rightmost_name(dot.object));
+    auto result = resolve_structural_access(object_type,
+                                            dot.member,
+                                            resolving_.ast.location_of(dot.object),
+                                            get_rightmost_name(dot.object));
     if (!result) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
     }
 
-    // The user type resolver returns poisoned types in error conditions which can be bubbled here
+    // The structural resolver returns poisoned types in error conditions which can be bubbled here
     auto& member_type = *result.value();
     resolving_.set_sema_type(dot.member, member_type);
     resolving_.set_sema_type(id, member_type);
@@ -973,7 +981,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
             ctx_.poison_node(resolving_,
                              id,
                              fmt::format("Only struct and union types may be used in "
-                                         "initialized expressions; found '{}'",
+                                         "initializer expressions; found '{}'",
                                          type_kind_display_name(object_type.get_kind())),
                              Error::TYPE_MISMATCH,
                              resolving_.ast.location_of(id)));
@@ -982,7 +990,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
     for (const auto& [accessor, value] : init.initializers) {
         // The accessor is always a lookup into the stack
         {
-            const UserTypeStack::Guard g{implicit_type_stack_, object_type};
+            const StructuralGuard g{implicit_type_stack_, object_type};
             TRY_RESOLVE(accessor);
         }
 
@@ -993,7 +1001,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
         }
 
         {
-            const UserTypeStack::Guard g{implicit_type_stack_, member_type};
+            const StructuralGuard g{implicit_type_stack_, member_type};
             TRY_RESOLVE(value);
         }
     }
@@ -1012,15 +1020,9 @@ auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> v
     if (!symbol) { return; }
     auto& label_data = symbols::Label::from(*symbol);
 
-    // Every label should be broken to at least once
+    // Labels may not be used outside of continues which don't push void
     if (!label_data.has_yield_types()) {
-        label_data.add_yield_type(ctx_.get_poison());
-        return last_type_.emplace(
-            ctx_.poison_node(resolving_,
-                             label.name,
-                             "Labels cannot be used without inner break or continue statements",
-                             Error::ILLEGAL_LABEL_USAGE,
-                             resolving_.ast.location_of(label.name)));
+        label_data.add_yield_type(ctx_.get_builtin_resolved_type(TypeKind::VOID));
     }
 
     // The last type inherits the result type to help propagation of poison
@@ -1033,8 +1035,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> v
 
 auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> void {
     TRY_RESOLVE(match.matcher);
-    auto&                      matcher_type = *last_type_.take();
-    const UserTypeStack::Guard g{implicit_type_stack_, matcher_type};
+    auto&                 matcher_type = *last_type_.take();
+    const StructuralGuard g{implicit_type_stack_, matcher_type};
 
     // The expression must resolve to a single type on pass 3
     opt::Option<Type&> first_type;
@@ -1087,11 +1089,42 @@ namespace {
 
 } // namespace
 
+auto TypeResolver::disambiguate_operator(TypeKind                   kind,
+                                         ast::ExpressionHandle      operand,
+                                         Type&                      inner_type,
+                                         types::MutabilityModifiers mutability) noexcept
+    -> opt::Option<Type&> {
+    // Creates a pointer type out of the resolved inner type of the expression
+    const auto make_type = [&] -> Type& {
+        auto& new_type = ctx_.pool[{kind, mutability, inner_type}];
+        new_type.resolve_if<types::Pointer>(inner_type);
+        return new_type;
+    };
+
+    // There's some cases where the parser can't disambiguate between types and values
+    if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(operand)) {
+        const auto& symbol = ctx_.registry.lookup(table_stack_, ident->name);
+
+        // If we've found a resolved type then we can safely interpret this as a pointer
+        if (symbol->get_kind_opt() == SymbolKind::TYPE) { return make_type(); }
+    } else if (inner_type.get_kind() == TypeKind::TYPE) {
+        return make_type();
+    }
+    return opt::none;
+}
+
 auto TypeResolver::visit(ast::NodeID id, const ast::ReferenceExpression& ref) -> void {
     TRY_RESOLVE(ref.rhs);
     auto& rhs_type = *last_type_.take();
 
-    auto& new_type = ctx_.pool[{TypeKind::REFERENCE, ref_addr_of_is_mutable(id), rhs_type}];
+    const auto mutability = ref_addr_of_is_mutable(id);
+    if (const auto new_type =
+            disambiguate_operator(TypeKind::REFERENCE, ref.rhs, rhs_type, mutability)) {
+        resolving_.set_sema_type(id, *new_type);
+        return last_type_.emplace(*new_type);
+    }
+
+    auto& new_type = ctx_.pool[{TypeKind::REFERENCE, mutability, rhs_type}];
     new_type.resolve<types::Reference>(rhs_type);
 
     resolving_.set_sema_type(id, new_type);
@@ -1111,38 +1144,23 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AddressOfExpression& adr_of)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DereferenceExpression& deref) -> void {
     TRY_RESOLVE(deref.rhs);
-    auto& inner_type = *last_type_.take();
+    auto& rhs_type = *last_type_.take();
 
-    // Creates a pointer type out of the resolved inner type of the expression
-    const auto make_pointer_type = [&] {
-        auto& new_type = ctx_.pool[{TypeKind::POINTER, types::mut::CONSTANT, inner_type}];
-        new_type.resolve_if<types::Pointer>(inner_type);
-        resolving_.set_sema_type(id, new_type);
-        last_type_.emplace(new_type);
-    };
-
-    // There's some cases where the parser can't disambiguate between types and values
-    if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(deref.rhs)) {
-        const auto& symbol = ctx_.registry.lookup(table_stack_, ident->name);
-
-        // If we've found a resolved type then we can safely interpret this as a pointer
-        if (symbol->get_status() == SymbolStatus::RESOLVED &&
-            symbol->get_kind_opt() == SymbolKind::TYPE) {
-            return make_pointer_type();
-        }
-    } else if (inner_type.get_kind() == TypeKind::TYPE) {
-        return make_pointer_type();
+    if (const auto new_type =
+            disambiguate_operator(TypeKind::POINTER, deref.rhs, rhs_type, types::mut::CONSTANT)) {
+        resolving_.set_sema_type(id, *new_type);
+        return last_type_.emplace(*new_type);
     }
 
     // Check for a pointer and update to the underlying type to enforce dereference semantics
-    if (const auto pointer = inner_type.as_opt<types::Pointer>()) {
+    if (const auto pointer = rhs_type.as_opt<types::Pointer>()) {
         last_type_.emplace(pointer->underlying);
     } else {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
                              fmt::format("Cannot dereference non-pointer expression; found '{}'",
-                                         type_kind_display_name(inner_type.get_kind())),
+                                         type_kind_display_name(rhs_type.get_kind())),
                              Error::TYPE_MISMATCH,
                              resolving_.ast.location_of(id)));
     }
@@ -1166,7 +1184,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& im
                              resolving_.ast.location_of(id)));
     }
 
-    auto result = resolve_user_type_access(
+    auto result = resolve_structural_access(
         *implicit_type, implicit_access.member, resolving_.ast.location_of(id));
     if (!result) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
@@ -1251,8 +1269,7 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         switch (symbol->get_status()) {
         case SymbolStatus::RESOLVING: {
             const auto poison_out = [&] {
-                symbol->set_status(SymbolStatus::RESOLVED);
-                symbol->set_kind(SymbolKind::POISONED);
+                ctx_.poison_symbol(*symbol);
                 last_type_.emplace(ctx_.poison_node(
                     resolving_,
                     id,
@@ -1329,9 +1346,9 @@ namespace {
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> void {
-    auto&                      struct_type = resolving_.get_sema_type(id);
-    const Scope                s{table_stack_, struct_type.get_symbol_table_idx(), table_idx_};
-    const UserTypeStack::Guard g{user_type_stack_, struct_type};
+    auto&                 struct_type = resolving_.get_sema_type(id);
+    const Scope           s{table_stack_, struct_type.get_symbol_table_idx(), table_idx_};
+    const StructuralGuard g{user_type_stack_, struct_type};
 
     auto field_types = ctx_.pool.get_many_unsafe(struct_expr.fields.size());
     for (usize i = 0; const auto& field : struct_expr.fields) {
@@ -1370,9 +1387,9 @@ VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::StructExpression&)
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void {
-    auto&                      union_type = resolving_.get_sema_type(id);
-    const Scope                s{table_stack_, union_type.get_symbol_table_idx(), table_idx_};
-    const UserTypeStack::Guard g{user_type_stack_, union_type};
+    auto&                 union_type = resolving_.get_sema_type(id);
+    const Scope           s{table_stack_, union_type.get_symbol_table_idx(), table_idx_};
+    const StructuralGuard g{user_type_stack_, union_type};
 
     auto field_types = ctx_.pool.get_many_unsafe(union_expr.fields.size());
     for (usize i = 0; const auto& field : union_expr.fields) {
@@ -1483,16 +1500,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ContinueStatement& continue_
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
     }
 
-    // Continue statements should only store a single void type since they have no value
-    auto  symbol    = result.value();
-    auto& void_type = ctx_.get_builtin_resolved_type(TypeKind::VOID);
-    if (symbol) {
-        auto& label_data = symbols::Label::from(*symbol);
-        if (!label_data.has_yield_types()) { label_data.add_yield_type(void_type); }
-    }
-
-    // Similar to breaks but there is no way to break with a value
-    resolving_.set_sema_type(id, void_type);
+    resolving_.set_sema_type(id, ctx_.get_builtin_resolved_type(TypeKind::VOID));
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::NORETURN));
 }
 
@@ -1516,7 +1524,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
     };
 
     {
-        opt::Option<UserTypeStack::Guard> type_guard;
+        opt::Option<StructuralGuard> type_guard;
 
         // With an explicit type, the ident should always adopt that exact type
         if (decl.explicit_type) {
@@ -1582,14 +1590,14 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ImportStatement& import_stmt
 
     // Updating this type reflects on the symbol in the actual table as well
     auto& import_type = resolving_.get_sema_type(id);
-    if (import_type.is_poison()) { return symbol.set_kind(SymbolKind::POISONED); }
+    if (import_type.is_poison()) { return ctx_.poison_symbol(symbol); }
     ASSERT(import_type.has_resolved(), "Import types should be resolved on pass 1");
     auto& module = import_type.as<types::Module>();
 
     // There's no need to poison the import type since it would lose all of the module information
     Context new_ctx = ctx_;
     resolve_types(module.imported, new_ctx);
-    if (module.imported.is_poisoned()) { return symbol.set_kind(SymbolKind::POISONED); }
+    if (module.imported.is_poisoned()) { return ctx_.poison_symbol(symbol); }
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
@@ -1638,7 +1646,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::UsingStatement& using_stmt) 
     symbol->set_status(SymbolStatus::RESOLVING);
     resolve(using_stmt.explicit_type);
     if (last_type_->is_poison()) {
-        symbol->set_kind(SymbolKind::POISONED);
+        ctx_.poison_symbol(*symbol);
         return resolving_.set_sema_type(id, *last_type_);
     }
     resolving_.set_sema_type(id, *last_type_.take());

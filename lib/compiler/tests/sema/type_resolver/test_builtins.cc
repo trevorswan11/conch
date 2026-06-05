@@ -95,6 +95,12 @@ TEST_CASE("Builtin type introspection") {
     });
 }
 
+TEST_CASE("Builtin this introspection") {
+    auto [ctx, idx]              = helpers::resolve_and_check("struct { using A = @this(); };");
+    const auto [sym, data, type] = ctx->get_type_sym_info<syms::Node>("A", idx + 1);
+    CHECK(type == ctx->get_type(sema::TypeKind::STRUCT, idx + 1));
+}
+
 TEST_CASE("Deferred return type from typeOf") {
     auto [ctx, idx] =
         helpers::resolve_and_check("const a := fn(): type {}; using B = @typeOf(a());");
@@ -204,6 +210,14 @@ TEST_CASE("Other builtin quick type mismatch") {
         sema::Diagnostic{"Expected a pointer-yielding expression; found 'i32'",
                          sema::Error::TYPE_MISMATCH,
                          std::pair{0uz, 27uz}});
+}
+
+TEST_CASE("Illegal @this usage") {
+    helpers::test_resolver_fail(
+        "@this();",
+        sema::Diagnostic{"@this() may only be used inside of structs, unions, and enums",
+                         sema::Error::TYPE_MISMATCH,
+                         std::pair{0uz, 5uz}});
 }
 
 } // namespace ghoti::tests

@@ -54,22 +54,22 @@ class TypeResolver {
     };
 
     // A guarded stack that manages the current user-types for function self parameters
-    class UserTypeStack {
+    class StructuralTypeStack {
       public:
         class Guard {
           public:
-            Guard(UserTypeStack& s, Type& type) noexcept : stack_{s} { stack_.push(type); }
+            Guard(StructuralTypeStack& s, Type& type) noexcept : stack_{s} { stack_.push(type); }
             ~Guard() { stack_.pop(); }
 
           private:
-            UserTypeStack& stack_;
+            StructuralTypeStack& stack_;
         };
 
       public:
-        UserTypeStack() noexcept = default;
-        ~UserTypeStack()         = default;
+        StructuralTypeStack() noexcept = default;
+        ~StructuralTypeStack()         = default;
 
-        MAKE_MOVE_CONSTRUCTABLE_ONLY(UserTypeStack)
+        MAKE_MOVE_CONSTRUCTABLE_ONLY(StructuralTypeStack)
 
         auto push(Type& type) -> void { stack_.push_back(type); }
         auto pop() noexcept -> void {
@@ -85,6 +85,8 @@ class TypeResolver {
       private:
         std::vector<mem::NonNull<Type>> stack_;
     };
+
+    using StructuralGuard = StructuralTypeStack::Guard;
 
     // Resolves the provided type and unresolves upon desctruction if not committed
     template <typename Resolvee> class CommittableResolution {
@@ -126,6 +128,7 @@ class TypeResolver {
     auto                                   visit(ast::NodeID, const ast::CallExpression&) -> void;
     auto visit(ast::NodeID, const ast::DoWhileLoopExpression&) -> void;
 
+    // Returns the same type buffer that it was passed when resolution was successful
     [[nodiscard]] auto resolve_members(std::span<mem::NonNull<Type>>      buf,
                                        std::span<const ast::MemberHandle> members)
         -> opt::Option<std::span<mem::NonNull<Type>>>;
@@ -145,16 +148,16 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::AssignmentExpression&) -> void;
     auto visit(ast::NodeID, const ast::BinaryExpression&) -> void;
 
-    // Attempts to access the given member in the provided user type
+    // Attempts to access the given member in the provided structural type
     [[nodiscard]] auto
-    resolve_user_type_access(Type&                         object_type,
-                             ast::IdentifierHandle         member,
-                             SourceLocation                object_location,
-                             opt::Option<std::string_view> object_name = opt::none)
+    resolve_structural_access(Type&                         object_type,
+                              ast::IdentifierHandle         member,
+                              SourceLocation                object_location,
+                              opt::Option<std::string_view> object_name = opt::none)
         -> Result<mem::NonNull<Type>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
-    auto get_rightmost_name(ast::OuterAccessHandle handle) noexcept -> std::string_view;
+    auto get_rightmost_name(ast::OuterAccessHandle) noexcept -> std::string_view;
     template <traits::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::DotExpression&) -> void;
@@ -162,6 +165,14 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
+
+    // There's some cases where the parser can't disambiguate between types and values
+    [[nodiscard]] auto disambiguate_operator(TypeKind                   kind,
+                                             ast::ExpressionHandle      operand,
+                                             Type&                      inner_type,
+                                             types::MutabilityModifiers mutability) noexcept
+        -> opt::Option<Type&>;
+
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;
     auto visit(ast::NodeID, const ast::AddressOfExpression&) -> void;
     auto visit(ast::NodeID, const ast::DereferenceExpression&) -> void;
@@ -231,12 +242,12 @@ class TypeResolver {
     }
 
   private:
-    mod::Module&     resolving_;
-    usize            table_idx_;
-    SymbolTableStack table_stack_;
-    UserTypeStack    user_type_stack_;
-    UserTypeStack    implicit_type_stack_;
-    NamedTests       named_tests_; // Named tests of the currently resolving module
+    mod::Module&        resolving_;
+    usize               table_idx_;
+    SymbolTableStack    table_stack_;
+    StructuralTypeStack user_type_stack_;
+    StructuralTypeStack implicit_type_stack_;
+    NamedTests          named_tests_; // Named tests of the currently resolving module
 
     Context&           ctx_;
     opt::Option<Type&> last_type_;

@@ -25,6 +25,7 @@ constexpr auto ALL_BUILTINS_BY_SV = fixed::make_hash_map(builtins::ALIGN_CAST,
                                                          builtins::ALIGN_OF,
                                                          builtins::SIZE_OF,
                                                          builtins::TYPE_OF,
+                                                         builtins::THIS,
                                                          builtins::TAG_NAME,
                                                          builtins::MEMCPY,
                                                          builtins::MEMSET,
@@ -55,8 +56,8 @@ constexpr auto ALL_BUILTINS_BY_TT = [] {
 
 } // namespace
 
-auto get_builtin_opt(TokenType tok) noexcept -> opt::Option<std::string_view> {
-    return ALL_BUILTINS_BY_TT[tok];
+auto get_builtin_opt(TokenType tt) noexcept -> opt::Option<std::string_view> {
+    return ALL_BUILTINS_BY_TT[tt];
 }
 
 auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
