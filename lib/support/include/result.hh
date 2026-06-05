@@ -33,7 +33,9 @@ template <typename E> class EmptyResult {
     [[nodiscard]] constexpr auto has_error() const noexcept -> bool {
         return std::holds_alternative<E>(error_);
     }
-    [[nodiscard]] constexpr auto error() const -> const E& { return std::get<E>(error_); }
+    [[nodiscard]] constexpr auto error(this auto&& self) -> decltype(auto) {
+        return std::get<E>(self.error_);
+    }
 
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 

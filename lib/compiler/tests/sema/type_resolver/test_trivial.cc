@@ -63,14 +63,56 @@ TEST_CASE("Type alias resolution") {
     CHECK(c_type == ctx->get_type(sema::TypeKind::REFERENCE, bool_ref));
 }
 
+TEST_CASE("Unary expression resolution") {
+    helpers::resolve_and_check("var a: ^i32; _ = *a;");
+    helpers::resolve_and_check("_ = !1;");
+    helpers::resolve_and_check("_ = ~1;");
+    helpers::resolve_and_check("_ = -1;");
+
+    helpers::test_resolver_fail(
+        "var a: i32; _ = *a;",
+        sema::Diagnostic{"Cannot dereference non-pointer expression; found 'i32'",
+                         sema::Error::TYPE_MISMATCH,
+                         std::pair{0uz, 16uz}});
+}
+
 TEST_CASE("Undeclared identifier usage") {
-    auto [ctx, idx] = helpers::test_resolver_fail("const a := b;",
-                                                  sema::Diagnostic{
-                                                      "Use of undeclared identifier 'b'",
-                                                      sema::Error::UNDECLARED_IDENTIFIER,
-                                                      std::pair{0uz, 11uz},
-                                                  });
-    ctx->check_poisoned<syms::Node>("a", idx);
+    const auto expected_diag = [](usize col) {
+        return sema::Diagnostic{
+            "Use of undeclared identifier 'b'",
+            sema::Error::UNDECLARED_IDENTIFIER,
+            std::pair{0uz, col},
+        };
+    };
+
+    helpers::test_resolver_fail("const a := b;", expected_diag(11));
+    helpers::test_resolver_fail("using a = ^b;", expected_diag(10));
+}
+
+TEST_CASE("Defer & discard statement resolution") {
+    auto [ctx, idx]           = helpers::resolve_and_check("fn(): void { defer { var a: i32; } }");
+    const auto [sym, _, type] = ctx->get_type_sym_info<syms::Node>("a", 2);
+    CHECK(type == ctx->get_type(sema::TypeKind::I32));
+    helpers::resolve_and_check("_ = 1 + 1;");
+}
+
+TEST_CASE("Call resolution edge cases") {
+    helpers::resolve_and_check(
+        "@sizeOf(blk: { if (1 + 1 == 2) { break :blk i32; } else { break :blk f64; } });");
+    helpers::resolve_and_check("@typeOf([]i32);");
+    helpers::test_resolver_fail("const a := b; const c := a();",
+                                sema::Diagnostic{"Use of undeclared identifier 'b'",
+                                                 sema::Error::UNDECLARED_IDENTIFIER,
+                                                 std::pair{0uz, 11uz}});
+}
+
+TEST_CASE("Loop resolution") {
+    helpers::resolve_and_check("const a := loop { const foo := 42; };");
+    helpers::test_resolver_fail(
+        "for (23) |_| { var a: i32; }",
+        sema::Diagnostic{"Iterables may only be arrays or slices; found 'i32'",
+                         sema::Error::TYPE_MISMATCH,
+                         std::pair{0uz, 5uz}});
 }
 
 TEST_CASE("Duplicate test name") {

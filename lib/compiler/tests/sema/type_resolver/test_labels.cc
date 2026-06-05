@@ -2,6 +2,7 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
 
 #include "ast/expression.hh"
 #include "helpers/sema.hh"
@@ -10,12 +11,13 @@
 #include "sema/type.hh"
 
 #include "option.hh"
+#include "types.hh"
 
 namespace ghoti::tests {
 
 namespace syms = sema::symbols;
 
-TEST_CASE("For loop resolution") {
+TEST_CASE("Labeled for loop resolution") {
     auto [ctx, idx] = helpers::resolve_and_check(R"(
         var arr: []bool;
         const a := outer: for (0..5, blk: { break :blk 2..4; }, arr) |i, j, _| {
@@ -48,10 +50,9 @@ TEST_CASE("For loop resolution") {
     check_capture("j");
 }
 
-TEST_CASE("Trivial loop resolution") {
+TEST_CASE("Complex label resolution") {
     helpers::resolve_and_check(
         "const a := do { const foo := 42; } while (blk: { break :blk 42; });");
-    helpers::resolve_and_check("const a := loop { const foo := 42; };");
     helpers::resolve_and_check(R"(
         var i: i32;
         const a := outer: while (blk: { break :blk 42; }) : (i += blk: {
@@ -65,12 +66,18 @@ TEST_CASE("Trivial loop resolution") {
     )");
 }
 
-TEST_CASE("Illegal for loop iterable type") {
-    helpers::test_resolver_fail(
-        "for (23) |_| { var a: i32; }",
-        sema::Diagnostic{"Iterables may only be arrays or slices; found 'i32'",
-                         sema::Error::TYPE_MISMATCH,
-                         std::pair{0uz, 5uz}});
+TEST_CASE("Unknown labels resolved") {
+    const auto test_unknown_label = [](std::string_view name, usize col) {
+        helpers::test_resolver_fail(
+            fmt::format("for (0..2) |_| {{ {} :blk; }}", name),
+            sema::Diagnostic{
+                fmt::format("Labeled {} statements must be used with a known label", name),
+                sema::Error::ILLEGAL_CONTROL_FLOW,
+                std::pair{0uz, col}});
+    };
+
+    test_unknown_label("break", 24);
+    test_unknown_label("continue", 27);
 }
 
 } // namespace ghoti::tests

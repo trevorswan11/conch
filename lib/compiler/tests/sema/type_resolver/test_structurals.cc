@@ -266,4 +266,82 @@ TEST_CASE("Illegal circular module-based access resolution") {
     ctx->check_poisoned(sym);
 }
 
+TEST_CASE("Initializer expression in various resolution contexts") {
+    SECTION("Out of place access-related expressions") {
+        helpers::test_resolver_fail(
+            ".{};",
+            sema::Diagnostic{
+                "Initializer expression requires a known type; provide an explicit type "
+                "or use in a typed context",
+                sema::Error::TYPE_MISMATCH,
+                std::pair{0uz, 1uz}});
+
+        helpers::test_resolver_fail(
+            "const a := .f;",
+            sema::Diagnostic{"Implicit access expression used outside of a typed context",
+                             sema::Error::TYPE_MISMATCH,
+                             std::pair{0uz, 11uz}});
+    }
+
+    SECTION("Initializer with incomplete type") {
+        const auto expected_diag = [](usize col) {
+            return sema::Diagnostic{"Cannot initialize an incomplete type",
+                                    sema::Error::CYCLIC_DEPENDENCY,
+                                    std::pair{0uz, col}};
+        };
+
+        helpers::test_resolver_fail("struct { a: auto = @this(){}, };", expected_diag(26));
+        helpers::test_resolver_fail("struct { a: @this() = .{}, };", expected_diag(23));
+    }
+
+    SECTION("Union & enum type restrictions") {
+        helpers::test_resolver_fail(
+            "const U := union { A: i32, B: i32, }; const u := U{ .A = 1, .B = 2 };",
+            sema::Diagnostic{"Union initializer lists must list exactly one field; found 2",
+                             sema::Error::ARITY_MISMATCH,
+                             std::pair{0uz, 50uz}});
+
+        helpers::test_resolver_fail(
+            "const E := enum { A, }; const e := E{};",
+            sema::Diagnostic{"Enums cannot be initialized with an initializer expression as they "
+                             "lack member variables",
+                             sema::Error::ARITY_MISMATCH,
+                             std::pair{0uz, 36uz}});
+    }
+
+    SECTION("Struct type restrictions") {
+        constexpr std::string_view input{"const S := struct { a: i32, b: i64 = 3, c: bool,};"};
+        helpers::resolve_and_check(
+            fmt::format("{} const a: S = .{{.a = 2, .b = 3, .c = false, }};", input));
+
+        helpers::test_resolver_fail(
+            fmt::format("{} const a: S = .{{.a = 2, .b = 3, .c = false, .c = true, }};", input),
+            sema::Diagnostic{"Struct initializer contains duplicate field: c",
+                             sema::Error::DUPLICATE_FIELD,
+                             std::pair{0uz, 65uz}});
+        helpers::test_resolver_fail(
+            fmt::format("{} const a: S = .{{.a = 2, .b = 3, .c = false, .c = true, .a = 34 }};",
+                        input),
+            sema::Diagnostic{"Struct initializer contains duplicate fields: c, a",
+                             sema::Error::DUPLICATE_FIELD,
+                             std::pair{0uz, 65uz}});
+
+        helpers::test_resolver_fail(fmt::format("{} const a: S = .{{ .a = 2, }};", input),
+                                    sema::Diagnostic{"Struct initializer missing required field: c",
+                                                     sema::Error::MISSING_FIELDS,
+                                                     std::pair{0uz, 65uz}});
+        helpers::test_resolver_fail(
+            fmt::format("{} const a: S = .{{ .b = 2, }};", input),
+            sema::Diagnostic{"Struct initializer missing required fields: a, c",
+                             sema::Error::MISSING_FIELDS,
+                             std::pair{0uz, 65uz}});
+
+        helpers::test_resolver_fail(
+            fmt::format("{} const a: S = .{{ .a = 2, .c = true, .d = 2 }};", input),
+            sema::Diagnostic{"Struct initializer contains unknown field: d",
+                             sema::Error::UNKNOWN_FIELDS,
+                             std::pair{0uz, 65uz}});
+    }
+}
+
 } // namespace ghoti::tests

@@ -69,7 +69,7 @@ TEST_CASE("Array resolution with implicit type") {
     CHECK(value_type == array_literal_type);
 }
 
-TEST_CASE("Indexing known arrays with single accessors") {
+TEST_CASE("Indexing with single accessors") {
     const auto test_index = [](std::string_view type_mod) {
         auto [ctx, idx] =
             helpers::resolve_and_check(fmt::format("var a: {}u32; const b := a[0];", type_mod));
@@ -121,6 +121,7 @@ TEST_CASE("Illegal arrays dependent on incomplete types") {
     helpers::test_resolver_fail("const A := struct { a: @typeOf([3]A), };", expected_diag(34));
     helpers::test_resolver_fail("const A := union { a: [1]A, };", expected_diag(25));
     helpers::test_resolver_fail("const A := union { a: @typeOf([1]A), };", expected_diag(33));
+    helpers::test_resolver_fail("const A := struct { a: auto = [_]A{}, };", expected_diag(33));
 }
 
 } // namespace ghoti::tests

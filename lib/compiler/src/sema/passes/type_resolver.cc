@@ -7,6 +7,7 @@
 #include <variant>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include "ast/expression.hh"
 #include "ast/format.hh"
@@ -193,27 +194,27 @@ template <traits::IndexableID ID>
     }
     case TokenType::BUILTIN_PTR_FROM_INT: {
         auto& requested_output = *get_resolved_call_arg_type(call.arguments[0]);
-        if (requested_output.get_kind() != TypeKind::POINTER) {
-            return make_sema_err(fmt::format("Expected a pointer type; found '{}'",
-                                             type_kind_display_name(requested_output.get_kind())),
-                                 Error::TYPE_MISMATCH,
-                                 get_call_arg_location(call.arguments[0]));
+        if (requested_output.get_kind() == TypeKind::POINTER) {
+            return_type = requested_output;
+            break;
         }
-        return_type = requested_output;
-        break;
+        return make_sema_err(fmt::format("Expected a pointer type; found '{}'",
+                                         type_kind_display_name(requested_output.get_kind())),
+                             Error::TYPE_MISMATCH,
+                             get_call_arg_location(call.arguments[0]));
     }
     case TokenType::BUILTIN_SLICE_FROM_PTR: {
         auto& ptr_type = *get_resolved_call_arg_type(call.arguments[0]);
         if (const auto& ptr_data = ptr_type.as_opt<types::Pointer>()) {
             // The resulting slice isn't null terminated since the pointer gives no guarantee
             return_type = ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
-        } else {
-            return make_sema_err(fmt::format("Expected a pointer-yielding expression; found '{}'",
-                                             type_kind_display_name(ptr_type.get_kind())),
-                                 Error::TYPE_MISMATCH,
-                                 get_call_arg_location(call.arguments[0]));
+            break;
         }
-        break;
+
+        return make_sema_err(fmt::format("Expected a pointer-yielding expression; found '{}'",
+                                         type_kind_display_name(ptr_type.get_kind())),
+                             Error::TYPE_MISMATCH,
+                             get_call_arg_location(call.arguments[0]));
     }
     case TokenType::BUILTIN_TAG_NAME: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::SLICE);
@@ -921,6 +922,70 @@ auto TypeResolver::visit(ast::NodeID id, const ast::RangeExpression& range) -> v
     last_type_.emplace(slice_type);
 }
 
+auto TypeResolver::validate_struct_initializer(ast::NodeID                       init_id,
+                                               const ast::InitializerExpression& init,
+                                               Type& struct_type) -> Result<void, Diagnostic> {
+    struct_validator_.clear();
+    const auto& struct_data = struct_type.as<types::Struct>();
+
+    const auto plurality = [](const auto& vec) -> std::string_view {
+        return vec.size() == 1 ? "" : "s";
+    };
+
+    // Check for duplicates
+    for (const auto& [accessor, value] : init.initializers) {
+        const auto& accessor_node = resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
+        const auto& accessor_ident =
+            resolving_.ast.get_as<ast::IdentifierExpression>(accessor_node.member);
+        const auto field_name = accessor_ident.name;
+        if (!struct_validator_.seen.insert(field_name).second) {
+            struct_validator_.duplicates.emplace_back(field_name);
+        }
+        struct_validator_.provided.emplace_back(field_name);
+    }
+
+    if (!struct_validator_.duplicates.empty()) {
+        return Diagnostic{fmt::format("Struct initializer contains duplicate field{}: {}",
+                                      plurality(struct_validator_.duplicates),
+                                      fmt::join(struct_validator_.duplicates, ", ")),
+                          Error::DUPLICATE_FIELD,
+                          resolving_.ast.location_of(init_id)};
+    }
+
+    // Check for missing fields
+    const auto& enclosing = struct_data.enclosing;
+    for (const auto& [ident, _, default_value] : struct_data.struct_expr.fields) {
+        const auto& field_node = enclosing.ast.get_as<ast::IdentifierExpression>(ident);
+        if (!default_value && !struct_validator_.seen.contains(field_node.name)) {
+            struct_validator_.missings.emplace_back(field_node.name);
+        }
+    }
+
+    if (!struct_validator_.missings.empty()) {
+        return Diagnostic{fmt::format("Struct initializer missing required field{}: {}",
+                                      plurality(struct_validator_.missings),
+                                      fmt::join(struct_validator_.missings, ", ")),
+                          Error::MISSING_FIELDS,
+                          resolving_.ast.location_of(init_id)};
+    }
+
+    // Check for extra/unknown fields
+    const auto  struct_table_idx = struct_type.get_symbol_table_idx();
+    const auto& struct_table     = ctx_.registry.get(struct_table_idx);
+    for (const auto& name : struct_validator_.provided) {
+        if (!struct_table.has(name)) { struct_validator_.unknowns.emplace_back(name); }
+    }
+
+    if (!struct_validator_.unknowns.empty()) {
+        return Diagnostic{fmt::format("Struct initializer contains unknown field{}: {}",
+                                      plurality(struct_validator_.unknowns),
+                                      fmt::join(struct_validator_.unknowns, ", ")),
+                          Error::UNKNOWN_FIELDS,
+                          resolving_.ast.location_of(init_id)};
+    }
+    return {};
+}
+
 auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init) -> void {
     // Resolve the object first so it can be tied to the member's types
     opt::Option<Type&> object_type_opt;
@@ -948,25 +1013,31 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
                                                    resolving_.ast.location_of(id)));
     }
 
+    const auto num_initializers = init.initializers.size();
     if (object_type.as_opt<types::Enum>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
                              "Enums cannot be initialized with an initializer expression as "
                              "they lack member variables",
-                             Error::TYPE_MISMATCH,
+                             Error::ARITY_MISMATCH,
                              resolving_.ast.location_of(id)));
-    }
-
-    // This is a restriction naturally imposed by the definition of a union in theory
-    if (object_type.as_opt<types::Union>() && init.initializers.size() != 1) {
-        return last_type_.emplace(ctx_.poison_node(
-            resolving_,
-            id,
-            fmt::format("Union initializer lists must list exactly one field; found {}",
-                        init.initializers.size()),
-            Error::ARITY_MISMATCH,
-            resolving_.ast.location_of(id)));
+    } else if (object_type.as_opt<types::Union>()) {
+        // This is a restriction naturally imposed by the definition of a union in theory
+        if (num_initializers != 1) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("Union initializer lists must list exactly one field; found {}",
+                            num_initializers),
+                Error::ARITY_MISMATCH,
+                resolving_.ast.location_of(id)));
+        }
+    } else if (const auto struct_data = object_type.as_opt<types::Struct>()) {
+        auto valid = validate_struct_initializer(id, init, object_type);
+        if (!valid) {
+            return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(valid).error()));
+        }
     }
 
     if (!object_type.as_opt<types::Struct>() && !object_type.as_opt<types::Union>()) {
@@ -1312,9 +1383,13 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
         auto        symbol = ctx_.registry.get_from_opt(table_idx_, ident.name);
         if (!symbol) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
-        if (field.default_value) { TRY_RESOLVE(*field.default_value); }
         TRY_RESOLVE(field.explicit_type);
         auto& field_type = *last_type_.take();
+
+        if (field.default_value) {
+            const StructuralGuard inner_g{implicit_type_stack_, field_type};
+            TRY_RESOLVE(*field.default_value);
+        }
 
         if (!field_type.has_resolved()) {
             return last_type_.emplace(ctx_.poison_node(
@@ -1330,7 +1405,8 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
     }
 
     auto member_types = ctx_.pool.get_many_unsafe(struct_expr.members.size());
-    CommittableResolution<types::Struct> resolution{struct_type, field_types, member_types};
+    CommittableResolution<types::Struct> resolution{
+        struct_type, field_types, member_types, struct_expr, resolving_};
     if (!resolve_members(member_types, struct_expr.members)) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id));
     }
@@ -1412,8 +1488,7 @@ auto TypeResolver::resolve_control_flow_label(opt::Option<ast::IdentifierHandle>
     if (label) {
         const auto& ident  = resolving_.ast.get_as<ast::IdentifierExpression>(*label);
         auto        symbol = ctx_.registry.lookup(table_stack_, ident.name);
-        ASSERT(symbol, "Symbol was not found in the current accessible scopes");
-        if (symbol->get_kind() != SymbolKind::LABEL) {
+        if (!symbol || symbol->get_kind() != SymbolKind::LABEL) {
             return make_sema_err(
                 fmt::format("Labeled {} statements must be used with a known label", stmt_name),
                 Error::ILLEGAL_CONTROL_FLOW,

@@ -108,6 +108,23 @@ class TypeResolver {
         bool  committed_{false};
     };
 
+    struct StructInitializerValidator {
+        std::vector<std::string_view>                  provided;
+        std::vector<std::string_view>                  duplicates;
+        std::vector<std::string_view>                  missings;
+        std::vector<std::string_view>                  unknowns;
+        ankerl::unordered_dense::set<std::string_view> seen;
+
+        // State is cleared but not reallocated to save some time
+        auto clear() noexcept -> void {
+            provided.clear();
+            duplicates.clear();
+            missings.clear();
+            unknowns.clear();
+            seen.clear();
+        }
+    };
+
   private:
     auto visit(ast::NodeID, const ast::ArrayExpression&) -> void;
 
@@ -162,6 +179,11 @@ class TypeResolver {
 
     auto visit(ast::NodeID, const ast::DotExpression&) -> void;
     auto visit(ast::NodeID, const ast::RangeExpression&) -> void;
+
+    [[nodiscard]] auto validate_struct_initializer(ast::NodeID,
+                                                   const ast::InitializerExpression&,
+                                                   Type&) -> Result<void, Diagnostic>;
+
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
@@ -239,7 +261,9 @@ class TypeResolver {
     SymbolTableStack    table_stack_;
     StructuralTypeStack user_type_stack_;
     StructuralTypeStack implicit_type_stack_;
-    NamedTests          named_tests_; // Named tests of the currently resolving module
+
+    NamedTests                 named_tests_;
+    StructInitializerValidator struct_validator_;
 
     Context&           ctx_;
     opt::Option<Type&> last_type_;

@@ -27,6 +27,9 @@ enum class Error : u8 {
     ILLEGAL_SELF_PARAMETER,
     ILLEGAL_LABEL_USAGE,
     DUPLICATE_TEST_NAME,
+    DUPLICATE_FIELD,
+    MISSING_FIELDS,
+    UNKNOWN_FIELDS,
 };
 
 using Diagnostic  = Diagnostic<Error>;

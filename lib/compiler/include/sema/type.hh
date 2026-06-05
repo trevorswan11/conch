@@ -115,6 +115,8 @@ struct Union {
 struct Struct {
     std::span<mem::NonNull<Type>> fields;
     std::span<mem::NonNull<Type>> members;
+    const ast::StructExpression&  struct_expr;
+    const mod::Module&            enclosing;
 
     // The index location entirely depends on the number of fields which always come first
     [[nodiscard]] auto type_at(usize idx) const noexcept -> Type& {
