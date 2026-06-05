@@ -1,7 +1,5 @@
 #include "ast/dumper.hh"
 
-#include <variant>
-
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <magic_enum/magic_enum.hpp>
@@ -70,7 +68,7 @@ auto ASTDumper::visit(NodeID, const CallExpression& call) -> void {
         fmt::println(out_, "{}Arguments:", indent_.current_branch());
         dump_container(call.arguments, [this](const CallExpression::Argument& arg) {
             fmt::print(out_, "{}", indent_.current_branch());
-            std::visit([this](auto arg_id) { dump(arg_id); }, arg.id);
+            arg.visit([this](auto arg_id) { dump(arg_id); });
         });
     }
 }

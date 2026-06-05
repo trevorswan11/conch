@@ -2,7 +2,6 @@
 
 #include <concepts>
 #include <cstddef>
-#include <tuple>
 #include <type_traits>
 
 namespace ghoti::traits {
@@ -12,6 +11,9 @@ concept Integral = std::is_integral_v<T> && !std::same_as<T, bool>;
 
 template <typename T>
 concept Unsigned = std::is_unsigned_v<T>;
+
+template <typename T, typename... Args>
+concept NoThrowConstructible = std::is_nothrow_constructible_v<T, Args...>;
 
 template <typename T>
 concept TriviallyConstructible = std::is_trivially_constructible_v<T>;

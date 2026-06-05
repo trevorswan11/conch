@@ -39,8 +39,8 @@ class Analyzer {
         return self.registry_.get_opt(idx);
     }
 
-    MAKE_DEDUCING_GETTER(registry, SymbolTableRegistry&)
-    MAKE_DEDUCING_GETTER(pool, TypePool&)
+    MAKE_DEDUCING_GETTER(registry)
+    MAKE_DEDUCING_GETTER(pool)
 
     [[nodiscard]] auto get_prelude_index_opt() const noexcept -> opt::Size {
         return ctx_.prelude_index;

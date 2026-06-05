@@ -3,7 +3,8 @@
 #include <concepts>
 #include <expected>
 #include <type_traits>
-#include <variant>
+
+#include "variant.hh"
 
 namespace ghoti {
 
@@ -27,14 +28,14 @@ template <typename E> class EmptyResult {
 
     // Checks for the lack of presence of the underlying error, mirrors std::expected
     [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return !has_error(); }
-    constexpr auto               value() const -> void { std::get<std::monostate>(error_); }
+    constexpr auto               value() const -> void {}
     constexpr auto               operator*() const -> void { return value(); }
 
     [[nodiscard]] constexpr auto has_error() const noexcept -> bool {
-        return std::holds_alternative<E>(error_);
+        return error_.template is<E>();
     }
     [[nodiscard]] constexpr auto error(this auto&& self) -> decltype(auto) {
-        return std::get<E>(self.error_);
+        return self.error_.template get<E>();
     }
 
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
@@ -50,7 +51,7 @@ template <typename E> class EmptyResult {
     [[nodiscard]] constexpr auto operator==(const EmptyResult&) const noexcept -> bool = default;
 
   private:
-    std::variant<std::monostate, E> error_;
+    Variant<Unit, E> error_;
 };
 
 // Uses explicit inline namespace due to name collisions in std

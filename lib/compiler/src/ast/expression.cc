@@ -3,7 +3,6 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <fmt/format.h>
@@ -153,7 +152,7 @@ namespace {
 // Returns an actual value only if a terminal condition was found
 [[nodiscard]] auto validate_member_decl(syntax::Parser& parser, MemberHandle member) noexcept
     -> opt::Option<std::string_view> {
-    return std::visit(
+    return parser.get_ast()[*member].visit(
         Overloaded{[](const DeclStatement& decl) -> opt::Option<std::string_view> {
                        // Members that violate this wouldn't be usable with C
                        if (decl.has_modifier(DeclModifiers::EXTERN) ||
@@ -162,8 +161,7 @@ namespace {
                        }
                        return opt::none;
                    },
-                   [](const auto&) -> opt::Option<std::string_view> { return opt::none; }},
-        parser.get_ast()[*member]);
+                   [](const auto&) -> opt::Option<std::string_view> { return opt::none; }});
 }
 
 [[nodiscard]] auto parse_members(syntax::Parser& parser) -> Result<Members, syntax::Diagnostic> {

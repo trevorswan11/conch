@@ -48,7 +48,7 @@ auto format_module_diagnostic(std::ostream&                   os,
 
 auto Module::print_diagnostics(std::ostream& os) const -> void {
     if (is_ok()) { return; }
-    match(Overloaded{
+    diagnostics.visit(Overloaded{
         [this, &os](const auto& list) {
             for (const auto& diag : list) {
                 format_module_diagnostic(

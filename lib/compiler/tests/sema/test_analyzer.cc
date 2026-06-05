@@ -130,7 +130,7 @@ TEST_CASE("Full sema pipeline") {
 
             CHECK(call_expr.arguments.size() == 1);
             const auto arg =
-                helpers::unwrap(call_expr.arguments[0].as_opt<ast::ExpressionHandle>());
+                helpers::unwrap(call_expr.arguments[0].get_opt<ast::ExpressionHandle>());
             auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
             CHECK(arg_type == msg_type);
 

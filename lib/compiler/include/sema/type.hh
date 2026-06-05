@@ -113,10 +113,10 @@ struct Union {
 };
 
 struct Struct {
-    std::span<mem::NonNull<Type>> fields;
-    std::span<mem::NonNull<Type>> members;
-    const ast::StructExpression&  struct_expr;
-    const mod::Module&            enclosing;
+    std::span<mem::NonNull<Type>>                 fields;
+    std::span<const ast::StructExpression::Field> ast_fields;
+    std::span<mem::NonNull<Type>>                 members;
+    const mod::Module&                            enclosing;
 
     // The index location entirely depends on the number of fields which always come first
     [[nodiscard]] auto type_at(usize idx) const noexcept -> Type& {
@@ -236,21 +236,21 @@ namespace ghoti::sema {
 // A semantic type that is entirely owned by an arena of types
 class Type {
   public:
-    using Resolved = std::variant<types::Poison,
-                                  types::BuiltinType,
-                                  types::Slice,
-                                  types::Array,
-                                  types::Pointer,
-                                  types::Reference,
-                                  types::Enum,
-                                  types::Union,
-                                  types::Struct,
-                                  types::Module,
-                                  types::Function,
-                                  types::BuiltinFunction,
-                                  types::MetaType,
-                                  types::DeferredCall,
-                                  types::DeferredArray>;
+    using Resolved = Variant<types::Poison,
+                             types::BuiltinType,
+                             types::Slice,
+                             types::Array,
+                             types::Pointer,
+                             types::Reference,
+                             types::Enum,
+                             types::Union,
+                             types::Struct,
+                             types::Module,
+                             types::Function,
+                             types::BuiltinFunction,
+                             types::MetaType,
+                             types::DeferredCall,
+                             types::DeferredArray>;
 
   public:
     ~Type() = default;
@@ -267,15 +267,15 @@ class Type {
 
     // Unpacks T from the resolved type assuming the type has been resolved to T
     template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
-        return std::get<T>(self.resolved_.value());
+        return self.resolved_.value().template get<T>();
     }
 
     // Tries to unpack T, returning an empty option instead of throwing an exception
     template <typename T, typename Self>
     [[nodiscard]] auto as_opt(this Self&& self) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, T>&> {
-        if (!self.resolved_ || !std::holds_alternative<T>(*self.resolved_)) { return opt::none; }
-        return std::get<T>(*self.resolved_);
+        if (!self.resolved_ || !self.resolved_->template is<T>()) { return opt::none; }
+        return self.resolved_->template get<T>();
     }
 
     // Intended for use on pass 1 only

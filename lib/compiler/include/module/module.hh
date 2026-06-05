@@ -19,7 +19,6 @@
 #include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
-#include "assert.hh"
 #include "hash.hh"
 #include "memory.hh"
 #include "option.hh"
@@ -46,18 +45,16 @@ enum class ModuleState : u8 {
 };
 
 // cppcheck-suppress-begin internalAstError
-using DiagnosticListVariant = std::variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
+using DiagnosticListVariant = Variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
 // cppcheck-suppress-end internalAstError
 
 #define MAKE_MODULE_DIAGNOSTIC_UNPACKER(name, checker, DiagType)                \
     [[nodiscard]] auto CONCAT(get_, name)() const noexcept -> const DiagType& { \
-        try {                                                                   \
-            return std::get<DiagType>(diagnostics);                             \
-        } catch (...) { UNREACHABLE("Unchecked variant access"); }              \
+        return diagnostics.get<DiagType>();                                     \
     }                                                                           \
                                                                                 \
     [[nodiscard]] auto CONCAT(has_, name)() const noexcept -> bool {            \
-        return checker() && std::holds_alternative<DiagType>(diagnostics);      \
+        return checker() && diagnostics.is<DiagType>();                         \
     }
 
 struct Module {
@@ -73,8 +70,6 @@ struct Module {
 
     MAKE_MODULE_DIAGNOSTIC_UNPACKER(parser_diagnostics, is_errored, syntax::Diagnostics)
     MAKE_MODULE_DIAGNOSTIC_UNPACKER(sema_diagnostics, is_poisoned, sema::Diagnostics)
-
-    MAKE_VARIANT_MATCHER(diagnostics)
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>

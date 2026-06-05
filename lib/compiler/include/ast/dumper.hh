@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ostream>
-#include <variant>
 
 #include <fmt/ostream.h>
 
@@ -23,14 +22,14 @@ class ASTDumper {
 
     template <traits::IndexableNodeID ID> auto dump(ID id) -> void {
         ASSERT(id.is_valid(), "Attempt to dump invalid handle");
-        std::visit([&](const auto& data) { this->visit(id, data); }, ast_[id]);
+        ast_[id].visit([&](const auto& data) { this->visit(id, data); });
     }
 
     auto dump(ExplicitTypeID id) -> void {
         ASSERT(id.is_valid(), "Attempt to dump invalid handle");
         fmt::println(out_, "ExplicitType (modifier: {})", id.get_modifier());
         const Indent::Guard g{indent_, true};
-        std::visit([&](const auto& data) { visit(id, data); }, ast_[id]);
+        ast_[id].visit([&](const auto& data) { visit(id, data); });
     }
 
   private:

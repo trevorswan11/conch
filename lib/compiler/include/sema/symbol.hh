@@ -102,16 +102,16 @@ using ForLoopCapture = ast::ForLoopExpression::Capture;
 
 class Symbol {
   public:
-    using Data = std::variant<symbols::Builtin,
-                              symbols::Node,
-                              symbols::Label,
-                              symbols::MatchCapture,
-                              symbols::StructField,
-                              symbols::UnionField,
-                              symbols::Enumeration,
-                              symbols::SelfParameter,
-                              symbols::Parameter,
-                              symbols::ForLoopCapture>;
+    using Data = Variant<symbols::Builtin,
+                         symbols::Node,
+                         symbols::Label,
+                         symbols::MatchCapture,
+                         symbols::StructField,
+                         symbols::UnionField,
+                         symbols::Enumeration,
+                         symbols::SelfParameter,
+                         symbols::Parameter,
+                         symbols::ForLoopCapture>;
 
   public:
     Symbol(std::string_view name, const Data& data) noexcept : name_{name}, data_{data} {}
@@ -120,22 +120,19 @@ class Symbol {
     MAKE_MOVE_CONSTRUCTABLE_ONLY(Symbol)
 
     MAKE_GETTER(name, std::string_view)
-    MAKE_GETTER(data, const Symbol::Data&)
+    MAKE_DEDUCING_GETTER(data)
 
     // Unpacks T from the resolved type assuming the type has been resolved to T
-    template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
-        return std::get<T>(self.data_);
+    template <typename T> [[nodiscard]] auto as(this auto&& self) noexcept -> auto& {
+        return self.data_.template get<T>();
     }
 
     // Tries to unpack T, returning an empty option instead of throwing an exception
     template <typename T, typename Self>
     [[nodiscard]] auto as_opt(this Self&& self) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, T>&> {
-        if (!std::holds_alternative<T>(self.data_)) { return opt::none; }
-        return std::get<T>(self.data_);
+        return self.data_.template get_opt<T>();
     }
-
-    MAKE_VARIANT_MATCHER(data_)
 
     [[nodiscard]] auto get_symbol_location(const mod::Module& module) const noexcept
         -> SourceLocation;

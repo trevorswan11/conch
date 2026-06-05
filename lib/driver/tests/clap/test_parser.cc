@@ -2,7 +2,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <variant>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -29,9 +28,9 @@ TEST_CASE("Error with no args") {
 TEST_CASE("Ast dump parser") {
     auto         args = helpers::MockArgv{{"ghoti"s, "debug"s}};
     clap::Parser parser{args.argc(), args.argv(), std::cerr, false};
-    CHECK(std::holds_alternative<Unit>(parser.get_parsed()));
+    CHECK(parser.get_parsed().is<Unit>());
     REQUIRE(parser.parse());
-    CHECK(std::holds_alternative<cmd::Debug>(parser.get_parsed()));
+    CHECK(parser.get_parsed().is<cmd::Debug>());
 }
 
 } // namespace ghoti::tests

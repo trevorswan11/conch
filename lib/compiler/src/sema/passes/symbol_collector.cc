@@ -2,7 +2,6 @@
 
 #include <string_view>
 #include <utility>
-#include <variant>
 
 #include <fmt/format.h>
 
@@ -27,7 +26,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::sema {
 
@@ -82,7 +80,7 @@ auto SymbolCollector::visit(ast::NodeID, const ast::CallExpression& call) -> voi
     const auto g = in_expr_scope_.guard();
     collect(call.function);
     for (const auto& arg : call.arguments) {
-        std::visit([this](auto arg_id) { collect(arg_id); }, arg.id);
+        arg.visit([this](auto arg_id) { collect(arg_id); });
     }
 }
 

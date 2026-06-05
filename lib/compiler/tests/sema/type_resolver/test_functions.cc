@@ -79,7 +79,7 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto check_arg_type = [&](usize arg_idx, const sema::Type& expected_type) {
             REQUIRE(arg_idx < call.arguments.size());
             const auto arg =
-                helpers::unwrap(call.arguments[arg_idx].as_opt<ast::ExpressionHandle>());
+                helpers::unwrap(call.arguments[arg_idx].get_opt<ast::ExpressionHandle>());
             const auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
             CHECK(expected_type == arg_type);
         };
@@ -87,7 +87,7 @@ TEST_CASE("Function declaration and call type resolution") {
         check_arg_type(0, i32_type);
         check_arg_type(1, ctx->get_type(sema::TypeKind::POINTER, i32_type));
 
-        const auto last_arg = helpers::unwrap(call.arguments[2].as_opt<ast::ExpressionHandle>());
+        const auto last_arg = helpers::unwrap(call.arguments[2].get_opt<ast::ExpressionHandle>());
         const auto str_size = ctx->get_string_literal_size(last_arg);
 
         const auto& u8_type = ctx->get_type(sema::TypeKind::U8);

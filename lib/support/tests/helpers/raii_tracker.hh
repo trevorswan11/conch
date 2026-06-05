@@ -35,7 +35,8 @@ struct RAIITracker {
         move_count++;
     }
 
-    auto operator=(RAIITracker&&) noexcept {
+    auto operator=(RAIITracker&&) noexcept -> RAIITracker& {
+        live_count++;
         move_count++;
         return *this;
     }

@@ -4,7 +4,6 @@
 #include <span>
 #include <string_view>
 #include <utility>
-#include <variant>
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -271,42 +270,39 @@ auto TypeResolver::resolve_call_args(std::span<const ast::CallExpression::Argume
     -> ResolveResult {
     bool any_poison = false;
     for (const auto& arg : args) {
-        any_poison |= std::visit(
-            [this](auto id) {
-                resolve(id);
-                return last_type_.take()->is_poison();
-            },
-            arg.id);
+        any_poison |= arg.visit([this](auto id) {
+            resolve(id);
+            return last_type_.take()->is_poison();
+        });
     }
     return any_poison ? ResolveResult::POISONED : ResolveResult::OK;
 }
 
 auto TypeResolver::get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
     -> mem::NonNull<Type> {
-    return std::visit(Overloaded{[this](ast::ExpressionHandle id) -> auto& {
-                                     // Labels store their actual type in nested node data
-                                     if (const auto label =
-                                             resolving_.ast.get_as_opt<ast::LabelExpression>(id)) {
-                                         auto type = resolving_.get_sema_type_opt(label->name);
-                                         ASSERT(type, "Labeled call arg was not typed");
-                                         return *type;
-                                     }
+    return arg.visit(Overloaded{[this](ast::ExpressionHandle id) -> auto& {
+                                    // Labels store their actual type in nested node data
+                                    if (const auto label =
+                                            resolving_.ast.get_as_opt<ast::LabelExpression>(id)) {
+                                        auto type = resolving_.get_sema_type_opt(label->name);
+                                        ASSERT(type, "Labeled call arg was not typed");
+                                        return *type;
+                                    }
 
-                                     auto type = resolving_.get_sema_type_opt(id);
-                                     ASSERT(type, "Call argument was not typed");
-                                     return *type;
-                                 },
-                                 [this](ast::ExplicitTypeID id) -> auto& {
-                                     auto type = resolving_.get_sema_type_opt(id);
-                                     ASSERT(type, "Call argument was not typed");
-                                     return *type;
-                                 }},
-                      arg.id);
+                                    auto type = resolving_.get_sema_type_opt(id);
+                                    ASSERT(type, "Call argument was not typed");
+                                    return *type;
+                                },
+                                [this](ast::ExplicitTypeID id) -> auto& {
+                                    auto type = resolving_.get_sema_type_opt(id);
+                                    ASSERT(type, "Call argument was not typed");
+                                    return *type;
+                                }});
 }
 
 auto TypeResolver::get_call_arg_location(const ast::CallExpression::Argument& arg)
     -> SourceLocation {
-    return std::visit([this](auto id) { return resolving_.ast.location_of(id); }, arg.id);
+    return arg.visit([this](auto id) { return resolving_.ast.location_of(id); });
 }
 
 template <traits::IndexableID ID>
@@ -343,12 +339,10 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         for (auto [param_type, arg] :
              std::views::zip(function_type->params.subspan(param_offset), call.arguments)) {
             const StructuralGuard g{implicit_type_stack_, *param_type};
-            any_arg_poison |= std::visit(
-                [this](auto id) {
-                    resolve(id);
-                    return last_type_.take()->is_poison();
-                },
-                arg.id);
+            any_arg_poison |= arg.visit([this](auto id) {
+                resolve(id);
+                return last_type_.take()->is_poison();
+            });
         }
         if (any_arg_poison) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
@@ -652,7 +646,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
         // Identifier handles are not unique in the tree, but their symbol can be used to find root
         resolving_.set_sema_type_if(
             id,
-            symbol.match(Overloaded{
+            symbol.get_data().visit(Overloaded{
                 [](symbols::Builtin& builtin) -> Type& { return builtin.get_type(); },
                 [this](symbols::Label label) -> Type& {
                     const auto defn = label.get_definition();
@@ -954,7 +948,7 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
 
     // Check for missing fields
     const auto& enclosing = struct_data.enclosing;
-    for (const auto& [ident, _, default_value] : struct_data.struct_expr.fields) {
+    for (const auto& [ident, _, default_value] : struct_data.ast_fields) {
         const auto& field_node = enclosing.ast.get_as<ast::IdentifierExpression>(ident);
         if (!default_value && !struct_validator_.seen.contains(field_node.name)) {
             struct_validator_.missings.emplace_back(field_node.name);
@@ -1406,7 +1400,7 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
 
     auto member_types = ctx_.pool.get_many_unsafe(struct_expr.members.size());
     CommittableResolution<types::Struct> resolution{
-        struct_type, field_types, member_types, struct_expr, resolving_};
+        struct_type, field_types, struct_expr.fields, member_types, resolving_};
     if (!resolve_members(member_types, struct_expr.members)) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id));
     }

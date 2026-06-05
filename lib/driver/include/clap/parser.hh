@@ -19,7 +19,7 @@
 
 namespace ghoti::clap {
 
-using Parsed = std::variant<Unit, cmd::Debug>;
+using Parsed = Variant<Unit, cmd::Debug>;
 
 class Parser {
   public:

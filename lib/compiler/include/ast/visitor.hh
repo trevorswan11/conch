@@ -14,7 +14,7 @@
 namespace ghoti::ast {
 
 #define X(Type) Type,
-using NodeData = std::variant<FOREACH_AST_NODE(X) Unit>;
+using NodeData = Variant<FOREACH_AST_NODE(X) Unit>;
 #undef X
 
 #define AST_NODE_VISITOR_DEF_GEN_X(NodeType) \
@@ -33,16 +33,16 @@ using NodeData = std::variant<FOREACH_AST_NODE(X) Unit>;
 #define AST_TYPE_VISITOR_NOOP(Class, NodeType) \
     auto Class::visit(ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void {}
 
-using TypeData = std::variant<IdentifierExpression,
-                              ModuleAccessExpression,
-                              DotExpression,
-                              CallExpression,
-                              ExplicitFunctionType,
-                              ExplicitTypeID,
-                              StructExpression,
-                              EnumExpression,
-                              UnionExpression,
-                              ExplicitArrayType>;
+using TypeData = Variant<IdentifierExpression,
+                         ModuleAccessExpression,
+                         DotExpression,
+                         CallExpression,
+                         ExplicitFunctionType,
+                         ExplicitTypeID,
+                         StructExpression,
+                         EnumExpression,
+                         UnionExpression,
+                         ExplicitArrayType>;
 
 #define AST_VISITOR_DEF_GEN()  \
     AST_NODE_VISITOR_DEF_GEN() \

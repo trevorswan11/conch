@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string_view>
-#include <variant>
 #include <vector>
 
 #include "ast/handle.hh"
@@ -11,7 +10,7 @@
 
 #include "option.hh"
 #include "result.hh"
-#include "type_traits.hh"
+#include "variant.hh"
 
 namespace ghoti {
 
@@ -30,22 +29,7 @@ struct ArrayExpression {
 };
 
 struct CallExpression {
-    struct Argument {
-        std::variant<ExpressionHandle, ExplicitTypeID> id;
-
-        // Unpacks T from the variant ID assuming T is currently active
-        template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
-            return std::get<T>(self.id);
-        }
-
-        // Unpacks T from the variant ID only if T is currently active
-        template <typename T, typename Self>
-        [[nodiscard]] auto as_opt(this Self&& self) noexcept
-            -> opt::Option<traits::const_dispatch_t<Self, T>&> {
-            if (!std::holds_alternative<T>(self.id)) { return opt::none; }
-            return std::get<T>(self.id);
-        }
-    };
+    using Argument = Variant<ExpressionHandle, ExplicitTypeID>;
 
     ExpressionHandle      function;
     std::vector<Argument> arguments;

@@ -2,7 +2,6 @@
 
 #include <ranges>
 #include <string_view>
-#include <variant>
 
 #include <fmt/format.h>
 
@@ -30,31 +29,22 @@ namespace {
 
 [[nodiscard]] auto symbol_location_of(const mod::Module& module, const Symbol::Data& data) noexcept
     -> SourceLocation {
-    return std::visit(
-        Overloaded{[](const symbols::Builtin&) { return SourceLocation{0, 0}; },
-                   [&module](const auto& handle) { return module.ast.location_of(handle); },
-                   [&module](const symbols::Label& label) {
-                       return module.ast.location_of(label.get_definition());
-                   },
-                   [&module](const symbols::StructField& inner) {
-                       return module.ast.location_of(inner.name);
-                   },
-                   [&module](const symbols::UnionField& inner) {
-                       return module.ast.location_of(inner.name);
-                   },
-                   [&module](const symbols::Enumeration& inner) {
-                       return module.ast.location_of(inner.name);
-                   },
-                   [&module](const symbols::SelfParameter& inner) {
-                       return module.ast.location_of(inner.name);
-                   },
-                   [&module](const symbols::Parameter& inner) {
-                       return module.ast.location_of(inner.name);
-                   },
-                   [&module](const symbols::ForLoopCapture& inner) {
-                       return module.ast.location_of(inner.payload);
-                   }},
-        data);
+    return data.visit(Overloaded{
+        [](const symbols::Builtin&) { return SourceLocation{0, 0}; },
+        [&module](const auto& handle) { return module.ast.location_of(handle); },
+        [&module](const symbols::Label& label) {
+            return module.ast.location_of(label.get_definition());
+        },
+        [&module](const symbols::StructField& inner) { return module.ast.location_of(inner.name); },
+        [&module](const symbols::UnionField& inner) { return module.ast.location_of(inner.name); },
+        [&module](const symbols::Enumeration& inner) { return module.ast.location_of(inner.name); },
+        [&module](const symbols::SelfParameter& inner) {
+            return module.ast.location_of(inner.name);
+        },
+        [&module](const symbols::Parameter& inner) { return module.ast.location_of(inner.name); },
+        [&module](const symbols::ForLoopCapture& inner) {
+            return module.ast.location_of(inner.payload);
+        }});
 }
 
 } // namespace
@@ -64,7 +54,7 @@ auto Symbol::get_symbol_location(const mod::Module& module) const noexcept -> So
 }
 
 auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
-    return match(
+    return data_.visit(
         Overloaded{[&module](const symbols::Node& node) {
                        switch (node->get_kind()) {
                        case ast::NodeKind::DECL_STATEMENT:

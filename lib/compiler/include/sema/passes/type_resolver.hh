@@ -39,7 +39,7 @@ class TypeResolver {
     static auto resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
     template <traits::IndexableID ID> auto resolve(ID id) -> void {
-        std::visit([&](const auto& data) { visit(id, data); }, resolving_.ast[id]);
+        resolving_.ast[id].visit([&](const auto& data) { visit(id, data); });
     }
 
   private:
