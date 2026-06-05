@@ -45,9 +45,12 @@ auto ASTDumper::visit(NodeID, const ArrayExpression& array) -> void {
         dump(array.item_explicit_type);
     }
 
-    {
-        const Indent::Guard g{indent_, true};
-        fmt::println(out_, "{}Items:", indent_.current_branch());
+    const Indent::Guard g{indent_, true};
+    fmt::print(out_, "{}Items:", indent_.current_branch());
+    if (array.items.empty()) {
+        fmt::println(out_, " <empty>");
+    } else {
+        fmt::println(out_, "");
         dump_node_list(array.items);
     }
 }
@@ -55,13 +58,14 @@ auto ASTDumper::visit(NodeID, const ArrayExpression& array) -> void {
 // Safe to call with invalid ID in type dispatch
 auto ASTDumper::visit(NodeID, const CallExpression& call) -> void {
     fmt::println(out_, "CallExpression");
+    const auto has_args = !call.arguments.empty();
     {
-        const Indent::Guard g{indent_, false};
+        const Indent::Guard g{indent_, !has_args};
         fmt::print(out_, "{}Callee: ", indent_.current_branch());
         dump(call.function);
     }
 
-    {
+    if (has_args) {
         const Indent::Guard g{indent_, true};
         fmt::println(out_, "{}Arguments:", indent_.current_branch());
         dump_container(call.arguments, [this](const CallExpression::Argument& arg) {

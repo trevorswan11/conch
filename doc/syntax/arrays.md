@@ -7,7 +7,7 @@
 - Arrays are immutably sized, though internal elements can be mutable based on the provided type
 - A trailing comma is allowed, but not required
 ```ghoti
-[_]*N{a, b, c, d, e, }; // Inferred Size
+[_]^N{a, b, c, d, e, }; // Inferred Size
 [2uz]i32{A, B, }; // Explicit size
 [1uz]i32{2, 3}; // Illegal - size mismatch
 ```
@@ -31,8 +31,8 @@
     - Values of either type can be used with array-related builtins
 - Array types can have modifiers
 ```ghoti
-var a: &[S]&*mut T; // Normal array type
-var a: &[]&*mut T; // Analogous slice type
+var a: &[S]&^mut T; // Normal array type
+var a: &[]&^mut T; // Analogous slice type
 ```
 - Arrays do not implicitly 'decay' to slices or pointers
     - To pass an array to a function that expects a slice, you should use the respective reference operator (`&` or `&mut`) depending on the context. This is similar to Zig's array/slice syntax

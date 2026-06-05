@@ -508,4 +508,14 @@ ExpressionStatement
 ExpressionStatement
 └─ Expr: AddressOfExpression (CARET)
     └─ Operand: IdentifierExpression: a
+ExpressionStatement
+└─ Expr: CallExpression
+    └─ Callee: IdentifierExpression: call
+ExpressionStatement
+└─ Expr: ArrayExpression
+    ├─ Size: (inferred)
+    ├─ Null terminated: false
+    ├─ Type: ExplicitType (modifier: VALUE)
+    │   └─ IdentifierExpression: i32 (primitive)
+    └─ Items: <empty>
 )"

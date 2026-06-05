@@ -15,9 +15,9 @@
         - A member function can provide this keyword in five different ways:
             1. `self` denotes a pass by value (copy)
             2. `&self` denotes a pass by const reference
-            3. `*self` denotes a pass by const pointer
+            3. `^self` denotes a pass by const pointer
             4. `&mut self` denotes a pass by mutable reference
-            5. `*mut self` denotes a pass by mutable pointer
+            5. `^mut self` denotes a pass by mutable pointer
         - This parameter _must_ be the first parameter of the function's parameter list
         - This parameter is conventionally named `self` but is allowed to assume any non-reserved keyword
         - This parameter has the underlying type of the directly enclosing struct

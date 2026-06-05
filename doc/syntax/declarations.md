@@ -88,7 +88,7 @@ pub using MyPublicBool = bool; // Publically accessible via namespacig when impo
     - This restriction is in place as it would be impossible to instantiate the underlying type
 ```ghoti
 using S = &struct { ... };          // Illegal
-using S = *union { ... };           // Illegal
+using S = ^union { ... };           // Illegal
 using S = volatile enum { ... };    // Illegal
 using S = enum { ... };             // Legal
 ```

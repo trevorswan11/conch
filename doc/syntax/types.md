@@ -2,8 +2,8 @@
 ## Explicit Types
 - Types in ghoti are first class values and can be assigned to values and passed to functions
 - There are 5 different explicit type modifiers in ghoti
-    - `*`: Denotes a constant pointer
-    - `*mut`: Denotes a mutable pointer
+    - `^`: Denotes a constant pointer
+    - `^mut`: Denotes a mutable pointer
     - `&`: Denotes a constant reference
     - `&mut`: Denotes a mutable reference
     - `volatile`: Denotes a [volatile](https://en.wikipedia.org/wiki/Volatile_(computer_programming)) value, preventing certain compiler optimizations for the sake of correctness
@@ -18,8 +18,8 @@
     - Nested types: Consist of an outer type modifier acting on any of these types in a recursive fashion
 - The location of the type modifier is extremely important:
 ```ghoti
-*mut [5uz]i32 // A mutable pointer to an array of 5 integers.
-[5uz]*mut i32 // A constant array of 5 mutable pointers to integers
+^mut [5uz]i32 // A mutable pointer to an array of 5 integers.
+[5uz]^mut i32 // A constant array of 5 mutable pointers to integers
 ```
 - Each of these explicit types can be accompanied by any amount of type modifiers (syntactically)
     `&&&&&&&&&&&&&&&i32` is technically a valid type, though it likely would never be used
@@ -40,7 +40,7 @@ func(tP);
 - Types can also be returned from functions, assuming the type can be fully constructed at compile time
 - Function types require parameter names for clarity and maintainability:
 ```ghoti
-using Callback = fn(status: i32, result: *bool): void;
+using Callback = fn(status: i32, result: ^bool): void;
 const register := fn(cb: Callback): void { ... };
 ```
 
@@ -50,11 +50,11 @@ const register := fn(cb: Callback): void { ... };
 - Any pointer type can receive the builtin `nullptr` pointer
     - This is the only use-case for a built-in null in ghoti
 - A reference to an object can access its internal fields using the dot operator
-- You can reference a pointer by using the `*` operator
+- You can dereference a pointer by using the `*` operator
 - A pointer to an object can access its internal fields using the standard dot operator
     - Note that this is just syntactic sugar for an explicit dereference expression followed by a dot operator
 ```ghoti
-var a: *A = ...;
+var a: ^A = ...;
 a.b;   // Syntactic sugar
 (*a).b; // Equivalent expression
 ```

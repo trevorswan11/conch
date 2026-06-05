@@ -14,10 +14,10 @@ const foo := fn(a: i32, b: u32): u64 {
     - All parameters are implicitly constant values
 - A parameter may be passed by const reference by marking it as `&`
     - To call such a function, the call site must also indicate with the `&` operator
-    - A const pointer is created with the same operator, but the definition denotes this with `*`
+    - A const pointer is created with the `^` operator which the function must also indicate
 - A parameter may be passed by mutable reference by marking it as `&mut`
     - To call such a function, the call site must also indicate with the `&mut` operator
-    - A mutable pointer is created with the same operator, but the definition denotes this with `*mut`
+    - A mutable pointer is created with the `^mut` operator which the function must also indicate
 - There are no default parameters
 ```ghoti
 const foo := fn(a: &i32): u64 {
@@ -45,7 +45,7 @@ _ = baz(&mut b);    // Illegal, cannot mutate const
 
 - Variadic function parameters are supported to allow for c-interop
     - Currently, ghoti does not expose primitives for interacting with this parameter type
-    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(*byte, ...): i32;`
+    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(^byte, ...): i32;`
 
 ## Semantics
 - There is no function overloading

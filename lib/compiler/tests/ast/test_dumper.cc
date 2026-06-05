@@ -65,6 +65,8 @@ constexpr std::string_view input{R"(
     var a: i32 = undefined;
     0b00_11_00_11;
     ^mut a; ^a;
+    call();
+    [_]i32{};
 )"};
 
 constexpr std::string_view expected{
