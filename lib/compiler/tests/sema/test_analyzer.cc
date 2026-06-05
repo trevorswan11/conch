@@ -53,7 +53,7 @@ pub const println := fn(str: []u8): void {};
 
     CHECK(sym.get_kind_opt() == sema::SymbolKind::MODULE);
     CHECK(sym.is_public(enclosing_module) == is_public);
-    REQUIRE(node_data.get_name(enclosing_module.ast) == name);
+    REQUIRE(node_data.get_name(enclosing_module.ast).second == name);
     auto& module = type_data.imported;
     CHECK(module.is_ok());
     return {module, type};

@@ -418,7 +418,7 @@ auto SymbolCollector::visit(ast::NodeID, const ast::ExpressionStatement& expr) -
 
 auto SymbolCollector::collect_import_payload(const ast::ImportStatement& import_stmt)
     -> std::pair<std::string_view, Result<mem::NonNull<mod::Module>, mod::Diagnostic>> {
-    const auto name = import_stmt.get_name(collecting_.ast);
+    const auto [_, name] = import_stmt.get_name(collecting_.ast);
     if (const auto string =
             collecting_.ast.get_as_opt<ast::StringExpression>(import_stmt.payload)) {
         ASSERT(import_stmt.alias, "File import without alias");
