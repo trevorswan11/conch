@@ -98,8 +98,8 @@ TEST_CASE("Illegal type aliasing/definition") {
     };
 
     helpers::test_parser_fail("using U = &union { a: i32 };", expected_diag());
-    helpers::test_parser_fail("using S = *struct { pub var foo := bar; };", expected_diag());
-    helpers::test_parser_fail("using E = *enum { a };", expected_diag());
+    helpers::test_parser_fail("using S = ^struct { pub var foo := bar; };", expected_diag());
+    helpers::test_parser_fail("using E = ^enum { a };", expected_diag());
 }
 
 } // namespace ghoti::tests

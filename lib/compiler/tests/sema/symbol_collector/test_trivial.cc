@@ -16,8 +16,8 @@ using helpers::MockFile;
 
 TEST_CASE("Array/Index collection") {
     helpers::collect_and_check("const a := [2uz]i32{A, B, }; const b := a[0];");
-    helpers::collect_and_check("const a := [_]*N{a, b, c, d, e, }; const b := a[2];");
-    helpers::collect_and_check("const a := [_]*N{a, b, c, d, if (e > f) g else h, };");
+    helpers::collect_and_check("const a := [_]^N{a, b, c, d, e, }; const b := a[2];");
+    helpers::collect_and_check("const a := [_]^N{a, b, c, d, if (e > f) g else h, };");
     helpers::collect_and_check("const a := [2uz]i32{A, match (B) { c => d }, };");
 }
 

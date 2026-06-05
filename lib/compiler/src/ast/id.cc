@@ -76,8 +76,8 @@ constexpr auto MODIFIERS = [] {
     fixed::EnumMap<TokenType, Modifier> modifiers{Modifier::VALUE};
     modifiers[TokenType::BW_AND]       = Modifier::REF;
     modifiers[TokenType::AND_MUT]      = Modifier::MUT_REF;
-    modifiers[TokenType::STAR]         = Modifier::PTR;
-    modifiers[TokenType::STAR_MUT]     = Modifier::MUT_PTR;
+    modifiers[TokenType::CARET]        = Modifier::PTR;
+    modifiers[TokenType::CARET_MUT]    = Modifier::MUT_PTR;
     modifiers[TokenType::VOLATILE]     = Modifier::VOLATILE;
     modifiers[TokenType::MUT_VOLATILE] = Modifier::MUT_VOLATILE;
     return modifiers;

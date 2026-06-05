@@ -165,14 +165,6 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
-
-    // There's some cases where the parser can't disambiguate between types and values
-    [[nodiscard]] auto disambiguate_operator(TypeKind                   kind,
-                                             ast::ExpressionHandle      operand,
-                                             Type&                      inner_type,
-                                             types::MutabilityModifiers mutability) noexcept
-        -> opt::Option<Type&>;
-
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;
     auto visit(ast::NodeID, const ast::AddressOfExpression&) -> void;
     auto visit(ast::NodeID, const ast::DereferenceExpression&) -> void;

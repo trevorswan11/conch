@@ -7,6 +7,7 @@
 #include <ankerl/unordered_dense.h>
 
 #include "ast/expression.hh"
+#include "ast/type.hh"
 #include "module/module.hh"
 
 #include "arena.hh"
@@ -72,9 +73,9 @@ struct Slice {
 };
 
 struct Array {
-    Type&     underlying;
-    opt::Size len; // This is empty for array types only to be set for constant eval
-    bool      null_terminated;
+    Type& underlying;
+    usize len;
+    bool  null_terminated;
 };
 
 struct Pointer {
@@ -145,9 +146,13 @@ struct MetaType {
     Type& instance;
 };
 
-// Represents a node who's type cannot be known until constant evaluation
-struct DeferredEval {
-    const ast::CallExpression& call_node;
+struct DeferredCall {
+    const ast::CallExpression& call;
+};
+
+struct DeferredArray {
+    const ast::ExplicitArrayType& array;
+    Type&                         underlying;
 };
 
 enum class MutabilityModifiers : u8 {
@@ -242,7 +247,8 @@ class Type {
                                   types::Function,
                                   types::BuiltinFunction,
                                   types::MetaType,
-                                  types::DeferredEval>;
+                                  types::DeferredCall,
+                                  types::DeferredArray>;
 
   public:
     ~Type() = default;

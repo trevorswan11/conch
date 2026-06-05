@@ -26,7 +26,6 @@ constexpr Operator PERCENT{"%", TokenType::PERCENT};
 constexpr Operator PERCENT_ASSIGN{"%=", TokenType::PERCENT_ASSIGN};
 constexpr Operator BANG{"!", TokenType::BANG};
 constexpr Operator AND_MUT{"&mut", TokenType::AND_MUT};
-constexpr Operator STAR_MUT{"*mut", TokenType::STAR_MUT};
 constexpr Operator CARET_MUT{"^mut", TokenType::CARET_MUT};
 
 constexpr Operator BW_AND{"&", TokenType::BW_AND};

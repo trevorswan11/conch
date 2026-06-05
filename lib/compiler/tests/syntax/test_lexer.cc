@@ -361,12 +361,13 @@ TEST_CASE("Lexing multiline string literals") {
 }
 
 TEST_CASE("Lexing pointers and references") {
-    test_lexer("& &mut * *mut nullptr",
+    test_lexer("& &mut * ^ ^mut nullptr",
                {
                    {TokenType::BW_AND, "&"},
                    {TokenType::AND_MUT, "&mut"},
                    {TokenType::STAR, "*"},
-                   {TokenType::STAR_MUT, "*mut"},
+                   {TokenType::CARET, "^"},
+                   {TokenType::CARET_MUT, "^mut"},
                    {TokenType::NULLPTR, "nullptr"},
                });
 }

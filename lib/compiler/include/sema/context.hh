@@ -11,6 +11,7 @@
 
 #include "option.hh"
 #include "result.hh"
+#include "types.hh"
 #include "variant.hh"
 
 namespace ghoti::sema {
@@ -56,6 +57,25 @@ struct Context {
 
     // Gets the already-resolved poison type from the pool
     [[nodiscard]] auto get_poison() -> Type&;
+
+    // Calls resolve_if on the resulting type
+    [[nodiscard]] auto get_pointer(types::mut::MutabilityModifiers mutability, Type& underlying)
+        -> Type&;
+
+    // Calls resolve_if on the resulting type
+    [[nodiscard]] auto get_reference(types::mut::MutabilityModifiers mutability, Type& underlying)
+        -> Type&;
+
+    // Calls resolve_if on the resulting type
+    [[nodiscard]] auto get_array(types::mut::MutabilityModifiers mutability,
+                                 bool                            null_terminated,
+                                 usize                           size,
+                                 Type&                           underlying) -> Type&;
+
+    // Calls resolve_if on the resulting type
+    [[nodiscard]] auto get_slice(types::mut::MutabilityModifiers mutability,
+                                 bool                            null_terminated,
+                                 Type&                           underlying) -> Type&;
 
     // Poisons the symbol and constructs an associated diagnostic to insert into the list
     template <typename... Args> auto poison_symbol(Symbol& symbol, Args&&... args) -> void {

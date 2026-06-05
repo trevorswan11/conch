@@ -86,11 +86,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ArrayExpression& array) -> v
             incomplete_array_item(resolving_.ast.location_of(array.item_explicit_type))));
     }
 
-    const auto items_size      = array.items.size();
-    const auto null_terminated = array.null_terminated;
     last_type_.emplace(
-        ctx_.pool[{TypeKind::ARRAY, types::mut::CONSTANT, null_terminated, items_size, item_type}]);
-    last_type_->resolve_if<types::Array>(item_type, items_size, null_terminated);
+        ctx_.get_array(types::mut::CONSTANT, array.null_terminated, array.items.size(), item_type));
     resolving_.set_sema_type(id, *last_type_);
 }
 
@@ -159,9 +156,10 @@ template <traits::IndexableID ID>
     case TokenType::BUILTIN_TYPE_OF: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::TYPE);
         auto& instance_type = *get_resolved_call_arg_type(call.arguments[0]);
-        if (instance_type.as_opt<types::DeferredEval>()) {
+        if (instance_type.as_opt<types::DeferredCall>() ||
+            instance_type.as_opt<types::DeferredArray>()) {
             return_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
-            return_type->resolve_if<types::DeferredEval>(call);
+            return_type->resolve_if<types::DeferredCall>(call);
         } else {
             return_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, instance_type}];
             return_type->resolve_if<types::MetaType>(instance_type);
@@ -180,11 +178,11 @@ template <traits::IndexableID ID>
                              resolving_.ast.location_of(id));
     case TokenType::BUILTIN_PTR_FROM_ARRAY: {
         auto& array_type = *get_resolved_call_arg_type(call.arguments[0]);
-        if (const auto& array_data = array_type.as_opt<types::Array>()) {
-            // The new type uses a new key to align with normal pointer creation
-            return_type =
-                ctx_.pool[{TypeKind::POINTER, types::mut::CONSTANT, array_data->underlying}];
-            return_type->resolve_if<types::Pointer>(array_data->underlying);
+        // The new type uses a new key to align with normal pointer creation
+        if (const auto array_data = array_type.as_opt<types::Array>()) {
+            return_type = ctx_.get_pointer(types::mut::CONSTANT, array_data->underlying);
+        } else if (const auto deferred_data = array_type.as_opt<types::DeferredArray>()) {
+            return_type = ctx_.get_pointer(types::mut::CONSTANT, deferred_data->underlying);
         } else {
             return make_sema_err(fmt::format("Expected an array-yielding expression; found '{}'",
                                              type_kind_display_name(array_type.get_kind())),
@@ -208,10 +206,7 @@ template <traits::IndexableID ID>
         auto& ptr_type = *get_resolved_call_arg_type(call.arguments[0]);
         if (const auto& ptr_data = ptr_type.as_opt<types::Pointer>()) {
             // The resulting slice isn't null terminated since the pointer gives no guarantee
-            auto& new_type =
-                ctx_.pool[{TypeKind::SLICE, types::mut::CONSTANT, false, ptr_data->underlying}];
-            new_type.resolve_if<types::Slice>(ptr_data->underlying, false);
-            return_type = new_type;
+            return_type = ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
         } else {
             return make_sema_err(fmt::format("Expected a pointer-yielding expression; found '{}'",
                                              type_kind_display_name(ptr_type.get_kind())),
@@ -359,7 +354,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         // Functions that return a type cannot be resolved until the constant evaluator
         if (function_type->return_type.get_kind() == TypeKind::TYPE) {
             auto& deferred_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
-            deferred_type.resolve_if<types::DeferredEval>(call);
+            deferred_type.resolve_if<types::DeferredCall>(call);
 
             resolving_.set_sema_type(id, deferred_type);
             return last_type_.emplace(deferred_type);
@@ -479,6 +474,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr)
             // Assign types unconditionally since ignoring discards saves no space
             if (const auto array = iterable_type.as_opt<types::Array>()) {
                 resolving_.set_sema_type(capture.payload, array->underlying);
+            } else if (const auto deferred = iterable_type.as_opt<types::DeferredArray>()) {
+                resolving_.set_sema_type(capture.payload, deferred->underlying);
             } else if (const auto slice = iterable_type.as_opt<types::Slice>()) {
                 resolving_.set_sema_type(capture.payload, slice->underlying);
             } else {
@@ -763,6 +760,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> v
         last_type_.emplace(slice->underlying);
     } else if (const auto array = array_type.as_opt<types::Array>()) {
         last_type_.emplace(array->underlying);
+    } else if (const auto deferred = array_type.as_opt<types::DeferredArray>()) {
+        last_type_.emplace(deferred->underlying);
     } else if (const auto pointer = array_type.as_opt<types::Pointer>()) {
         last_type_.emplace(pointer->underlying);
     } else {
@@ -781,10 +780,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> v
 
     // There may be a slice accessor which results in a slice type
     if (access_type.as_opt<types::Slice>()) {
-        auto& new_slice_type =
-            ctx_.pool[{TypeKind::SLICE, types::mut::CONSTANT, false, single_item_type}];
-        new_slice_type.resolve<types::Slice>(single_item_type, false);
-        last_type_.emplace(new_slice_type);
+        last_type_.emplace(ctx_.get_slice(types::mut::CONSTANT, false, single_item_type));
     } else {
         last_type_.emplace(single_item_type);
     }
@@ -918,12 +914,9 @@ auto TypeResolver::visit(ast::NodeID id, const ast::RangeExpression& range) -> v
     TRY_RESOLVE(range.lhs);
     auto& lhs_type = *last_type_.take();
     TRY_RESOLVE(range.rhs);
-    auto& rhs_type = *last_type_.take();
 
     // Due to deferred type checking just use one type
-    auto& slice_type =
-        ctx_.pool[{TypeKind::SLICE, types::mut::CONSTANT, false, lhs_type, rhs_type}];
-    slice_type.resolve<types::Slice>(rhs_type, false);
+    auto& slice_type = ctx_.get_slice(types::mut::CONSTANT, false, lhs_type);
     resolving_.set_sema_type(id, slice_type);
     last_type_.emplace(slice_type);
 }
@@ -1089,42 +1082,11 @@ namespace {
 
 } // namespace
 
-auto TypeResolver::disambiguate_operator(TypeKind                   kind,
-                                         ast::ExpressionHandle      operand,
-                                         Type&                      inner_type,
-                                         types::MutabilityModifiers mutability) noexcept
-    -> opt::Option<Type&> {
-    // Creates a pointer type out of the resolved inner type of the expression
-    const auto make_type = [&] -> Type& {
-        auto& new_type = ctx_.pool[{kind, mutability, inner_type}];
-        new_type.resolve_if<types::Pointer>(inner_type);
-        return new_type;
-    };
-
-    // There's some cases where the parser can't disambiguate between types and values
-    if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(operand)) {
-        const auto& symbol = ctx_.registry.lookup(table_stack_, ident->name);
-
-        // If we've found a resolved type then we can safely interpret this as a pointer
-        if (symbol->get_kind_opt() == SymbolKind::TYPE) { return make_type(); }
-    } else if (inner_type.get_kind() == TypeKind::TYPE) {
-        return make_type();
-    }
-    return opt::none;
-}
-
 auto TypeResolver::visit(ast::NodeID id, const ast::ReferenceExpression& ref) -> void {
     TRY_RESOLVE(ref.rhs);
     auto& rhs_type = *last_type_.take();
 
-    const auto mutability = ref_addr_of_is_mutable(id);
-    if (const auto new_type =
-            disambiguate_operator(TypeKind::REFERENCE, ref.rhs, rhs_type, mutability)) {
-        resolving_.set_sema_type(id, *new_type);
-        return last_type_.emplace(*new_type);
-    }
-
-    auto& new_type = ctx_.pool[{TypeKind::REFERENCE, mutability, rhs_type}];
+    auto& new_type = ctx_.get_reference(ref_addr_of_is_mutable(id), rhs_type);
     new_type.resolve<types::Reference>(rhs_type);
 
     resolving_.set_sema_type(id, new_type);
@@ -1135,7 +1097,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AddressOfExpression& adr_of)
     TRY_RESOLVE(adr_of.rhs);
     auto& rhs_type = *last_type_.take();
 
-    auto& new_type = ctx_.pool[{TypeKind::POINTER, ref_addr_of_is_mutable(id), rhs_type}];
+    auto& new_type = ctx_.get_pointer(ref_addr_of_is_mutable(id), rhs_type);
     new_type.resolve_if<types::Pointer>(rhs_type);
 
     resolving_.set_sema_type(id, new_type);
@@ -1145,12 +1107,6 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AddressOfExpression& adr_of)
 auto TypeResolver::visit(ast::NodeID id, const ast::DereferenceExpression& deref) -> void {
     TRY_RESOLVE(deref.rhs);
     auto& rhs_type = *last_type_.take();
-
-    if (const auto new_type =
-            disambiguate_operator(TypeKind::POINTER, deref.rhs, rhs_type, types::mut::CONSTANT)) {
-        resolving_.set_sema_type(id, *new_type);
-        return last_type_.emplace(*new_type);
-    }
 
     // Check for a pointer and update to the underlying type to enforce dereference semantics
     if (const auto pointer = rhs_type.as_opt<types::Pointer>()) {
@@ -1199,12 +1155,12 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& im
 // String literals are just constant arrays of bytes
 auto TypeResolver::visit(ast::NodeID id, const ast::StringExpression& string) -> void {
     // String literals are null terminated since they can be trivially shortened to non null
-    const auto  size    = string.value.size() + 1;
-    const auto& u8_type = ctx_.get_builtin_resolved_type(TypeKind::U8);
-    auto&       type    = ctx_.pool[{TypeKind::ARRAY, types::mut::CONSTANT, true, size, u8_type}];
+    auto& type = ctx_.get_array(types::mut::CONSTANT,
+                                true,
+                                string.value.size() + 1,
+                                ctx_.get_builtin_resolved_type(TypeKind::U8));
 
     // String literals with the same size will always have the same type
-    type.resolve<types::Array>(ctx_.get_builtin_resolved_type(TypeKind::U8), size, true);
     resolving_.set_sema_type(id, type);
     last_type_.emplace(type);
 }
@@ -1770,14 +1726,10 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitArrayType& a
         }
 
         TRY_RESOLVE(*array.dimension);
-        const opt::Size placeholder_size;
-        last_type_.emplace(ctx_.pool[{
-            TypeKind::ARRAY, types::mut::CONSTANT, null_terminated, placeholder_size, item_type}]);
-        last_type_->resolve_if<types::Array>(item_type, placeholder_size, null_terminated);
+        last_type_.emplace(ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &array}]);
+        last_type_->resolve_if<types::DeferredArray>(array, item_type);
     } else {
-        last_type_.emplace(
-            ctx_.pool[{TypeKind::SLICE, types::mut::CONSTANT, null_terminated, item_type}]);
-        last_type_->resolve_if<types::Slice>(item_type, null_terminated);
+        last_type_.emplace(ctx_.get_slice(types::mut::CONSTANT, null_terminated, item_type));
     }
 
     auto& final_type = apply_explicit_modifiers(id, *last_type_.take());

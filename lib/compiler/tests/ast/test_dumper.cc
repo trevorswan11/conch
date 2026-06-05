@@ -11,7 +11,7 @@
 namespace ghoti::tests {
 
 constexpr std::string_view input{R"(
-    [_:0]*N{a, b, c, d, e, 3, "54" };
+    [_:0]^N{a, b, c, d, e, 3, "54" };
     a <= b or c == d and e;
     a or b[3uz] == !c;
     continue;
@@ -22,21 +22,21 @@ constexpr std::string_view input{R"(
     constexpr SIZE := 2uz;
     { a; b; 2; c; };
     while (true) : (i += 1) {a;} else return b;
-    var f_ptr: *fn(&a, *mut B, ...): &[0x2uz][N]*E;
+    var f_ptr: ^fn(&a, ^mut B, ...): &[0x2uz][N]^E;
     A::B::C;
-    struct { var a: Foo = bar; const b := fn(*mut this, a: A, b: *B): C { c; }; };
+    struct { var a: Foo = bar; const b := fn(^mut this, a: A, b: ^B): C { c; }; };
     &a; &mut b; *a;
     match (a) { b => |c| d; e => |_| f; g => h; _ => d; };
     loop { a; };
     (*arr[i][j]) = 2;
     if (a) { b; } else { c; };
     if constexpr (a) { b; };
-    fn(*mut this, a: A, b: *B, ): i32 { c; };
+    fn(^mut this, a: A, b: ^B, ): i32 { c; };
     for (arr, l, p) |i, &mut j, _| { a; } else return b;
     enum : u64 {A = 1ul, B = T, C, };
     @as(i32, a);
     using T = i32;
-    a(&mut r, t, *[N:0]u8);
+    a(&mut r, t, ^[N:0]u8);
     .a;
     union { a: i32, b: &mut T, };
     do { a;} while (true);
@@ -59,7 +59,7 @@ constexpr std::string_view input{R"(
     var a: List(i32);
     break :blk a;
     a: { continue :a; };
-    pub using a = **i32;
+    pub using a = ^^i32;
     fn(self): i32 {};
     '\n'; '\r'; '\t'; '\\'; '\''; '\0';
     var a: i32 = undefined;

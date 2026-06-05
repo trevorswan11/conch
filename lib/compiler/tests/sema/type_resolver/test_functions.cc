@@ -22,7 +22,7 @@ namespace syms = sema::symbols;
 
 TEST_CASE("Function declaration and call type resolution") {
     auto [ctx, idx] = helpers::resolve_and_check(R"(
-        const a := fn(b: i32, c: *@typeOf(b), d: [:0]u8): bool {
+        const a := fn(b: i32, c: ^@typeOf(b), d: [:0]u8): bool {
             return true;
         };
 
@@ -130,7 +130,7 @@ TEST_CASE("Self parameters in structural types") {
 
     check_structural_type(R"(const a := union {
         b: i32,
-        const foo := fn(*self): void {};
+        const foo := fn(^self): void {};
     };)",
                           sema::TypeKind::POINTER);
 }
@@ -144,11 +144,11 @@ TEST_CASE("Deferred return type from user function") {
     const auto& call = helpers::unwrap(
         ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
-    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredEval>()).call_node);
+    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredCall>()).call);
 }
 
 TEST_CASE("Function explicit type resolution") {
-    auto [ctx, idx]              = helpers::resolve_and_check("var foo: fn(*i32, u32): bool;");
+    auto [ctx, idx]              = helpers::resolve_and_check("var foo: fn(^i32, u32): bool;");
     const auto [sym, data, type] = ctx->get_type_sym_info<syms::Node>("foo", idx);
 
     const auto& expected_type =
@@ -161,19 +161,18 @@ TEST_CASE("Function explicit type resolution") {
 
 TEST_CASE("Function with syntactically ambiguous arguments") {
     auto [ctx, idx] = helpers::resolve_and_check(R"(
-        using a = @typeOf(*i32);
-        using b = @typeOf(*mut i32);
+        using a = @typeOf(^i32);
+        using b = @typeOf(^mut i32);
         using c = @typeOf(&i32);
         using d = @typeOf(&mut i32);
-        using e = @typeOf(**i32);
-        using f = @typeOf(*mut *i32);
+        using e = @typeOf(^^i32);
+        using f = @typeOf(^mut ^i32);
     )");
 
     const auto check_ambiguous = [&](std::string_view name, const sema::Type& instance_type) {
         const auto& meta_type = ctx->get_type(sema::TypeKind::TYPE, instance_type);
         const auto [sym, _, type, data] =
             ctx->get_full_type_sym_info<syms::Node, sema::types::MetaType>(name, idx);
-        fmt::println("{}", magic_enum::enum_name(data.instance.get_kind()));
         CHECK(type == meta_type);
     };
 
@@ -185,7 +184,7 @@ TEST_CASE("Function with syntactically ambiguous arguments") {
     check_ambiguous("b", ctx->get_type<mut::MUTABLE>(sema::TypeKind::POINTER, i32_type));
     check_ambiguous("c", ctx->get_type(sema::TypeKind::REFERENCE, i32_type));
     check_ambiguous("d", ctx->get_type<mut::MUTABLE>(sema::TypeKind::REFERENCE, i32_type));
-    // check_ambiguous("e", ctx->get_type(sema::TypeKind::POINTER, i32_const_ptr));
+    check_ambiguous("e", ctx->get_type(sema::TypeKind::POINTER, i32_const_ptr));
     check_ambiguous("f", ctx->get_type<mut::MUTABLE>(sema::TypeKind::POINTER, i32_const_ptr));
 }
 

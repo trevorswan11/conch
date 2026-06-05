@@ -38,7 +38,7 @@ TEST_CASE("Builtin type resolution") {
 }
 
 TEST_CASE("Nested type resolution") {
-    auto [ctx, idx] = helpers::resolve_and_check("var a: **i32; var b: ***i32;");
+    auto [ctx, idx] = helpers::resolve_and_check("var a: ^^i32; var b: ^^^i32;");
 
     const auto& i32_ptr =
         ctx->get_type(sema::TypeKind::POINTER, ctx->get_type(sema::TypeKind::I32));
@@ -51,7 +51,7 @@ TEST_CASE("Nested type resolution") {
 }
 
 TEST_CASE("Type alias resolution") {
-    auto [ctx, idx] = helpers::resolve_and_check("using a = *bool; var b: a; var c: &a;");
+    auto [ctx, idx] = helpers::resolve_and_check("using a = ^bool; var b: a; var c: &a;");
     const auto& bool_ref =
         ctx->get_type(sema::TypeKind::POINTER, ctx->get_type(sema::TypeKind::BOOL));
 

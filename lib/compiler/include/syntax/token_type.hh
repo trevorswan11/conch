@@ -111,7 +111,6 @@ enum class TokenType : u8 {
     UNDERSCORE,
     USING,
     AND_MUT,
-    STAR_MUT,
     CARET_MUT,
 
     FUNCTION,

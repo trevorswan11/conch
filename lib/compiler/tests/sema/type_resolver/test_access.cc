@@ -131,13 +131,13 @@ const func := other::BarS.bar;
 }
 
 TEST_CASE("Indirection in structural type resolution") {
-    helpers::resolve_and_check("const A := struct { a: *B, }; const B := struct { b: *A, };");
-    helpers::resolve_and_check("const A := struct { a: *A, };");
-    helpers::resolve_and_check("const A := struct { a: *A, const b := fn(c: A): i32 {}; };");
-    helpers::resolve_and_check("const A := struct { a: *@this(), const b := fn(c: *A): i32 {}; };");
+    helpers::resolve_and_check("const A := struct { a: ^B, }; const B := struct { b: ^A, };");
+    helpers::resolve_and_check("const A := struct { a: ^A, };");
+    helpers::resolve_and_check("const A := struct { a: ^A, const b := fn(c: A): i32 {}; };");
+    helpers::resolve_and_check("const A := struct { a: ^@this(), const b := fn(c: ^A): i32 {}; };");
     helpers::resolve_and_check(
         R"(const A := struct {
-            a: *A,
+            a: ^A,
             const b := fn(&self, c: A): i32 {
                 const dA := A;
                 using uA = A;

@@ -8,6 +8,7 @@
 #include "syntax/keywords.hh"
 
 #include "assert.hh"
+#include "types.hh"
 
 namespace ghoti::sema {
 
@@ -15,6 +16,35 @@ auto Context::get_poison() -> Type& {
     auto& poison = pool[{TypeKind::POISON, types::mut::CONSTANT}];
     poison.resolve_if<types::Poison>();
     return poison;
+}
+
+auto Context::get_pointer(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
+    auto& type = pool[{TypeKind::POINTER, mutability, underlying}];
+    type.resolve_if<types::Pointer>(underlying);
+    return type;
+}
+
+auto Context::get_reference(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
+    auto& type = pool[{TypeKind::REFERENCE, mutability, underlying}];
+    type.resolve_if<types::Reference>(underlying);
+    return type;
+}
+
+auto Context::get_array(types::mut::MutabilityModifiers mutability,
+                        bool                            null_terminated,
+                        usize                           size,
+                        Type&                           underlying) -> Type& {
+    auto& type = pool[{TypeKind::ARRAY, mutability, null_terminated, size, underlying}];
+    type.resolve_if<types::Array>(underlying, size, null_terminated);
+    return type;
+}
+
+auto Context::get_slice(types::mut::MutabilityModifiers mutability,
+                        bool                            null_terminated,
+                        Type&                           underlying) -> Type& {
+    auto& type = pool[{TypeKind::SLICE, mutability, null_terminated, underlying}];
+    type.resolve_if<types::Slice>(underlying, null_terminated);
+    return type;
 }
 
 namespace {

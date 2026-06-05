@@ -27,7 +27,7 @@ TEST_CASE("Function type restrictions") {
 }
 
 TEST_CASE("Bodied function type") {
-    helpers::test_parser_fail("var a: *mut fn(): void { b; };",
+    helpers::test_parser_fail("var a: ^mut fn(): void { b; };",
                               syntax::Diagnostic{"Function types may not have a body",
                                                  syntax::Error::EXPLICIT_FN_TYPE_HAS_BODY,
                                                  std::pair{0uz, 12uz}},

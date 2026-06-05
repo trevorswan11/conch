@@ -13,22 +13,22 @@ namespace ghoti::tests {
 
 TEST_CASE("Function missing return type") {
     helpers::test_parser_fail(
-        "fn(*mut this, a: A, b: *B, );",
+        "fn(^mut this, a: A, b: ^B, );",
         syntax::Diagnostic{
             "Expected token COLON, found SEMICOLON", syntax::Error::UNEXPECTED_TOKEN, 0, 28});
 
-    helpers::test_parser_fail("fn(*mut this, a: A, b: *B, ): ;",
+    helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ;",
                               syntax::Diagnostic{"No prefix parse function for SEMICOLON(;) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
                                                  std::pair{0uz, 30uz}});
 
-    helpers::test_parser_fail("fn(*mut this, a: A, b: *B, ): ",
+    helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ",
                               syntax::Diagnostic{syntax::Error::MISSING_EXPLICIT_TYPE, 0, 28});
 }
 
 TEST_CASE("Function parameter missing type") {
     helpers::test_parser_fail(
-        "fn(*mut this, a): i32;",
+        "fn(^mut this, a): i32;",
         syntax::Diagnostic{
             "Expected token COLON, found RPAREN", syntax::Error::UNEXPECTED_TOKEN, 0, 15});
 }

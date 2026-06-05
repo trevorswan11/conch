@@ -111,7 +111,7 @@ TEST_CASE("Deferred return type from typeOf") {
     const auto& call = helpers::unwrap(
         ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
-    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredEval>()).call_node);
+    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredCall>()).call);
 }
 
 TEST_CASE("Builtin pointer conversions") {
@@ -124,7 +124,7 @@ TEST_CASE("Builtin pointer conversions") {
         "var a := [_]i32{0, 1, 2};");
 
     test_builtin_resolve(
-        bis::PTR_FROM_INT, "*i32, 0xc0ffeeul", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        bis::PTR_FROM_INT, "^i32, 0xc0ffeeul", [](helpers::SemaTestContext& ctx) -> sema::Type& {
             return ctx.get_type(sema::TypeKind::POINTER, ctx.get_type(sema::TypeKind::I32));
         });
 
