@@ -17,7 +17,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::ast { class AST; } // namespace ghoti::ast
 
@@ -92,18 +91,21 @@ class Parser {
     auto get_current_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
     auto get_peek_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
 
-    [[nodiscard]] auto parse_statement(bool require_semicolon)
+    [[nodiscard]] auto parse_statement(SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<ast::StatementHandle, Diagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Result<ast::ExpressionHandle, Diagnostic>;
 
     // Assumes that the current token is looking at the start of the expression.
     // The resulting statement can only be a jump, block, or expression statement.
-    [[nodiscard]] auto parse_restricted_statement(Error error, bool require_semicolon = true)
+    [[nodiscard]] auto
+    parse_restricted_statement(Error error, SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<ast::StatementHandle, Diagnostic>;
 
     // Parses a restricted statement only if an else token is currently looked at.
-    [[nodiscard]] auto try_parse_restricted_alternate(Error error, bool require_semicolon = true)
+    [[nodiscard]] auto
+    try_parse_restricted_alternate(Error             error,
+                                   SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<opt::Option<ast::StatementHandle>, Diagnostic>;
 
     static auto get_prefix_fn_opt(TokenType tt) noexcept -> opt::Option<PrefixFn>;

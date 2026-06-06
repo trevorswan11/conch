@@ -88,13 +88,15 @@ struct Reference {
 };
 
 struct Enum {
-    usize                         enumeration_count;
-    bool                          non_exhaustive;
-    Type&                         underlying;
-    std::span<mem::NonNull<Type>> members;
+    std::span<const ast::EnumExpression::Enumeration> ast_enumerations;
+    bool                                              non_exhaustive;
+    Type&                                             underlying;
+    std::span<mem::NonNull<Type>>                     members;
+    const mod::Module&                                enclosing;
 
     [[nodiscard]] auto type_at(usize idx, Type& object_type) const noexcept -> Type& {
         // The index location entirely depends on the number of variants which always come first
+        const auto enumeration_count = ast_enumerations.size();
         ASSERT(idx < enumeration_count + members.size(), "Index exceeds enum's types");
         if (idx < enumeration_count) { return object_type; }
         return *members[idx - enumeration_count];
@@ -102,8 +104,10 @@ struct Enum {
 };
 
 struct Union {
-    std::span<mem::NonNull<Type>> fields;
-    std::span<mem::NonNull<Type>> members;
+    std::span<mem::NonNull<Type>>                fields;
+    std::span<const ast::UnionExpression::Field> ast_fields;
+    std::span<mem::NonNull<Type>>                members;
+    const mod::Module&                           enclosing;
 
     // The index location entirely depends on the number of fields which always come first
     [[nodiscard]] auto type_at(usize idx) const noexcept -> Type& {

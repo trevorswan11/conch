@@ -30,7 +30,7 @@ auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
-        statements.emplace_back(TRY(parser.parse_statement(true)));
+        statements.emplace_back(TRY(parser.parse_statement()));
     }
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
 
@@ -184,7 +184,7 @@ auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
                                start_token);
     }
     parser.advance();
-    const auto stmt = TRY(parser.parse_statement(true));
+    const auto stmt = TRY(parser.parse_statement());
 
     // The statement has different restrictions from expression alternates
     if (!stmt.any<ExpressionStatement, DiscardStatement, BlockStatement>()) {
@@ -214,18 +214,34 @@ auto DiscardStatement::parse(syntax::Parser& parser)
     return parser.add_stmt<DiscardStatement>(start_token, expr);
 }
 
-auto ExpressionStatement::parse(syntax::Parser& parser, bool require_semicolon)
+auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
     -> Result<StatementHandle, syntax::Diagnostic> {
     const auto start_token = parser.get_current_token();
     const auto expr        = TRY(parser.parse_expression());
 
+    using Behavior           = syntax::SemicolonBehavior;
+    const bool has_semicolon = parser.current_token_is(syntax::TokenType::SEMICOLON);
+    const bool at_block_end  = parser.current_token_is(syntax::TokenType::RBRACE);
+
+    const auto check_illegal_semicolon = [&] -> opt::Option<Err<syntax::Diagnostic>> {
+        const auto& semicolon = parser.advance();
+        if (behavior == Behavior::DISALLOW) {
+            return syntax::make_syntax_err("Semicolon is not allowed in this context",
+                                           syntax::Error::UNEXPECTED_TOKEN,
+                                           semicolon);
+        }
+        return opt::none;
+    };
+
     // RBRACE would mean we're at the end of a block and a semicolon is never required
-    if (parser.current_token_is(syntax::TokenType::RBRACE)) {
-        if (parser.peek_token_is(syntax::TokenType::SEMICOLON)) { parser.advance(); }
-    } else if (!parser.current_token_is(syntax::TokenType::SEMICOLON)) {
+    if (at_block_end) {
         if (parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
-            parser.advance();
-        } else if (require_semicolon) {
+            if (auto err = check_illegal_semicolon()) { return std::move(*err); }
+        }
+    } else if (!has_semicolon) {
+        if (parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
+            if (auto err = check_illegal_semicolon()) { return std::move(*err); }
+        } else if (behavior == Behavior::REQUIRE) {
             TRY(parser.expect_peek(syntax::TokenType::SEMICOLON));
         }
     }

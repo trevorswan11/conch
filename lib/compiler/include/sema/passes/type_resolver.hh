@@ -36,6 +36,24 @@ namespace ghoti::sema {
 // Resolves all types and symbol uses without type checking
 class TypeResolver {
   public:
+    struct StructuralValidator {
+        std::vector<std::string_view>                  provided;
+        std::vector<std::string_view>                  duplicates;
+        std::vector<std::string_view>                  missings;
+        std::vector<std::string_view>                  unknowns;
+        ankerl::unordered_dense::set<std::string_view> seen;
+
+        // State is cleared but not reallocated to save some time
+        auto clear() noexcept -> void {
+            provided.clear();
+            duplicates.clear();
+            missings.clear();
+            unknowns.clear();
+            seen.clear();
+        }
+    };
+
+  public:
     static auto resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
     template <traits::IndexableID ID> auto resolve(ID id) -> void {
@@ -108,23 +126,6 @@ class TypeResolver {
         bool  committed_{false};
     };
 
-    struct StructInitializerValidator {
-        std::vector<std::string_view>                  provided;
-        std::vector<std::string_view>                  duplicates;
-        std::vector<std::string_view>                  missings;
-        std::vector<std::string_view>                  unknowns;
-        ankerl::unordered_dense::set<std::string_view> seen;
-
-        // State is cleared but not reallocated to save some time
-        auto clear() noexcept -> void {
-            provided.clear();
-            duplicates.clear();
-            missings.clear();
-            unknowns.clear();
-            seen.clear();
-        }
-    };
-
   private:
     auto visit(ast::NodeID, const ast::ArrayExpression&) -> void;
 
@@ -186,6 +187,13 @@ class TypeResolver {
 
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
+
+    [[nodiscard]] auto validate_enum_arms(ast::NodeID, const ast::MatchExpression&, Type&)
+        -> Result<void, Diagnostic>;
+
+    [[nodiscard]] auto validate_union_arms(ast::NodeID, const ast::MatchExpression&, Type&)
+        -> Result<void, Diagnostic>;
+
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;
     auto visit(ast::NodeID, const ast::AddressOfExpression&) -> void;
@@ -262,8 +270,10 @@ class TypeResolver {
     StructuralTypeStack user_type_stack_;
     StructuralTypeStack implicit_type_stack_;
 
-    NamedTests                 named_tests_;
-    StructInitializerValidator struct_validator_;
+    NamedTests          named_tests_;
+    StructuralValidator struct_validator_;
+    StructuralValidator enum_validator_;
+    StructuralValidator union_validator_;
 
     Context&           ctx_;
     opt::Option<Type&> last_type_;

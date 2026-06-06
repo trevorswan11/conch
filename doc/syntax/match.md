@@ -13,8 +13,9 @@
     - Jump statement (return, break, continue)
     - Expression statement
     - Block statement
+- Arms of match expressions must be comma separated and there may be a trailing comma
 - Loops are expressions and must be terminated by a semicolon
 ```ghoti
-match (a) { 2 => { c; } _ => d }; // Standard match on a non-union value
+match (a) { 2 => { c; }, _ => d }; // Standard match on a non-union value
 match (a) { .b => |b| { c; } }; // Match on a union value that has a field `b`
 ```

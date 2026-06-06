@@ -44,7 +44,7 @@ TEST_CASE("Flat if collection") { helpers::collect_and_check("const a := if (b >
 
 TEST_CASE("Match expression collection") {
     auto [ctx, idx] = helpers::collect_and_check(
-        "const a := match (b) { c => |d| { const foo := bar; } _ => { const foo := bar; } "
+        "const a := match (b) { c => |d| { const foo := bar; }, _ => { const foo := bar; }, "
         "e => |_| { const foo := bar; } };");
 
     auto& registry = ctx->analyzer.get_registry();
@@ -62,7 +62,7 @@ TEST_CASE("Match expression collection") {
 }
 
 TEST_CASE("Flat match collection") {
-    helpers::collect_and_check("const a := match (b) { c => |d| d; e => |_| f; g => h; _ => i };");
+    helpers::collect_and_check("const a := match (b) { c => |d| d, e => |_| f, g => h, _ => i };");
 }
 
 namespace {
@@ -82,10 +82,10 @@ TEST_CASE("If expression inner shadowing") {
 }
 
 TEST_CASE("Match shadowing assignee") {
-    helpers::test_collector_fail("const a := match (c) { b => |a| b; };", expected_diag(29));
+    helpers::test_collector_fail("const a := match (c) { b => |a| b, };", expected_diag(29));
     helpers::test_collector_fail("const a := match (c) { b => { var a: i32; } };",
                                  expected_diag(30));
-    helpers::test_collector_fail("const a := match (b) { c => d; _ => { var a: i32; } };",
+    helpers::test_collector_fail("const a := match (b) { c => d, _ => { var a: i32; } };",
                                  expected_diag(38));
 }
 

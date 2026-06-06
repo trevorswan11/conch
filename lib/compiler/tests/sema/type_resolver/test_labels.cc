@@ -66,6 +66,41 @@ TEST_CASE("Complex label resolution") {
     )");
 }
 
+TEST_CASE("Label multi-type resolution") {
+    SECTION("Multi control flow") {
+        auto [ctx, idx] = helpers::resolve_and_check(R"(
+blk: {
+    break :blk 42;
+    break :blk true;
+    break :blk "val";
+    break :blk;
+};)");
+
+        const auto [_, data]   = ctx->get_symbol<syms::Label>("blk", idx + 1);
+        const auto yield_types = data.get_yield_types();
+        CHECK(yield_types.size() == 4);
+        CHECK(yield_types[0] == ctx->get_type(sema::TypeKind::I32));
+        CHECK(yield_types[1] == ctx->get_type(sema::TypeKind::BOOL));
+        CHECK(yield_types[2] ==
+              ctx->get_type(sema::TypeKind::ARRAY, true, 4, ctx->get_type(sema::TypeKind::U8)));
+        CHECK(yield_types[3] == ctx->get_type(sema::TypeKind::VOID));
+    }
+
+    SECTION("Only continue") {
+        auto [ctx, idx] = helpers::resolve_and_check(R"(
+loop {
+    blk: {
+        continue :blk;
+    };
+})");
+
+        const auto [_, data]   = ctx->get_symbol<syms::Label>("blk", idx + 2);
+        const auto yield_types = data.get_yield_types();
+        CHECK(yield_types.size() == 1);
+        CHECK(yield_types[0] == ctx->get_type(sema::TypeKind::VOID));
+    }
+}
+
 TEST_CASE("Unknown labels resolved") {
     const auto test_unknown_label = [](std::string_view name, usize col) {
         helpers::test_resolver_fail(

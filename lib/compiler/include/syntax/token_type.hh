@@ -203,6 +203,12 @@ enum class TokenType : u8 {
     ILLEGAL,
 };
 
+enum class SemicolonBehavior : u8 {
+    REQUIRE,
+    OPTIONAL,
+    DISALLOW,
+};
+
 enum class Base : u8 {
     BINARY      = 2,
     OCTAL       = 8,

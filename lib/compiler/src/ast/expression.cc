@@ -169,7 +169,7 @@ namespace {
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
-        auto parsed_member = TRY(parser.parse_statement(true));
+        auto parsed_member = TRY(parser.parse_statement());
 
         // Downcast the parsed member into the specific member variant and check
         const auto member = TRY(deconstruct_member(parser, parsed_member));
@@ -472,10 +472,10 @@ auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syn
 
     // The consequence and alternate are trivially handled by restricted statement parsers
     parser.advance();
-    const auto consequence =
-        TRY(parser.parse_restricted_statement(syntax::Error::ILLEGAL_IF_BRANCH, false));
-    const auto alternate =
-        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_IF_BRANCH, false));
+    const auto consequence = TRY(parser.parse_restricted_statement(
+        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL));
+    const auto alternate   = TRY(parser.try_parse_restricted_alternate(
+        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL));
 
     return parser.add_expr<IfExpression>(
         start_token, constexpr_condition, condition, consequence, alternate);
@@ -594,7 +594,7 @@ auto LabelExpression::parse(syntax::Parser& parser, ExpressionHandle name)
     parser.advance();
 
     // The body has to be constructed in place from a lambda as it cannot be default initialized
-    const auto raw_stmt = TRY(parser.parse_statement(true));
+    const auto raw_stmt = TRY(parser.parse_statement());
     const auto body     = TRY(deconstruct_body(parser, raw_stmt));
 
     return parser.add_expr<LabelExpression>(start_token, name, body);
@@ -711,10 +711,17 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
         // The resulting statement must be restricted like an if branch
         parser.advance();
-        const auto consequence =
-            TRY(parser.parse_restricted_statement(syntax::Error::ILLEGAL_MATCH_ARM, false));
+        const auto consequence = TRY(parser.parse_restricted_statement(
+            syntax::Error::ILLEGAL_MATCH_ARM, syntax::SemicolonBehavior::DISALLOW));
         arms.emplace_back(pattern, capture, consequence);
         arm_idx += 1;
+
+        // The lack of a comma must mean we're at the end of the arm list
+        if (parser.peek_token_is(syntax::TokenType::COMMA)) {
+            parser.advance();
+        } else {
+            break;
+        }
     }
 
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));

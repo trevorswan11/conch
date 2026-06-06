@@ -94,7 +94,7 @@ struct DiscardStatement {
 struct ExpressionStatement {
     ExpressionHandle expression;
 
-    [[nodiscard]] static auto parse(syntax::Parser& parser, bool require_semicolon)
+    [[nodiscard]] static auto parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
         -> Result<StatementHandle, syntax::Diagnostic>;
 };
 

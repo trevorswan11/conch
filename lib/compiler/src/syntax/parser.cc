@@ -58,7 +58,7 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
 
         // Comments are entirely discarded from the tree
         if (!current_token_is(TokenType::COMMENT)) {
-            auto stmt = parse_statement(true);
+            auto stmt = parse_statement();
             if (stmt) {
                 ast.add_root(**stmt);
             } else {
@@ -121,7 +121,8 @@ auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, opt::
         .value_or(std::pair{Precedence::LOWEST, opt::none});
 }
 
-auto Parser::parse_statement(bool require_semicolon) -> Result<ast::StatementHandle, Diagnostic> {
+auto Parser::parse_statement(SemicolonBehavior behavior)
+    -> Result<ast::StatementHandle, Diagnostic> {
     // Not all decls are public so the condition needs to be rechecked
     if (current_token_.type == TokenType::PUBLIC) {
         switch (peek_token_.type) {
@@ -143,7 +144,7 @@ auto Parser::parse_statement(bool require_semicolon) -> Result<ast::StatementHan
     case TokenType::RETURN:     return ast::ReturnStatement::parse(*this);
     case TokenType::TEST:       return ast::TestStatement::parse(*this);
     case TokenType::USING:      return ast::UsingStatement::parse(*this);
-    default:                    return ast::ExpressionStatement::parse(*this, require_semicolon);
+    default:                    return ast::ExpressionStatement::parse(*this, behavior);
     }
 }
 
@@ -172,9 +173,9 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
     return lhs_expression;
 }
 
-[[nodiscard]] auto Parser::parse_restricted_statement(Error error, bool require_semicolon)
+[[nodiscard]] auto Parser::parse_restricted_statement(Error error, SemicolonBehavior behavior)
     -> Result<ast::StatementHandle, Diagnostic> {
-    auto clause = TRY(parse_statement(require_semicolon));
+    auto clause = TRY(parse_statement(behavior));
 
     // The clause can only be a jump, block, or expression statement
     if (!clause.any<ast::ExpressionStatement,
@@ -187,12 +188,12 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
     return clause;
 }
 
-[[nodiscard]] auto Parser::try_parse_restricted_alternate(Error error, bool require_semicolon)
+[[nodiscard]] auto Parser::try_parse_restricted_alternate(Error error, SemicolonBehavior behavior)
     -> Result<opt::Option<ast::StatementHandle>, Diagnostic> {
     if (peek_token_is(TokenType::ELSE)) {
         // Advance twice to actually look at the statement's first token
         advance(2);
-        return TRY(parse_restricted_statement(error, require_semicolon));
+        return TRY(parse_restricted_statement(error, behavior));
     }
     return opt::none;
 }

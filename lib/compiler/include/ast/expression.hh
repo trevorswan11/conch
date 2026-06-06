@@ -224,7 +224,7 @@ struct MatchExpression {
 
     ExpressionHandle matcher;
     std::vector<Arm> arms;
-    opt::Size        catch_all_idx; // The arm index which is the catch-all
+    opt::Size        catch_all_idx;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
