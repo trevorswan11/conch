@@ -44,18 +44,7 @@ enum class ModuleState : u8 {
     ERRORED,
 };
 
-// cppcheck-suppress-begin internalAstError
 using DiagnosticListVariant = Variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
-// cppcheck-suppress-end internalAstError
-
-#define MAKE_MODULE_DIAGNOSTIC_UNPACKER(name, checker, DiagType)                \
-    [[nodiscard]] auto CONCAT(get_, name)() const noexcept -> const DiagType& { \
-        return diagnostics.get<DiagType>();                                     \
-    }                                                                           \
-                                                                                \
-    [[nodiscard]] auto CONCAT(has_, name)() const noexcept -> bool {            \
-        return checker() && diagnostics.is<DiagType>();                         \
-    }
 
 struct Module {
     std::filesystem::path path;
@@ -67,9 +56,6 @@ struct Module {
     ModuleState           state;
 
     DiagnosticListVariant diagnostics{Unit{}};
-
-    MAKE_MODULE_DIAGNOSTIC_UNPACKER(parser_diagnostics, is_errored, syntax::Diagnostics)
-    MAKE_MODULE_DIAGNOSTIC_UNPACKER(sema_diagnostics, is_poisoned, sema::Diagnostics)
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>

@@ -17,21 +17,8 @@ namespace ghoti::ast {
 using NodeData = Variant<FOREACH_AST_NODE(X) Unit>;
 #undef X
 
-#define AST_NODE_VISITOR_DEF_GEN_X(NodeType) \
-    auto visit(ghoti::ast::NodeID, const ghoti::ast::NodeType&) -> void;
-#define AST_NODE_VISITOR_DEF_GEN()               \
-    FOREACH_AST_NODE(AST_NODE_VISITOR_DEF_GEN_X) \
-    auto visit(ghoti::ast::NodeID, const ghoti::Unit&) -> void;
-
 #define AST_NODE_VISITOR_NOOP(Class, NodeType) \
     auto Class::visit(ghoti::ast::NodeID, const ghoti::ast::NodeType&) -> void {}
-
-#define AST_TYPE_VISITOR_DEF_GEN_X(NodeType) \
-    auto visit(ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void;
-#define AST_TYPE_VISITOR_DEF_GEN() FOREACH_AST_TYPE(AST_TYPE_VISITOR_DEF_GEN_X)
-
-#define AST_TYPE_VISITOR_NOOP(Class, NodeType) \
-    auto Class::visit(ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void {}
 
 using TypeData = Variant<IdentifierExpression,
                          ModuleAccessExpression,
@@ -44,9 +31,8 @@ using TypeData = Variant<IdentifierExpression,
                          UnionExpression,
                          ExplicitArrayType>;
 
-#define AST_VISITOR_DEF_GEN()  \
-    AST_NODE_VISITOR_DEF_GEN() \
-    AST_TYPE_VISITOR_DEF_GEN()
+#define AST_TYPE_VISITOR_NOOP(Class, NodeType) \
+    auto Class::visit(ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void {}
 
 // Creates the template instantiation for a ID-templated, Node/ExplicitType ID visitor
 #define VISITOR_TEMPLATE_INIT(ClassName, fn_name, NodeType)                                   \

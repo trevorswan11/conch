@@ -30,7 +30,7 @@ auto test_common_decl_collection(const sema::SymbolTableRegistry& registry,
                                  usize                            idx,
                                  std::string_view                 name) -> void {
     const auto& symbol = unwrap(registry.get_from_opt(idx, name));
-    const auto& node   = unwrap(symbol.as_opt<sema::symbols::Node>());
+    const auto& node   = unwrap(symbol.get_data().as_opt<sema::symbols::Node>());
     CHECK_FALSE(symbol.is_public(module));
     CHECK(node.is<ast::DeclStatement>());
 }
@@ -76,7 +76,7 @@ auto SemaTestContext::check_poisoned(const sema::Symbol& sym) -> void {
 auto SemaTestContext::check_poisoned(const sema::Type& type) -> void {
     CHECK(type.is_poison());
     CHECK(type == get_type(sema::TypeKind::POISON));
-    CHECK(type.as_opt<sema::types::Poison>());
+    CHECK(type.get_data().as_opt<sema::types::Poison>());
 }
 
 auto SemaTestContext::check_poisoned(const sema::Symbol& sym, const sema::Type& type) -> void {
@@ -93,9 +93,7 @@ auto SemaTestContext::get_string_literal_size(ast::ExpressionHandle     handle,
 
 auto collect(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto ctx = mem::make_box<SemaTestContext>(imports, TEST_FILENAME, input);
-    if (ctx->root_mod->has_parser_diagnostics()) {
-        check_errors<syntax::Diagnostic>(ctx->root_mod->get_parser_diagnostics());
-    }
+    check_errors<syntax::Diagnostics>(*ctx->root_mod);
     ctx->analyzer.collect_symbols(*ctx->root_mod);
 
     REQUIRE(ctx->root_mod->root_table_idx);
@@ -105,9 +103,7 @@ auto collect(std::string_view input, const std::vector<MockFile>& imports) -> Ct
 
 auto collect_and_check(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto [ctx, idx] = collect(input, imports);
-    if (ctx->root_mod->has_sema_diagnostics()) {
-        check_errors<sema::Diagnostic>(ctx->root_mod->get_sema_diagnostics());
-    }
+    check_errors<sema::Diagnostics>(*ctx->root_mod);
     return {std::move(ctx), idx};
 }
 
@@ -119,9 +115,7 @@ auto resolve(std::string_view input, const std::vector<MockFile>& imports) -> Ct
 
 auto resolve_and_check(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto [ctx, idx] = resolve(input, imports);
-    if (ctx->root_mod->has_sema_diagnostics()) {
-        check_errors<sema::Diagnostic>(ctx->root_mod->get_sema_diagnostics());
-    }
+    check_errors<sema::Diagnostics>(*ctx->root_mod);
     ctx->verify_registry_resolved();
 
     return {std::move(ctx), idx};

@@ -8,20 +8,24 @@
 
 namespace ghoti::tests {
 
+namespace {
+
 constexpr usize MARKER{42};
 
-struct Foo {
+struct Large {
     usize                      marker{MARKER};
     std::array<i32, 4 * 1'024> _;
 };
 
+} // namespace
+
 TEST_CASE("Arena pointer stability") {
-    mem::Arena        arena;
-    std::vector<Foo*> foos;
+    mem::Arena          arena;
+    std::vector<Large*> foos;
 
     // First use
     {
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Foo>().get()); }
+        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 
@@ -29,7 +33,7 @@ TEST_CASE("Arena pointer stability") {
     {
         arena.reset();
         foos.clear();
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Foo>().get()); }
+        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 }

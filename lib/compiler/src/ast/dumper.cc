@@ -562,8 +562,6 @@ auto ASTDumper::visit(NodeID, const WhileLoopExpression& while_expr) -> void {
     }
 }
 
-auto ASTDumper::visit(NodeID, const Unit&) -> void { fmt::println(out_, "<discarded>"); }
-
 auto ASTDumper::visit(NodeID, const BlockStatement& block) -> void {
     fmt::println(out_, "BlockStatement");
     if (block.empty()) {

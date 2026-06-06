@@ -9,7 +9,7 @@
 #include "sema/passes/type_resolver.hh"
 
 #include "result.hh"
-#include "variant.hh"
+#include "syntax/error.hh"
 
 namespace ghoti::sema {
 
@@ -21,7 +21,7 @@ auto Analyzer::analyze(const std::filesystem::path& entry_path) -> Result<void, 
     }
 
     auto module = *module_result;
-    if (module->has_parser_diagnostics()) { module->print_diagnostics(error_stream_); }
+    if (module->diagnostics.is<syntax::Diagnostics>()) { module->print_diagnostics(error_stream_); }
 
     collect_symbols(*module);
     resolve_types(*module);

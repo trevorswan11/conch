@@ -51,7 +51,8 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto& c_meta = ctx->get_type(sema::TypeKind::TYPE, i32_type);
         const auto& c_ptr  = ctx->get_type(sema::TypeKind::POINTER, c_meta);
         check_param_type("c", c_ptr);
-        const auto& c_meta_data = helpers::unwrap(c_meta.as_opt<sema::types::MetaType>());
+        const auto& c_meta_data =
+            helpers::unwrap(c_meta.get_data().as_opt<sema::types::MetaType>());
         CHECK(c_meta_data.instance == i32_type);
 
         const auto& u8_slice =
@@ -79,7 +80,7 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto check_arg_type = [&](usize arg_idx, const sema::Type& expected_type) {
             REQUIRE(arg_idx < call.arguments.size());
             const auto arg =
-                helpers::unwrap(call.arguments[arg_idx].get_opt<ast::ExpressionHandle>());
+                helpers::unwrap(call.arguments[arg_idx].as_opt<ast::ExpressionHandle>());
             const auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
             CHECK(expected_type == arg_type);
         };
@@ -87,7 +88,7 @@ TEST_CASE("Function declaration and call type resolution") {
         check_arg_type(0, i32_type);
         check_arg_type(1, ctx->get_type(sema::TypeKind::POINTER, i32_type));
 
-        const auto last_arg = helpers::unwrap(call.arguments[2].get_opt<ast::ExpressionHandle>());
+        const auto last_arg = helpers::unwrap(call.arguments[2].as_opt<ast::ExpressionHandle>());
         const auto str_size = ctx->get_string_literal_size(last_arg);
 
         const auto& u8_type = ctx->get_type(sema::TypeKind::U8);
@@ -144,7 +145,7 @@ TEST_CASE("Deferred return type from user function") {
     const auto& call = helpers::unwrap(
         ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
-    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredCall>()).call);
+    CHECK(&call == &helpers::unwrap(type.get_data().as_opt<sema::types::DeferredCall>()).call);
 }
 
 TEST_CASE("Function explicit type resolution") {

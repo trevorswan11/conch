@@ -35,7 +35,7 @@ template <typename E> class EmptyResult {
         return error_.template is<E>();
     }
     [[nodiscard]] constexpr auto error(this auto&& self) -> decltype(auto) {
-        return self.error_.template get<E>();
+        return self.error_.template as<E>();
     }
 
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }

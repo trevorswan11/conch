@@ -49,9 +49,9 @@ TEST_CASE("For loop collection") {
 
     const auto& loop_table = ctx->analyzer.get_table(3);
     const auto& i_symbol   = helpers::unwrap(loop_table.get_opt("i"));
-    CHECK(i_symbol.as_opt<sema::symbols::ForLoopCapture>());
+    CHECK(i_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
     const auto& j_symbol = helpers::unwrap(loop_table.get_opt("i"));
-    CHECK(j_symbol.as_opt<sema::symbols::ForLoopCapture>());
+    CHECK(j_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
 
     ctx->test_common_decl_collection(2);
     ctx->test_common_decl_collection(3);

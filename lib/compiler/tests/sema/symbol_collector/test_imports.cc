@@ -5,8 +5,10 @@
 
 #include "helpers/common.hh"
 #include "helpers/sema.hh"
+#include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
+#include "syntax/error.hh"
 
 #include "types.hh"
 
@@ -94,9 +96,9 @@ TEST_CASE("Diamond dependencies") {
 
 TEST_CASE("Self import") {
     helpers::SemaTestContext ctx{{}, "self.gh", R"(import "self.gh" as self;)"};
-    REQUIRE_FALSE(ctx.root_mod->has_parser_diagnostics());
+    helpers::check_errors<syntax::Diagnostics>(*ctx.root_mod);
     ctx.analyzer.collect_symbols(*ctx.root_mod);
-    REQUIRE_FALSE(ctx.root_mod->has_sema_diagnostics());
+    helpers::check_errors<sema::Diagnostics>(*ctx.root_mod);
     const auto& registry = ctx.analyzer.get_registry();
     REQUIRE(registry.size() == 1);
     CHECK(registry.get_from_opt(0, "self"));
@@ -105,7 +107,7 @@ TEST_CASE("Self import") {
 TEST_CASE("Unknown file module") {
     std::stringstream ss;
     auto              ctx = helpers::analyze(helpers::TEST_FILENAME, ss, R"(import "a.gh" as a;)");
-    REQUIRE(ctx->root_mod->has_sema_diagnostics());
+    REQUIRE(ctx->root_mod->diagnostics.as_opt<sema::Diagnostics>());
 
     constexpr std::string_view expected{
         R"(test.gh:1:8: error: Could not find path 'a.gh' in virtual file system

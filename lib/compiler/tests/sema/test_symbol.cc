@@ -47,7 +47,7 @@ TEST_CASE("Basic table operations") {
     const auto& retrieved = helpers::unwrap(table.get_opt("a"));
     CHECK(retrieved.get_name() == "a");
 
-    const auto symbolic_node = helpers::unwrap(retrieved.as_opt<sema::symbols::Node>());
+    const auto symbolic_node = helpers::unwrap(retrieved.get_data().as_opt<sema::symbols::Node>());
     CHECK(symbolic_node->is<ast::ImportStatement>());
 }
 

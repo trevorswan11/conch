@@ -52,7 +52,7 @@ namespace {
 auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
     const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) {
         auto& type = pool[{kind, types::mut::CONSTANT}];
-        ASSERT(!type.has_resolved(), "Builtin types should only be resolved once");
+        ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
         type.resolve<types::BuiltinType>();
 
         prelude.insert_unchecked(keyword.name, symbols::Builtin{keyword, type});
@@ -88,14 +88,14 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
     const auto inject_function =
         [&](const syntax::Builtin& builtin, types::BuiltinParams&& param_types, Type& return_type) {
             for (const auto& param_type : param_types) {
-                ASSERT(param_type->has_resolved(), "Builtins must be fully resolved");
+                ASSERT(param_type->is_resolved(), "Builtins must be fully resolved");
             }
-            ASSERT(return_type.has_resolved(), "Builtins must be fully resolved");
+            ASSERT(return_type.is_resolved(), "Builtins must be fully resolved");
 
             types::Key key{TypeKind::FUNCTION, types::mut::CONSTANT};
             key.imprint(builtin);
             auto& type = pool[key];
-            ASSERT(!type.has_resolved(), "Builtin functions should only be resolved once");
+            ASSERT(!type.is_resolved(), "Builtin functions should only be resolved once");
             type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
 
             prelude.insert_unchecked(builtin.name, symbols::Builtin{builtin, type});
@@ -174,7 +174,7 @@ auto Context::inject_prelude() -> void {
 
 auto Context::get_builtin_resolved_type(TypeKind kind) -> Type& {
     auto& type = pool[{kind, types::mut::CONSTANT}];
-    ASSERT(type.has_resolved(), "Builtin type was not already resolved");
+    ASSERT(type.is_resolved(), "Builtin type was not already resolved");
     return type;
 }
 

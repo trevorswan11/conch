@@ -166,6 +166,7 @@ concept DiagnosticType = is_diagnostic_v<T>;
 
 template <traits::DiagnosticType D> class DiagnosticList {
   public:
+    using value_type = D;
     MAKE_ITERATOR(Diagnostics, std::vector<D>, diagnostics_) // cppcheck-suppress syntaxError
 
   public:

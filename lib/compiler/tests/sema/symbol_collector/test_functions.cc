@@ -26,8 +26,9 @@ TEST_CASE("Function hollow types") {
     const auto& fn_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
     CHECK(fn_type == ctx->get_type(sema::TypeKind::FUNCTION, 1));
 
-    REQUIRE(helpers::unwrap(registry.get_from_opt(1, "self")).as_opt<syms::SelfParameter>());
-    REQUIRE(helpers::unwrap(registry.get_from_opt(1, "c")).as_opt<syms::Parameter>());
+    REQUIRE(
+        helpers::unwrap(registry.get_from_opt(1, "self")).get_data().as_opt<syms::SelfParameter>());
+    REQUIRE(helpers::unwrap(registry.get_from_opt(1, "c")).get_data().as_opt<syms::Parameter>());
     ctx->test_common_decl_collection(1);
 }
 

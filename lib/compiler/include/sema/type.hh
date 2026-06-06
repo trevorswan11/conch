@@ -63,6 +63,7 @@ class Type;
 
 namespace types {
 
+struct Unresolved {};
 struct Poison {};
 
 using BuiltinType = Unit;
@@ -236,21 +237,22 @@ namespace ghoti::sema {
 // A semantic type that is entirely owned by an arena of types
 class Type {
   public:
-    using Resolved = Variant<types::Poison,
-                             types::BuiltinType,
-                             types::Slice,
-                             types::Array,
-                             types::Pointer,
-                             types::Reference,
-                             types::Enum,
-                             types::Union,
-                             types::Struct,
-                             types::Module,
-                             types::Function,
-                             types::BuiltinFunction,
-                             types::MetaType,
-                             types::DeferredCall,
-                             types::DeferredArray>;
+    using Data = Variant<types::Unresolved,
+                         types::Poison,
+                         types::BuiltinType,
+                         types::Slice,
+                         types::Array,
+                         types::Pointer,
+                         types::Reference,
+                         types::Enum,
+                         types::Union,
+                         types::Struct,
+                         types::Module,
+                         types::Function,
+                         types::BuiltinFunction,
+                         types::MetaType,
+                         types::DeferredCall,
+                         types::DeferredArray>;
 
   public:
     ~Type() = default;
@@ -261,41 +263,36 @@ class Type {
     auto operator=(Type&&) -> Type&      = delete;
 
     MAKE_GETTER(key, const types::Key&)
-    MAKE_OPTIONAL_UNPACKER(resolved, const Resolved&, resolved_, *)
-    [[nodiscard]] auto get_resolved_opt() const noexcept { return resolved_; }
+    MAKE_DEDUCING_GETTER(data)
+
     [[nodiscard]] auto get_kind() const noexcept -> TypeKind { return key_.get_kind(); }
-
-    // Unpacks T from the resolved type assuming the type has been resolved to T
-    template <typename T> [[nodiscard]] auto as(this auto&& self) -> auto& {
-        return self.resolved_.value().template get<T>();
-    }
-
-    // Tries to unpack T, returning an empty option instead of throwing an exception
-    template <typename T, typename Self>
-    [[nodiscard]] auto as_opt(this Self&& self) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, T>&> {
-        if (!self.resolved_ || !self.resolved_->template is<T>()) { return opt::none; }
-        return self.resolved_->template get<T>();
-    }
 
     // Intended for use on pass 1 only
     constexpr auto set_symbol_table_idx(usize idx) noexcept -> void {
         symbol_table_idx_.emplace(idx);
     }
 
-    MAKE_OPTIONAL_UNPACKER(symbol_table_idx, usize, symbol_table_idx_, *)
+    [[nodiscard]] auto has_symbol_table_idx() const noexcept -> bool {
+        return symbol_table_idx_.has_value();
+    }
+
+    [[nodiscard]] auto get_symbol_table_idx() const noexcept { return *symbol_table_idx_; }
     [[nodiscard]] auto get_symbol_table_idx_opt() const noexcept { return symbol_table_idx_; }
 
-    template <typename Resolvee, typename... Args> auto resolve(Args&&... args) noexcept -> void {
-        resolved_.emplace(Resolvee{std::forward<Args>(args)...});
+    [[nodiscard]] auto is_resolved() const noexcept -> bool {
+        return !data_.is<types::Unresolved>();
     }
-    auto unresolve() noexcept -> void { resolved_.reset(); }
+
+    auto unresolve() noexcept -> void { data_.emplace<types::Unresolved>(); }
+    template <typename Resolvee, typename... Args> auto resolve(Args&&... args) noexcept -> void {
+        data_.emplace<Resolvee>(std::forward<Args>(args)...);
+    }
 
     // Resolves only if not already resolved, returning true if modified
     template <typename Resolvee, typename... Args>
     auto resolve_if(Args&&... args) noexcept -> bool {
-        if (has_resolved()) { return false; }
-        resolved_.emplace(Resolvee{std::forward<Args>(args)...});
+        if (is_resolved()) { return false; }
+        data_.emplace<Resolvee>(std::forward<Args>(args)...);
         return true;
     }
 
@@ -326,9 +323,9 @@ class Type {
     explicit Type(types::Key key) noexcept : key_{std::move(key)} {}
 
   private:
-    types::Key            key_;
-    opt::Size             symbol_table_idx_;
-    opt::Option<Resolved> resolved_;
+    types::Key key_;
+    opt::Size  symbol_table_idx_;
+    Data       data_;
 
     // Initialization is restricted to the pool's arena exclusively
     friend class mem::Arena;

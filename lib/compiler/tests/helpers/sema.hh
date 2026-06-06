@@ -29,6 +29,7 @@
 #include "syntax/error.hh"
 #include "types.hh"
 #include "utility.hh"
+#include "variant.hh"
 
 namespace ghoti::tests::helpers {
 
@@ -95,7 +96,7 @@ struct SemaTestContext {
     template <typename SymbolData>
     [[nodiscard]] auto get_symbol(std::string_view name, usize table_idx) {
         const auto& symbol = helpers::unwrap(analyzer.get_registry().get_from_opt(table_idx, name));
-        const auto& symbol_data = helpers::unwrap(symbol.as_opt<SymbolData>());
+        const auto& symbol_data = helpers::unwrap(symbol.get_data().as_opt<SymbolData>());
         return std::tie(symbol, symbol_data);
     }
 
@@ -118,8 +119,9 @@ struct SemaTestContext {
                                               usize                     table_idx,
                                               opt::Option<mod::Module&> module = opt::none,
                                               Proj                      proj   = {}) {
-        auto        info      = get_type_sym_info<SymbolData>(name, table_idx, module, proj);
-        const auto& type_data = helpers::unwrap(std::get<2>(info).template as_opt<TypeData>());
+        auto        info = get_type_sym_info<SymbolData>(name, table_idx, module, proj);
+        const auto& type_data =
+            helpers::unwrap(std::get<2>(info).get_data().template as_opt<TypeData>());
         return std::tuple_cat(info, std::forward_as_tuple(type_data));
     }
 
@@ -155,7 +157,8 @@ struct SemaTestContext {
                                          usize                     table_idx,
                                          opt::Option<mod::Module&> module = opt::none) {
         auto        info = get_ast_type_sym_info<SymbolData, TreeData>(name, table_idx, module);
-        const auto& type_data = helpers::unwrap(std::get<3>(info).template as_opt<TypeData>());
+        const auto& type_data =
+            helpers::unwrap(std::get<3>(info).get_data().template as_opt<TypeData>());
         return std::tuple_cat(info, std::forward_as_tuple(type_data));
     }
 
@@ -190,9 +193,7 @@ auto analyze(std::string_view root_path,
              Mocks&&... mocks) -> mem::Box<SemaTestContext> {
     auto ctx = mem::make_box<SemaTestContext>(
         make_vector<MockFile>(std::forward<Mocks>(mocks)...), root_path, input, error_stream);
-    if (ctx->root_mod->has_parser_diagnostics()) {
-        check_errors<syntax::Diagnostic>(ctx->root_mod->get_parser_diagnostics());
-    }
+    check_errors<syntax::Diagnostics>(*ctx->root_mod);
 
     auto& analyzer = ctx->analyzer;
     REQUIRE(analyzer.analyze(root_path));
@@ -204,7 +205,7 @@ template <std::same_as<MockFile>... Mocks>
 auto analyze_and_check(std::string_view root_path, std::string_view input, Mocks&&... mocks)
     -> mem::Box<SemaTestContext> {
     auto ctx = analyze(root_path, std::cerr, input, std::forward<Mocks>(mocks)...);
-    REQUIRE_FALSE(ctx->root_mod->has_sema_diagnostics());
+    REQUIRE_FALSE(ctx->root_mod->diagnostics.template is<Unit>());
     return ctx;
 }
 
@@ -215,10 +216,7 @@ auto test_collector_fail(std::string_view             failing,
                          Ds&&... expected_diagnostics) -> void {
     auto [ctx, idx] = collect(failing, imports);
     auto test_mod   = ctx->root_mod;
-
-    REQUIRE(test_mod->has_sema_diagnostics());
-    const auto& errors = test_mod->get_sema_diagnostics();
-    check_errors_against<sema::Diagnostic>(errors, std::forward<Ds>(expected_diagnostics)...);
+    check_errors_against<sema::Diagnostics>(*test_mod, std::forward<Ds>(expected_diagnostics)...);
 }
 
 // Tests a semantically failing input against the expected generated errors
@@ -249,10 +247,7 @@ auto test_resolver_fail(std::string_view             failing,
                         Ds&&... expected_diagnostics) -> CtxIdxPair {
     auto [ctx, idx] = resolve(failing, imports);
     auto test_mod   = ctx->root_mod;
-
-    REQUIRE(test_mod->has_sema_diagnostics());
-    const auto& errors = test_mod->get_sema_diagnostics();
-    check_errors_against<sema::Diagnostic>(errors, std::forward<Ds>(expected_diagnostics)...);
+    check_errors_against<sema::Diagnostics>(*test_mod, std::forward<Ds>(expected_diagnostics)...);
     return {std::move(ctx), idx};
 }
 

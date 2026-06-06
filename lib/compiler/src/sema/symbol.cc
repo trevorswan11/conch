@@ -15,12 +15,11 @@
 #include "diagnostic.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::sema {
 
 auto symbols::Label::from(Symbol& symbol) -> Label& {
-    auto label_data = symbol.as_opt<symbols::Label>();
+    auto label_data = symbol.get_data().as_opt<symbols::Label>();
     ASSERT(label_data, "Label is not linked to a symbolic label");
     return *label_data;
 }
@@ -29,7 +28,7 @@ namespace {
 
 [[nodiscard]] auto symbol_location_of(const mod::Module& module, const Symbol::Data& data) noexcept
     -> SourceLocation {
-    return data.visit(Overloaded{
+    return data.visit(
         [](const symbols::Builtin&) { return SourceLocation{0, 0}; },
         [&module](const auto& handle) { return module.ast.location_of(handle); },
         [&module](const symbols::Label& label) {
@@ -44,7 +43,7 @@ namespace {
         [&module](const symbols::Parameter& inner) { return module.ast.location_of(inner.name); },
         [&module](const symbols::ForLoopCapture& inner) {
             return module.ast.location_of(inner.payload);
-        }});
+        });
 }
 
 } // namespace
@@ -55,18 +54,18 @@ auto Symbol::get_symbol_location(const mod::Module& module) const noexcept -> So
 
 auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
     return data_.visit(
-        Overloaded{[&module](const symbols::Node& node) {
-                       switch (node->get_kind()) {
-                       case ast::NodeKind::DECL_STATEMENT:
-                           return module.ast.get_as<ast::DeclStatement>(*node).has_modifier(
-                               ast::DeclModifiers::PUBLIC);
-                       case ast::NodeKind::USING_STATEMENT:
-                       case ast::NodeKind::IMPORT_STATEMENT:
-                           return node->get_token_type() == syntax::TokenType::PUBLIC;
-                       default: return false;
-                       }
-                   },
-                   [](const auto&) { return false; }});
+        [&module](const symbols::Node& node) {
+            switch (node->get_kind()) {
+            case ast::NodeKind::DECL_STATEMENT:
+                return module.ast.get_as<ast::DeclStatement>(*node).has_modifier(
+                    ast::DeclModifiers::PUBLIC);
+            case ast::NodeKind::USING_STATEMENT:
+            case ast::NodeKind::IMPORT_STATEMENT:
+                return node->get_token_type() == syntax::TokenType::PUBLIC;
+            default: return false;
+            }
+        },
+        [](const auto&) { return false; });
 }
 
 auto SymbolTable::insert(std::string_view name, const mod::Module& module, const Symbol::Data& data)

@@ -249,10 +249,8 @@ TEST_CASE("Illegal circular module-based access resolution") {
     auto& a_module    = *helpers::unwrap(ctx->manager.try_get_file_module("a.gh"));
     auto& b_module    = *helpers::unwrap(ctx->manager.try_get_file_module("b.gh"));
 
-    REQUIRE(b_module.has_sema_diagnostics());
-    const auto& errors = b_module.get_sema_diagnostics();
-    helpers::check_errors_against<sema::Diagnostic>(
-        errors,
+    helpers::check_errors_against<sema::Diagnostics>(
+        b_module,
         sema::Diagnostic{"Cross-module cyclic dependency detected while resolving symbol 'B'",
                          sema::Error::CYCLIC_DEPENDENCY,
                          std::pair{0uz, 54uz}});

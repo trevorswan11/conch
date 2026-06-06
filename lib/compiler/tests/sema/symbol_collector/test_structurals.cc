@@ -44,7 +44,7 @@ TEST_CASE("Struct hollow types") {
         test_user_type("const a := struct { b: i32, var foo := bar; };", sema::TypeKind::STRUCT, 2);
     const auto& registry = ctx->analyzer.get_registry();
     const auto& field    = helpers::unwrap(registry.get_from_opt(1, "b"));
-    REQUIRE(field.as_opt<sema::symbols::StructField>());
+    REQUIRE(field.get_data().as_opt<sema::symbols::StructField>());
     ctx->test_common_decl_collection(1);
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("Enum hollow types") {
         test_user_type("const a := enum {b, static const foo := bar; };", sema::TypeKind::ENUM, 2);
     const auto& registry    = ctx->analyzer.get_registry();
     const auto& enumeration = helpers::unwrap(registry.get_from_opt(1, "b"));
-    REQUIRE(enumeration.as_opt<sema::symbols::Enumeration>());
+    REQUIRE(enumeration.get_data().as_opt<sema::symbols::Enumeration>());
     ctx->test_common_decl_collection(1);
 }
 
@@ -62,7 +62,7 @@ TEST_CASE("Union hollow types") {
         test_user_type("const a := union { b: i32, const foo := bar; };", sema::TypeKind::UNION, 2);
     const auto& registry = ctx->analyzer.get_registry();
     const auto& field    = helpers::unwrap(registry.get_from_opt(1, "b"));
-    REQUIRE(field.as_opt<sema::symbols::UnionField>());
+    REQUIRE(field.get_data().as_opt<sema::symbols::UnionField>());
     ctx->test_common_decl_collection(1);
 }
 

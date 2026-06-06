@@ -42,7 +42,8 @@ TEST_CASE("Array resolution with explicit type") {
     const auto& value_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
     CHECK(value_type == array_literal_type);
 
-    const auto& type_data = helpers::unwrap(array_literal_type.as_opt<sema::types::Array>());
+    const auto& type_data =
+        helpers::unwrap(array_literal_type.get_data().as_opt<sema::types::Array>());
     CHECK(type_data.underlying == item_type);
     CHECK(type_data.len == 2);
     CHECK_FALSE(type_data.null_terminated);

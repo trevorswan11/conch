@@ -122,18 +122,6 @@ class Symbol {
     MAKE_GETTER(name, std::string_view)
     MAKE_DEDUCING_GETTER(data)
 
-    // Unpacks T from the resolved type assuming the type has been resolved to T
-    template <typename T> [[nodiscard]] auto as(this auto&& self) noexcept -> auto& {
-        return self.data_.template get<T>();
-    }
-
-    // Tries to unpack T, returning an empty option instead of throwing an exception
-    template <typename T, typename Self>
-    [[nodiscard]] auto as_opt(this Self&& self) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, T>&> {
-        return self.data_.template get_opt<T>();
-    }
-
     [[nodiscard]] auto get_symbol_location(const mod::Module& module) const noexcept
         -> SourceLocation;
 

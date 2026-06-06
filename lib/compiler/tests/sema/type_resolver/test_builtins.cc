@@ -33,7 +33,7 @@ auto test_builtin_resolve(const syntax::Builtin& builtin,
         builtin.name, helpers::unwrap(ctx->analyzer.get_prelude_index_opt()));
     CHECK(builtin_sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
     const auto& builtin_type = builtin_sym_data.get_type();
-    CHECK(builtin_type.as_opt<sema::types::BuiltinFunction>());
+    CHECK(builtin_type.get_data().as_opt<sema::types::BuiltinFunction>());
 
     // Now validate the actual declaration and call
     const sema::Type& expected_type = expected_type_fn(*ctx);
@@ -111,7 +111,7 @@ TEST_CASE("Deferred return type from typeOf") {
     const auto& call = helpers::unwrap(
         ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
-    CHECK(&call == &helpers::unwrap(type.as_opt<sema::types::DeferredCall>()).call);
+    CHECK(&call == &helpers::unwrap(type.get_data().as_opt<sema::types::DeferredCall>()).call);
 }
 
 TEST_CASE("Builtin pointer conversions") {

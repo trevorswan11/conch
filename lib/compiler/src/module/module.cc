@@ -48,7 +48,7 @@ auto format_module_diagnostic(std::ostream&                   os,
 
 auto Module::print_diagnostics(std::ostream& os) const -> void {
     if (is_ok()) { return; }
-    diagnostics.visit(Overloaded{
+    diagnostics.visit(
         [this, &os](const auto& list) {
             for (const auto& diag : list) {
                 format_module_diagnostic(
@@ -56,7 +56,7 @@ auto Module::print_diagnostics(std::ostream& os) const -> void {
                     << "\n";
             }
         },
-        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); }});
+        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
