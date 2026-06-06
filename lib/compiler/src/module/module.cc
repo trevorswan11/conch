@@ -18,6 +18,7 @@
 
 #include "assert.hh"
 #include "diagnostic.hh"
+#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "style.hh"
@@ -109,8 +110,7 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     auto       source       = TRY(loader_.load(path));
     const auto abs_path_str = path.string();
 
-    auto mod =
-        mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)}, ast::AST{});
+    auto mod = mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)});
     syntax::Parser p{mod->source};
     auto           diagnostics = p.consume(mod->ast);
 

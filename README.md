@@ -96,7 +96,7 @@ zig build --release
     - [x] Syntax documentation
 - [ ] Multi-pass Semantic Analysis (to support order independent declarations)
     - [x] Symbol registration pass
-    - [ ] Type resolution pass
+    - [x] Type resolution pass
     - [ ] Type checking pass
 - [ ] LLVM Integration
     - [ ] Build system integration
@@ -118,7 +118,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 2. Create your Feature Branch (`git checkout -b feat/AmazingFeature`)
 3. Commit your Changes (`git commit -m '[feat]: Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feat/AmazingFeature`)
-5. Open a Pull Request
+5. Open a Pull Request against `dev`
 
 ### Top contributors:
 

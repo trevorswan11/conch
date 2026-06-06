@@ -38,7 +38,7 @@ TEST_CASE("Labeled for loop resolution") {
         const auto [sym, sym_data, node_data, type] =
             ctx->get_ast_type_sym_info<syms::Label, ast::LabelExpression>(
                 "outer", idx + 1, opt::none, &syms::Label::get_definition);
-        CHECK(ctx->root_mod->get_sema_type(node_data.name) == i32_type);
+        CHECK(ctx->root_mod.get_sema_type(node_data.name) == i32_type);
     }
 
     const auto check_capture = [&](std::string_view name) {

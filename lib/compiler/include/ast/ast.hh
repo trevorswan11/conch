@@ -13,6 +13,7 @@
 #include "iterator.hh"
 #include "option.hh"
 #include "types.hh"
+#include "utility.hh"
 
 namespace ghoti::ast {
 
@@ -55,6 +56,10 @@ class AST {
     MAKE_UNALIASED_ITERATOR(std::vector<NodeID>, nodes_.roots)
 
   public:
+    AST()  = default;
+    ~AST() = default;
+    MAKE_MOVE_ONLY(AST)
+
     constexpr auto add_root(NodeID id) -> void { nodes_.roots.push_back(id); }
 
     [[nodiscard]] constexpr auto get_pool_sizes() const noexcept -> DataPoolSizes {

@@ -29,11 +29,11 @@ auto test_user_type(std::string_view input, sema::TypeKind kind, usize expected_
     CHECK(sym.get_kind_opt() == sema::SymbolKind::TYPE);
 
     auto& actual_type =
-        helpers::unwrap(ctx->root_mod->get_sema_type_opt(helpers::unwrap(node_data.value)));
+        helpers::unwrap(ctx->root_mod.get_sema_type_opt(helpers::unwrap(node_data.value)));
     const auto type_idx = helpers::unwrap(actual_type.get_symbol_table_idx_opt(), idx + 1);
     CHECK(actual_type == ctx->get_type(kind, type_idx));
 
-    const auto& value_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
+    const auto& value_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
     CHECK(actual_type == value_type);
     return std::move(ctx);
 }
@@ -72,7 +72,7 @@ TEST_CASE("Public using query") {
     const auto& registry  = ctx->analyzer.get_registry();
     const auto& int_alias = helpers::unwrap(registry.get_from_opt(idx, "I"));
     CHECK(int_alias.get_kind_opt() == sema::SymbolKind::TYPE);
-    CHECK(int_alias.is_public(*ctx->root_mod));
+    CHECK(int_alias.is_public(ctx->root_mod));
 }
 
 TEST_CASE("Shadowing member/field declarations") {

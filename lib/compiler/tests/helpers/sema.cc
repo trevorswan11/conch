@@ -17,6 +17,7 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 
+#include "memory.hh"
 #include "option.hh"
 #include "sema/type.hh"
 #include "syntax/error.hh"
@@ -39,14 +40,14 @@ SemaTestContext::SemaTestContext(const std::vector<MockFile>& imports,
                                  std::string_view             input,
                                  std::ostream&                error_stream)
     : loader{mem::make_box<mod::MemoryLoader>()}, manager{*loader},
-      analyzer{manager, error_stream, false}, root_mod{[&] {
+      analyzer{manager, error_stream, false}, root_mod{[&] -> auto& {
           loader->add(root_path, std::string{input});
           for (const auto& mock : imports) {
               loader->add(mock.path, std::string{mock.source});
               if (mock.name) { REQUIRE(manager.add_library_module(*mock.name, mock.path)); }
           }
 
-          return unwrap(manager.try_get_file_module(root_path));
+          return *unwrap(manager.try_get_file_module(root_path));
       }()} {}
 
 auto SemaTestContext::verify_registry_resolved() -> void {
@@ -64,7 +65,7 @@ auto SemaTestContext::verify_registry_resolved() -> void {
 
 auto SemaTestContext::test_common_decl_collection(usize idx, std::string_view name) -> void {
     const auto& registry = analyzer.get_registry();
-    helpers::test_common_decl_collection(registry, *root_mod, idx, name);
+    helpers::test_common_decl_collection(registry, root_mod, idx, name);
 }
 
 auto SemaTestContext::check_poisoned(const sema::Symbol& sym) -> void {
@@ -85,36 +86,34 @@ auto SemaTestContext::check_poisoned(const sema::Symbol& sym, const sema::Type& 
 
 auto SemaTestContext::get_string_literal_size(ast::ExpressionHandle     handle,
                                               opt::Option<mod::Module&> enclosing_mod) -> usize {
-    const auto& module   = enclosing_mod.value_or(*root_mod);
+    const auto& module   = enclosing_mod.value_or(root_mod);
     const auto& str_expr = helpers::unwrap(module.ast.get_as_opt<ast::StringExpression>(handle));
     return str_expr.value.size() + 1;
 }
 
 auto collect(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto ctx = mem::make_box<SemaTestContext>(imports, TEST_FILENAME, input);
-    check_errors<syntax::Diagnostics>(*ctx->root_mod);
-    ctx->analyzer.collect_symbols(*ctx->root_mod);
-
-    REQUIRE(ctx->root_mod->root_table_idx);
-    usize idx = *ctx->root_mod->root_table_idx;
+    check_errors<syntax::Diagnostics>(ctx->root_mod);
+    ctx->analyzer.collect_symbols(ctx->root_mod);
+    usize idx = helpers::unwrap(ctx->root_mod.root_table_idx);
     return {std::move(ctx), idx};
 }
 
 auto collect_and_check(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto [ctx, idx] = collect(input, imports);
-    check_errors<sema::Diagnostics>(*ctx->root_mod);
+    check_errors<sema::Diagnostics>(ctx->root_mod);
     return {std::move(ctx), idx};
 }
 
 auto resolve(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto [ctx, idx] = collect(input, imports);
-    ctx->analyzer.resolve_types(*ctx->root_mod);
+    ctx->analyzer.resolve_types(ctx->root_mod);
     return {std::move(ctx), idx};
 }
 
 auto resolve_and_check(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
     auto [ctx, idx] = resolve(input, imports);
-    check_errors<sema::Diagnostics>(*ctx->root_mod);
+    check_errors<sema::Diagnostics>(ctx->root_mod);
     ctx->verify_registry_resolved();
 
     return {std::move(ctx), idx};

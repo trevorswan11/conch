@@ -55,7 +55,7 @@ struct SemaTestContext {
     mem::Box<mod::MemoryLoader> loader;
     mod::ModuleManager          manager;
     sema::Analyzer              analyzer;
-    gsl::not_null<mod::Module*> root_mod;
+    mod::Module&                root_mod;
 
     // The root is automatically added to the internal loader and can be immediately analyzed
     explicit SemaTestContext(const std::vector<MockFile>& imports,
@@ -108,7 +108,7 @@ struct SemaTestContext {
                                          opt::Option<mod::Module&> module = opt::none,
                                          Proj                      proj   = {}) {
         auto        info      = get_symbol<SymbolData>(name, table_idx);
-        auto&       enclosing = module.value_or(*root_mod);
+        auto&       enclosing = module.value_or(root_mod);
         const auto& type =
             helpers::unwrap(enclosing.get_sema_type_opt(std::invoke(proj, std::get<1>(info))));
         return std::tuple_cat(info, std::forward_as_tuple(type));
@@ -133,7 +133,7 @@ struct SemaTestContext {
                                         opt::Option<mod::Module&> module = opt::none,
                                         Proj                      proj   = {}) {
         auto        info      = get_symbol<SymbolData>(name, table_idx);
-        auto&       enclosing = module.value_or(*root_mod);
+        auto&       enclosing = module.value_or(root_mod);
         const auto& node_data = helpers::unwrap(
             enclosing.ast.get_as_opt<TreeData>(std::invoke(proj, std::get<1>(info))));
         return std::tuple_cat(info, std::forward_as_tuple(node_data));
@@ -146,7 +146,7 @@ struct SemaTestContext {
                                              opt::Option<mod::Module&> module = opt::none,
                                              Proj                      proj   = {}) {
         auto        info = get_ast_sym_info<SymbolData, TreeData>(name, table_idx, module, proj);
-        auto&       enclosing = module.value_or(*root_mod);
+        auto&       enclosing = module.value_or(root_mod);
         const auto& type =
             helpers::unwrap(enclosing.get_sema_type_opt(std::invoke(proj, std::get<1>(info))));
         return std::tuple_cat(info, std::forward_as_tuple(type));
@@ -194,7 +194,7 @@ auto analyze(std::string_view root_path,
              Mocks&&... mocks) -> mem::Box<SemaTestContext> {
     auto ctx = mem::make_box<SemaTestContext>(
         make_vector<MockFile>(std::forward<Mocks>(mocks)...), root_path, input, error_stream);
-    check_errors<syntax::Diagnostics>(*ctx->root_mod);
+    check_errors<syntax::Diagnostics>(ctx->root_mod);
 
     auto& analyzer = ctx->analyzer;
     REQUIRE(analyzer.analyze(root_path));
@@ -206,7 +206,7 @@ template <std::same_as<MockFile>... Mocks>
 auto analyze_and_check(std::string_view root_path, std::string_view input, Mocks&&... mocks)
     -> mem::Box<SemaTestContext> {
     auto ctx = analyze(root_path, std::cerr, input, std::forward<Mocks>(mocks)...);
-    REQUIRE_FALSE(ctx->root_mod->diagnostics.template is<Unit>());
+    REQUIRE_FALSE(ctx->root_mod.diagnostics.template is<Unit>());
     return ctx;
 }
 
@@ -216,8 +216,8 @@ auto test_collector_fail(std::string_view             failing,
                          const std::vector<MockFile>& imports,
                          Ds&&... expected_diagnostics) -> void {
     auto [ctx, idx] = collect(failing, imports);
-    auto test_mod   = ctx->root_mod;
-    check_errors_against<sema::Diagnostics>(*test_mod, std::forward<Ds>(expected_diagnostics)...);
+    check_errors_against<sema::Diagnostics>(ctx->root_mod,
+                                            std::forward<Ds>(expected_diagnostics)...);
 }
 
 // Tests a semantically failing input against the expected generated errors
@@ -247,8 +247,8 @@ auto test_resolver_fail(std::string_view             failing,
                         const std::vector<MockFile>& imports,
                         Ds&&... expected_diagnostics) -> CtxIdxPair {
     auto [ctx, idx] = resolve(failing, imports);
-    auto test_mod   = ctx->root_mod;
-    check_errors_against<sema::Diagnostics>(*test_mod, std::forward<Ds>(expected_diagnostics)...);
+    check_errors_against<sema::Diagnostics>(ctx->root_mod,
+                                            std::forward<Ds>(expected_diagnostics)...);
     return {std::move(ctx), idx};
 }
 

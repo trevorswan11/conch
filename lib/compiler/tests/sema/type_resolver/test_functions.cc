@@ -60,8 +60,8 @@ TEST_CASE("Function declaration and call type resolution") {
         check_param_type("d", u8_slice);
 
         const auto& fn = helpers::unwrap(
-            ctx->root_mod->ast.get_as_opt<ast::FunctionExpression>(*a_decl_node_data.value));
-        const auto& return_type = ctx->root_mod->get_sema_type(fn.explicit_return_type);
+            ctx->root_mod.ast.get_as_opt<ast::FunctionExpression>(*a_decl_node_data.value));
+        const auto& return_type = ctx->root_mod.get_sema_type(fn.explicit_return_type);
         CHECK(return_type == bool_type);
     }
 
@@ -72,16 +72,16 @@ TEST_CASE("Function declaration and call type resolution") {
         CHECK(decl_type == bool_type);
 
         const auto& call = helpers::unwrap(
-            ctx->root_mod->ast.get_as_opt<ast::CallExpression>(*decl_node_data.value));
+            ctx->root_mod.ast.get_as_opt<ast::CallExpression>(*decl_node_data.value));
         CHECK(call.arguments.size() == 3);
-        const auto& call_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(call.function));
+        const auto& call_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(call.function));
         CHECK(a_decl_type == call_type);
 
         const auto check_arg_type = [&](usize arg_idx, const sema::Type& expected_type) {
             REQUIRE(arg_idx < call.arguments.size());
             const auto arg =
                 helpers::unwrap(call.arguments[arg_idx].as_opt<ast::ExpressionHandle>());
-            const auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
+            const auto& arg_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(arg));
             CHECK(expected_type == arg_type);
         };
 
@@ -95,7 +95,7 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto& null_string_type =
             ctx->get_type(sema::TypeKind::ARRAY, true, str_size, u8_type);
 
-        const auto& last_arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(last_arg));
+        const auto& last_arg_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(last_arg));
         CHECK(null_string_type == last_arg_type);
     }
 }
@@ -142,8 +142,8 @@ TEST_CASE("Deferred return type from user function") {
     const auto [sym, sym_data, node_data, type] =
         ctx->get_ast_type_sym_info<syms::Node, ast::UsingStatement>("B", idx);
 
-    const auto& call = helpers::unwrap(
-        ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
+    const auto& call =
+        helpers::unwrap(ctx->root_mod.ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
     CHECK(&call == &helpers::unwrap(type.get_data().as_opt<sema::types::DeferredCall>()).call);
 }

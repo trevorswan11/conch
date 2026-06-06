@@ -51,12 +51,20 @@ struct Module {
     std::filesystem::path path;
     std::filesystem::path parent_path;
     SourceFile            source;
-    ast::AST              ast;
+    ast::AST              ast{};
     sema::SideTables      sema_side_tables;
     opt::Size             root_table_idx;
-    ModuleState           state;
+    ModuleState           state{ModuleState::PARSED};
 
     DiagnosticListVariant diagnostics{Unit{}};
+
+    Module(std::filesystem::path path,
+           std::filesystem::path parent_path,
+           SourceFile            source) noexcept
+        : path{std::move(path)}, parent_path{std::move(parent_path)}, source{std::move(source)} {}
+
+    ~Module() = default;
+    MAKE_MOVE_ONLY(Module)
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>

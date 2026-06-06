@@ -34,11 +34,11 @@ namespace ghoti {
     Type(Type&&) noexcept              = default; \
     auto operator=(Type&&)->Type&      = delete;
 
-#define MAKE_MOVE_ONLY(Type)                      \
-    Type(const Type&)                  = delete;  \
-    auto operator=(const Type&)->Type& = delete;  \
-    Type(Type&&) noexcept              = default; \
-    auto operator=(Type&&)->Type&      = default;
+#define MAKE_MOVE_ONLY(Type)                            \
+    Type(const Type&)                        = delete;  \
+    auto operator=(const Type&)->Type&       = delete;  \
+    Type(Type&&) noexcept                    = default; \
+    auto operator=(Type&&) noexcept -> Type& = default;
 
 #define CONCAT_INNER(a, b) a##b
 #define CONCAT(a, b) CONCAT_INNER(a, b)

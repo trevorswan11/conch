@@ -46,7 +46,7 @@ TEST_CASE("Public import query") {
 
     auto&       table      = helpers::unwrap(ctx->analyzer.get_table_opt(idx));
     const auto& std_import = helpers::unwrap(table.get_opt("std"));
-    CHECK(std_import.is_public(*ctx->root_mod));
+    CHECK(std_import.is_public(ctx->root_mod));
 }
 
 namespace {
@@ -96,9 +96,9 @@ TEST_CASE("Diamond dependencies") {
 
 TEST_CASE("Self import") {
     helpers::SemaTestContext ctx{{}, "self.gh", R"(import "self.gh" as self;)"};
-    helpers::check_errors<syntax::Diagnostics>(*ctx.root_mod);
-    ctx.analyzer.collect_symbols(*ctx.root_mod);
-    helpers::check_errors<sema::Diagnostics>(*ctx.root_mod);
+    helpers::check_errors<syntax::Diagnostics>(ctx.root_mod);
+    ctx.analyzer.collect_symbols(ctx.root_mod);
+    helpers::check_errors<sema::Diagnostics>(ctx.root_mod);
     const auto& registry = ctx.analyzer.get_registry();
     REQUIRE(registry.size() == 1);
     CHECK(registry.get_from_opt(0, "self"));
@@ -107,7 +107,7 @@ TEST_CASE("Self import") {
 TEST_CASE("Unknown file module") {
     std::stringstream ss;
     auto              ctx = helpers::analyze(helpers::TEST_FILENAME, ss, R"(import "a.gh" as a;)");
-    REQUIRE(ctx->root_mod->diagnostics.as_opt<sema::Diagnostics>());
+    REQUIRE(ctx->root_mod.diagnostics.as_opt<sema::Diagnostics>());
 
     constexpr std::string_view expected{
         R"(test.gh:1:8: error: Could not find path 'a.gh' in virtual file system

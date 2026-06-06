@@ -28,7 +28,7 @@ namespace {
         ctx->get_ast_sym_info<sema::symbols::Node, ast::DeclStatement>("a", 0);
     CHECK_FALSE(sym.has_kind());
 
-    const auto& actual_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
+    const auto& actual_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
     CHECK(actual_type == ctx->get_type(sema::TypeKind::BLOCK, loop_block_idx));
     return std::move(ctx);
 }

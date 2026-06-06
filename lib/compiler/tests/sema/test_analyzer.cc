@@ -67,7 +67,7 @@ TEST_CASE("Full sema pipeline") {
     ctx->verify_registry_resolved();
 
     REQUIRE(ctx->analyzer.get_registry().size() == 6);
-    auto& root_module = *ctx->root_mod;
+    auto& root_module = ctx->root_mod;
     CHECK(root_module.root_table_idx == 0);
     auto [std_module, std_module_type] = check_inner_module(*ctx, root_module, "std", 0, false);
     CHECK(std_module.root_table_idx == 1);
@@ -131,7 +131,7 @@ TEST_CASE("Full sema pipeline") {
             CHECK(call_expr.arguments.size() == 1);
             const auto arg =
                 helpers::unwrap(call_expr.arguments[0].as_opt<ast::ExpressionHandle>());
-            auto& arg_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(arg));
+            auto& arg_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(arg));
             CHECK(arg_type == msg_type);
 
             const auto& access_expr = helpers::unwrap(

@@ -42,8 +42,8 @@ auto test_builtin_resolve(const syntax::Builtin& builtin,
     CHECK(expected_type == decl_type);
 
     const auto& call =
-        helpers::unwrap(ctx->root_mod->ast.get_as_opt<ast::CallExpression>(*decl_node_data.value));
-    const auto& call_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(call.function));
+        helpers::unwrap(ctx->root_mod.ast.get_as_opt<ast::CallExpression>(*decl_node_data.value));
+    const auto& call_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(call.function));
     CHECK(builtin_type == call_type);
 }
 
@@ -108,8 +108,8 @@ TEST_CASE("Deferred return type from typeOf") {
     const auto [sym, sym_data, node_data, type] =
         ctx->get_ast_type_sym_info<syms::Node, ast::UsingStatement>("B", idx);
 
-    const auto& call = helpers::unwrap(
-        ctx->root_mod->ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
+    const auto& call =
+        helpers::unwrap(ctx->root_mod.ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));
     CHECK(type == ctx->get_type(sema::TypeKind::TYPE, &call));
     CHECK(&call == &helpers::unwrap(type.get_data().as_opt<sema::types::DeferredCall>()).call);
 }

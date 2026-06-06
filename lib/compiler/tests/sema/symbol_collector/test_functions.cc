@@ -23,7 +23,7 @@ TEST_CASE("Function hollow types") {
         ctx->get_ast_sym_info<syms::Node, ast::DeclStatement>("a", idx);
     CHECK(sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
 
-    const auto& fn_type = helpers::unwrap(ctx->root_mod->get_sema_type_opt(*node_data.value));
+    const auto& fn_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
     CHECK(fn_type == ctx->get_type(sema::TypeKind::FUNCTION, 1));
 
     REQUIRE(
