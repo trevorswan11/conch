@@ -326,18 +326,18 @@ TEST_CASE("Initializer expression in various resolution contexts") {
 
         helpers::test_resolver_fail(fmt::format("{} const a: S = .{{ .a = 2, }};", input),
                                     sema::Diagnostic{"Struct initializer missing required field: c",
-                                                     sema::Error::MISSING_FIELDS,
+                                                     sema::Error::MISSING_FIELD,
                                                      std::pair{0uz, 65uz}});
         helpers::test_resolver_fail(
             fmt::format("{} const a: S = .{{ .b = 2, }};", input),
             sema::Diagnostic{"Struct initializer missing required fields: a, c",
-                             sema::Error::MISSING_FIELDS,
+                             sema::Error::MISSING_FIELD,
                              std::pair{0uz, 65uz}});
 
         helpers::test_resolver_fail(
             fmt::format("{} const a: S = .{{ .a = 2, .c = true, .d = 2 }};", input),
             sema::Diagnostic{"Struct initializer contains unknown field: d",
-                             sema::Error::UNKNOWN_FIELDS,
+                             sema::Error::UNKNOWN_FIELD,
                              std::pair{0uz, 65uz}});
     }
 }

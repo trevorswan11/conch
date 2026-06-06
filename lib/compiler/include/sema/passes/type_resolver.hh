@@ -190,10 +190,10 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
 
     [[nodiscard]] auto validate_enum_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> Result<void, Diagnostic>;
+        -> opt::Option<Diagnostic>;
 
     [[nodiscard]] auto validate_union_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> Result<void, Diagnostic>;
+        -> opt::Option<Diagnostic>;
 
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;

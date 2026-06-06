@@ -155,9 +155,10 @@ template <traits::IndexableID ID>
     // @typeOf returns a type as per documentation, but it's not the literal `type` type
     case TokenType::BUILTIN_TYPE_OF: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::TYPE);
-        auto& instance_type = *get_resolved_call_arg_type(call.arguments[0]);
-        if (instance_type.get_data().as_opt<types::DeferredCall>() ||
-            instance_type.get_data().as_opt<types::DeferredArray>()) {
+        auto&       instance_type = *get_resolved_call_arg_type(call.arguments[0]);
+        const auto& instance_data = instance_type.get_data();
+        if (instance_data.as_opt<types::DeferredCall>() ||
+            instance_data.as_opt<types::DeferredArray>()) {
             return_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
             return_type->resolve_if<types::DeferredCall>(call);
         } else {
@@ -178,11 +179,11 @@ template <traits::IndexableID ID>
                              resolving_.ast.location_of(id));
     case TokenType::BUILTIN_PTR_FROM_ARRAY: {
         auto& array_type = *get_resolved_call_arg_type(call.arguments[0]);
+        auto& type_data  = array_type.get_data();
         // The new type uses a new key to align with normal pointer creation
-        if (const auto array_data = array_type.get_data().as_opt<types::Array>()) {
+        if (const auto array_data = type_data.as_opt<types::Array>()) {
             return_type = &ctx_.get_pointer(types::mut::CONSTANT, array_data->underlying);
-        } else if (const auto deferred_data =
-                       array_type.get_data().as_opt<types::DeferredArray>()) {
+        } else if (const auto deferred_data = type_data.as_opt<types::DeferredArray>()) {
             return_type = &ctx_.get_pointer(types::mut::CONSTANT, deferred_data->underlying);
         } else {
             return make_sema_err(fmt::format("Expected an array-yielding expression; found '{}'",
@@ -318,7 +319,8 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
     resolving_.set_sema_type(call.function, callee_type);
 
     // Verify that the type in the function is callable and store the return type
-    if (auto function_type = callee_type.get_data().as_opt<types::Function>()) {
+    auto& callee_data = callee_type.get_data();
+    if (const auto function_type = callee_data.as_opt<types::Function>()) {
         const auto has_implicit_self =
             function_type->has_self && resolving_.ast.get_as_opt<ast::DotExpression>(call.function);
 
@@ -359,7 +361,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         // Only arity is checked since the type checker will handle the rest
         resolving_.set_sema_type(id, function_type->return_type);
         last_type_.emplace(function_type->return_type);
-    } else if (auto builtin_type = callee_type.get_data().as_opt<types::BuiltinFunction>()) {
+    } else if (const auto builtin_type = callee_data.as_opt<types::BuiltinFunction>()) {
         // There's no need to check any further if the arguments are poisoned
         if (resolve_call_args(call.arguments) == ResolveResult::POISONED) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id));
@@ -468,12 +470,12 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr)
             resolving_.set_sema_type(iterable, iterable_type);
 
             // Assign types unconditionally since ignoring discards saves no space
-            if (const auto array = iterable_type.get_data().as_opt<types::Array>()) {
+            auto& iterable_data = iterable_type.get_data();
+            if (const auto array = iterable_data.as_opt<types::Array>()) {
                 resolving_.set_sema_type(capture.payload, array->underlying);
-            } else if (const auto deferred =
-                           iterable_type.get_data().as_opt<types::DeferredArray>()) {
+            } else if (const auto deferred = iterable_data.as_opt<types::DeferredArray>()) {
                 resolving_.set_sema_type(capture.payload, deferred->underlying);
-            } else if (const auto slice = iterable_type.get_data().as_opt<types::Slice>()) {
+            } else if (const auto slice = iterable_data.as_opt<types::Slice>()) {
                 resolving_.set_sema_type(capture.payload, slice->underlying);
             } else {
                 return last_type_.emplace(ctx_.poison_node(
@@ -643,12 +645,13 @@ namespace {
 } // namespace
 
 template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbol& symbol) -> void {
+    auto& symbol_data = symbol.get_data();
     switch (symbol.get_status()) {
     case SymbolStatus::RESOLVED:
         // Identifier handles are not unique in the tree, but their symbol can be used to find root
         resolving_.set_sema_type_if(
             id,
-            symbol.get_data().visit(
+            symbol_data.visit(
                 [](symbols::Builtin& builtin) -> Type& { return builtin.get_type(); },
                 [this](symbols::Label label) -> Type& {
                     const auto defn = label.get_definition();
@@ -696,7 +699,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
         symbol.set_status(SymbolStatus::RESOLVING);
 
         // All other symbol data kinds are independently resolved
-        const auto node = symbol.get_data().as_opt<symbols::Node>();
+        const auto node = symbol_data.as_opt<symbols::Node>();
         ASSERT(node, "Unresolved symbol is not AST-associated");
         resolve(*node);
         resolving_.set_sema_type(id, *last_type_.take());
@@ -750,16 +753,15 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IfExpression& if_expr) -> vo
 auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> void {
     TRY_RESOLVE(index.array);
     auto& array_type = *last_type_.take();
+    auto& array_data = array_type.get_data();
 
-    if (array_type.get_kind() == TypeKind::LABEL) {
-        last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::AUTO));
-    } else if (const auto slice = array_type.get_data().as_opt<types::Slice>()) {
+    if (const auto slice = array_data.as_opt<types::Slice>()) {
         last_type_.emplace(slice->underlying);
-    } else if (const auto array = array_type.get_data().as_opt<types::Array>()) {
+    } else if (const auto array = array_data.as_opt<types::Array>()) {
         last_type_.emplace(array->underlying);
-    } else if (const auto deferred = array_type.get_data().as_opt<types::DeferredArray>()) {
+    } else if (const auto deferred = array_data.as_opt<types::DeferredArray>()) {
         last_type_.emplace(deferred->underlying);
-    } else if (const auto pointer = array_type.get_data().as_opt<types::Pointer>()) {
+    } else if (const auto pointer = array_data.as_opt<types::Pointer>()) {
         last_type_.emplace(pointer->underlying);
     } else {
         return last_type_.emplace(
@@ -821,9 +823,10 @@ auto TypeResolver::resolve_structural_access(Type&                         objec
                                              opt::Option<std::string_view> object_name)
     -> Result<gsl::not_null<Type*>, Diagnostic> {
     // Early validation to simplify error handling
-    const auto enum_type   = object_type.get_data().as_opt<types::Enum>();
-    const auto struct_type = object_type.get_data().as_opt<types::Struct>();
-    const auto union_type  = object_type.get_data().as_opt<types::Union>();
+    auto&      object_data = object_type.get_data();
+    const auto enum_type   = object_data.as_opt<types::Enum>();
+    const auto struct_type = object_data.as_opt<types::Struct>();
+    const auto union_type  = object_data.as_opt<types::Union>();
     if (!enum_type && !struct_type && !union_type) {
         return make_sema_err(
             fmt::format(
@@ -965,7 +968,7 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
         return Diagnostic{fmt::format("Struct initializer missing required field{}: {}",
                                       plurality(struct_validator_.missings),
                                       fmt::join(struct_validator_.missings, ", ")),
-                          Error::MISSING_FIELDS,
+                          Error::MISSING_FIELD,
                           resolving_.ast.location_of(init_id)};
     }
 
@@ -980,7 +983,7 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
         return Diagnostic{fmt::format("Struct initializer contains unknown field{}: {}",
                                       plurality(struct_validator_.unknowns),
                                       fmt::join(struct_validator_.unknowns, ", ")),
-                          Error::UNKNOWN_FIELDS,
+                          Error::UNKNOWN_FIELD,
                           resolving_.ast.location_of(init_id)};
     }
     return {};
@@ -1014,8 +1017,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
     }
 
     const auto  num_initializers = init.initializers.size();
-    const auto& resolved         = object_type.get_data();
-    if (resolved.as_opt<types::Enum>()) {
+    const auto& object_data      = object_type.get_data();
+    if (object_data.as_opt<types::Enum>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1023,7 +1026,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
                              "they lack member variables",
                              Error::ARITY_MISMATCH,
                              resolving_.ast.location_of(id)));
-    } else if (resolved.as_opt<types::Union>()) {
+    } else if (object_data.as_opt<types::Union>()) {
         // This is a restriction naturally imposed by the definition of a union in theory
         if (num_initializers != 1) {
             return last_type_.emplace(ctx_.poison_node(
@@ -1034,13 +1037,13 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
                 Error::ARITY_MISMATCH,
                 resolving_.ast.location_of(id)));
         }
-    } else if (const auto struct_data = resolved.as_opt<types::Struct>()) {
+    } else if (const auto struct_data = object_data.as_opt<types::Struct>()) {
         if (auto valid = validate_struct_initializer(id, init, object_type); !valid) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(valid).error()));
         }
     }
 
-    if (!resolved.as_opt<types::Struct>() && !resolved.as_opt<types::Union>()) {
+    if (!object_data.as_opt<types::Struct>() && !object_data.as_opt<types::Union>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1102,12 +1105,23 @@ namespace {
 // Collects potential duplicate implicit access match arms for the structural type
 auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
                            mod::Module&                               resolving,
-                           TypeResolver::StructuralValidator&         validator) -> void {
+                           TypeResolver::StructuralValidator&         validator,
+                           bool require_implicit_access) -> opt::Option<Diagnostic> {
     for (const auto& arm : arms) {
+        if (arm.pattern.is<Unit>()) { continue; }
+
         // It's only possible to verify access expressions
         const auto pattern_node =
             resolving.ast.get_as_opt<ast::ImplicitAccessExpression>(arm.pattern);
-        if (!pattern_node) { continue; }
+        if (!pattern_node) {
+            if (require_implicit_access) {
+                return Diagnostic{
+                    "Match arm may only have an implicit access pattern in this context",
+                    Error::ILLEGAL_MATCH_PATTERN,
+                    resolving.ast.location_of(arm.pattern)};
+            }
+            continue;
+        }
 
         const auto& ident = resolving.ast.get_as<ast::IdentifierExpression>(pattern_node->member);
         if (!validator.seen.insert(ident.name).second) {
@@ -1115,22 +1129,30 @@ auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
         }
         validator.provided.emplace_back(ident.name);
     }
+    return opt::none;
 }
 
 } // namespace
 
 auto TypeResolver::validate_enum_arms(ast::NodeID                 match_id,
                                       const ast::MatchExpression& match,
-                                      Type& enum_type) -> Result<void, Diagnostic> {
+                                      Type& enum_type) -> opt::Option<Diagnostic> {
     enum_validator_.clear();
 
+    if (enum_type.get_data().as<types::Enum>().non_exhaustive && !match.catch_all_idx) {
+        return Diagnostic{"Match expressions over non-exhaustive enums must have a catch all arm",
+                          Error::ILLEGAL_MATCH_PATTERN,
+                          resolving_.ast.location_of(match_id)};
+    }
+
     // Track seen and duplicate variants in the match arms
-    gather_arm_duplicates(match.arms, resolving_, enum_validator_);
+    ASSERT(!gather_arm_duplicates(match.arms, resolving_, enum_validator_, false),
+           "Enum validation should not return a diagnostic");
     if (!enum_validator_.duplicates.empty()) {
         return Diagnostic{fmt::format("Match expression contains duplicate enumeration{}: {}",
                                       plurality(enum_validator_.duplicates),
                                       fmt::join(enum_validator_.duplicates, ", ")),
-                          Error::DUPLICATE_FIELD,
+                          Error::DUPLICATE_ENUMERATION,
                           resolving_.ast.location_of(match_id)};
     }
 
@@ -1145,20 +1167,23 @@ auto TypeResolver::validate_enum_arms(ast::NodeID                 match_id,
         return Diagnostic{fmt::format("Match expression contains unknown enumeration{}: {}",
                                       plurality(enum_validator_.unknowns),
                                       fmt::join(enum_validator_.unknowns, ", ")),
-                          Error::UNKNOWN_FIELDS,
+                          Error::UNKNOWN_ENUMERATION,
                           resolving_.ast.location_of(match_id)};
     }
-    return {};
+    return opt::none;
 }
 
 auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
                                        const ast::MatchExpression& match,
-                                       Type& union_type) -> Result<void, Diagnostic> {
+                                       Type& union_type) -> opt::Option<Diagnostic> {
     union_validator_.clear();
     const auto& union_data = union_type.get_data().as<types::Union>();
 
     // Track seen and duplicate fields in the match arms
-    gather_arm_duplicates(match.arms, resolving_, union_validator_);
+    if (auto diag = gather_arm_duplicates(match.arms, resolving_, union_validator_, true); diag) {
+        return std::move(diag).value();
+    }
+
     if (!union_validator_.duplicates.empty()) {
         return Diagnostic{fmt::format("Match expression contains duplicate union field{}: {}",
                                       plurality(union_validator_.duplicates),
@@ -1167,22 +1192,24 @@ auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
                           resolving_.ast.location_of(match_id)};
     }
 
-    // Check for missing fields
-    const auto& enclosing = union_data.enclosing;
-    for (const auto& [ident, _] : union_data.ast_fields) {
-        const auto& field_node = enclosing.ast.get_as<ast::IdentifierExpression>(ident);
-        if (!union_validator_.seen.contains(field_node.name)) {
-            union_validator_.missings.emplace_back(field_node.name);
+    // Check for missing fields only if there's a missing catch all
+    if (!match.catch_all_idx) {
+        const auto& enclosing = union_data.enclosing;
+        for (const auto& [ident, _] : union_data.ast_fields) {
+            const auto& field_node = enclosing.ast.get_as<ast::IdentifierExpression>(ident);
+            if (!union_validator_.seen.contains(field_node.name)) {
+                union_validator_.missings.emplace_back(field_node.name);
+            }
         }
-    }
 
-    if (!union_validator_.missings.empty()) {
-        return Diagnostic{
-            fmt::format("Match expression is non-exhaustive; missing union field{}: {}",
-                        plurality(union_validator_.missings),
-                        fmt::join(union_validator_.missings, ", ")),
-            Error::MISSING_FIELDS,
-            resolving_.ast.location_of(match_id)};
+        if (!union_validator_.missings.empty()) {
+            return Diagnostic{
+                fmt::format("Match expression is non-exhaustive; missing union field{}: {}",
+                            plurality(union_validator_.missings),
+                            fmt::join(union_validator_.missings, ", ")),
+                Error::MISSING_FIELD,
+                resolving_.ast.location_of(match_id)};
+        }
     }
 
     // Check for unknown fields
@@ -1196,10 +1223,10 @@ auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
         return Diagnostic{fmt::format("Match expression contains unknown union field{}: {}",
                                       plurality(union_validator_.unknowns),
                                       fmt::join(union_validator_.unknowns, ", ")),
-                          Error::UNKNOWN_FIELDS,
+                          Error::UNKNOWN_FIELD,
                           resolving_.ast.location_of(match_id)};
     }
-    return {};
+    return opt::none;
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> void {
@@ -1218,18 +1245,93 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
     };
 
     // Rip through the arms once to validate structural arm rules
-    if (matcher_type.get_data().as_opt<types::Enum>()) {
-        if (auto valid = validate_union_arms(id, match, matcher_type); !valid) {
-            return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(valid).error()));
+    const auto& matcher_data = matcher_type.get_data();
+    if (matcher_data.as_opt<types::Enum>()) {
+        if (auto diag = validate_enum_arms(id, match, matcher_type); diag) {
+            return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
-    } else if (matcher_type.get_data().as_opt<types::Union>()) {
-        if (auto valid = validate_union_arms(id, match, matcher_type); !valid) {
-            return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(valid).error()));
+    } else if (matcher_data.as_opt<types::Union>()) {
+        if (auto diag = validate_union_arms(id, match, matcher_type); diag) {
+            return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
+    } else if (matcher_data.as_opt<types::BuiltinType>()) {
+        // It's assumed that any sufficiently large type cannot be fully enumerated
+        opt::Option<u16> required_arm_count;
+        switch (matcher_type.get_kind()) {
+        case TypeKind::I32:
+        case TypeKind::I64:
+        case TypeKind::ISIZE:
+        case TypeKind::U32:
+        case TypeKind::U64:
+        case TypeKind::USIZE: break;
+        case TypeKind::U8:    required_arm_count.emplace(256); break;
+        case TypeKind::BOOL:  required_arm_count.emplace(2); break;
+        case TypeKind::F32:
+        case TypeKind::F64:
+            return last_type_.emplace(
+                ctx_.poison_node(resolving_,
+                                 id,
+                                 "Cannot match on floats due to precision; use an if statement "
+                                 "with explicit precision handling",
+                                 sema::Error::TYPE_MISMATCH,
+                                 resolving_.ast.location_of(match.matcher)));
+        case TypeKind::VOID:
+        case TypeKind::UNDEFINED:
+            return last_type_.emplace(ctx_.poison_node(resolving_,
+                                                       id,
+                                                       "Empty types cannot be matched on",
+                                                       sema::Error::TYPE_MISMATCH,
+                                                       resolving_.ast.location_of(match.matcher)));
+        case TypeKind::TYPE:
+        case TypeKind::AUTO:
+        case TypeKind::OPAQUE:
+        case TypeKind::NORETURN:
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("Can only match on integers, bytes, and booleans; found '{}'",
+                            type_kind_display_name(matcher_type.get_kind())),
+                sema::Error::TYPE_MISMATCH,
+                resolving_.ast.location_of(match.matcher)));
+        default: UNREACHABLE("Builtin types should never take this type kind");
+        }
+
+        if (!match.catch_all_idx) {
+            // With a required arm count the counts must match
+            if (required_arm_count && required_arm_count != match.arms.size()) {
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    fmt::format("Matching on type '{}' requires a catch all arm with "
+                                "a pattern of '_' or exactly {} patterned arms",
+                                type_kind_display_name(matcher_type.get_kind()),
+                                *required_arm_count),
+                    sema::Error::TYPE_MISMATCH,
+                    resolving_.ast.location_of(match.matcher)));
+            } else if (!required_arm_count) {
+                // Otherwise there must always be a catch all arm
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    fmt::format(
+                        "Matching on type '{}' requires a catch all arm with a pattern of '_'",
+                        type_kind_display_name(matcher_type.get_kind())),
+                    sema::Error::TYPE_MISMATCH,
+                    resolving_.ast.location_of(match.matcher)));
+            }
+        }
+    } else {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            fmt::format("Can only match on enums, unions, and certain primitive types; found '{}'",
+                        type_kind_display_name(matcher_type.get_kind())),
+            sema::Error::TYPE_MISMATCH,
+            resolving_.ast.location_of(match.matcher)));
     }
 
     // Each arm was assigned a new scope index on the first pass
-    for (const auto& arm : match.arms) {
+    for (usize i = 0; const auto& arm : match.arms) {
         // Tabled types have prefilled types that should be pushed on the table stack
         opt::Option<Scope> scope;
         const auto         arm_type = resolving_.get_sema_type_opt(arm.pattern);
@@ -1242,12 +1344,13 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
             resolve_symbol_info(*arm.capture, SymbolKind::VALUE);
         }
 
-        TRY_RESOLVE(arm.pattern);
+        if (i != match.catch_all_idx) { TRY_RESOLVE(arm.pattern); }
         TRY_RESOLVE(arm.dispatch);
 
         // Set the arms type to the dispatch only if its not occupied by a tabled type
         if (!arm_type) { resolving_.set_sema_type(arm.pattern, *last_type_); }
         try_set_first_type();
+        i += 1;
     }
 
     // In the rare case that a type could not be found we have to poison
