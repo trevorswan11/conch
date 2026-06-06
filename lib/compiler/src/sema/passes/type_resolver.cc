@@ -1146,8 +1146,8 @@ auto TypeResolver::validate_enum_arms(ast::NodeID                 match_id,
     }
 
     // Track seen and duplicate variants in the match arms
-    ASSERT(!gather_arm_duplicates(match.arms, resolving_, enum_validator_, false),
-           "Enum validation should not return a diagnostic");
+    const auto diag = gather_arm_duplicates(match.arms, resolving_, enum_validator_, false);
+    ASSERT(!diag, "Enum validation should not return a diagnostic");
     if (!enum_validator_.duplicates.empty()) {
         return Diagnostic{fmt::format("Match expression contains duplicate enumeration{}: {}",
                                       plurality(enum_validator_.duplicates),
