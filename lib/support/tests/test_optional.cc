@@ -14,7 +14,7 @@
 namespace ghoti::tests {
 
 TEST_CASE("Ref construction checks") {
-    STATIC_CHECK_FALSE(std::is_constructible_v<opt::detail::Ref<i32>, i32&&>);
+    STATIC_CHECK_FALSE(traits::Constructible<opt::detail::Ref<i32>, i32&&>);
     STATIC_CHECK(traits::TriviallyCopyable<opt::detail::Ref<i32>>);
 }
 
@@ -46,17 +46,10 @@ TEST_CASE("Ref basic construction") {
 }
 
 TEST_CASE("Ref null use & access") {
-    SECTION("Default") {
-        const opt::detail::Ref<i32> opt{};
-        CHECK_FALSE(opt.has_value());
-        CHECK_THROWS_AS(opt.value(), std::bad_optional_access);
-    }
-
-    SECTION("Explicit") {
-        const opt::detail::Ref<i32> opt{opt::none};
-        CHECK_FALSE(opt.has_value());
-        CHECK_THROWS_AS(opt.value(), std::bad_optional_access);
-    }
+    const opt::detail::Ref<i32> opt1{};
+    CHECK_FALSE(opt1.has_value());
+    const opt::detail::Ref<i32> opt2{opt::none};
+    CHECK_FALSE(opt2.has_value());
 }
 
 TEST_CASE("Ref conversions") {
@@ -150,7 +143,6 @@ TEST_CASE("Ref transform on none") {
 TEST_CASE("Boolean wrapper") {
     opt::Tribool b;
     CHECK_FALSE(b.has_value());
-    CHECK_THROWS_AS(b.value(), std::bad_optional_access);
     CHECK_FALSE(b.value_or(false));
     CHECK_FALSE(b.value_or(0));
 
@@ -177,7 +169,6 @@ TEST_CASE("Boolean-std optional conversion") {
 TEST_CASE("Index wrapper") {
     opt::Size i;
     CHECK_FALSE(i.has_value());
-    CHECK_THROWS_AS(i.value(), std::bad_optional_access);
 
     i = 0;
     CHECK(i.has_value());
@@ -217,7 +208,6 @@ TEST_CASE("CompactOpt with enum") {
 TEST_CASE("Optional enum wrapper") {
     opt::Option<OptionableEnum> e;
     CHECK_FALSE(e.has_value());
-    CHECK_THROWS_AS(e.value(), std::bad_optional_access);
 
     e = OptionableEnum::A;
     CHECK(e.has_value());

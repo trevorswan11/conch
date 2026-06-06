@@ -1,12 +1,14 @@
 #pragma once
 
-#include <span>
+#include <gsl/pointers>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
 #include <fmt/format.h>
+#include <gsl/pointers>
+#include <gsl/span>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -24,7 +26,6 @@
 
 #include "assert.hh"
 #include "diagnostic.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
@@ -89,7 +90,7 @@ class TypeResolver {
 
         MAKE_MOVE_CONSTRUCTABLE_ONLY(StructuralTypeStack)
 
-        auto push(Type& type) -> void { stack_.push_back(type); }
+        auto push(Type& type) -> void { stack_.push_back(&type); }
         auto pop() noexcept -> void {
             if (!stack_.empty()) { stack_.pop_back(); }
         }
@@ -101,12 +102,12 @@ class TypeResolver {
         }
 
       private:
-        std::vector<mem::NonNull<Type>> stack_;
+        std::vector<gsl::not_null<Type*>> stack_;
     };
 
     using StructuralGuard = StructuralTypeStack::Guard;
 
-    // Resolves the provided type and unresolves upon desctruction if not committed
+    // Resolves the provided type and unresolves upon destruction if not committed
     template <typename Resolvee> class CommittableResolution {
       public:
         template <typename... Args>
@@ -136,9 +137,9 @@ class TypeResolver {
                                             const types::BuiltinFunction& builtin)
         -> Result<void, Diagnostic>;
 
-    auto resolve_call_args(std::span<const ast::CallExpression::Argument> args) -> ResolveResult;
+    auto resolve_call_args(gsl::span<const ast::CallExpression::Argument> args) -> ResolveResult;
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
-        -> mem::NonNull<Type>;
+        -> gsl::not_null<Type*>;
     [[nodiscard]] auto get_call_arg_location(const ast::CallExpression::Argument& arg)
         -> SourceLocation;
 
@@ -147,9 +148,9 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::DoWhileLoopExpression&) -> void;
 
     // Returns the same type buffer that it was passed when resolution was successful
-    [[nodiscard]] auto resolve_members(std::span<mem::NonNull<Type>>      buf,
-                                       std::span<const ast::MemberHandle> members)
-        -> opt::Option<std::span<mem::NonNull<Type>>>;
+    [[nodiscard]] auto resolve_members(gsl::span<Type*>                   buf,
+                                       gsl::span<const ast::MemberHandle> members)
+        -> opt::Option<gsl::span<Type*>>;
     template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
@@ -172,7 +173,7 @@ class TypeResolver {
                               ast::IdentifierHandle         member,
                               SourceLocation                object_location,
                               opt::Option<std::string_view> object_name = opt::none)
-        -> Result<mem::NonNull<Type>, Diagnostic>;
+        -> Result<gsl::not_null<Type*>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
     auto get_rightmost_name(ast::OuterAccessHandle) noexcept -> std::string_view;

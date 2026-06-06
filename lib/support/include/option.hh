@@ -55,7 +55,7 @@ template <typename T> class Ref {
     Ref(T&&) = delete;
 
     template <typename U>
-        requires(std::convertible_to<U*, T*>)
+        requires std::convertible_to<U*, T*>
     constexpr Ref(const Ref<U>& other) noexcept
         : ptr_{other.has_value() ? other.operator->() : nullptr} {}
     // cppcheck-suppress-end noExplicitConstructor
@@ -75,22 +75,14 @@ template <typename T> class Ref {
         return ptr;
     }
 
-    [[nodiscard]] constexpr auto value() const -> T& {
-        if (!ptr_) { throw std::bad_optional_access{}; }
-        return *ptr_;
-    }
-
-    [[nodiscard]] constexpr auto get() const noexcept -> T& {
+    [[nodiscard]] constexpr auto value() const noexcept -> T& { return *get(); }
+    [[nodiscard]] constexpr auto get() const noexcept -> T* {
         ASSERT(has_value(), "Attempt to access empty optional reference");
-        return *ptr_;
-    }
-
-    [[nodiscard]] constexpr auto operator->() const noexcept -> T* {
-        ASSERT(ptr_, "Attempt to access empty optional reference");
         return ptr_;
     }
 
-    [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return get(); }
+    [[nodiscard]] constexpr auto operator->() const noexcept -> T* { return get(); }
+    [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return *get(); }
 
     // Applies F to to underlying reference if present
     template <typename F> [[nodiscard]] constexpr auto transform(this auto&& self, F&& f) {
@@ -115,12 +107,12 @@ template <typename T> class Ref {
     [[nodiscard]] constexpr auto value_or(this auto&& self, Or& or_value) -> T& {
         static_assert(
             requires(T& t) { static_cast<Or&>(t); }, "value_or: Or& must be convertible to T&");
-        return self.has_value() ? self.get() : static_cast<T&>(or_value);
+        return self.has_value() ? *self.get() : static_cast<T&>(or_value);
     }
 
     // Creates a copy of the underlying data and forwards it to the standard optional
     [[nodiscard]] constexpr auto materialize() const noexcept
-        requires(std::is_copy_constructible_v<T>)
+        requires traits::CopyConstructible<T>
     {
         return has_value() ? std::optional<std::remove_const_t<T>>{*ptr_} : opt::none;
     }
@@ -134,7 +126,7 @@ template <typename T> class Ref {
 
 // Returns the Ref version of the optional type if required
 template <typename T>
-using TryDispatchRef =
+using dispatch_opt =
     std::conditional_t<traits::Reference<T>, Ref<std::remove_reference_t<T>>, std::optional<T>>;
 
 // An efficient optional enum representation for enums with a sentinel value
@@ -158,31 +150,28 @@ template <traits::Compactable T> class CompactOpt {
 
     // Resets the optional and returns the stored value
     [[nodiscard]] constexpr auto take() noexcept -> T {
-        auto value = value_;
+        auto tmp = value_;
         reset();
-        return value;
+        return tmp;
     }
 
-    [[nodiscard]] constexpr auto value() const -> T {
-        if (!has_value()) { throw std::bad_optional_access{}; }
-        return value_;
+    [[nodiscard]] constexpr auto value(this auto&& self) -> auto& {
+        ASSERT(self.has_value(), "Attempt to access empty compact optional");
+        return self.value_;
     }
 
-    [[nodiscard]] constexpr auto get() const noexcept -> T {
-        ASSERT(has_value(), "Attempt to access empty compact optional");
-        return value_;
+    [[nodiscard]] constexpr auto get(this auto&& self) noexcept -> auto* { return &self.value(); }
+    [[nodiscard]] constexpr auto operator->(this auto&& self) noexcept -> auto* {
+        return self.get();
     }
-
-    [[nodiscard]] constexpr auto operator->() const noexcept -> const T* {
-        ASSERT(has_value(), "Attempt to access empty compact optional");
-        return &value_;
+    [[nodiscard]] constexpr auto operator*(this auto&& self) noexcept -> auto& {
+        return *self.get();
     }
-
-    [[nodiscard]] constexpr auto operator*() const noexcept -> T { return get(); }
-    [[nodiscard]] friend auto    operator==(const CompactOpt& lhs, const CompactOpt& rhs) noexcept
+    [[nodiscard]] friend auto operator==(const CompactOpt& lhs, const CompactOpt& rhs) noexcept
         -> bool = default;
 
-    template <typename F> [[nodiscard]] constexpr auto transform(this auto&& self, F&& f) {
+    template <typename F>
+    [[nodiscard]] constexpr auto transform(this auto&& self, F&& f) -> decltype(auto) {
         using Res = std::remove_cv_t<std::invoke_result_t<F, T>>;
 
         // This is straight from clang's stdc++ C++23 optional implementation
@@ -193,17 +182,17 @@ template <traits::Compactable T> class CompactOpt {
         static_assert(std::is_object_v<Res>, "Result of f(value()) should be an object type");
 
         // Also from clang, but generalized to support reference transform chains
-        using Ret = TryDispatchRef<Res>;
+        using Ret = dispatch_opt<Res>;
         return self.has_value() ? Ret{std::forward<F>(f)(self.value())} : Ret{};
     }
 
     template <typename Or>
-    [[nodiscard]] constexpr auto value_or(this auto&& self, Or&& or_value) -> T {
+    [[nodiscard]] constexpr auto value_or(this auto&& self, Or&& or_value) -> decltype(auto) {
         // This is straight from clang's stdc++ C++23 optional implementation
-        static_assert(std::is_copy_constructible_v<Or>, "value_or: Or must be copy constructible");
+        static_assert(traits::CopyConstructible<Or>, "value_or: Or must be copy constructible");
         static_assert(
-            requires(T t) { static_cast<Or>(t); }, "value_or: Or must be convertible to T");
-        return self.has_value() ? self.get() : static_cast<T>(std::forward<Or>(or_value));
+            requires(const T& t) { static_cast<Or>(t); }, "value_or: Or must be convertible to T");
+        return self.has_value() ? *self.get() : static_cast<T>(std::forward<Or>(or_value));
     }
 
     [[nodiscard]] constexpr operator std::optional<T>() const noexcept {
@@ -274,10 +263,7 @@ class Tribool {
         return value;
     }
 
-    [[nodiscard]] constexpr auto value() const -> bool {
-        if (!has_value()) { throw std::bad_optional_access{}; }
-        return static_cast<bool>(value_);
-    }
+    [[nodiscard]] constexpr auto value() const noexcept -> bool { return get(); }
 
     [[nodiscard]] constexpr auto get() const noexcept -> bool {
         ASSERT(has_value(), "Attempt to access empty optional boolean");
@@ -288,7 +274,7 @@ class Tribool {
 
     template <typename Or> [[nodiscard]] constexpr auto value_or(Or&& or_value) -> bool {
         // This is straight from clang's stdc++ C++23 optional implementation
-        static_assert(std::is_copy_constructible_v<Or>, "value_or: Or must be copy constructible");
+        static_assert(traits::CopyConstructible<Or>, "value_or: Or must be copy constructible");
         static_assert(std::is_convertible_v<Or, bool>, "value_or: Or must be convertible to T");
         return has_value() ? get() : static_cast<bool>(std::forward<Or>(or_value));
     }
@@ -333,11 +319,7 @@ class Size {
         return idx;
     }
 
-    [[nodiscard]] constexpr auto value() const -> usize {
-        if (!*this) { throw std::bad_optional_access{}; }
-        return value_;
-    }
-
+    [[nodiscard]] constexpr auto value() const -> usize { return get(); }
     [[nodiscard]] constexpr auto get() const noexcept -> usize {
         ASSERT(has_value(), "Attempt to access empty optional enum");
         return value_;

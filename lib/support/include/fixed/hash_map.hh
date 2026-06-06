@@ -5,11 +5,11 @@
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <span>
-#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include <gsl/span>
 
 #include "assert.hh"
 #include "fixed/storage.hh"
@@ -215,7 +215,7 @@ class HashMap {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto get_metadata() const noexcept -> std::span<const Metadata> {
+    [[nodiscard]] constexpr auto get_metadata() const noexcept -> gsl::span<const Metadata> {
         return metadata_;
     }
 
@@ -249,11 +249,8 @@ class HashMap {
         }
 
         // It's cheaper to lower probing distance after deletions by recycling a tombstone
-        if (first_tombstone_idx < Capacity) {
-            probe = first_tombstone_idx;
-        } else if (limit == 0) {
-            throw std::out_of_range{"HashMap is full"};
-        }
+        if (first_tombstone_idx < Capacity) { probe = first_tombstone_idx; }
+        ASSERT(limit != 0, "HashMap is full");
         metadata_[probe].fill(fingerprint);
         size_ += 1;
 
@@ -266,9 +263,9 @@ class HashMap {
     }
 
     // Returns a reference to the value at the key if present
-    [[nodiscard]] constexpr auto get(this auto&& self, const Key& key) -> auto& {
+    [[nodiscard]] constexpr auto get(this auto&& self, const Key& key) noexcept -> auto& {
         const auto idx = self.index_of(key);
-        if (!idx) { throw std::out_of_range{"Illegal get on missing key"}; }
+        ASSERT(idx, "Illegal get on missing key");
         return *(self.value_data() + *idx);
     }
 

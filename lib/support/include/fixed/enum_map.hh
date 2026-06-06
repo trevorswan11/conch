@@ -7,8 +7,8 @@
 #include "assert.hh"
 #include "enum.hh"
 #include "iterator.hh"
-#include "memory.hh"
 #include "option.hh"
+#include "type_traits.hh"
 
 namespace ghoti::fixed {
 
@@ -43,7 +43,7 @@ template <MappableEnum E, typename Value> class EnumMap {
     [[nodiscard]] constexpr auto get_opt(E key) const noexcept {
         if constexpr (traits::is_option_v<Value>) {
             return operator[](key);
-        } else if constexpr (traits::is_ptr_v<Value>) {
+        } else if constexpr (traits::Pointer<Value>) {
             const auto value = operator[](key);
             return value ? opt::Option<Value>{value} : opt::none;
         } else {

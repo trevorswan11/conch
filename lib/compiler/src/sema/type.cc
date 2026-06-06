@@ -1,10 +1,11 @@
 #include "sema/type.hh"
 
-#include <span>
+#include <gsl/pointers>
 #include <string_view>
 
+#include <gsl/span>
+
 #include "fixed/enum_map.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "types.hh"
 
@@ -59,45 +60,45 @@ auto TypePool::get_opt(const types::Key& key) noexcept -> opt::Option<Type&> {
     return opt::none;
 }
 
-auto TypePool::get_or_emplace(const types::Key& key) -> Type& {
-    if (auto type = get_opt(key)) { return *type; }
+auto TypePool::get_or_emplace(const types::Key& key) -> gsl::not_null<Type*> {
+    if (auto it = cache_.find(key); it != cache_.end()) { return it->second; }
     auto* type = arena_.make<Type>(key).get();
     cache_.emplace(key, type);
-    return *type;
+    return type;
 }
 
-auto TypePool::get_many_unsafe(usize count) noexcept -> std::span<mem::NonNull<Type>> {
-    return arena_.make_span<mem::NonNull<Type>>(count);
+auto TypePool::get_many_unsafe(usize count) noexcept -> gsl::span<Type*> {
+    return arena_.make_span<Type*>(count);
 }
 
-auto TypePool::get_many(usize count, Type& common_type) noexcept -> std::span<mem::NonNull<Type>> {
+auto TypePool::get_many(usize count, Type& common_type) noexcept -> gsl::span<Type*> {
     auto types = get_many_unsafe(count);
-    for (usize i = 0; i < count; ++i) { types[i] = common_type; }
+    for (usize i = 0; i < count; ++i) { types[i] = &common_type; }
     return types;
 }
 
 namespace {
 
 auto strip_modifiers(TypePool& pool, const Type& old_type, types::MutabilityModifiers mut)
-    -> Type& {
+    -> gsl::not_null<Type*> {
     auto key = old_type.get_key();
     key.set_mut(key.get_mut() & ~mut);
 
     // Resolve here since the type information doesn't contain modifier information
-    auto& new_type = pool[key];
-    new_type.resolve_if<Type::Data>(old_type.get_data());
+    auto new_type = pool[key];
+    new_type->resolve_if<Type::Data>(old_type.get_data());
     return new_type;
 }
 
 } // namespace
 
-auto TypePool::strip_const(const Type& type) -> Type& {
-    if (!type.is_constant()) { return const_cast<Type&>(type); }
+auto TypePool::strip_const(const Type& type) -> gsl::not_null<Type*> {
+    if (!type.is_constant()) { return const_cast<Type*>(&type); }
     return strip_modifiers(*this, type, types::mut::CONSTANT);
 }
 
-auto TypePool::strip_volatile(const Type& type) -> Type& {
-    if (!type.is_volatile()) { return const_cast<Type&>(type); }
+auto TypePool::strip_volatile(const Type& type) -> gsl::not_null<Type*> {
+    if (!type.is_volatile()) { return const_cast<Type*>(&type); }
     return strip_modifiers(*this, type, types::mut::VOLATILE);
 }
 

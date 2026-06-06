@@ -1,20 +1,21 @@
 #include <algorithm>
 #include <iterator>
-#include <span>
-#include <stdexcept>
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <gsl/pointers>
+#include <gsl/span>
 
 #include "fixed/vector.hh"
 #include "helpers/raii_tracker.hh"
 #include "memory.hh"
+#include "type_traits.hh"
 #include "types.hh"
 
 namespace ghoti::tests {
 
 TEST_CASE("StaticVector type checks") {
-    STATIC_REQUIRE(traits::TriviallyDestructible<fixed::Vector<mem::NonNull<i32>, 4>>);
+    STATIC_REQUIRE(traits::TriviallyDestructible<fixed::Vector<gsl::not_null<i32*>, 4>>);
     STATIC_REQUIRE_FALSE(traits::TriviallyDestructible<fixed::Vector<mem::Box<i32>, 4>>);
 }
 
@@ -26,8 +27,6 @@ TEST_CASE("StaticVector basic usage") {
     for (i32 i = 0; i < 5; ++i) { vec.push_back(i * 10); }
     CHECK(vec.size() == 5);
     CHECK_FALSE(vec.empty());
-
-    CHECK_THROWS_AS(vec.push_back(10), std::out_of_range);
 }
 
 TEST_CASE("StaticVector iteration") {
@@ -65,8 +64,8 @@ TEST_CASE("StaticVector with non-trivial type") {
     }
 
     SECTION("NonNull usage") {
-        fixed::Vector<mem::NonNull<i32>, 2> ptrs;
-        i32                                 v = 22;
+        fixed::Vector<gsl::not_null<i32*>, 2> ptrs;
+        i32                                   v = 22;
         ptrs.emplace_back(&v);
         CHECK(ptrs[0] == &v);
         CHECK(*ptrs[0] == v);
@@ -75,7 +74,7 @@ TEST_CASE("StaticVector with non-trivial type") {
 
 TEST_CASE("StaticVector span conversion") {
     fixed::Vector<i32, 4> vec{1, 2};
-    std::span<i32>        s = vec;
+    gsl::span<i32>        s = vec;
     CHECK(s.size() == 2);
     CHECK(std::ranges::equal(s, vec));
 }
@@ -159,8 +158,8 @@ TEST_CASE("Vector self assignment") {
 }
 
 TEST_CASE("StaticVector ranges compatibility") {
-    STATIC_REQUIRE(std::forward_iterator<fixed::Vector<mem::NonNull<i32>, 4>::iterator>);
-    STATIC_REQUIRE(std::forward_iterator<fixed::Vector<mem::NonNull<i32>, 4>::const_iterator>);
+    STATIC_REQUIRE(std::forward_iterator<fixed::Vector<gsl::not_null<i32*>, 4>::iterator>);
+    STATIC_REQUIRE(std::forward_iterator<fixed::Vector<gsl::not_null<i32*>, 4>::const_iterator>);
 
     constexpr auto vec        = fixed::Vector<i32, 4>{1, 2, 3};
     i32            sum        = 0;

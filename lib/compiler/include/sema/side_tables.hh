@@ -20,7 +20,7 @@ template <traits::IndexableID ID, traits::Option T> struct SideTable {
 
     // Allows a handle wrapper of a node to be used for raw ID-based tables
     template <typename U>
-        requires(std::convertible_to<U, ID>)
+        requires std::convertible_to<U, ID>
     [[nodiscard]] constexpr auto operator[](this auto&& self, U id) noexcept -> auto& {
         ASSERT(id.is_valid(), "Attempt to access invalid id");
         return self.values[static_cast<ID>(id).get_index()];

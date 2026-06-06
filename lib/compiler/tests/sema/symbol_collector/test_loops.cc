@@ -2,6 +2,7 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <gsl/pointers>
 
 #include "ast/statement.hh"
 #include "helpers/common.hh"

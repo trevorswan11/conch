@@ -69,9 +69,7 @@ TEST_CASE("Illegal registry insert") {
 
 TEST_CASE("Safety checked registry operations") {
     sema::SymbolTableRegistry registry;
-    CHECK_THROWS(registry.get(1));
     CHECK_FALSE(registry.get_opt(1));
-    CHECK_THROWS(registry.get_from(1, "a"));
     CHECK_FALSE(registry.get_from_opt(1, "a"));
 }
 

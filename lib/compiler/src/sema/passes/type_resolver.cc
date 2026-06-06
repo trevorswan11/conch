@@ -1,12 +1,13 @@
 #include "sema/passes/type_resolver.hh"
 
 #include <ranges>
-#include <span>
 #include <string_view>
 #include <utility>
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <gsl/pointers>
+#include <gsl/span>
 
 #include "ast/expression.hh"
 #include "ast/format.hh"
@@ -27,7 +28,6 @@
 
 #include "assert.hh"
 #include "diagnostic.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
@@ -111,7 +111,7 @@ template <traits::IndexableID ID>
     ASSERT(syntax::get_builtin_opt(builtin_id), "Cannot resolve non-builtin function");
 
     using syntax::TokenType;
-    mem::NonNull<Type> return_type = ctx_.get_poison();
+    gsl::not_null<Type*> return_type = &ctx_.get_poison();
 
     // Indexing can be done freely as arity is already validated
     switch (builtin_id) {
@@ -149,7 +149,7 @@ template <traits::IndexableID ID>
     case TokenType::BUILTIN_CTZ:
     case TokenType::BUILTIN_POP_COUNT:    {
         ASSERT(builtin.return_type.get_kind() == TypeKind::USIZE);
-        return_type = builtin.return_type;
+        return_type = &builtin.return_type;
         break;
     }
     // @typeOf returns a type as per documentation, but it's not the literal `type` type
@@ -169,7 +169,7 @@ template <traits::IndexableID ID>
     // @this returns a type as per docs, but it's really a structural type with full determinism
     case TokenType::BUILTIN_THIS:
         if (const auto user_type = user_type_stack_.peek()) {
-            return_type = *user_type;
+            return_type = user_type.get();
             break;
         }
 
@@ -180,10 +180,10 @@ template <traits::IndexableID ID>
         auto& array_type = *get_resolved_call_arg_type(call.arguments[0]);
         // The new type uses a new key to align with normal pointer creation
         if (const auto array_data = array_type.get_data().as_opt<types::Array>()) {
-            return_type = ctx_.get_pointer(types::mut::CONSTANT, array_data->underlying);
+            return_type = &ctx_.get_pointer(types::mut::CONSTANT, array_data->underlying);
         } else if (const auto deferred_data =
                        array_type.get_data().as_opt<types::DeferredArray>()) {
-            return_type = ctx_.get_pointer(types::mut::CONSTANT, deferred_data->underlying);
+            return_type = &ctx_.get_pointer(types::mut::CONSTANT, deferred_data->underlying);
         } else {
             return make_sema_err(fmt::format("Expected an array-yielding expression; found '{}'",
                                              type_kind_display_name(array_type.get_kind())),
@@ -195,7 +195,7 @@ template <traits::IndexableID ID>
     case TokenType::BUILTIN_PTR_FROM_INT: {
         auto& requested_output = *get_resolved_call_arg_type(call.arguments[0]);
         if (requested_output.get_kind() == TypeKind::POINTER) {
-            return_type = requested_output;
+            return_type = &requested_output;
             break;
         }
         return make_sema_err(fmt::format("Expected a pointer type; found '{}'",
@@ -207,7 +207,7 @@ template <traits::IndexableID ID>
         auto& ptr_type = *get_resolved_call_arg_type(call.arguments[0]);
         if (const auto& ptr_data = ptr_type.get_data().as_opt<types::Pointer>()) {
             // The resulting slice isn't null terminated since the pointer gives no guarantee
-            return_type = ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
+            return_type = &ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
             break;
         }
 
@@ -218,14 +218,14 @@ template <traits::IndexableID ID>
     }
     case TokenType::BUILTIN_TAG_NAME: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::SLICE);
-        return_type = builtin.return_type;
+        return_type = &builtin.return_type;
         break;
     }
     case TokenType::BUILTIN_MEMCPY:
     case TokenType::BUILTIN_MEMSET:
     case TokenType::BUILTIN_MEMMOVE: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::VOID);
-        return_type = builtin.return_type;
+        return_type = &builtin.return_type;
         break;
     }
     // Many of these return @typeOf(expression) which is trivial
@@ -247,7 +247,7 @@ template <traits::IndexableID ID>
     }
     case TokenType::BUILTIN_PANIC: {
         ASSERT(builtin.return_type.get_kind() == TypeKind::NORETURN);
-        return_type = builtin.return_type;
+        return_type = &builtin.return_type;
         break;
     }
     default: UNREACHABLE("Unimplemented builtin type resolution");
@@ -267,7 +267,7 @@ template auto TypeResolver::resolve_builtin_call<ast::ExplicitTypeID>(ast::Expli
                                                                       const types::BuiltinFunction&)
     -> Result<void, Diagnostic>;
 
-auto TypeResolver::resolve_call_args(std::span<const ast::CallExpression::Argument> args)
+auto TypeResolver::resolve_call_args(gsl::span<const ast::CallExpression::Argument> args)
     -> ResolveResult {
     bool any_poison = false;
     for (const auto& arg : args) {
@@ -280,8 +280,8 @@ auto TypeResolver::resolve_call_args(std::span<const ast::CallExpression::Argume
 }
 
 auto TypeResolver::get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
-    -> mem::NonNull<Type> {
-    return arg.visit(
+    -> gsl::not_null<Type*> {
+    return &arg.visit(
         [this](ast::ExpressionHandle id) -> auto& {
             // Labels store their actual type in nested node data
             if (const auto label = resolving_.ast.get_as_opt<ast::LabelExpression>(id)) {
@@ -349,7 +349,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
 
         // Functions that return a type cannot be resolved until the constant evaluator
         if (function_type->return_type.get_kind() == TypeKind::TYPE) {
-            auto& deferred_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
+            auto& deferred_type = *ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
             deferred_type.resolve_if<types::DeferredCall>(call);
 
             resolving_.set_sema_type(id, deferred_type);
@@ -398,16 +398,15 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do_wh
     last_type_.emplace(loop_type);
 }
 
-auto TypeResolver::resolve_members(std::span<mem::NonNull<Type>>      buf,
-                                   std::span<const ast::MemberHandle> members)
-    -> opt::Option<std::span<mem::NonNull<Type>>> {
+auto TypeResolver::resolve_members(gsl::span<Type*> buf, gsl::span<const ast::MemberHandle> members)
+    -> opt::Option<gsl::span<Type*>> {
     // Only poison the enum once all members are collected
     for (usize i = 0; const auto& member : members) {
         // The resolved statement type is in last_type_ unlike in the symbol collector
         resolve(*member);
         auto& member_type = resolving_.get_sema_type(member);
         if (member_type.is_poison()) { return opt::none; }
-        buf[i++] = member_type;
+        buf[i++] = &member_type;
     }
     return buf;
 }
@@ -566,7 +565,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::FunctionExpression& fn) -> v
                                  resolving_.ast.location_of(fn.self->name)));
         }
 
-        param_types[param_idx++] = *last_type_.take();
+        param_types[param_idx++] = last_type_.take();
         resolve_symbol_info(fn.self->name, SymbolKind::VALUE);
     }
 
@@ -575,7 +574,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::FunctionExpression& fn) -> v
         TRY_RESOLVE(param.explicit_type);
 
         auto& param_type         = *last_type_.take();
-        param_types[param_idx++] = param_type;
+        param_types[param_idx++] = &param_type;
         resolving_.set_sema_type(param.name, param_type);
         resolve_symbol_info(param.name, SymbolKind::VALUE);
     }
@@ -820,7 +819,7 @@ auto TypeResolver::resolve_structural_access(Type&                         objec
                                              ast::IdentifierHandle         member,
                                              SourceLocation                object_location,
                                              opt::Option<std::string_view> object_name)
-    -> Result<mem::NonNull<Type>, Diagnostic> {
+    -> Result<gsl::not_null<Type*>, Diagnostic> {
     // Early validation to simplify error handling
     const auto enum_type   = object_type.get_data().as_opt<types::Enum>();
     const auto struct_type = object_type.get_data().as_opt<types::Struct>();
@@ -855,12 +854,12 @@ auto TypeResolver::resolve_structural_access(Type&                         objec
     }
 
     auto& [member_symbol, member_idx] = *symbol_proxy;
-    mem::NonNull<Type> result_type    = ctx_.get_poison();
+    gsl::not_null<Type*> result_type  = &ctx_.get_poison();
     if (member_symbol.get_kind() == SymbolKind::POISONED) { return result_type; }
 
-    if (enum_type) { return enum_type->type_at(member_idx, object_type); }
-    if (struct_type) { return struct_type->type_at(member_idx); }
-    if (union_type) { return union_type->type_at(member_idx); }
+    if (enum_type) { return &enum_type->type_at(member_idx, object_type); }
+    if (struct_type) { return &struct_type->type_at(member_idx); }
+    if (union_type) { return &union_type->type_at(member_idx); }
     UNREACHABLE("Error handling failed to catch invalid type");
 }
 
@@ -1101,7 +1100,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> v
 namespace {
 
 // Collects potential duplicate implicit access match arms for the structural type
-auto gather_arm_duplicates(std::span<const ast::MatchExpression::Arm> arms,
+auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
                            mod::Module&                               resolving,
                            TypeResolver::StructuralValidator&         validator) -> void {
     for (const auto& arm : arms) {
@@ -1525,7 +1524,7 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
         resolving_.set_sema_type(field.name, field_type);
         symbol->set_kind(SymbolKind::VALUE);
         symbol->set_status(SymbolStatus::RESOLVED);
-        field_types[i++] = field_type;
+        field_types[i++] = &field_type;
     }
 
     auto member_types = ctx_.pool.get_many_unsafe(struct_expr.members.size());
@@ -1566,7 +1565,7 @@ auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void 
         resolving_.set_sema_type(field.name, field_type);
         symbol->set_kind(SymbolKind::VALUE);
         symbol->set_status(SymbolStatus::RESOLVED);
-        field_types[i++] = field_type;
+        field_types[i++] = &field_type;
     }
 
     auto member_types = ctx_.pool.get_many_unsafe(union_expr.members.size());
@@ -1840,7 +1839,7 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         new_key.set_kind(TypeKind::POINTER);
         new_key.imprint(inner_type);
 
-        auto& new_ptr_type = ctx_.pool[new_key];
+        auto& new_ptr_type = *ctx_.pool[new_key];
         new_ptr_type.resolve_if<types::Pointer>(inner_type);
         return new_ptr_type;
     } else if (modifier.is_ref()) {
@@ -1848,12 +1847,12 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         new_key.set_kind(TypeKind::REFERENCE);
         new_key.imprint(inner_type);
 
-        auto& new_ref_type = ctx_.pool[new_key];
+        auto& new_ref_type = *ctx_.pool[new_key];
         new_ref_type.resolve_if<types::Reference>(inner_type);
         return new_ref_type;
     } else if (modifier.is_volatile()) {
         // Volatility is baked into mutability and should not be imprinted
-        auto& new_vol_type = ctx_.pool[new_key];
+        auto& new_vol_type = *ctx_.pool[new_key];
         new_vol_type.resolve_if<Type::Data>(inner_type.get_data());
         return new_vol_type;
     }
@@ -1901,14 +1900,14 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitFunctionType
         TRY_RESOLVE(param);
         auto& param_type = *last_type_.take();
         fn_key.imprint(param_type);
-        param_types[i++] = param_type;
+        param_types[i++] = &param_type;
     }
 
     TRY_RESOLVE(fn.explicit_return_type);
     auto& return_type = *last_type_.take();
     fn_key.imprint(return_type);
 
-    auto& resolved_fn = ctx_.pool[fn_key];
+    auto& resolved_fn = *ctx_.pool[fn_key];
     resolved_fn.resolve_if<types::Function>(false, param_types, return_type);
 
     auto& final_type = apply_explicit_modifiers(id, resolved_fn);

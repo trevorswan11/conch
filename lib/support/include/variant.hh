@@ -18,7 +18,28 @@ template <class... Ts> struct Overloaded : Ts... {
     using Ts::operator()...;
 };
 
-// Non-constexpr capable yet efficient (compilation performance) `std::variant` replacement
+namespace detail {
+
+template <typename...> struct unique_types : std::true_type {};
+
+template <typename T, typename... Rest>
+struct unique_types<T, Rest...>
+    : std::bool_constant<(!(std::is_same_v<T, Rest> || ...)) && unique_types<Rest...>::value> {};
+
+template <typename... Ts> constexpr auto unique_types_v = unique_types<Ts...>::value;
+
+} // namespace detail
+
+namespace traits {
+
+template <typename... Ts>
+concept UniqueTypes = detail::unique_types_v<Ts...>;
+
+} // namespace traits
+
+// Non-constexpr capable yet efficient (compilation performance) `std::variant` alternative
+//
+// This is not compatible with the standard's definition of variant.
 //
 // You might argue that I should just use `std::variant` because this is just a bug waiting to
 // happen, but I would say that the gains from doing this outweigh the headaches of a few bugs down
@@ -26,13 +47,16 @@ template <class... Ts> struct Overloaded : Ts... {
 // (which relies heavily on variants and `std::visit`) from 173M to 58M on macOS (in debug mode).
 //
 // If I catch any usage of `std::variant` I will lose my marbles...
-template <typename... Ts> class Variant {
+//
+// Inspired by: https://github.com/groundswellaudio/swl-variant
+template <typename... Ts>
+    requires(sizeof...(Ts) > 0 && traits::UniqueTypes<Ts...>)
+class Variant {
   public:
     static constexpr auto N = sizeof...(Ts);
-    using index_type        = traits::min_uint_for_bits<N>;
+    using index_type        = traits::min_uint_for_bits<min_bits<N>>;
 
   private:
-    // Inspired by: https://github.com/groundswellaudio/swl-variant
     template <usize I> using nth = __type_pack_element<I, Ts...>;
     template <typename T>
     static constexpr usize index_of = [] {
@@ -42,10 +66,10 @@ template <typename... Ts> class Variant {
     }();
 
     template <typename T, typename... Args>
-    static constexpr auto nothrow_construct =
+    static constexpr auto nothrow_constructable =
         traits::NoThrowConstructible<std::remove_cvref_t<T>, Args...>;
-    static constexpr auto nothrow_copy = (traits::NoThrowMoveConstructible<Ts> && ...);
-    static constexpr auto nothrow_move = (traits::NoThrowCopyConstructible<Ts> && ...);
+    static constexpr auto nothrow_copy = (traits::NoThrowCopyConstructible<Ts> && ...);
+    static constexpr auto nothrow_move = (traits::NoThrowMoveConstructible<Ts> && ...);
 
   public:
     // cppcheck-suppress-begin noExplicitConstructor
@@ -60,7 +84,7 @@ template <typename... Ts> class Variant {
     // Construct from any alternative type
     template <typename T>
         requires(index_of<T> < N)
-    Variant(T&& t) noexcept(nothrow_construct<T, T&&>) {
+    Variant(T&& t) noexcept(nothrow_constructable<T, T&&>) {
         using U = std::remove_cvref_t<T>;
         ::new (storage_) U{std::forward<T>(t)};
         index_ = static_cast<index_type>(index_of<T>);
@@ -68,9 +92,9 @@ template <typename... Ts> class Variant {
 
     // In-place construction
     template <typename T, typename... Args>
-        requires(index_of<T> < N && std::is_constructible_v<T, Args && ...>)
+        requires(index_of<T> < N && traits::Constructible<T, Args && ...>)
     explicit Variant(std::in_place_type_t<T>,
-                     Args&&... args) noexcept(nothrow_construct<T, Args...>) {
+                     Args&&... args) noexcept(nothrow_constructable<T, Args&&...>) {
         ::new (storage_) T{std::forward<Args>(args)...};
         index_ = static_cast<index_type>(index_of<T>);
     }
@@ -83,17 +107,12 @@ template <typename... Ts> class Variant {
 
     Variant(const Variant& other) noexcept(nothrow_copy) { copy_construct(other); }
     auto operator=(const Variant& other) noexcept(nothrow_copy) -> Variant& {
-        if (this != &other) {
-            destroy_active();
-            copy_construct(other);
-        }
-        return *this;
+        return copy_assign(other);
     }
 
     Variant(Variant&& other) noexcept(nothrow_move) { move_construct(std::move(other)); }
     auto operator=(Variant&& other) noexcept(nothrow_move) -> Variant& {
-        if (this != &other) { move_construct(std::move(other)); }
-        return *this;
+        return move_assign(std::move(other));
     }
 
     [[nodiscard]] auto                       index() const noexcept -> usize { return index_; }
@@ -102,9 +121,10 @@ template <typename... Ts> class Variant {
     }
 
     // Asserts that the requested type is currently active
-    template <typename T, typename Self> [[nodiscard]] auto as(this Self&& self) -> decltype(auto) {
+    template <typename T, typename Self>
+    [[nodiscard]] auto as(this Self&& self) noexcept -> decltype(auto) {
         ASSERT(self.template is<T>(), "Variant::as<T> called on inactive alternative");
-        if constexpr (std::is_rvalue_reference_v<Self>) {
+        if constexpr (traits::RValueReference<Self>) {
             return std::move(*self.template as_raw<T>());
         } else {
             return *self.template as_raw<T>();
@@ -121,33 +141,25 @@ template <typename... Ts> class Variant {
 
     // Safely cleans up the active type before constructing a new type in place
     template <typename T, typename... Args>
-        requires(index_of<T> < N && std::is_constructible_v<T, Args && ...>)
-    auto emplace(Args&&... args) noexcept(nothrow_construct<T, Args...>) -> T& {
+        requires(index_of<T> < N && traits::Constructible<T, Args && ...>)
+    auto emplace(Args&&... args) noexcept(nothrow_constructable<T, Args&&...>) -> T& {
         destroy_active();
         T* p   = ::new (storage_) T{std::forward<Args>(args)...};
         index_ = static_cast<index_type>(index_of<T>);
         return *p;
     }
 
-    // Identical behavior to copy construction
+    // If the copy throws the Variant is left uninitialized
     template <typename> auto emplace(const Variant& other) noexcept(nothrow_copy) -> Variant& {
-        if (this != &other) {
-            destroy_active();
-            copy_construct(other);
-        }
-        return *this;
+        return copy_assign(other);
     }
 
-    // Identical behavior to move construction
+    // If the move throws the Variant is left uninitialized
     template <typename> auto emplace(Variant&& other) noexcept(nothrow_move) -> Variant& {
-        if (this != &other) {
-            destroy_active();
-            move_construct(std::move(other));
-        }
-        return *this;
+        return move_assign(std::move(other));
     }
 
-    // Forwards all visitors through the `Overloaded` pattern to match on the active type
+    // Accepts one or more visitors which must cover all possible variant states
     template <typename... Visitors>
     [[nodiscard]] auto visit(this auto&& self, Visitors&&... vis) -> decltype(auto) {
         return visit_impl(self, Overloaded{std::forward<Visitors>(vis)...});
@@ -165,22 +177,21 @@ template <typename... Ts> class Variant {
     }
 
   private:
-    // Retrieve a properly typed pointer into the underlying storage
+    // Retrieve an unchecked properly typed pointer into the underlying storage
     template <typename T, typename Self>
     [[nodiscard]] auto as_raw(this Self&& self) noexcept -> auto* {
+        // https://en.cppreference.com/cpp/utility/launder
         return std::launder(reinterpret_cast<traits::const_dispatch_t<Self, T>*>(self.storage_));
     }
 
-    void destroy_active() noexcept {
+    auto destroy_active() noexcept -> void {
         if (index_ >= static_cast<index_type>(N)) { return; }
-        // Walk the integer sequence until a destructor is called
         [this]<usize... Is>(std::index_sequence<Is...>) noexcept {
             (void)(... || (index_ == Is ? (as_raw<nth<Is>>()->~nth<Is>(), true) : false));
         }(std::index_sequence_for<Ts...>{});
     }
 
-    void copy_construct(const Variant& other) noexcept(nothrow_copy) {
-        // Walk the integer sequence until a constructor is called
+    auto copy_construct(const Variant& other) noexcept(nothrow_copy) -> void {
         [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_copy) {
             (void)(... ||
                    (other.index_ == Is
@@ -189,9 +200,16 @@ template <typename... Ts> class Variant {
         }(std::index_sequence_for<Ts...>{});
     }
 
+    auto copy_assign(const Variant& other) noexcept(nothrow_copy) -> Variant& {
+        if (this != &other) {
+            destroy_active();
+            copy_construct(other);
+        }
+        return *this;
+    }
+
     // Also destroys the moved-from object
-    void move_construct(Variant&& other) noexcept(nothrow_move) {
-        // Walk the integer sequence until a constructor is called
+    auto move_construct(Variant&& other) noexcept(nothrow_move) -> void {
         [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_move) {
             (void)(... || (other.index_ == Is
                                ? (::new (storage_) nth<Is>{std::move(*other.as_raw<nth<Is>>())},
@@ -201,6 +219,14 @@ template <typename... Ts> class Variant {
         }(std::index_sequence_for<Ts...>{});
         other.destroy_active();
         other.index_ = static_cast<index_type>(N);
+    }
+
+    auto move_assign(Variant&& other) noexcept(nothrow_move) -> Variant& {
+        if (this != &other) {
+            destroy_active();
+            move_construct(std::move(other));
+        }
+        return *this;
     }
 
     template <usize I = 0, typename Self, typename Visitor>
@@ -216,8 +242,8 @@ template <typename... Ts> class Variant {
     }
 
   private:
-    alignas(std::max({alignof(Ts)...})) std::byte storage_[std::max({sizeof(Ts)...})];
     index_type index_;
+    alignas(std::max({alignof(Ts)...})) std::byte storage_[std::max({sizeof(Ts)...})];
 };
 
 struct Unit {};

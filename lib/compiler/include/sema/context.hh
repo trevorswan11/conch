@@ -3,6 +3,8 @@
 #include <ostream>
 #include <utility>
 
+#include <gsl/pointers>
+
 #include "ast/traits.hh"
 #include "module/module.hh"
 #include "sema/error.hh"
@@ -12,7 +14,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::sema {
 

@@ -13,6 +13,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <gsl/pointers>
 
 #include "ast/handle.hh"
 #include "ast/kind.hh"
@@ -54,7 +55,7 @@ struct SemaTestContext {
     mem::Box<mod::MemoryLoader> loader;
     mod::ModuleManager          manager;
     sema::Analyzer              analyzer;
-    mem::NonNull<mod::Module>   root_mod;
+    gsl::not_null<mod::Module*> root_mod;
 
     // The root is automatically added to the internal loader and can be immediately analyzed
     explicit SemaTestContext(const std::vector<MockFile>& imports,
@@ -76,7 +77,7 @@ struct SemaTestContext {
     template <sema::types::MutabilityModifiers Mutability = sema::types::mut::CONSTANT,
               typename... Markers>
     [[nodiscard]] auto get_type(sema::TypeKind kind, Markers&&... markers) -> auto& {
-        return analyzer.get_pool()[{kind, Mutability, std::forward<Markers>(markers)...}];
+        return *analyzer.get_pool()[{kind, Mutability, std::forward<Markers>(markers)...}];
     }
 
     static auto check_poisoned(const sema::Symbol& sym) -> void;

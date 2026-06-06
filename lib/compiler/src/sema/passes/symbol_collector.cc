@@ -1,9 +1,11 @@
 #include "sema/passes/symbol_collector.hh"
 
+#include <gsl/pointers>
 #include <string_view>
 #include <utility>
 
 #include <fmt/format.h>
+#include <gsl/span>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -22,7 +24,6 @@
 
 #include "assert.hh"
 #include "iterator.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
@@ -155,7 +156,7 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::FunctionExpression& fn) -
     // Parameters belong to the parent scope
     if (fn.self) {
         const auto& ident = collecting_.ast.get_as<ast::IdentifierExpression>(fn.self->name);
-        try_declare<symbols::SelfParameter>(ident.name, fn.self.get());
+        try_declare<symbols::SelfParameter>(ident.name, *fn.self.get());
     }
 
     // The parameter's type should be collected first to prevent self-referential types
@@ -415,7 +416,7 @@ auto SymbolCollector::visit(ast::NodeID, const ast::ExpressionStatement& expr) -
 }
 
 auto SymbolCollector::collect_import_payload(const ast::ImportStatement& import_stmt)
-    -> std::pair<std::string_view, Result<mem::NonNull<mod::Module>, mod::Diagnostic>> {
+    -> std::pair<std::string_view, Result<gsl::not_null<mod::Module*>, mod::Diagnostic>> {
     const auto [_, name] = import_stmt.get_name(collecting_.ast);
     if (const auto string =
             collecting_.ast.get_as_opt<ast::StringExpression>(import_stmt.payload)) {
@@ -447,7 +448,7 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::ImportStatement& import_s
     if (imported_mod && !imported_mod->is_errored()) {
         // Its much easier for other steps to get the enclosing module if we resolve now
         auto& type =
-            ctx_.pool[{TypeKind::MODULE, types::mut::CONSTANT, *imported_mod->root_table_idx}];
+            *ctx_.pool[{TypeKind::MODULE, types::mut::CONSTANT, *imported_mod->root_table_idx}];
         type.resolve<types::Module>(*imported_mod);
 
         collecting_.set_sema_type(id, type);

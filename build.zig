@@ -217,12 +217,16 @@ fn addArtifacts(b: *std.Build, config: struct {
     const unordered_dense = b.dependency("unordered_dense", .{});
     const unordered_dense_inc = unordered_dense.path("include");
 
+    const gsl = b.dependency("gsl", .{});
+    const gsl_inc = gsl.path("include");
+
     const cli11 = b.dependency("cli11", .{});
     const cli11_inc = cli11.path("include");
 
     const system_includes = [_]std.Build.LazyPath{
         magic_enum_inc,
         unordered_dense_inc,
+        gsl_inc,
         cli11_inc,
     };
 

@@ -2,7 +2,6 @@
 
 #include <concepts>
 #include <ostream>
-#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -12,8 +11,10 @@
 
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <gsl/span>
 #include <magic_enum/magic_enum.hpp>
 
+#include "assert.hh"
 #include "iterator.hh"
 #include "option.hh"
 #include "style.hh"
@@ -183,14 +184,11 @@ template <traits::DiagnosticType D> class DiagnosticList {
     }
 
     [[nodiscard]] auto operator[](this auto&& self, usize idx) noexcept -> auto& {
+        ASSERT(idx < self.diagnostics_.size(), "Index out of range");
         return self.diagnostics_[idx];
     }
 
-    [[nodiscard]] auto at(this auto&& self, usize idx) -> auto& {
-        return self.diagnostics_.at(idx);
-    }
-
-    operator std::span<const D>() const { return diagnostics_; }
+    operator gsl::span<const D>() const { return diagnostics_; }
 
     // Creates a new list with the same terminal behavior
     [[nodiscard]] auto create_new() const -> DiagnosticList { return DiagnosticList{in_terminal_}; }

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <concepts>
-#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -11,6 +10,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <gsl/span>
 
 #include "module/module.hh"
 
@@ -50,7 +50,7 @@ template <Unwrappable U> auto unwrap_err(U&& u) -> decltype(auto) {
 }
 
 // Checks if the error list is empty, dumping the list's contents otherwise.
-template <typename E> auto check_errors(std::span<const E> errors) {
+template <typename E> auto check_errors(gsl::span<const E> errors) {
     if (!errors.empty()) { fmt::println("{}", errors); }
     REQUIRE(errors.empty());
 }
@@ -64,7 +64,7 @@ template <typename DiagList> auto check_errors(const mod::Module& module) {
 
 // Checks if the error list is matches the expected, dumping the list's contents otherwise.
 template <typename E, std::same_as<E>... Es>
-auto check_errors_against(std::span<const E> errors, Es&&... expected_errors) {
+auto check_errors_against(gsl::span<const E> errors, Es&&... expected_errors) {
     const std::array expected_arr{std::forward<Es>(expected_errors)...};
     constexpr auto   expected_count = sizeof...(Es);
 

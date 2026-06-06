@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include <ankerl/unordered_dense.h>
+#include <gsl/pointers>
 
 #include "ast/ast.hh"
 #include "ast/expression.hh"
@@ -165,11 +166,11 @@ class ModuleManager {
     // Asserts that the path is relative and its parent is absolute
     [[nodiscard]] auto try_get_file_module(const std::filesystem::path& path,
                                            const std::filesystem::path& parent_path = {})
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Attempts to load the module from the loader and parse its contents
     [[nodiscard]] auto try_get_library_module(std::string_view name)
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Adds a library module and its underlying path to the lookup table
     [[nodiscard]] auto add_library_module(std::string_view name, const std::filesystem::path& path)
@@ -177,7 +178,7 @@ class ModuleManager {
 
   private:
     [[nodiscard]] auto try_get(const std::filesystem::path& path)
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
   private:
     SourceLoader&                                                         loader_;

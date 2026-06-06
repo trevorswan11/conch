@@ -1,10 +1,11 @@
 #pragma once
 
 #include <concepts>
-#include <span>
 #include <string_view>
 
 #include <ankerl/unordered_dense.h>
+#include <gsl/pointers>
+#include <gsl/span>
 
 #include "ast/expression.hh"
 #include "ast/type.hh"
@@ -15,7 +16,6 @@
 #include "enum.hh"
 #include "fixed/vector.hh"
 #include "hash.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "type_traits.hh"
 #include "types.hh"
@@ -88,10 +88,10 @@ struct Reference {
 };
 
 struct Enum {
-    std::span<const ast::EnumExpression::Enumeration> ast_enumerations;
+    gsl::span<const ast::EnumExpression::Enumeration> ast_enumerations;
     bool                                              non_exhaustive;
     Type&                                             underlying;
-    std::span<mem::NonNull<Type>>                     members;
+    gsl::span<Type*>                                  members;
     const mod::Module&                                enclosing;
 
     [[nodiscard]] auto type_at(usize idx, Type& object_type) const noexcept -> Type& {
@@ -104,9 +104,9 @@ struct Enum {
 };
 
 struct Union {
-    std::span<mem::NonNull<Type>>                fields;
-    std::span<const ast::UnionExpression::Field> ast_fields;
-    std::span<mem::NonNull<Type>>                members;
+    gsl::span<Type*>                             fields;
+    gsl::span<const ast::UnionExpression::Field> ast_fields;
+    gsl::span<Type*>                             members;
     const mod::Module&                           enclosing;
 
     // The index location entirely depends on the number of fields which always come first
@@ -118,9 +118,9 @@ struct Union {
 };
 
 struct Struct {
-    std::span<mem::NonNull<Type>>                 fields;
-    std::span<const ast::StructExpression::Field> ast_fields;
-    std::span<mem::NonNull<Type>>                 members;
+    gsl::span<Type*>                              fields;
+    gsl::span<const ast::StructExpression::Field> ast_fields;
+    gsl::span<Type*>                              members;
     const mod::Module&                            enclosing;
 
     // The index location entirely depends on the number of fields which always come first
@@ -132,9 +132,9 @@ struct Struct {
 };
 
 struct Function {
-    bool                          has_self;
-    std::span<mem::NonNull<Type>> params;
-    Type&                         return_type;
+    bool             has_self;
+    gsl::span<Type*> params;
+    Type&            return_type;
 };
 
 struct Module {
@@ -142,7 +142,7 @@ struct Module {
 };
 
 constexpr usize MAX_BUILTIN_PARAMS{4};
-using BuiltinParams = fixed::Vector<mem::NonNull<Type>, MAX_BUILTIN_PARAMS>;
+using BuiltinParams = fixed::Vector<gsl::not_null<Type*>, MAX_BUILTIN_PARAMS>;
 
 struct BuiltinFunction {
     BuiltinParams params;
@@ -346,38 +346,36 @@ class TypePool {
     MAKE_MOVE_CONSTRUCTABLE_ONLY(TypePool)
 
     // Gets a type by its key or emplace's it into the internal cache
-    [[nodiscard]] auto operator[](const types::Key& key) -> Type& { return get_or_emplace(key); }
+    [[nodiscard]] auto operator[](const types::Key& key) -> gsl::not_null<Type*> {
+        return get_or_emplace(key);
+    }
     [[nodiscard]] auto get_opt(const types::Key& key) noexcept -> opt::Option<Type&>;
 
     // Allocate a quasi-contiguous span of types with the provided keys
     template <std::same_as<types::Key>... Keys>
-    [[nodiscard]] auto get_many(Keys&&... keys) noexcept -> std::span<mem::NonNull<Type>> {
-        auto  types = arena_.make_span<mem::NonNull<Type>>(sizeof...(Keys));
+    [[nodiscard]] auto get_many(Keys&&... keys) noexcept -> gsl::span<Type*> {
+        auto  types = arena_.make_span<Type*>(sizeof...(Keys));
         usize i     = 0;
         (..., [&] { types[i++] = get_or_emplace(keys); }());
         return types;
     }
 
     // Allocates the requested number of types but does not initialize any data
-    //
-    // Violates an invariant of the NonNull class where the pointer is actually null
-    [[nodiscard]] auto get_many_unsafe(usize count) noexcept -> std::span<mem::NonNull<Type>>;
+    [[nodiscard]] auto get_many_unsafe(usize count) noexcept -> gsl::span<Type*>;
 
     // Allocate a quasi-contiguous span of types with the same types
-    [[nodiscard]] auto get_many(usize count, Type& common_type) noexcept
-        -> std::span<mem::NonNull<Type>>;
+    [[nodiscard]] auto get_many(usize count, Type& common_type) noexcept -> gsl::span<Type*>;
 
     // Allocate a quasi-contiguous span of types with the same key types
-    [[nodiscard]] auto get_many(usize count, types::Key common_key) noexcept
-        -> std::span<mem::NonNull<Type>> {
-        return get_many(count, get_or_emplace(common_key));
+    [[nodiscard]] auto get_many(usize count, types::Key common_key) noexcept -> gsl::span<Type*> {
+        return get_many(count, *get_or_emplace(common_key));
     }
 
-    [[nodiscard]] auto strip_const(const Type& type) -> Type&;
-    [[nodiscard]] auto strip_volatile(const Type& type) -> Type&;
+    [[nodiscard]] auto strip_const(const Type& type) -> gsl::not_null<Type*>;
+    [[nodiscard]] auto strip_volatile(const Type& type) -> gsl::not_null<Type*>;
 
   private:
-    auto get_or_emplace(const types::Key& key) -> Type&;
+    auto get_or_emplace(const types::Key& key) -> gsl::not_null<Type*>;
 
   private:
     mem::Arena                                      arena_;

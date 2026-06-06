@@ -8,6 +8,7 @@
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <gsl/pointers>
 
 #include "ast/expression.hh"
 #include "module/error.hh"
@@ -17,7 +18,6 @@
 
 #include "assert.hh"
 #include "diagnostic.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "style.hh"
@@ -61,7 +61,7 @@ auto Module::print_diagnostics(std::ostream& os) const -> void {
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                                         const std::filesystem::path& parent_path)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     ASSERT((parent_path.empty() || parent_path.is_absolute()) &&
            "Parent path must be absolute or empty");
     if (!path.is_relative()) {
@@ -75,7 +75,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 }
 
 auto ModuleManager::try_get_library_module(std::string_view name)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     auto it = module_lut_.find(name);
     if (it == module_lut_.end()) {
         return make_mod_err(fmt::format("Unknown module '{}'", name), Error::MODULE_DOES_NOT_EXIST);
@@ -103,7 +103,7 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
 }
 
 auto ModuleManager::try_get(const std::filesystem::path& path)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
     auto       source       = TRY(loader_.load(path));

@@ -17,7 +17,6 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 
-#include "memory.hh"
 #include "option.hh"
 #include "sema/type.hh"
 #include "syntax/error.hh"

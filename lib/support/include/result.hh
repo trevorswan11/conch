@@ -4,7 +4,8 @@
 #include <expected>
 #include <type_traits>
 
-#include "variant.hh"
+#include "option.hh"
+#include "type_traits.hh"
 
 namespace ghoti {
 
@@ -20,7 +21,7 @@ template <typename E> class EmptyResult {
 
     // Constructs the error type in place
     template <typename... Args> constexpr EmptyResult(Args&&... args) {
-        error_.template emplace<E>(std::forward<Args>(args)...);
+        error_.emplace(std::forward<Args>(args)...);
     }
 
     constexpr EmptyResult(Err<E>&& err) : error_{std::move(err.error())} {}
@@ -29,20 +30,14 @@ template <typename E> class EmptyResult {
     // Checks for the lack of presence of the underlying error, mirrors std::expected
     [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return !has_error(); }
     constexpr auto               value() const -> void {}
-    constexpr auto               operator*() const -> void { return value(); }
-
-    [[nodiscard]] constexpr auto has_error() const noexcept -> bool {
-        return error_.template is<E>();
-    }
-    [[nodiscard]] constexpr auto error(this auto&& self) -> decltype(auto) {
-        return self.error_.template as<E>();
-    }
-
+    constexpr auto               operator*() const -> void {}
+    [[nodiscard]] constexpr auto has_error() const noexcept -> bool { return error_.has_value(); }
+    [[nodiscard]] constexpr auto error(this auto&& self) -> auto& { return *self.error_; }
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
     template <typename Or = E> constexpr auto error_or(Or&& or_value) const& {
         // This is straight from clang's stdc++ C++23 expected implementation
-        static_assert(std::is_copy_constructible_v<Or>, "error_type has to be copy constructible");
+        static_assert(traits::CopyConstructible<Or>, "error_type has to be copy constructible");
         static_assert(std::is_convertible_v<Or, E>, "argument has to be convertible to error_type");
         if (has_value()) { return std::forward<Or>(or_value); }
         return error();
@@ -51,7 +46,7 @@ template <typename E> class EmptyResult {
     [[nodiscard]] constexpr auto operator==(const EmptyResult&) const noexcept -> bool = default;
 
   private:
-    Variant<Unit, E> error_;
+    opt::Option<E> error_;
 };
 
 // Uses explicit inline namespace due to name collisions in std

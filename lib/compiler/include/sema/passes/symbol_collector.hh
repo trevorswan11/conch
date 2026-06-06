@@ -3,6 +3,8 @@
 #include <string_view>
 #include <utility>
 
+#include <gsl/pointers>
+
 #include "ast/expression.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
@@ -17,7 +19,6 @@
 #include "sema/type.hh"
 
 #include "counter.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
@@ -88,7 +89,7 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::ExpressionStatement&) -> void;
 
     [[nodiscard]] auto collect_import_payload(const ast::ImportStatement& import_stmt)
-        -> std::pair<std::string_view, Result<mem::NonNull<mod::Module>, mod::Diagnostic>>;
+        -> std::pair<std::string_view, Result<gsl::not_null<mod::Module*>, mod::Diagnostic>>;
 
     auto visit(ast::NodeID, const ast::ImportStatement&) -> void;
     auto visit(ast::NodeID, const ast::ReturnStatement&) -> void;

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <ranges>
-#include <span>
 #include <string_view>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
+#include <gsl/pointers>
+#include <gsl/span>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -19,7 +20,6 @@
 #include "assert.hh"
 #include "diagnostic.hh"
 #include "iterator.hh"
-#include "memory.hh"
 #include "option.hh"
 #include "result.hh"
 #include "type_traits.hh"
@@ -77,17 +77,17 @@ class Label {
     explicit Label(Handle label) noexcept : definition_{label} {}
 
     MAKE_GETTER(definition, Handle)
-    MAKE_GETTER(yield_types, std::span<const mem::NonNull<Type>>)
+    MAKE_GETTER(yield_types, gsl::span<const gsl::not_null<Type*>>)
 
     [[nodiscard]] auto has_yield_types() const noexcept -> bool { return !yield_types_.empty(); }
-    auto               add_yield_type(Type& type) -> void { yield_types_.emplace_back(type); }
+    auto               add_yield_type(Type& type) -> void { yield_types_.emplace_back(&type); }
 
     // Gets the Label data from the symbol, asserting the underlying data is a label
     [[nodiscard]] static auto from(Symbol& symbol) -> Label&;
 
   private:
-    Handle                          definition_;
-    std::vector<mem::NonNull<Type>> yield_types_;
+    Handle                            definition_;
+    std::vector<gsl::not_null<Type*>> yield_types_;
 };
 
 using MatchCapture   = ast::IdentifierHandle;
@@ -294,17 +294,21 @@ class SymbolTableRegistry {
                                    std::string_view    name,
                                    const Symbol::Data& data) -> Result<void, Diagnostic>;
 
-    [[nodiscard]] auto get(this auto&& self, usize idx) -> auto& { return self.tables_.at(idx); }
+    [[nodiscard]] auto get(this auto&& self, usize idx) noexcept -> auto& {
+        ASSERT(idx < self.tables_.size(), "Index out of range");
+        return self.tables_[idx];
+    }
 
     template <typename Self>
     [[nodiscard]] auto get_opt(this Self&& self, usize idx) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, SymbolTable>&> {
         if (idx >= self.tables_.size()) { return opt::none; }
-        return self.tables_[idx];
+        return self.get(idx);
     }
 
     [[nodiscard]] auto get_from(this auto&& self, usize idx, std::string_view name) -> auto& {
-        return self.tables_.at(idx).get(name);
+        ASSERT(idx < self.tables_.size(), "Index out of range");
+        return self.tables_[idx].get(name);
     }
 
     template <typename Self>

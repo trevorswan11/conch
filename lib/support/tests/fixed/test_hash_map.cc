@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <iterator>
-#include <stdexcept>
 #include <string_view>
 #include <utility>
 
@@ -83,7 +82,6 @@ TEST_CASE("HashMap helper constructor & clear") {
     CHECK(hm.size() == 0);
     for (i32 i = -10; i < 10; ++i) {
         CHECK_FALSE(hm.contains(i));
-        CHECK_THROWS_AS(hm.get(i), std::out_of_range);
         CHECK_FALSE(hm.get_opt(i));
     }
 }

@@ -36,13 +36,13 @@ template <traits::Integral Underlying> class Counter {
     [[nodiscard]] constexpr auto operator==(const Counter&) const noexcept -> bool = default;
 
     template <typename T>
-        requires(std::is_convertible_v<T, Underlying>)
+        requires std::is_convertible_v<T, Underlying>
     [[nodiscard]] constexpr auto operator==(const T& other) const noexcept -> bool {
         return count_ == static_cast<Underlying>(other);
     }
 
     template <typename T>
-        requires(std::is_convertible_v<T, Underlying>)
+        requires std::is_convertible_v<T, Underlying>
     constexpr auto operator<=>(const T& other) const noexcept {
         return count_ <=> static_cast<Underlying>(other);
     }

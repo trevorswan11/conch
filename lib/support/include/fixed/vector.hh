@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <span>
-#include <stdexcept>
 #include <utility>
+
+#include <gsl/span>
 
 #include "assert.hh"
 #include "fixed/storage.hh"
@@ -29,7 +29,7 @@ template <typename Item, usize Capacity> class Vector {
     Vector() = default;
     ~Vector() { clear(); }
     ~Vector()
-        requires(traits::TriviallyDestructible<Item>)
+        requires traits::TriviallyDestructible<Item>
     = default;
 
     // Constructs the vector in place by emplacing each item into the buffer
@@ -39,7 +39,7 @@ template <typename Item, usize Capacity> class Vector {
     }
 
     constexpr Vector(const Vector&)
-        requires(traits::TriviallyCopyable<Item>)
+        requires traits::TriviallyCopyable<Item>
     = default;
 
     constexpr Vector(const Vector& other) {
@@ -52,7 +52,7 @@ template <typename Item, usize Capacity> class Vector {
     }
 
     constexpr auto operator=(const Vector&) -> Vector&
-        requires(traits::TriviallyCopyable<Item>)
+        requires traits::TriviallyCopyable<Item>
     = default;
 
     constexpr auto operator=(const Vector& other) -> Vector& {
@@ -89,7 +89,7 @@ template <typename Item, usize Capacity> class Vector {
 
     // Constructs an object in place at the end of the vector with the provided args
     template <typename... Args> constexpr auto emplace_back(Args&&... args) -> void {
-        if (size_ >= Capacity) { throw std::out_of_range{"StaticVector size out of range"}; }
+        ASSERT(size_ < Capacity, "StaticVector size out of range");
         std::construct_at(data() + size_, std::forward<Args>(args)...);
         size_++;
     }
@@ -97,8 +97,8 @@ template <typename Item, usize Capacity> class Vector {
     constexpr auto push_back(const Item& item) -> void { emplace_back(item); }
     constexpr auto push_back(Item&& item) -> void { emplace_back(std::move(item)); }
 
-    [[nodiscard]] constexpr explicit operator std::span<Item>() noexcept { return {data(), size_}; }
-    [[nodiscard]] constexpr explicit operator std::span<const Item>() const noexcept {
+    [[nodiscard]] constexpr explicit operator gsl::span<Item>() noexcept { return {data(), size_}; }
+    [[nodiscard]] constexpr explicit operator gsl::span<const Item>() const noexcept {
         return {data(), size_};
     }
 
