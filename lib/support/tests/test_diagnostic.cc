@@ -1,8 +1,11 @@
+#include <utility>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "diagnostic.hh"
+#include "option.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 struct SomethingLocationed {};
 struct SomethingElseLocationed {};
@@ -26,9 +29,9 @@ enum class TestEnum {
     MAD,
 };
 
-TEST_CASE("Diagnostic type checkers") {
-    STATIC_CHECK(is_diagnostic_v<Diagnostic<TestEnum>>);
-    STATIC_CHECK_FALSE(is_diagnostic_v<TestEnum>);
+TEST_CASE("Diagnostic traits") {
+    STATIC_CHECK(traits::is_diagnostic_v<Diagnostic<TestEnum>>);
+    STATIC_CHECK_FALSE(traits::is_diagnostic_v<TestEnum>);
 }
 
 TEST_CASE("Location and error only") {
@@ -45,13 +48,13 @@ TEST_CASE("Custom locateable") {
 
 TEST_CASE("Error messages with associated files") {
     Diagnostic<TestEnum> d{"message", TestEnum::SAD};
-    CHECK("foo.porp: error: message" == d.to_string("foo.porp", false));
+    CHECK("foo.gh: error: message" == d.to_string("foo.gh", false));
 }
 
 TEST_CASE("Locateable Error messages with associated files") {
     SomethingLocationed  l;
     Diagnostic<TestEnum> d{"message", TestEnum::SAD, l};
-    CHECK("foo.porp:1:43: error: message" == d.to_string("foo.porp", false));
+    CHECK("foo.gh:1:43: error: message" == d.to_string("foo.gh", false));
 }
 
 TEST_CASE("Move constructor with new error") {
@@ -72,4 +75,4 @@ TEST_CASE("Move constructor with new location") {
 
 } // namespace tests
 
-} // namespace porpoise
+} // namespace ghoti

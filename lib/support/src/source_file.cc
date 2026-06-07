@@ -1,8 +1,16 @@
 #include "source_file.hh"
 
-#include "string.hh"
+#include <cctype>
+#include <string>
+#include <string_view>
+#include <utility>
 
-namespace porpoise {
+#include "diagnostic.hh"
+#include "option.hh"
+#include "string.hh"
+#include "types.hh"
+
+namespace ghoti {
 
 LineOffsets::LineOffsets(std::string_view input) {
     offsets_.emplace_back(0);
@@ -21,7 +29,7 @@ auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
 
     // Count skipped on the left but not right since the caret is right-clipped
     usize skipped = 0;
-    substr        = string::trim_left(substr, [&](byte b) {
+    substr        = string::trim_left(substr, [&skipped](byte b) {
         if (std::isspace(b)) {
             skipped += 1;
             return true;
@@ -52,4 +60,4 @@ auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
     return {substr, std::move(caret_line)};
 }
 
-} // namespace porpoise
+} // namespace ghoti

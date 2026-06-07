@@ -1,27 +1,34 @@
+#include <string_view>
+#include <utility>
+
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
 
 #include "helpers/ast.hh"
+#include "syntax/error.hh"
 
-namespace porpoise::tests {
+#include "types.hh"
+
+namespace ghoti::tests {
 
 TEST_CASE("Function missing return type") {
     helpers::test_parser_fail(
-        "fn(*mut this, a: A, b: *B, );",
+        "fn(^mut this, a: A, b: ^B, );",
         syntax::Diagnostic{
             "Expected token COLON, found SEMICOLON", syntax::Error::UNEXPECTED_TOKEN, 0, 28});
 
-    helpers::test_parser_fail("fn(*mut this, a: A, b: *B, ): ;",
+    helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ;",
                               syntax::Diagnostic{"No prefix parse function for SEMICOLON(;) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
                                                  std::pair{0uz, 30uz}});
 
-    helpers::test_parser_fail("fn(*mut this, a: A, b: *B, ): ",
+    helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ",
                               syntax::Diagnostic{syntax::Error::MISSING_EXPLICIT_TYPE, 0, 28});
 }
 
 TEST_CASE("Function parameter missing type") {
     helpers::test_parser_fail(
-        "fn(*mut this, a): i32;",
+        "fn(^mut this, a): i32;",
         syntax::Diagnostic{
             "Expected token COLON, found RPAREN", syntax::Error::UNEXPECTED_TOKEN, 0, 15});
 }
@@ -36,6 +43,20 @@ TEST_CASE("Out-of-place self parameter") {
             "Expected token COLON, found RPAREN", syntax::Error::UNEXPECTED_TOKEN, 0, 13});
 }
 
+TEST_CASE("Illegal self parameter modifier") {
+    const auto test_illegal_self = [](std::string_view modifier) {
+        helpers::test_parser_fail(
+            fmt::format("fn({} self): i32 {{}};", modifier),
+            syntax::Diagnostic{
+                "Self parameters cannot be marked volatile; they must be values, refs, or pointers",
+                syntax::Error::ILLEGAL_SELF_PARAMETER_MODIFIER,
+                std::pair{0uz, 3uz}});
+    };
+
+    test_illegal_self("volatile");
+    test_illegal_self("mut_volatile");
+}
+
 TEST_CASE("Out-of-place variadic parameter") {
     helpers::test_parser_fail(
         "fn(a: A, ..., b: B): i32;",
@@ -44,27 +65,39 @@ TEST_CASE("Out-of-place variadic parameter") {
 }
 
 TEST_CASE("Default function parameter") {
-    helpers::test_parser_fail(
-        "fn(a: A = 2): i32;",
-        syntax::Diagnostic{syntax::Error::FN_PARAMETER_HAS_DEFAULT_VALUE, 0, 4});
+    helpers::test_parser_fail("fn(a: A = 2): i32;",
+                              syntax::Diagnostic{"Function parameters may not have default values",
+                                                 syntax::Error::FN_PARAMETER_HAS_DEFAULT_VALUE,
+                                                 std::pair{0uz, 6uz}});
 }
 
 TEST_CASE("Noreturn function types") {
+    helpers::test_parser_fail("fn(a: &noreturn): i32;",
+                              syntax::Diagnostic{"Explicit `noreturn` type cannot have a modifier",
+                                                 syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER,
+                                                 std::pair{0uz, 6uz}});
+
     helpers::test_parser_fail(
-        "fn(a: &noreturn): i32;",
-        syntax::Diagnostic{syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER, 0, 6});
-    helpers::test_parser_fail("fn(a: noreturn): i32;",
-                              syntax::Diagnostic{syntax::Error::FN_PARAMETER_IS_NORETURN, 0, 4});
-    helpers::test_parser_fail(
-        "fn(a: A): &noreturn;",
-        syntax::Diagnostic{syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER, 0, 10});
+        "fn(a: noreturn): i32;",
+        syntax::Diagnostic{"Function parameter types may not be marked `noreturn`",
+                           syntax::Error::FN_PARAMETER_IS_NORETURN,
+                           std::pair{0uz, 6uz}});
+
+    helpers::test_parser_fail("fn(a: A): &noreturn;",
+                              syntax::Diagnostic{"Explicit `noreturn` type cannot have a modifier",
+                                                 syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER,
+                                                 std::pair{0uz, 10uz}});
 }
 
 TEST_CASE("Illegal type function types") {
-    helpers::test_parser_fail("fn(A: &type): i32;",
-                              syntax::Diagnostic{syntax::Error::ILLEGAL_TYPE_TYPE_MODIFIER, 0, 6});
-    helpers::test_parser_fail("fn(A: type): &type;",
-                              syntax::Diagnostic{syntax::Error::ILLEGAL_TYPE_TYPE_MODIFIER, 0, 13});
+    const auto expected_diag = [](usize col) {
+        return syntax::Diagnostic{"Explicit `type` type cannot have a modifier",
+                                  syntax::Error::ILLEGAL_TYPE_TYPE_MODIFIER,
+                                  std::pair{0uz, col}};
+    };
+
+    helpers::test_parser_fail("fn(A: &type): i32;", expected_diag(6));
+    helpers::test_parser_fail("fn(A: type): &type;", expected_diag(13));
 }
 
 TEST_CASE("Non-terminated parameter list") {
@@ -72,4 +105,4 @@ TEST_CASE("Non-terminated parameter list") {
                               syntax::Diagnostic{syntax::Error::ILLEGAL_IDENTIFIER, 0, 9});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

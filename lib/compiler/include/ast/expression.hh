@@ -1,10 +1,18 @@
 #pragma once
 
+#include <string_view>
+#include <vector>
+
 #include "ast/handle.hh"
-
+#include "ast/id.hh"
 #include "syntax/error.hh"
+#include "syntax/token_type.hh"
 
-namespace porpoise {
+#include "option.hh"
+#include "result.hh"
+#include "variant.hh"
+
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -21,7 +29,7 @@ struct ArrayExpression {
 };
 
 struct CallExpression {
-    using Argument = std::variant<ExpressionHandle, ExplicitTypeID>;
+    using Argument = Variant<ExpressionHandle, ExplicitTypeID>;
 
     ExpressionHandle      function;
     std::vector<Argument> arguments;
@@ -39,10 +47,14 @@ struct DoWhileLoopExpression {
 };
 
 struct EnumExpression {
-    using Enumeration = std::pair<IdentifierHandle, opt::Option<ExpressionHandle>>;
+    struct Enumeration {
+        IdentifierHandle              name;
+        opt::Option<ExpressionHandle> value;
+    };
 
     opt::Option<IdentifierHandle> underlying;
     std::vector<Enumeration>      enumerations;
+    bool                          non_exhaustive;
     Members                       members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
@@ -66,7 +78,7 @@ struct ForLoopExpression {
 
 struct SelfParameter {
     TypeModifier     modifier;
-    IdentifierHandle ident;
+    IdentifierHandle name;
 };
 
 } // namespace ast
@@ -79,7 +91,7 @@ template <> struct Nullable<ast::SelfParameter> {
     }
 
     [[nodiscard]] static constexpr auto is_valid(const ast::SelfParameter& self) noexcept -> bool {
-        return self.ident.is_valid();
+        return self.name.is_valid();
     }
 };
 
@@ -87,24 +99,24 @@ template <> struct Nullable<ast::SelfParameter> {
 
 namespace ast {
 
+[[nodiscard]] auto try_parse_variadic_fn(syntax::Parser& parser)
+    -> Result<bool, syntax::Diagnostic>;
+
 struct FunctionExpression {
     struct Parameter {
-        opt::Option<IdentifierHandle> ident;
-        ExplicitTypeID                explicit_type;
+        IdentifierHandle name;
+        ExplicitTypeID   explicit_type;
     };
 
     opt::Option<SelfParameter> self;
     std::vector<Parameter>     parameters;
     bool                       variadic;
     ExplicitTypeID             explicit_return_type;
-    opt::Option<BlockHandle>   body;
+    BlockHandle                body;
 
     // Parse the function as a value. Meant for the parser LUT
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
-
-    [[nodiscard]] static auto try_parse_variadic(syntax::Parser& parser)
-        -> Result<bool, syntax::Diagnostic>;
 };
 
 struct GroupedExpression {
@@ -158,8 +170,13 @@ DECLARE_INFIX_EXPRESSION(AssignmentExpression)
 // The operator is stored in the nodes id
 DECLARE_INFIX_EXPRESSION(BinaryExpression)
 
-// The operator is stored in the nodes id
-DECLARE_INFIX_EXPRESSION(DotExpression)
+struct DotExpression {
+    OuterAccessHandle object;
+    IdentifierHandle  member;
+
+    [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle outer)
+        -> Result<ExpressionHandle, syntax::Diagnostic>;
+};
 
 // The operator is stored in the nodes id
 DECLARE_INFIX_EXPRESSION(RangeExpression)
@@ -200,14 +217,14 @@ struct LabelExpression {
 
 struct MatchExpression {
     struct Arm {
-        ExpressionHandle                    pattern;
+        MatchPatternHandle                  pattern;
         opt::Option<DiscardableIdentHandle> capture;
         StatementHandle                     dispatch;
     };
 
-    ExpressionHandle             matcher;
-    std::vector<Arm>             arms;
-    opt::Option<StatementHandle> catch_all;
+    ExpressionHandle matcher;
+    std::vector<Arm> arms;
+    opt::Size        catch_all_idx;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
@@ -223,20 +240,39 @@ struct MatchExpression {
 DECLARE_PREFIX_EXPRESSION(UnaryExpression)
 DECLARE_PREFIX_EXPRESSION(ReferenceExpression)
 DECLARE_PREFIX_EXPRESSION(DereferenceExpression)
-DECLARE_PREFIX_EXPRESSION(ImplicitAccessExpression)
+DECLARE_PREFIX_EXPRESSION(AddressOfExpression)
+
+struct ImplicitAccessExpression {
+    IdentifierHandle member;
+
+    [[nodiscard]] static auto parse(syntax::Parser& parser)
+        -> Result<ExpressionHandle, syntax::Diagnostic>;
+};
 
 #undef DECLARE_PREFIX_EXPRESSION
 
-struct ScopeResolutionExpression {
-    ExpressionHandle outer;
-    IdentifierHandle inner;
+struct ModuleAccessExpression {
+    OuterAccessHandle outer;
+    IdentifierHandle  inner;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle outer)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct StructExpression {
-    Members members;
+    // Field publicity is baked into the identifier's token type
+    struct Field {
+        IdentifierHandle              name;
+        ExplicitTypeID                explicit_type;
+        opt::Option<ExpressionHandle> default_value;
+
+        [[nodiscard]] constexpr auto is_public() const noexcept -> bool {
+            return name->get_token_type() == syntax::TokenType::PUBLIC;
+        }
+    };
+
+    std::vector<Field> fields;
+    Members            members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<ExpressionHandle, syntax::Diagnostic>;
@@ -244,7 +280,7 @@ struct StructExpression {
 
 struct UnionExpression {
     struct Field {
-        IdentifierHandle ident;
+        IdentifierHandle name;
         ExplicitTypeID   explicit_type;
     };
 
@@ -267,4 +303,4 @@ struct WhileLoopExpression {
 
 } // namespace ast
 
-} // namespace porpoise
+} // namespace ghoti

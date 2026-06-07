@@ -1,8 +1,13 @@
 #include "syntax/keywords.hh"
 
-#include "fixed/hash_map.hh"
+#include <string_view>
 
-namespace porpoise::syntax {
+#include "syntax/token_type.hh"
+
+#include "fixed/hash_map.hh"
+#include "option.hh"
+
+namespace ghoti::syntax {
 
 namespace {
 
@@ -46,11 +51,12 @@ constexpr auto ALL_KEYWORDS = fixed::make_hash_map(keywords::FN,
                                                    keywords::EXTERN,
                                                    keywords::EXPORT,
                                                    keywords::VOLATILE,
-                                                   keywords::STATIC,
+                                                   keywords::MUT_VOLATILE,
                                                    keywords::NORETURN,
                                                    keywords::NULLPTR,
                                                    keywords::USING,
-                                                   keywords::TEST);
+                                                   keywords::TEST,
+                                                   keywords::UNDEFINED);
 
 } // namespace
 
@@ -58,4 +64,4 @@ auto get_keyword_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
     return ALL_KEYWORDS.get_opt(sv).materialize();
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

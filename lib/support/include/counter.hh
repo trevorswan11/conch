@@ -1,13 +1,12 @@
 #pragma once
 
-#include <type_traits>
-
+#include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // A simple counter that with RAII-based up/down counting
-template <Integral Underlying> class Counter {
+template <traits::Integral Underlying> class Counter {
   public:
     class Guard {
       public:
@@ -33,17 +32,17 @@ template <Integral Underlying> class Counter {
     constexpr operator bool() noexcept { return count_ != ZERO; }
     constexpr operator Underlying() noexcept { return static_cast<Underlying>(count_); }
 
-    constexpr auto operator<=>(const Counter&) const noexcept        = default;
-    constexpr auto operator==(const Counter&) const noexcept -> bool = default;
+    constexpr auto               operator<=>(const Counter&) const noexcept        = default;
+    [[nodiscard]] constexpr auto operator==(const Counter&) const noexcept -> bool = default;
 
     template <typename T>
-        requires(std::is_convertible_v<T, Underlying>)
-    constexpr auto operator==(const T& other) const noexcept -> bool {
+        requires std::is_convertible_v<T, Underlying>
+    [[nodiscard]] constexpr auto operator==(const T& other) const noexcept -> bool {
         return count_ == static_cast<Underlying>(other);
     }
 
     template <typename T>
-        requires(std::is_convertible_v<T, Underlying>)
+        requires std::is_convertible_v<T, Underlying>
     constexpr auto operator<=>(const T& other) const noexcept {
         return count_ <=> static_cast<Underlying>(other);
     }
@@ -61,4 +60,4 @@ template <Integral Underlying> class Counter {
 
 using DefaultCounter = Counter<usize>;
 
-} // namespace porpoise
+} // namespace ghoti

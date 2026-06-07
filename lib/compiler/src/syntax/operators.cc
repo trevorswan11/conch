@@ -1,10 +1,15 @@
-#include <algorithm>
-
 #include "syntax/operators.hh"
 
-#include "fixed/hash_map.hh"
+#include <algorithm>
+#include <string_view>
 
-namespace porpoise::syntax {
+#include "syntax/token_type.hh"
+
+#include "fixed/hash_map.hh"
+#include "option.hh"
+#include "types.hh"
+
+namespace ghoti::syntax {
 
 namespace {
 
@@ -22,7 +27,7 @@ constexpr auto ALL_OPERATORS = fixed::make_hash_map(operators::ASSIGN,
                                                     operators::PERCENT_ASSIGN,
                                                     operators::BANG,
                                                     operators::AND_MUT,
-                                                    operators::STAR_MUT,
+                                                    operators::CARET_MUT,
                                                     operators::BW_AND,
                                                     operators::BW_AND_ASSIGN,
                                                     operators::BW_OR,
@@ -33,7 +38,7 @@ constexpr auto ALL_OPERATORS = fixed::make_hash_map(operators::ASSIGN,
                                                     operators::SHR_ASSIGN,
                                                     operators::NOT,
                                                     operators::NOT_ASSIGN,
-                                                    operators::XOR,
+                                                    operators::CARET,
                                                     operators::XOR_ASSIGN,
                                                     operators::BOOLEAN_AND,
                                                     operators::BOOLEAN_OR,
@@ -64,4 +69,4 @@ auto get_operator_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
     return ALL_OPERATORS.get_opt(sv).materialize();
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

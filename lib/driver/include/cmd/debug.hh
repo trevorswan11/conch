@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 class Debug {
   public:
@@ -12,4 +12,4 @@ class Debug {
     std::string line_;
 };
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

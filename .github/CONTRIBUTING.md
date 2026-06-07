@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering to write a Pull Request (PR) for porpoise! Here are a few guidelines to get you started:
+Thanks for considering to write a Pull Request (PR) for ghoti! Here are a few guidelines to get you started:
 
 Make sure you are comfortable with the license; all contributions are licensed under the original MIT license.
 

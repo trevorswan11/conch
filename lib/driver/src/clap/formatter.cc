@@ -1,15 +1,19 @@
-#include <sstream>
-
-#include <fmt/ostream.h>
-
 #include "clap/formatter.hh"
+
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include <CLI/CLI.hpp>
+#include <fmt/color.h>
+#include <fmt/ostream.h>
 
 #include "string.hh"
 #include "style.hh"
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
-auto CLIFmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std::string {
+auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std::string {
     auto subcmds = app->get_subcommands({});
     if (subcmds.empty()) { return ""; }
 
@@ -22,12 +26,12 @@ auto CLIFmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> 
     return ss.str();
 }
 
-[[nodiscard]] auto CLIFmt::make_group(std::string                     group,
-                                      bool                            is_positional,
-                                      std::vector<const CLI::Option*> opts) const -> std::string {
+[[nodiscard]] auto Fmt::make_group(std::string                     group,
+                                   bool                            is_positional,
+                                   std::vector<const CLI::Option*> opts) const -> std::string {
     std::stringstream ss;
 
-    // THe group name is altered to clean up help output
+    // The group name is altered to clean up help output
     if (group == "OPTIONS") {
         fmt::print(ss, "\nGeneral Options:\n\n");
     } else {
@@ -38,7 +42,7 @@ auto CLIFmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> 
     return ss.str();
 }
 
-auto CLIFmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mode) const
+auto Fmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mode) const
     -> std::string {
     std::stringstream ss;
 
@@ -53,4 +57,4 @@ auto CLIFmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode
     return ss.str();
 }
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

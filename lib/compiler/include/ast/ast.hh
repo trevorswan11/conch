@@ -2,15 +2,20 @@
 
 #include <vector>
 
+#include "ast/id.hh"
 #include "ast/kind.hh"
 #include "ast/traits.hh"
 #include "ast/visitor.hh"
+#include "syntax/token.hh"
 
 #include "assert.hh"
 #include "diagnostic.hh"
 #include "iterator.hh"
+#include "option.hh"
+#include "types.hh"
+#include "utility.hh"
 
-namespace porpoise::ast {
+namespace ghoti::ast {
 
 template <traits::IndexableID ID, typename Data> struct DataPoolBase {
     std::vector<Data>           pool;
@@ -24,7 +29,7 @@ template <traits::IndexableID ID, typename Data> struct DataPoolBase {
     constexpr auto emplace_back(const syntax::Token& start_token, Data&& data) -> u64 {
         const auto index = static_cast<u64>(pool.size());
         pool.emplace_back(std::forward<Data>(data));
-        locations.emplace_back(::porpoise::traits::SourceInfo<syntax::Token>::get(start_token));
+        locations.emplace_back(traits::SourceInfo<syntax::Token>::get(start_token));
         return index;
     }
 };
@@ -42,17 +47,23 @@ template <typename Data> struct DataPool<NodeID, Data> : public DataPoolBase<Nod
 // A collection of multiple AST tree structures
 class AST {
   public:
+    struct DataPoolSizes {
+        usize nodes_size;
+        usize types_size;
+    };
+
+  public:
     MAKE_UNALIASED_ITERATOR(std::vector<NodeID>, nodes_.roots)
 
   public:
-    constexpr auto add_root(NodeID id) -> void { nodes_.roots.push_back(id); }
-    // Returns the node root ID at the requested index
-    [[nodiscard]] constexpr auto operator[](u64 idx) const noexcept -> NodeID {
-        return nodes_.roots[idx];
-    }
+    AST()  = default;
+    ~AST() = default;
+    MAKE_MOVE_ONLY(AST)
 
-    [[nodiscard]] constexpr auto total_nodes() const noexcept -> usize {
-        return nodes_.pool.size();
+    constexpr auto add_root(NodeID id) -> void { nodes_.roots.push_back(id); }
+
+    [[nodiscard]] constexpr auto get_pool_sizes() const noexcept -> DataPoolSizes {
+        return {nodes_.pool.size(), explicit_types_.pool.size()};
     }
 
     template <traits::ASTNode Data>
@@ -92,17 +103,16 @@ class AST {
     }
 
     // Returns the casted node at the requested index
-    template <typename Data, traits::IndexableNodeID ID>
+    template <typename Data, traits::IndexableID ID>
     [[nodiscard]] constexpr auto get_as(ID id) const noexcept -> const Data& {
         ASSERT(id.template is<Data>(), "Illegal node data retrieval");
-        return std::get<Data>(operator[](id));
+        return operator[](id).template as<Data>();
     }
 
     // Returns the casted node data at the requested index if present
-    template <typename Data, traits::IndexableNodeID ID>
+    template <typename Data, traits::IndexableID ID>
     [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> opt::Option<const Data&> {
-        if (!id.template is<Data>()) { return opt::none; }
-        return opt::Option<const Data&>{std::get<Data>(operator[](id))};
+        return operator[](id).template as_opt<Data>();
     }
 
     constexpr auto clear() noexcept -> void {
@@ -115,4 +125,4 @@ class AST {
     DataPool<ExplicitTypeID, TypeData> explicit_types_;
 };
 
-} // namespace porpoise::ast
+} // namespace ghoti::ast

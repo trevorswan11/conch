@@ -1,23 +1,23 @@
-third-party/**    linguist-vendored
+third-party/** linguist-vendored
 
 * text eol=lf
 
-*.c      text eol=lf
-*.cpp    text eol=lf
-*.h      text eol=lf
-*.hpp    text eol=lf
-*.zig    text eol=lf
-*.zon    text eol=lf
-*.in     text eol=lf
-*.inc    text eol=lf
+*.c   text eol=lf
+*.cc  text eol=lf
+*.h   text eol=lf
+*.hh  text eol=lf
+*.zig text eol=lf
+*.zon text eol=lf
+*.in  text eol=lf
+*.inc text eol=lf
 
-.clangd        text eol=lf
-.clang-format  text eol=lf
-flake.*        text eol=lf
+.clangd       text eol=lf
+.clang-format text eol=lf
+flake.*       text eol=lf
 
-*.yaml   text eol=lf
-*.yml    text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
 
-*.sh     text eol=lf
-*.bat    text eol=crlf
-*.fish   text eol=lf
+*.sh   text eol=lf
+*.bat  text eol=crlf
+*.fish text eol=lf

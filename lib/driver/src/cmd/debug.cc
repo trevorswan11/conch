@@ -1,23 +1,27 @@
-#include <iostream>
-
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-
 #include "cmd/debug.hh"
 
+#include <filesystem>
+#include <iostream>
+#include <string>
+
+#include <fmt/base.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+#include <fmt/ranges.h>
+#include <magic_enum/magic_enum.hpp>
+
 #include "ast/dumper.hh"
-
-#include "sema/analyzer.hh"
-
 #include "module/memory_loader.hh"
 #include "module/module.hh"
+#include "sema/analyzer.hh"
 
 #include "string.hh"
+#include "types.hh"
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 auto Debug::run() -> void {
-    const std::filesystem::path stdin_path = "stdin.porp";
+    const std::filesystem::path stdin_path = "stdin.gh";
     while (true) {
         fmt::print(">>> ");
         line_.clear();
@@ -45,10 +49,24 @@ auto Debug::run() -> void {
         for (const auto& node : stdin_mod->ast) { dumper.dump(node); }
 
         if (stdin_mod->is_poisoned()) { continue; }
+
+        const auto& registry = analyzer.get_registry();
         fmt::println("{} total tables, {} top-level symbols collected",
                      analyzer.get_registry().size(),
                      analyzer.get_table(*stdin_mod->root_table_idx).size());
+
+        for (usize i = 0; const auto& table : registry) {
+            if (analyzer.get_prelude_index_opt() == i) { continue; }
+            fmt::println("Symbols in table idx {}:", i);
+            for (const auto& [name, proxy] : table) {
+                const auto& symbol = proxy.symbol;
+                fmt::println("  - Symbol '{}': status = {}",
+                             name,
+                             magic_enum::enum_name(symbol.get_status()));
+            }
+            i += 1;
+        }
     }
 }
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

@@ -1,30 +1,67 @@
 #include "sema/context.hh"
 
+#include <concepts>
+#include <utility>
+
+#include <gsl/pointers>
+
+#include "sema/symbol.hh"
+#include "sema/type.hh"
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
 
-namespace porpoise::sema {
+#include "assert.hh"
+#include "types.hh"
+
+namespace ghoti::sema {
 
 auto Context::get_poison() -> Type& {
-    auto& poison = pool[{TypeKind::POISON, types::Key::Mutability::IMMUTABLE}];
-    if (!poison.has_resolved()) { poison.resolve<types::Poison>(); }
+    auto& poison = *pool[{TypeKind::POISON, types::mut::CONSTANT}];
+    poison.resolve_if<types::Poison>();
     return poison;
+}
+
+auto Context::get_pointer(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
+    auto& type = *pool[{TypeKind::POINTER, mutability, underlying}];
+    type.resolve_if<types::Pointer>(underlying);
+    return type;
+}
+
+auto Context::get_reference(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
+    auto& type = *pool[{TypeKind::REFERENCE, mutability, underlying}];
+    type.resolve_if<types::Reference>(underlying);
+    return type;
+}
+
+auto Context::get_array(types::mut::MutabilityModifiers mutability,
+                        bool                            null_terminated,
+                        usize                           size,
+                        Type&                           underlying) -> Type& {
+    auto& type = *pool[{TypeKind::ARRAY, mutability, null_terminated, size, underlying}];
+    type.resolve_if<types::Array>(underlying, size, null_terminated);
+    return type;
+}
+
+auto Context::get_slice(types::mut::MutabilityModifiers mutability,
+                        bool                            null_terminated,
+                        Type&                           underlying) -> Type& {
+    auto& type = *pool[{TypeKind::SLICE, mutability, null_terminated, underlying}];
+    type.resolve_if<types::Slice>(underlying, null_terminated);
+    return type;
 }
 
 namespace {
 
 auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
     const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) {
-        auto& type = pool[{kind, types::Key::Mutability::IMMUTABLE}];
-        if (!type.has_resolved()) { type.resolve<types::BuiltinType>(); }
+        auto& type = *pool[{kind, types::mut::CONSTANT}];
+        ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
+        type.resolve<types::BuiltinType>();
 
-        const auto name = keyword.first;
-        prelude.insert_unchecked(name, VirtualSymbol{keyword});
-
-        auto& symbol = prelude.get(name);
-        symbol.set_type(type);
+        prelude.insert_unchecked(keyword.name, symbols::Builtin{keyword, type});
+        auto& symbol = prelude.get(keyword.name);
         symbol.set_kind(SymbolKind::TYPE);
-        symbol.set_status(ResolveStatus::RESOLVED);
+        symbol.set_status(SymbolStatus::RESOLVED);
     };
 
     namespace kws = syntax::keywords;
@@ -46,6 +83,7 @@ auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
     inject_type(kws::TYPE, TypeKind::TYPE);
     inject_type(kws::AUTO, TypeKind::AUTO);
     inject_type(kws::OPAQUE, TypeKind::OPAQUE);
+    inject_type(kws::UNDEFINED, TypeKind::UNDEFINED);
     inject_type(kws::NORETURN, TypeKind::NORETURN);
 }
 
@@ -53,89 +91,84 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
     const auto inject_function =
         [&](const syntax::Builtin& builtin, types::BuiltinParams&& param_types, Type& return_type) {
             for (const auto& param_type : param_types) {
-                ASSERT(param_type->has_resolved(), "Builtins must be fully resolved");
+                ASSERT(param_type->is_resolved(), "Builtins must be fully resolved");
             }
-            ASSERT(return_type.has_resolved(), "Builtins must be fully resolved");
+            ASSERT(return_type.is_resolved(), "Builtins must be fully resolved");
 
-            types::Key key{TypeKind::FUNCTION, types::Key::Mutability::IMMUTABLE};
+            types::Key key{TypeKind::FUNCTION, types::mut::CONSTANT};
             key.imprint(builtin);
-            auto& type = pool[key];
-            if (!type.has_resolved()) {
-                type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
-            }
+            auto& type = *pool[key];
+            ASSERT(!type.is_resolved(), "Builtin functions should only be resolved once");
+            type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
 
-            const auto name = builtin.first;
-            prelude.insert_unchecked(name, VirtualSymbol{builtin});
-
-            auto& symbol = prelude.get(name);
-            symbol.set_type(type);
+            prelude.insert_unchecked(builtin.name, symbols::Builtin{builtin, type});
+            auto& symbol = prelude.get(builtin.name);
             symbol.set_kind(SymbolKind::CALLABLE);
-            symbol.set_status(ResolveStatus::RESOLVED);
+            symbol.set_status(SymbolStatus::RESOLVED);
         };
 
-    namespace bis = syntax::builtins;
-    using BP      = types::BuiltinParams;
+    namespace bis     = syntax::builtins;
+    const auto params = [&](std::same_as<Type&> auto&&... params) {
+        return types::BuiltinParams{&params...};
+    };
 
     // Common types
-    auto& t_void     = pool[{TypeKind::VOID, types::Key::Mutability::IMMUTABLE}];
-    auto& t_type     = pool[{TypeKind::TYPE, types::Key::Mutability::IMMUTABLE}];
-    auto& t_usize    = pool[{TypeKind::USIZE, types::Key::Mutability::IMMUTABLE}];
-    auto& t_auto     = pool[{TypeKind::AUTO, types::Key::Mutability::IMMUTABLE}];
-    auto& t_noreturn = pool[{TypeKind::NORETURN, types::Key::Mutability::IMMUTABLE}];
+    auto& t_void     = *pool[{TypeKind::VOID, types::mut::CONSTANT}];
+    auto& t_type     = *pool[{TypeKind::TYPE, types::mut::CONSTANT}];
+    auto& t_usize    = *pool[{TypeKind::USIZE, types::mut::CONSTANT}];
+    auto& t_auto     = *pool[{TypeKind::AUTO, types::mut::CONSTANT}];
+    auto& t_noreturn = *pool[{TypeKind::NORETURN, types::mut::CONSTANT}];
 
     // C-string
-    auto& t_c_str = pool[{TypeKind::SLICE, types::Key::Mutability::IMMUTABLE, true, TypeKind::U8}];
-    if (!t_c_str.has_resolved()) {
-        t_c_str.resolve<types::Slice>(pool[{TypeKind::U8, types::Key::Mutability::IMMUTABLE}],
-                                      true);
-    }
+    auto& t_u8    = *pool[{TypeKind::U8, types::mut::CONSTANT}];
+    auto& t_c_str = *pool[{TypeKind::SLICE, types::mut::CONSTANT, true, t_u8}];
+    t_c_str.resolve_if<types::Slice>(*pool[{TypeKind::U8, types::mut::CONSTANT}], true);
 
-    inject_function(bis::ALIGN_CAST, BP{t_type, t_auto}, t_auto);
-    inject_function(bis::PTR_CAST, BP{t_type, t_auto}, t_auto);
-    inject_function(bis::BIT_CAST, BP{t_type, t_auto}, t_auto);
-    inject_function(bis::CONST_CAST, BP{t_auto}, t_auto);
-    inject_function(bis::VOLATILE_CAST, BP{t_auto}, t_auto);
-    inject_function(bis::AS, BP{t_type, t_auto}, t_auto);
+    inject_function(bis::ALIGN_CAST, params(t_type, t_auto), t_auto);
+    inject_function(bis::PTR_CAST, params(t_type, t_auto), t_auto);
+    inject_function(bis::BIT_CAST, params(t_type, t_auto), t_auto);
+    inject_function(bis::CONST_CAST, params(t_auto), t_auto);
+    inject_function(bis::VOLATILE_CAST, params(t_auto), t_auto);
+    inject_function(bis::AS, params(t_type, t_auto), t_auto);
 
-    inject_function(bis::INT_FROM_PTR, BP{t_auto}, t_usize);
-    inject_function(bis::PTR_FROM_INT, BP{t_type, t_usize}, t_auto);
-    inject_function(bis::PTR_FROM_ARRAY, BP{t_auto}, t_auto);
-    inject_function(bis::SLICE_FROM_PTR, BP{t_auto, t_usize}, t_auto);
+    inject_function(bis::INT_FROM_PTR, params(t_auto), t_usize);
+    inject_function(bis::PTR_FROM_INT, params(t_type, t_usize), t_auto);
+    inject_function(bis::PTR_FROM_ARRAY, params(t_auto), t_auto);
+    inject_function(bis::SLICE_FROM_PTR, params(t_auto, t_usize), t_auto);
 
-    inject_function(bis::ALIGN_OF, BP{t_auto}, t_usize);
-    inject_function(bis::SIZE_OF, BP{t_auto}, t_usize);
-    inject_function(bis::TYPE_OF, BP{t_auto}, t_type);
-    inject_function(bis::TAG_NAME, BP{t_auto}, t_c_str);
+    inject_function(bis::ALIGN_OF, params(t_auto), t_usize);
+    inject_function(bis::SIZE_OF, params(t_auto), t_usize);
+    inject_function(bis::TYPE_OF, params(t_auto), t_type);
+    inject_function(bis::THIS, params(), t_type);
+    inject_function(bis::TAG_NAME, params(t_auto), t_c_str);
 
-    inject_function(bis::MEMCPY, BP{t_auto, t_auto}, t_void);
-    inject_function(bis::MEMSET, BP{t_auto, t_auto}, t_void);
-    inject_function(bis::MEMMOVE, BP{t_auto, t_auto}, t_void);
+    inject_function(bis::MEMCPY, params(t_auto, t_auto), t_void);
+    inject_function(bis::MEMSET, params(t_auto, t_auto), t_void);
+    inject_function(bis::MEMMOVE, params(t_auto, t_auto), t_void);
 
-    inject_function(bis::MUL_ADD, BP{t_type, t_auto, t_auto, t_auto}, t_auto);
-    inject_function(bis::CLZ, BP{t_auto}, t_usize);
-    inject_function(bis::CTZ, BP{t_auto}, t_usize);
-    inject_function(bis::DIV_MOD, BP{t_type, t_auto, t_auto}, t_auto);
-    inject_function(bis::POP_COUNT, BP{t_auto}, t_usize);
-    inject_function(bis::SQRT, BP{t_auto}, t_auto);
-    inject_function(bis::SIN, BP{t_auto}, t_auto);
-    inject_function(bis::COS, BP{t_auto}, t_auto);
-    inject_function(bis::TAN, BP{t_auto}, t_auto);
-    inject_function(bis::EXP, BP{t_auto}, t_auto);
-    inject_function(bis::EXP2, BP{t_auto}, t_auto);
-    inject_function(bis::LOG, BP{t_auto}, t_auto);
-    inject_function(bis::LOG2, BP{t_auto}, t_auto);
-    inject_function(bis::LOG10, BP{t_auto}, t_auto);
-    inject_function(bis::ABS, BP{t_auto}, t_auto);
-    inject_function(bis::FLOOR, BP{t_auto}, t_auto);
-    inject_function(bis::CEIL, BP{t_auto}, t_auto);
+    inject_function(bis::MUL_ADD, params(t_type, t_auto, t_auto, t_auto), t_auto);
+    inject_function(bis::CLZ, params(t_auto), t_usize);
+    inject_function(bis::CTZ, params(t_auto), t_usize);
+    inject_function(bis::POP_COUNT, params(t_auto), t_usize);
+    inject_function(bis::SQRT, params(t_auto), t_auto);
+    inject_function(bis::SIN, params(t_auto), t_auto);
+    inject_function(bis::COS, params(t_auto), t_auto);
+    inject_function(bis::TAN, params(t_auto), t_auto);
+    inject_function(bis::EXP, params(t_auto), t_auto);
+    inject_function(bis::EXP2, params(t_auto), t_auto);
+    inject_function(bis::LOG, params(t_auto), t_auto);
+    inject_function(bis::LOG2, params(t_auto), t_auto);
+    inject_function(bis::LOG10, params(t_auto), t_auto);
+    inject_function(bis::ABS, params(t_auto), t_auto);
+    inject_function(bis::FLOOR, params(t_auto), t_auto);
+    inject_function(bis::CEIL, params(t_auto), t_auto);
 
-    inject_function(bis::PANIC, BP{t_c_str}, t_noreturn);
+    inject_function(bis::PANIC, params(t_c_str), t_noreturn);
 }
 
 } // namespace
 
 auto Context::inject_prelude() -> void {
-    // This should only ever do work once
     if (prelude_index) { return; }
     prelude_index.emplace(registry.create());
 
@@ -144,4 +177,10 @@ auto Context::inject_prelude() -> void {
     inject_functions(prelude, pool);
 }
 
-} // namespace porpoise::sema
+auto Context::get_builtin_resolved_type(TypeKind kind) -> Type& {
+    auto& type = *pool[{kind, types::mut::CONSTANT}];
+    ASSERT(type.is_resolved(), "Builtin type was not already resolved");
+    return type;
+}
+
+} // namespace ghoti::sema

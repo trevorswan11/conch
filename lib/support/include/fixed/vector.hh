@@ -4,16 +4,16 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <span>
-#include <stdexcept>
 #include <utility>
 
+#include <gsl/span>
+
 #include "assert.hh"
+#include "fixed/storage.hh"
+#include "type_traits.hh"
 #include "types.hh"
 
-#include "fixed/storage.hh"
-
-namespace porpoise::fixed {
+namespace ghoti::fixed {
 
 // A fixed-size zero-allocation container with a vector-like interface
 template <typename Item, usize Capacity> class Vector {
@@ -29,7 +29,7 @@ template <typename Item, usize Capacity> class Vector {
     Vector() = default;
     ~Vector() { clear(); }
     ~Vector()
-        requires(TriviallyDestructible<Item>)
+        requires traits::TriviallyDestructible<Item>
     = default;
 
     // Constructs the vector in place by emplacing each item into the buffer
@@ -39,11 +39,11 @@ template <typename Item, usize Capacity> class Vector {
     }
 
     constexpr Vector(const Vector&)
-        requires(TriviallyCopyable<Item>)
+        requires traits::TriviallyCopyable<Item>
     = default;
 
     constexpr Vector(const Vector& other) {
-        if constexpr (TriviallyCopyable<Item>) {
+        if constexpr (traits::TriviallyCopyable<Item>) {
             size_ = other.size_;
             std::copy(other.begin(), other.end(), data());
         } else {
@@ -52,7 +52,7 @@ template <typename Item, usize Capacity> class Vector {
     }
 
     constexpr auto operator=(const Vector&) -> Vector&
-        requires(TriviallyCopyable<Item>)
+        requires traits::TriviallyCopyable<Item>
     = default;
 
     constexpr auto operator=(const Vector& other) -> Vector& {
@@ -64,7 +64,7 @@ template <typename Item, usize Capacity> class Vector {
     }
 
     constexpr Vector(Vector&& other) noexcept {
-        if constexpr (TriviallyCopyable<Item>) {
+        if constexpr (traits::TriviallyCopyable<Item>) {
             size_ = other.size_;
             std::copy(other.begin(), other.end(), data());
         } else {
@@ -76,7 +76,7 @@ template <typename Item, usize Capacity> class Vector {
     constexpr auto operator=(Vector&& other) -> Vector& {
         if (this != &other) {
             clear();
-            if constexpr (TriviallyCopyable<Item>) {
+            if constexpr (traits::TriviallyCopyable<Item>) {
                 size_ = other.size_;
                 std::copy(other.begin(), other.end(), data());
             } else {
@@ -89,7 +89,7 @@ template <typename Item, usize Capacity> class Vector {
 
     // Constructs an object in place at the end of the vector with the provided args
     template <typename... Args> constexpr auto emplace_back(Args&&... args) -> void {
-        if (size_ >= Capacity) { throw std::out_of_range{"StaticVector size out of range"}; }
+        ASSERT(size_ < Capacity, "StaticVector size out of range");
         std::construct_at(data() + size_, std::forward<Args>(args)...);
         size_++;
     }
@@ -97,36 +97,32 @@ template <typename Item, usize Capacity> class Vector {
     constexpr auto push_back(const Item& item) -> void { emplace_back(item); }
     constexpr auto push_back(Item&& item) -> void { emplace_back(std::move(item)); }
 
-    [[nodiscard]] constexpr explicit operator std::span<Item>() noexcept { return {data(), size_}; }
-    [[nodiscard]] constexpr explicit operator std::span<const Item>() const noexcept {
+    [[nodiscard]] constexpr explicit operator gsl::span<Item>() noexcept { return {data(), size_}; }
+    [[nodiscard]] constexpr explicit operator gsl::span<const Item>() const noexcept {
         return {data(), size_};
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto operator[](this Self&& self, usize idx) noexcept
+    [[nodiscard]] constexpr auto operator[](this auto&& self, usize idx) noexcept
         -> decltype(auto) {
         ASSERT(idx < self.size_, "StaticVector index out of bounds");
         return self.data()[idx];
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto begin(this Self&& self) noexcept -> auto* {
-        return self.data();
-    }
-
-    template <typename Self> [[nodiscard]] constexpr auto end(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto begin(this auto&& self) noexcept -> auto* { return self.data(); }
+    [[nodiscard]] constexpr auto end(this auto&& self) noexcept -> auto* {
         return self.data() + self.size_;
     }
 
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size_ == 0; }
     [[nodiscard]] constexpr auto size() const noexcept -> usize { return size_; }
+    [[nodiscard]] constexpr auto capacity() const noexcept -> usize { return Capacity; }
 
-    template <typename Self> [[nodiscard]] constexpr auto data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto data(this auto&& self) noexcept -> auto* {
         return self.items_.data();
     }
 
     constexpr auto clear() noexcept -> void {
-        if constexpr (!TriviallyDestructible<Item>) {
+        if constexpr (!traits::TriviallyDestructible<Item>) {
             // The lion is now concerned with freeing non-trivial resources
             for (usize i = 0; i < size_; ++i) { std::destroy_at(data() + i); }
         }
@@ -136,7 +132,7 @@ template <typename Item, usize Capacity> class Vector {
   private:
     // https://en.cppreference.com/cpp/algorithm/swap
     constexpr auto swap(Vector& other) noexcept -> void {
-        static_assert(!TriviallyCopyable<Item>, "Trivial copies should be defaulted");
+        static_assert(!traits::TriviallyCopyable<Item>, "Trivial copies should be defaulted");
         auto& smaller = (size_ < other.size_) ? *this : other;
         auto& larger  = (size_ < other.size_) ? other : *this;
 
@@ -147,7 +143,7 @@ template <typename Item, usize Capacity> class Vector {
         // Manually destroy the moved-from object after moving it
         for (usize i = smaller_size; i < larger_size; ++i) {
             smaller.emplace_back(std::move(larger[i]));
-            larger.data()[i].~Item();
+            std::destroy_at(data() + i);
         }
 
         smaller.size_ = larger_size;
@@ -159,4 +155,4 @@ template <typename Item, usize Capacity> class Vector {
     usize                           size_{0};
 };
 
-} // namespace porpoise::fixed
+} // namespace ghoti::fixed

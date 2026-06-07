@@ -1,18 +1,19 @@
 #include "launch.hh"
 
 #include "clap/parser.hh"
-
 #include "cmd/dispatcher.hh"
 
-namespace porpoise::driver {
+#include "result.hh"
+#include "types.hh"
 
-auto launch(i32 argc, byte** argv) -> Result<Unit, i32> {
+namespace ghoti::driver {
+
+auto launch(i32 argc, byte** argv) -> Result<void, i32> {
     clap::Parser parser{argc, argv};
     TRY(parser.parse());
 
     cmd::Dispatcher dispatcher;
-    TRY(std::visit(dispatcher, parser.get_parsed()));
-    return Unit{};
+    return parser.get_parsed().visit(dispatcher).error_or(0);
 }
 
-} // namespace porpoise::driver
+} // namespace ghoti::driver

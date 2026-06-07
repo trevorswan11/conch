@@ -1,8 +1,8 @@
 .{
-    .name = .porpoise,
+    .name = .ghoti,
     .version = "0.0.1",
     .minimum_zig_version = "0.16.0",
-    .fingerprint = 0x163d96e87b8b5b3f,
+    .fingerprint = 0x2f146abfbb7f6400,
     .dependencies = .{
         .catch2 = .{
             .url = "https://github.com/catchorg/Catch2/archive/refs/tags/v3.12.0.tar.gz",
@@ -23,6 +23,10 @@
         .unordered_dense = .{
             .url = "https://github.com/martinus/unordered_dense/archive/refs/tags/v4.8.1.tar.gz",
             .hash = "N-V-__8AAGlLPgDtp5xVf4RWSebI05x30M4e2QYAaY26KyEc",
+        },
+        .gsl = .{
+            .url = "https://github.com/microsoft/GSL/archive/refs/tags/v4.2.2.tar.gz",
+            .hash = "N-V-__8AANxABQD9lqQDJUNMghSl4TL2JrQ-L8EgyYEchRkr",
         },
         .cli11 = .{
             .url = "https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.6.2.tar.gz",
@@ -86,7 +90,7 @@
     },
     .paths = .{
         "lib",
-        "porpoise",
+        "ghoti",
         "tools",
         "third-party",
         "build.zig",

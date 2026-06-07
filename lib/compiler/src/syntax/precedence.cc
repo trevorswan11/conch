@@ -1,8 +1,11 @@
 #include "syntax/precedence.hh"
 
-#include "fixed/enum_map.hh"
+#include "syntax/token_type.hh"
 
-namespace porpoise::syntax {
+#include "fixed/enum_map.hh"
+#include "option.hh"
+
+namespace ghoti::syntax {
 
 namespace {
 
@@ -24,7 +27,7 @@ constexpr auto ALL_BINDINGS = [] {
     bindings[TokenType::GT_EQ]          = {Precedence::BOOL_LT_GT};
     bindings[TokenType::BW_AND]         = {Precedence::MUL_DIV};
     bindings[TokenType::BW_OR]          = {Precedence::ADD_SUB};
-    bindings[TokenType::XOR]            = {Precedence::ADD_SUB};
+    bindings[TokenType::CARET]          = {Precedence::ADD_SUB};
     bindings[TokenType::SHR]            = {Precedence::MUL_DIV};
     bindings[TokenType::SHL]            = {Precedence::MUL_DIV};
     bindings[TokenType::LPAREN]         = {Precedence::GROUP_CALL_IDX};
@@ -57,4 +60,4 @@ auto Binding::try_get_from(TokenType tt) noexcept -> opt::Option<Binding> {
     return ALL_BINDINGS[tt];
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

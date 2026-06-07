@@ -2,8 +2,9 @@
 
 #include "diagnostic.hh"
 #include "result.hh"
+#include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 enum class Error : u8 {
     UNEXPECTED_TOKEN,
@@ -12,9 +13,9 @@ enum class Error : u8 {
     ILLEGAL_IDENTIFIER,
     END_OF_TOKEN_STREAM,
     CONST_DECL_MISSING_VALUE,
-    EMPTY_USER_IMPORT,
+    EMPTY_FILE_IMPORT,
     ILLEGAL_IMPORT_TYPE,
-    USER_IMPORT_MISSING_ALIAS,
+    FILE_IMPORT_MISSING_ALIAS,
     DUPLICATE_DECL_MODIFIER,
     ILLEGAL_DECL_MODIFIERS,
     INTEGER_OVERFLOW,
@@ -38,6 +39,7 @@ enum class Error : u8 {
     MISSING_ARRAY_SIZE_TOKEN,
     MATCH_EXPR_MISSING_CONDITION,
     ARMLESS_MATCH_EXPR,
+    ILLEGAL_MATCH_PATTERN,
     ILLEGAL_MATCH_ARM,
     ILLEGAL_MATCH_CATCH_ALL,
     FN_PARAMETER_HAS_DEFAULT_VALUE,
@@ -46,14 +48,16 @@ enum class Error : u8 {
     MISSING_EXPLICIT_TYPE,
     EXPLICIT_FN_TYPE_HAS_BODY,
     FN_DECLARATION_WITHOUT_BODY,
-    ILLEGAL_OUTER_SCOPE_TYPE,
+    ILLEGAL_OUTER_ACCESSOR_TYPE,
     ILLEGAL_FUNCTION_TYPE_MODIFIER,
+    ILLEGAL_SELF_PARAMETER_MODIFIER,
     ILLEGAL_NORETURN_TYPE_MODIFIER,
     ILLEGAL_VOID_TYPE_MODIFIER,
     ILLEGAL_TYPE_TYPE_MODIFIER,
     COMMA_WITH_MISSING_CALL_ARGUMENT,
     EMPTY_UNION,
     EMPTY_ENUM,
+    ILLEGAL_NON_EXHAUSTIVE_ENUM,
     ILLEGAL_DEFERRED_STATEMENT,
     DEFER_MISSING_DEFERREE,
     EMPTY_TEST_DESCRIPTION,
@@ -62,6 +66,7 @@ enum class Error : u8 {
     ILLEGAL_LABEL,
     ILLEGAL_LABEL_EXPRESSION,
     ILLEGAL_LABEL_STATEMENT,
+    ILLEGAL_USING_ALIAS_WITH_MODIFIERS,
 };
 
 using Diagnostic  = Diagnostic<Error>;
@@ -72,4 +77,4 @@ template <typename... Args>
     return make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <concepts>
+
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace ast {
 
@@ -27,6 +29,7 @@ enum class NodeKind : u8 {
     MATCH_EXPRESSION,
     UNARY_EXPRESSION,
     REFERENCE_EXPRESSION,
+    ADDRESS_OF_EXPRESSION,
     DEREFERENCE_EXPRESSION,
     IMPLICIT_ACCESS_EXPRESSION,
     STRING_EXPRESSION,
@@ -41,9 +44,9 @@ enum class NodeKind : u8 {
     F64_EXPRESSION,
     BOOL_EXPRESSION,
     VOID_EXPRESSION,
-    SCOPE_RESOLUTION_EXPRESSION,
+    UNDEFINED_EXPRESSION,
+    MODULE_ACCESS_EXPRESSION,
     STRUCT_EXPRESSION,
-    TYPE_EXPRESSION,
     UNION_EXPRESSION,
     WHILE_LOOP_EXPRESSION,
 
@@ -62,44 +65,45 @@ enum class NodeKind : u8 {
     DISCARDED, // Represented by Unit
 };
 
-#define FOREACH_AST_EXPR(X)      \
-    X(ArrayExpression)           \
-    X(CallExpression)            \
-    X(DoWhileLoopExpression)     \
-    X(EnumExpression)            \
-    X(ForLoopExpression)         \
-    X(FunctionExpression)        \
-    X(IdentifierExpression)      \
-    X(IfExpression)              \
-    X(IndexExpression)           \
-    X(InfiniteLoopExpression)    \
-    X(AssignmentExpression)      \
-    X(BinaryExpression)          \
-    X(DotExpression)             \
-    X(RangeExpression)           \
-    X(InitializerExpression)     \
-    X(LabelExpression)           \
-    X(MatchExpression)           \
-    X(ReferenceExpression)       \
-    X(DereferenceExpression)     \
-    X(UnaryExpression)           \
-    X(ImplicitAccessExpression)  \
-    X(StringExpression)          \
-    X(I32Expression)             \
-    X(I64Expression)             \
-    X(ISizeExpression)           \
-    X(U32Expression)             \
-    X(U64Expression)             \
-    X(USizeExpression)           \
-    X(U8Expression)              \
-    X(F32Expression)             \
-    X(F64Expression)             \
-    X(BoolExpression)            \
-    X(VoidExpression)            \
-    X(ScopeResolutionExpression) \
-    X(StructExpression)          \
-    X(TypeExpression)            \
-    X(UnionExpression)           \
+#define FOREACH_AST_EXPR(X)     \
+    X(ArrayExpression)          \
+    X(CallExpression)           \
+    X(DoWhileLoopExpression)    \
+    X(EnumExpression)           \
+    X(ForLoopExpression)        \
+    X(FunctionExpression)       \
+    X(IdentifierExpression)     \
+    X(IfExpression)             \
+    X(IndexExpression)          \
+    X(InfiniteLoopExpression)   \
+    X(AssignmentExpression)     \
+    X(BinaryExpression)         \
+    X(DotExpression)            \
+    X(RangeExpression)          \
+    X(InitializerExpression)    \
+    X(LabelExpression)          \
+    X(MatchExpression)          \
+    X(ReferenceExpression)      \
+    X(AddressOfExpression)      \
+    X(DereferenceExpression)    \
+    X(UnaryExpression)          \
+    X(ImplicitAccessExpression) \
+    X(StringExpression)         \
+    X(I32Expression)            \
+    X(I64Expression)            \
+    X(ISizeExpression)          \
+    X(U32Expression)            \
+    X(U64Expression)            \
+    X(USizeExpression)          \
+    X(U8Expression)             \
+    X(F32Expression)            \
+    X(F64Expression)            \
+    X(BoolExpression)           \
+    X(VoidExpression)           \
+    X(UndefinedExpression)      \
+    X(ModuleAccessExpression)   \
+    X(StructExpression)         \
+    X(UnionExpression)          \
     X(WhileLoopExpression)
 
 #define FOREACH_AST_STMT(X) \
@@ -127,6 +131,7 @@ FOREACH_AST_NODE(FWD_DECLARE_NODE_X)
 enum class ExplicitTypeKind : u8 {
     IDENT,
     SCOPE,
+    DOT,
     CALL,
     FUNCTION,
     RECURSIVE,
@@ -136,19 +141,23 @@ enum class ExplicitTypeKind : u8 {
     ARRAY,
 };
 
-#define FOREACH_AST_TYPE(X)      \
-    X(IdentifierExpression)      \
-    X(ScopeResolutionExpression) \
-    X(CallExpression)            \
-    X(FunctionExpression)        \
-    X(ExplicitTypeID)            \
-    X(StructExpression)          \
-    X(EnumExpression)            \
-    X(UnionExpression)           \
+#define FOREACH_AST_TYPE(X)   \
+    X(IdentifierExpression)   \
+    X(ModuleAccessExpression) \
+    X(DotExpression)          \
+    X(CallExpression)         \
+    X(ExplicitFunctionType)   \
+    X(ExplicitTypeID)         \
+    X(StructExpression)       \
+    X(EnumExpression)         \
+    X(UnionExpression)        \
     X(ExplicitArrayType)
 
 class ExplicitTypeID;
 struct ExplicitArrayType;
+struct ExplicitFunctionType;
+
+} // namespace ast
 
 namespace traits {
 
@@ -156,14 +165,14 @@ template <typename T> struct NodeKindOf;
 
 template <typename T>
 concept ASTNode = requires {
-    { NodeKindOf<T>::value() } -> std::same_as<NodeKind>;
+    { NodeKindOf<T>::value() } -> std::same_as<ast::NodeKind>;
 };
 
-#define NODE_KIND_OF_TRAIT(Type, Kind)                                     \
-    template <> struct NodeKindOf<Type> {                                  \
-        [[nodiscard]] static constexpr auto value() noexcept -> NodeKind { \
-            return NodeKind::Kind;                                         \
-        }                                                                  \
+#define NODE_KIND_OF_TRAIT(Type, Kind)                                          \
+    template <> struct NodeKindOf<ast::Type> {                                  \
+        [[nodiscard]] static constexpr auto value() noexcept -> ast::NodeKind { \
+            return ast::NodeKind::Kind;                                         \
+        }                                                                       \
     };
 
 NODE_KIND_OF_TRAIT(ArrayExpression, ARRAY_EXPRESSION)
@@ -186,6 +195,7 @@ NODE_KIND_OF_TRAIT(MatchExpression, MATCH_EXPRESSION)
 NODE_KIND_OF_TRAIT(UnaryExpression, UNARY_EXPRESSION)
 NODE_KIND_OF_TRAIT(ReferenceExpression, REFERENCE_EXPRESSION)
 NODE_KIND_OF_TRAIT(DereferenceExpression, DEREFERENCE_EXPRESSION)
+NODE_KIND_OF_TRAIT(AddressOfExpression, ADDRESS_OF_EXPRESSION)
 NODE_KIND_OF_TRAIT(ImplicitAccessExpression, IMPLICIT_ACCESS_EXPRESSION)
 NODE_KIND_OF_TRAIT(StringExpression, STRING_EXPRESSION)
 NODE_KIND_OF_TRAIT(I32Expression, I32_EXPRESSION)
@@ -199,9 +209,9 @@ NODE_KIND_OF_TRAIT(F32Expression, F32_EXPRESSION)
 NODE_KIND_OF_TRAIT(F64Expression, F64_EXPRESSION)
 NODE_KIND_OF_TRAIT(BoolExpression, BOOL_EXPRESSION)
 NODE_KIND_OF_TRAIT(VoidExpression, VOID_EXPRESSION)
-NODE_KIND_OF_TRAIT(ScopeResolutionExpression, SCOPE_RESOLUTION_EXPRESSION)
+NODE_KIND_OF_TRAIT(UndefinedExpression, UNDEFINED_EXPRESSION)
+NODE_KIND_OF_TRAIT(ModuleAccessExpression, MODULE_ACCESS_EXPRESSION)
 NODE_KIND_OF_TRAIT(StructExpression, STRUCT_EXPRESSION)
-NODE_KIND_OF_TRAIT(TypeExpression, TYPE_EXPRESSION)
 NODE_KIND_OF_TRAIT(UnionExpression, UNION_EXPRESSION)
 NODE_KIND_OF_TRAIT(WhileLoopExpression, WHILE_LOOP_EXPRESSION)
 
@@ -217,7 +227,9 @@ NODE_KIND_OF_TRAIT(ReturnStatement, RETURN_STATEMENT)
 NODE_KIND_OF_TRAIT(TestStatement, TEST_STATEMENT)
 NODE_KIND_OF_TRAIT(UsingStatement, USING_STATEMENT)
 
-NODE_KIND_OF_TRAIT(Unit, DISCARDED)
+template <> struct NodeKindOf<Unit> {
+    [[nodiscard]] static constexpr auto value() noexcept { return ast::NodeKind::DISCARDED; }
+};
 
 #undef KIND_OF_TRAIT
 
@@ -225,20 +237,21 @@ template <typename T> struct ExplicitTypeKindOf;
 
 template <typename T>
 concept ASTExplicitType = requires {
-    { ExplicitTypeKindOf<T>::value() } -> std::same_as<ExplicitTypeKind>;
+    { ExplicitTypeKindOf<T>::value() } -> std::same_as<ast::ExplicitTypeKind>;
 };
 
-#define KIND_OF_TRAIT(Type, Kind)                                                  \
-    template <> struct ExplicitTypeKindOf<Type> {                                  \
-        [[nodiscard]] static constexpr auto value() noexcept -> ExplicitTypeKind { \
-            return ExplicitTypeKind::Kind;                                         \
-        }                                                                          \
+#define KIND_OF_TRAIT(Type, Kind)                                                       \
+    template <> struct ExplicitTypeKindOf<ast::Type> {                                  \
+        [[nodiscard]] static constexpr auto value() noexcept -> ast::ExplicitTypeKind { \
+            return ast::ExplicitTypeKind::Kind;                                         \
+        }                                                                               \
     };
 
 KIND_OF_TRAIT(IdentifierExpression, IDENT)
-KIND_OF_TRAIT(ScopeResolutionExpression, SCOPE)
+KIND_OF_TRAIT(ModuleAccessExpression, SCOPE)
+KIND_OF_TRAIT(DotExpression, DOT)
 KIND_OF_TRAIT(CallExpression, CALL)
-KIND_OF_TRAIT(FunctionExpression, FUNCTION)
+KIND_OF_TRAIT(ExplicitFunctionType, FUNCTION)
 KIND_OF_TRAIT(ExplicitTypeID, RECURSIVE)
 KIND_OF_TRAIT(StructExpression, STRUCT)
 KIND_OF_TRAIT(EnumExpression, ENUM)
@@ -249,6 +262,4 @@ KIND_OF_TRAIT(ExplicitArrayType, ARRAY)
 
 } // namespace traits
 
-} // namespace ast
-
-} // namespace porpoise
+} // namespace ghoti

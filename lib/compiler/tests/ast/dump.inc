@@ -34,8 +34,9 @@ ExpressionStatement
 ContinueStatement
 ReturnStatement
 └─ Value: EnumExpression
-    └─ Enumerations:
-        └─ Name: IdentifierExpression: RED
+    ├─ Enumerations:
+    │   └─ Name: IdentifierExpression: RED
+    └─ Non-Exhaustive: false
 ImportStatement
 ├─ Public: false
 └─ Library: IdentifierExpression: std
@@ -45,9 +46,11 @@ ImportStatement
 └─ Alias: IdentifierExpression: node
 DiscardStatement
 └─ Discarded: EnumExpression
-    └─ Enumerations:
-        └─ Name: IdentifierExpression: RED
-DeclStatement (SIZE)
+    ├─ Enumerations:
+    │   └─ Name: IdentifierExpression: RED
+    └─ Non-Exhaustive: true
+DeclStatement
+├─ Name: IdentifierExpression: SIZE
 ├─ Modifiers: CONSTEXPR
 ├─ Type: (inferred)
 └─ Value: USizeExpression: 2
@@ -71,7 +74,8 @@ ExpressionStatement
     │       └─ Expr: IdentifierExpression: a
     └─ Non-Break Clause: ReturnStatement
         └─ Value: IdentifierExpression: b
-DeclStatement (f_ptr)
+DeclStatement
+├─ Name: IdentifierExpression: f_ptr
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: PTR)
     └─ FunctionExpression
@@ -94,38 +98,41 @@ DeclStatement (f_ptr)
                         └─ ExplicitType (modifier: PTR)
                             └─ IdentifierExpression: E
 ExpressionStatement
-└─ Expr: ScopeResolutionExpression
-    ├─ Outer: ScopeResolutionExpression
+└─ Expr: ModuleAccessExpression
+    ├─ Outer: ModuleAccessExpression
     │   ├─ Outer: IdentifierExpression: A
     │   └─ Inner: IdentifierExpression: B
     └─ Inner: IdentifierExpression: C
 ExpressionStatement
 └─ Expr: StructExpression
-    ├─ DeclStatement (a)
-    │   ├─ Modifiers: VARIABLE
-    │   ├─ Type: ExplicitType (modifier: VALUE)
-    │   │   └─ IdentifierExpression: Foo
-    │   └─ Value: IdentifierExpression: bar
-    └─ DeclStatement (b)
-        ├─ Modifiers: CONSTANT
-        ├─ Type: (inferred)
-        └─ Value: FunctionExpression
-            ├─ Self: this (modifier: MUT_PTR)
-            ├─ Parameters:
-            │   ├─ Param:
-            │   │   ├─ Name: IdentifierExpression: a
-            │   │   └─ Type: ExplicitType (modifier: VALUE)
-            │   │       └─ IdentifierExpression: A
-            │   └─ Param:
-            │       ├─ Name: IdentifierExpression: b
-            │       └─ Type: ExplicitType (modifier: PTR)
-            │           └─ IdentifierExpression: B
-            ├─ Variadic: false
-            ├─ Returns: ExplicitType (modifier: VALUE)
-            │   └─ IdentifierExpression: C
-            └─ Body: BlockStatement
-                └─ ExpressionStatement
-                    └─ Expr: IdentifierExpression: c
+    └─ Members:
+        ├─ DeclStatement
+        │   ├─ Name: IdentifierExpression: a
+        │   ├─ Modifiers: VARIABLE
+        │   ├─ Type: ExplicitType (modifier: VALUE)
+        │   │   └─ IdentifierExpression: Foo
+        │   └─ Value: IdentifierExpression: bar
+        └─ DeclStatement
+            ├─ Name: IdentifierExpression: b
+            ├─ Modifiers: CONSTANT
+            ├─ Type: (inferred)
+            └─ Value: FunctionExpression
+                ├─ Self: this (modifier: MUT_PTR)
+                ├─ Parameters:
+                │   ├─ Param:
+                │   │   ├─ Name: IdentifierExpression: a
+                │   │   └─ Type: ExplicitType (modifier: VALUE)
+                │   │       └─ IdentifierExpression: A
+                │   └─ Param:
+                │       ├─ Name: IdentifierExpression: b
+                │       └─ Type: ExplicitType (modifier: PTR)
+                │           └─ IdentifierExpression: B
+                ├─ Variadic: false
+                ├─ Returns: ExplicitType (modifier: VALUE)
+                │   └─ IdentifierExpression: C
+                └─ Body: BlockStatement
+                    └─ ExpressionStatement
+                        └─ Expr: IdentifierExpression: c
 ExpressionStatement
 └─ Expr: ReferenceExpression (BW_AND)
     └─ Operand: IdentifierExpression: a
@@ -138,23 +145,25 @@ ExpressionStatement
 ExpressionStatement
 └─ Expr: MatchExpression
     ├─ Matcher: IdentifierExpression: a
-    ├─ Arms:
-    │   ├─ Arm:
-    │   │   ├─ Pattern: IdentifierExpression: b
-    │   │   ├─ Capture: IdentifierExpression: c
-    │   │   └─ Dispatch: ExpressionStatement
-    │   │       └─ Expr: IdentifierExpression: d
-    │   ├─ Arm:
-    │   │   ├─ Pattern: IdentifierExpression: e
-    │   │   ├─ Capture: <discarded>
-    │   │   └─ Dispatch: ExpressionStatement
-    │   │       └─ Expr: IdentifierExpression: f
-    │   └─ Arm:
-    │       ├─ Pattern: IdentifierExpression: g
-    │       └─ Dispatch: ExpressionStatement
-    │           └─ Expr: IdentifierExpression: h
-    └─ Catch All: ExpressionStatement
-        └─ Expr: IdentifierExpression: d
+    └─ Arms:
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: b
+        │   ├─ Capture: IdentifierExpression: c
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: d
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: e
+        │   ├─ Capture: <discarded>
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: f
+        ├─ Arm:
+        │   ├─ Pattern: IdentifierExpression: g
+        │   └─ Dispatch: ExpressionStatement
+        │       └─ Expr: IdentifierExpression: h
+        └─ Catch-All Arm:
+            ├─ Pattern: <discarded>
+            └─ Dispatch: ExpressionStatement
+                └─ Expr: IdentifierExpression: d
 ExpressionStatement
 └─ Expr: InfiniteLoopExpression
     └─ ExpressionStatement
@@ -221,12 +230,13 @@ ExpressionStatement
 ExpressionStatement
 └─ Expr: EnumExpression
     ├─ Underlying: IdentifierExpression: u64 (primitive)
-    └─ Enumerations:
-        ├─ Name: IdentifierExpression: A
-        │   └─ Default: U64Expression: 1
-        ├─ Name: IdentifierExpression: B
-        │   └─ Default: IdentifierExpression: T
-        └─ Name: IdentifierExpression: C
+    ├─ Enumerations:
+    │   ├─ Name: IdentifierExpression: A
+    │   │   └─ Default: U64Expression: 1
+    │   ├─ Name: IdentifierExpression: B
+    │   │   └─ Default: IdentifierExpression: T
+    │   └─ Name: IdentifierExpression: C
+    └─ Non-Exhaustive: false
 ExpressionStatement
 └─ Expr: CallExpression
     ├─ Callee: IdentifierExpression: @as (builtin)
@@ -252,8 +262,8 @@ ExpressionStatement
                 └─ ExplicitType (modifier: VALUE)
                     └─ IdentifierExpression: u8 (primitive)
 ExpressionStatement
-└─ Expr: ImplicitAccessExpression (DOT)
-    └─ Operand: IdentifierExpression: a
+└─ Expr: ImplicitAccessExpression
+    └─ Member: IdentifierExpression: a
 ExpressionStatement
 └─ Expr: UnionExpression
     └─ Fields:
@@ -303,7 +313,8 @@ ExpressionStatement
 └─ Expr: RangeExpression (DOT_DOT_EQ)
     ├─ Lower: IdentifierExpression: a
     └─ Upper: IdentifierExpression: b
-DeclStatement (a)
+DeclStatement
+├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
     └─ ArrayType
@@ -321,16 +332,16 @@ ExpressionStatement
     ├─ Object Type: <inferred>
     └─ Initializers:
         └─ Initializer:
-            ├─ Member: ImplicitAccessExpression (DOT)
-            │   └─ Operand: IdentifierExpression: a
+            ├─ Member: ImplicitAccessExpression
+            │   └─ Member: IdentifierExpression: a
             └─ Value: I32Expression: 3
 ExpressionStatement
 └─ Expr: Initializer Expression:
     ├─ Object Type: IdentifierExpression: TT
     └─ Initializers:
         └─ Initializer:
-            ├─ Member: ImplicitAccessExpression (DOT)
-            │   └─ Operand: IdentifierExpression: adfasf
+            ├─ Member: ImplicitAccessExpression
+            │   └─ Member: IdentifierExpression: adfasf
             └─ Value: IdentifierExpression: a
 ExpressionStatement
 └─ Expr: Initializer Expression:
@@ -340,15 +351,27 @@ ExpressionStatement
     ├─ Fields:
     │   └─ Field:
     │       ├─ Tag: IdentifierExpression: a
-    │       └─ Type: ExplicitType (modifier: PTR)
+    │       └─ Type: ExplicitType (modifier: VALUE)
     │           └─ StructExpression
-    │               └─ DeclStatement (b)
-    │                   ├─ Modifiers: VARIABLE
-    │                   ├─ Type: ExplicitType (modifier: VALUE)
-    │                   │   └─ IdentifierExpression: Foo
-    │                   └─ Value: IdentifierExpression: bar
+    │               ├─ Fields:
+    │               │   ├─ Name: IdentifierExpression: b
+    │               │   │   ├─ Public: false
+    │               │   │   ├─ Type: ExplicitType (modifier: VALUE)
+    │               │   │   │   └─ IdentifierExpression: Foo
+    │               │   │   └─ Default: IdentifierExpression: bar
+    │               │   └─ Name: IdentifierExpression: c
+    │               │       ├─ Public: true
+    │               │       └─ Type: ExplicitType (modifier: VALUE)
+    │               │           └─ IdentifierExpression: i32 (primitive)
+    │               └─ Members:
+    │                   └─ DeclStatement
+    │                       ├─ Name: IdentifierExpression: d
+    │                       ├─ Modifiers: VARIABLE
+    │                       └─ Type: ExplicitType (modifier: VALUE)
+    │                           └─ IdentifierExpression: u32 (primitive)
     └─ Members:
-        └─ DeclStatement (b)
+        └─ DeclStatement
+            ├─ Name: IdentifierExpression: b
             ├─ Modifiers: CONSTANT
             ├─ Type: (inferred)
             └─ Value: FunctionExpression
@@ -370,8 +393,10 @@ ExpressionStatement
     ├─ Enumerations:
     │   └─ Name: IdentifierExpression: A
     │       └─ Default: I64Expression: 2
+    ├─ Non-Exhaustive: false
     └─ Members:
-        └─ DeclStatement (b)
+        └─ DeclStatement
+            ├─ Name: IdentifierExpression: b
             ├─ Modifiers: CONSTANT
             ├─ Type: (inferred)
             └─ Value: FunctionExpression
@@ -387,7 +412,8 @@ ExpressionStatement
                 └─ Body: BlockStatement
                     └─ ExpressionStatement
                         └─ Expr: IdentifierExpression: c
-DeclStatement (a)
+DeclStatement
+├─ Name: IdentifierExpression: a
 ├─ Modifiers: CONSTANT
 ├─ Type: (inferred)
 └─ Value: VoidExpression
@@ -399,8 +425,8 @@ TestStatement
     │   └─ Library: IdentifierExpression: other
     └─ ExpressionStatement
         └─ Expr: CallExpression
-            ├─ Callee: ScopeResolutionExpression
-            │   ├─ Outer: ScopeResolutionExpression
+            ├─ Callee: ModuleAccessExpression
+            │   ├─ Outer: ModuleAccessExpression
             │   │   ├─ Outer: IdentifierExpression: std
             │   │   └─ Inner: IdentifierExpression: testing
             │   └─ Inner: IdentifierExpression: expect
@@ -408,22 +434,25 @@ TestStatement
                 └─ BinaryExpression (EQ)
                     ├─ LHS: IdentifierExpression: a
                     └─ RHS: BoolExpression: true
-DeclStatement (a)
+DeclStatement
+├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
     └─ CallExpression
-        ├─ Callee: ScopeResolutionExpression
+        ├─ Callee: ModuleAccessExpression
         │   ├─ Outer: IdentifierExpression: std
         │   └─ Inner: IdentifierExpression: ArrayList
         └─ Arguments:
             └─ IdentifierExpression: u8 (primitive)
-DeclStatement (a)
+DeclStatement
+├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
-    └─ ScopeResolutionExpression
+    └─ ModuleAccessExpression
         ├─ Outer: IdentifierExpression: std
         └─ Inner: IdentifierExpression: Io
-DeclStatement (a)
+DeclStatement
+├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
 └─ Type: ExplicitType (modifier: VALUE)
     └─ CallExpression
@@ -465,4 +494,28 @@ ExpressionStatement
 └─ Expr: U8Expression: 39
 ExpressionStatement
 └─ Expr: U8Expression: 0
+DeclStatement
+├─ Name: IdentifierExpression: a
+├─ Modifiers: VARIABLE
+├─ Type: ExplicitType (modifier: VALUE)
+│   └─ IdentifierExpression: i32 (primitive)
+└─ Value: UndefinedExpression
+ExpressionStatement
+└─ Expr: I32Expression: 51
+ExpressionStatement
+└─ Expr: AddressOfExpression (CARET_MUT)
+    └─ Operand: IdentifierExpression: a
+ExpressionStatement
+└─ Expr: AddressOfExpression (CARET)
+    └─ Operand: IdentifierExpression: a
+ExpressionStatement
+└─ Expr: CallExpression
+    └─ Callee: IdentifierExpression: call
+ExpressionStatement
+└─ Expr: ArrayExpression
+    ├─ Size: (inferred)
+    ├─ Null terminated: false
+    ├─ Type: ExplicitType (modifier: VALUE)
+    │   └─ IdentifierExpression: i32 (primitive)
+    └─ Items: <empty>
 )"

@@ -1,12 +1,31 @@
-#include <fmt/format.h>
-
-#include "syntax/parser.hh"
-
 #include "module/module.hh"
 
-#include "diagnostic.hh"
+#include <filesystem>
+#include <ostream>
+#include <string_view>
+#include <utility>
 
-namespace porpoise::mod {
+#include <fmt/color.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+#include <gsl/pointers>
+
+#include "ast/expression.hh"
+#include "module/error.hh"
+#include "sema/side_tables.hh"
+#include "source_file.hh"
+#include "syntax/parser.hh"
+
+#include "assert.hh"
+#include "diagnostic.hh"
+#include "memory.hh"
+#include "option.hh"
+#include "result.hh"
+#include "style.hh"
+#include "utility.hh"
+#include "variant.hh"
+
+namespace ghoti::mod {
 
 auto format_module_diagnostic(std::ostream&                   os,
                               detail::FormattableDiagnostic&& diag,
@@ -30,19 +49,20 @@ auto format_module_diagnostic(std::ostream&                   os,
 
 auto Module::print_diagnostics(std::ostream& os) const -> void {
     if (is_ok()) { return; }
-    match(Overloaded{
-        [&](const auto& l) {
-            for (const auto& diag : l) {
-                format_module_diagnostic(os, diag.to_formattable(), *this, l.get_terminal_status())
+    diagnostics.visit(
+        [this, &os](const auto& list) {
+            for (const auto& diag : list) {
+                format_module_diagnostic(
+                    os, diag.to_formattable(), *this, list.get_terminal_status())
                     << "\n";
             }
         },
-        [](const Unit&) { std::unreachable(); }});
+        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                                         const std::filesystem::path& parent_path)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     ASSERT((parent_path.empty() || parent_path.is_absolute()) &&
            "Parent path must be absolute or empty");
     if (!path.is_relative()) {
@@ -56,7 +76,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 }
 
 auto ModuleManager::try_get_library_module(std::string_view name)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     auto it = module_lut_.find(name);
     if (it == module_lut_.end()) {
         return make_mod_err(fmt::format("Unknown module '{}'", name), Error::MODULE_DOES_NOT_EXIST);
@@ -65,12 +85,12 @@ auto ModuleManager::try_get_library_module(std::string_view name)
 }
 
 auto ModuleManager::add_library_module(std::string_view name, const std::filesystem::path& path)
-    -> Result<Unit, Diagnostic> {
+    -> Result<void, Diagnostic> {
     const auto normalized = loader_.normalize(path);
     if (!normalized) { return make_mod_err(normalized.error()); }
 
     if (auto it = module_lut_.find(name); it != module_lut_.end()) {
-        if (it->second == normalized) { return Unit{}; }
+        if (it->second == normalized) { return {}; }
         return make_mod_err(fmt::format("Attempt to add duplicate module '{}' from path '{}' "
                                         "which already exists at path '{}'",
                                         name,
@@ -80,22 +100,21 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
     }
 
     module_lut_.emplace(name, *normalized);
-    return Unit{};
+    return {};
 }
 
 auto ModuleManager::try_get(const std::filesystem::path& path)
-    -> Result<mem::NonNull<Module>, Diagnostic> {
+    -> Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
     auto       source       = TRY(loader_.load(path));
     const auto abs_path_str = path.string();
 
-    auto mod =
-        mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)}, ast::AST{});
+    auto mod = mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)});
     syntax::Parser p{mod->source};
     auto           diagnostics = p.consume(mod->ast);
 
-    mod->sema_side_tables.resize(mod->ast.total_nodes());
+    mod->sema_side_tables.resize(mod->ast.get_pool_sizes());
     mod->state       = diagnostics.empty() ? ModuleState::PARSED : ModuleState::ERRORED;
     mod->diagnostics = std::move(diagnostics);
 
@@ -104,4 +123,4 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     return ptr;
 }
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

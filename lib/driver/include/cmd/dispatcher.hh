@@ -4,13 +4,14 @@
 #include "types.hh"
 #include "variant.hh"
 
-namespace porpoise::cmd {
+namespace ghoti::cmd {
 
 class Debug;
 
 class Dispatcher {
   public:
-    static auto operator()(Debug& dump) -> Result<Unit, i32>;
+    static auto operator()(Debug& dump) -> Result<void, i32>;
+    static auto operator()(Unit) noexcept -> Result<void, i32> { return {}; }
 };
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

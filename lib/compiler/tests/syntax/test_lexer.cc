@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <initializer_list>
 #include <ranges>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -8,8 +10,11 @@
 #include "syntax/builtins.hh"
 #include "syntax/lexer.hh"
 #include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
-namespace porpoise::tests {
+#include "types.hh"
+
+namespace ghoti::tests {
 
 using syntax::TokenType;
 using ExpectedLexeme = std::pair<TokenType, std::string_view>;
@@ -196,20 +201,55 @@ TEST_CASE("Lexing int bit-width variants") {
                });
 }
 
+TEST_CASE("Lexing underscore-separated numbers") {
+    test_lexer("0_1 123_2 3.14_159 42.0_11f 0b11_00_11 0xEEEE_FFFFuz 0o7_233u",
+               {
+                   {TokenType::INT_10, "0_1"},
+                   {TokenType::INT_10, "123_2"},
+                   {TokenType::F64, "3.14_159"},
+                   {TokenType::F32, "42.0_11f"},
+                   {TokenType::INT_2, "0b11_00_11"},
+                   {TokenType::UZINT_16, "0xEEEE_FFFFuz"},
+                   {TokenType::UINT_8, "0o7_233u"},
+               });
+}
+
+TEST_CASE("Lexing illegal underscored numbers") {
+    test_lexer("1234_.1 121.3_ _12",
+               {
+                   {TokenType::ILLEGAL, "1234_"},
+                   {TokenType::DOT, "."},
+                   {TokenType::INT_10, "1"},
+                   {TokenType::ILLEGAL, "121.3_"},
+                   {TokenType::UNDERSCORE, "_"},
+                   {TokenType::INT_10, "12"},
+               });
+}
+
 TEST_CASE("Lexing keywords") {
-    test_lexer("and or pub extern export volatile static "
+    test_lexer("and or pub extern export volatile mut_volatile "
                "i32 i64 isize u32 u64 usize f32 f64 u8 bool void type test",
                {
-                   {TokenType::BOOLEAN_AND, "and"},  {TokenType::BOOLEAN_OR, "or"},
-                   {TokenType::PUBLIC, "pub"},       {TokenType::EXTERN, "extern"},
-                   {TokenType::EXPORT, "export"},    {TokenType::VOLATILE, "volatile"},
-                   {TokenType::STATIC, "static"},    {TokenType::I32_TYPE, "i32"},
-                   {TokenType::I64_TYPE, "i64"},     {TokenType::ISIZE_TYPE, "isize"},
-                   {TokenType::U32_TYPE, "u32"},     {TokenType::U64_TYPE, "u64"},
-                   {TokenType::USIZE_TYPE, "usize"}, {TokenType::F32_TYPE, "f32"},
-                   {TokenType::F64_TYPE, "f64"},     {TokenType::U8_TYPE, "u8"},
-                   {TokenType::BOOL_TYPE, "bool"},   {TokenType::VOID_TYPE, "void"},
-                   {TokenType::TYPE_TYPE, "type"},   {TokenType::TEST, "test"},
+                   {TokenType::BOOLEAN_AND, "and"},
+                   {TokenType::BOOLEAN_OR, "or"},
+                   {TokenType::PUBLIC, "pub"},
+                   {TokenType::EXTERN, "extern"},
+                   {TokenType::EXPORT, "export"},
+                   {TokenType::VOLATILE, "volatile"},
+                   {TokenType::MUT_VOLATILE, "mut_volatile"},
+                   {TokenType::I32_TYPE, "i32"},
+                   {TokenType::I64_TYPE, "i64"},
+                   {TokenType::ISIZE_TYPE, "isize"},
+                   {TokenType::U32_TYPE, "u32"},
+                   {TokenType::U64_TYPE, "u64"},
+                   {TokenType::USIZE_TYPE, "usize"},
+                   {TokenType::F32_TYPE, "f32"},
+                   {TokenType::F64_TYPE, "f64"},
+                   {TokenType::U8_TYPE, "u8"},
+                   {TokenType::BOOL_TYPE, "bool"},
+                   {TokenType::VOID_TYPE, "void"},
+                   {TokenType::TYPE_TYPE, "type"},
+                   {TokenType::TEST, "test"},
                });
 }
 
@@ -321,24 +361,25 @@ TEST_CASE("Lexing multiline string literals") {
 }
 
 TEST_CASE("Lexing pointers and references") {
-    test_lexer("& &mut * *mut nullptr",
+    test_lexer("& &mut * ^ ^mut nullptr",
                {
                    {TokenType::BW_AND, "&"},
                    {TokenType::AND_MUT, "&mut"},
                    {TokenType::STAR, "*"},
-                   {TokenType::STAR_MUT, "*mut"},
+                   {TokenType::CARET, "^"},
+                   {TokenType::CARET_MUT, "^mut"},
                    {TokenType::NULLPTR, "nullptr"},
                });
 }
 
 TEST_CASE("Lexing compiler builtins & Lexer resetting") {
-    constexpr auto expecteds = std::ranges::views::transform(
+    constexpr auto expecteds = std::views::transform(
         syntax::builtins::ALL_TOKEN_TYPES,
         [](const auto& tt) -> syntax::Builtin { return {*syntax::get_builtin_opt(tt), tt}; });
 
     std::string input;
     std::ranges::for_each(expecteds, [&input](const auto& lexeme) -> void {
-        input.append(lexeme.first);
+        input.append(lexeme.name);
         input.push_back(' ');
     });
     syntax::Lexer l{input};
@@ -348,8 +389,7 @@ TEST_CASE("Lexing compiler builtins & Lexer resetting") {
     l_accumulator.reset(input);
     const auto reset_acc = l_accumulator.consume();
 
-    usize i = 0;
-    for (const auto& [expected_slice, expected_tt] : expecteds) {
+    for (usize i = 0; const auto& [expected_slice, expected_tt] : expecteds) {
         const auto  token             = l.advance();
         const auto& accumulated_token = accumulated_tokens[i];
         const auto& reset             = reset_acc[i];
@@ -371,4 +411,4 @@ TEST_CASE("Lexing illegal builtin") {
     CHECK(input == illegal.slice);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

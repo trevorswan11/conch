@@ -1,8 +1,14 @@
 #pragma once
 
+#include <filesystem>
+#include <string>
+
+#include "module/error.hh"
+
+#include "result.hh"
 #include "source_loader.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 class FileLoader : public SourceLoader {
   public:
@@ -15,4 +21,4 @@ class FileLoader : public SourceLoader {
         -> Result<std::filesystem::path, Error> override;
 };
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

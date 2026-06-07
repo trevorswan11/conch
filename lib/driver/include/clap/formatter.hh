@@ -1,12 +1,16 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
+#include <CLI/CLI.hpp>
 #include <CLI/Formatter.hpp>
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
-class CLIFmt : public CLI::Formatter {
+class Fmt : public CLI::Formatter {
   public:
-    CLIFmt() noexcept = default;
+    Fmt() noexcept = default;
 
     [[nodiscard]] auto make_subcommands(const CLI::App* app, CLI::AppFormatMode) const
         -> std::string override;
@@ -20,4 +24,4 @@ class CLIFmt : public CLI::Formatter {
                                  CLI::AppFormatMode mode) const -> std::string override;
 };
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

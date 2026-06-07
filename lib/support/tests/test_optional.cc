@@ -1,19 +1,21 @@
 #include <algorithm>
 #include <cctype>
+#include <optional>
 #include <string>
+#include <type_traits>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "helpers.hh"
-
+#include "helpers/inheritance.hh"
 #include "option.hh"
+#include "type_traits.hh"
 #include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Ref construction checks") {
-    STATIC_CHECK_FALSE(std::is_constructible_v<opt::detail::Ref<i32>, i32&&>);
-    STATIC_CHECK(TriviallyCopyable<opt::detail::Ref<i32>>);
+    STATIC_CHECK_FALSE(traits::Constructible<opt::detail::Ref<i32>, i32&&>);
+    STATIC_CHECK(traits::TriviallyCopyable<opt::detail::Ref<i32>>);
 }
 
 TEST_CASE("Option template specialization") {
@@ -22,12 +24,13 @@ TEST_CASE("Option template specialization") {
     STATIC_CHECK(std::is_same_v<opt::Option<i32>, std::optional<i32>>);
 }
 
-TEST_CASE("Option template checks") {
-    STATIC_CHECK(opt::is_option<opt::Option<int>>::value);
-    STATIC_CHECK(opt::is_option<opt::Option<int&>>::value);
-    STATIC_CHECK(opt::is_option_v<opt::Option<int>>);
-    STATIC_CHECK(opt::is_option_v<opt::Option<int&>>);
-    STATIC_CHECK_FALSE(opt::is_option_v<int>);
+TEST_CASE("Option traits") {
+    STATIC_CHECK(traits::is_option<opt::Option<i32>>::value);
+    STATIC_CHECK(traits::is_option<opt::Option<i32&>>::value);
+    STATIC_CHECK(traits::is_option_v<opt::Option<i32>>);
+    STATIC_CHECK(traits::is_option_v<opt::Option<i32&>>);
+    STATIC_CHECK_FALSE(traits::is_option_v<i32>);
+    STATIC_CHECK(traits::Option<opt::Option<i32&>>);
 }
 
 TEST_CASE("Ref basic construction") {
@@ -43,17 +46,10 @@ TEST_CASE("Ref basic construction") {
 }
 
 TEST_CASE("Ref null use & access") {
-    SECTION("Default") {
-        const opt::detail::Ref<i32> opt{};
-        CHECK_FALSE(opt.has_value());
-        CHECK_THROWS_AS(opt.value(), std::bad_optional_access);
-    }
-
-    SECTION("Explicit") {
-        const opt::detail::Ref<i32> opt{opt::none};
-        CHECK_FALSE(opt.has_value());
-        CHECK_THROWS_AS(opt.value(), std::bad_optional_access);
-    }
+    const opt::detail::Ref<i32> opt1{};
+    CHECK_FALSE(opt1.has_value());
+    const opt::detail::Ref<i32> opt2{opt::none};
+    CHECK_FALSE(opt2.has_value());
 }
 
 TEST_CASE("Ref conversions") {
@@ -145,9 +141,8 @@ TEST_CASE("Ref transform on none") {
 }
 
 TEST_CASE("Boolean wrapper") {
-    opt::detail::Boolean b;
+    opt::Tribool b;
     CHECK_FALSE(b.has_value());
-    CHECK_THROWS_AS(b.value(), std::bad_optional_access);
     CHECK_FALSE(b.value_or(false));
     CHECK_FALSE(b.value_or(0));
 
@@ -157,8 +152,8 @@ TEST_CASE("Boolean wrapper") {
 }
 
 TEST_CASE("Boolean-std optional conversion") {
-    std::optional<bool>  std_b{true};
-    opt::detail::Boolean my_b = std_b;
+    std::optional<bool> std_b{true};
+    opt::Tribool        my_b = std_b;
     REQUIRE(std_b.has_value());
     CHECK(*std_b == *my_b);
 
@@ -172,9 +167,8 @@ TEST_CASE("Boolean-std optional conversion") {
 }
 
 TEST_CASE("Index wrapper") {
-    opt::Index i;
+    opt::Size i;
     CHECK_FALSE(i.has_value());
-    CHECK_THROWS_AS(i.value(), std::bad_optional_access);
 
     i = 0;
     CHECK(i.has_value());
@@ -183,7 +177,7 @@ TEST_CASE("Index wrapper") {
 
 TEST_CASE("Index-std optional conversion") {
     std::optional<usize> std_i{42};
-    opt::Index           my_i = std_i;
+    opt::Size            my_i = std_i;
     REQUIRE(std_i.has_value());
     CHECK(*std_i == *my_i);
 
@@ -214,7 +208,6 @@ TEST_CASE("CompactOpt with enum") {
 TEST_CASE("Optional enum wrapper") {
     opt::Option<OptionableEnum> e;
     CHECK_FALSE(e.has_value());
-    CHECK_THROWS_AS(e.value(), std::bad_optional_access);
 
     e = OptionableEnum::A;
     CHECK(e.has_value());
@@ -249,4 +242,4 @@ TEST_CASE("Enum-std optional conversion") {
     CHECK_FALSE(my_i.has_value());
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

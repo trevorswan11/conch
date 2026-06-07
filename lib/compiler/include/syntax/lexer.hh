@@ -5,11 +5,12 @@
 #include <vector>
 
 #include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 class Lexer {
   public:
@@ -33,7 +34,7 @@ class Lexer {
         constexpr auto operator*() const noexcept -> reference { return current_token_; }
         constexpr auto operator->() const noexcept -> pointer { return &current_token_; }
 
-        constexpr auto operator==(std::default_sentinel_t) const noexcept -> bool {
+        [[nodiscard]] constexpr auto operator==(std::default_sentinel_t) const noexcept -> bool {
             return current_token_.type == TokenType::END;
         }
 
@@ -110,4 +111,4 @@ class Lexer {
     friend class Parser;
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

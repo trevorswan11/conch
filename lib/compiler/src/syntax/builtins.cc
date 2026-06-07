@@ -1,9 +1,14 @@
 #include "syntax/builtins.hh"
 
+#include <string_view>
+
+#include "syntax/token_type.hh"
+
 #include "fixed/enum_map.hh"
 #include "fixed/hash_map.hh"
+#include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 namespace {
 
@@ -20,6 +25,7 @@ constexpr auto ALL_BUILTINS_BY_SV = fixed::make_hash_map(builtins::ALIGN_CAST,
                                                          builtins::ALIGN_OF,
                                                          builtins::SIZE_OF,
                                                          builtins::TYPE_OF,
+                                                         builtins::THIS,
                                                          builtins::TAG_NAME,
                                                          builtins::MEMCPY,
                                                          builtins::MEMSET,
@@ -27,7 +33,6 @@ constexpr auto ALL_BUILTINS_BY_SV = fixed::make_hash_map(builtins::ALIGN_CAST,
                                                          builtins::MUL_ADD,
                                                          builtins::CLZ,
                                                          builtins::CTZ,
-                                                         builtins::DIV_MOD,
                                                          builtins::POP_COUNT,
                                                          builtins::SQRT,
                                                          builtins::SIN,
@@ -51,12 +56,12 @@ constexpr auto ALL_BUILTINS_BY_TT = [] {
 
 } // namespace
 
-auto get_builtin_opt(TokenType tok) noexcept -> opt::Option<std::string_view> {
-    return ALL_BUILTINS_BY_TT[tok];
+auto get_builtin_opt(TokenType tt) noexcept -> opt::Option<std::string_view> {
+    return ALL_BUILTINS_BY_TT[tt];
 }
 
 auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType> {
     return ALL_BUILTINS_BY_SV.get_opt(sv).materialize();
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

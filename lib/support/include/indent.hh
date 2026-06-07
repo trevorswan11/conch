@@ -2,9 +2,10 @@
 
 #include <ranges>
 #include <string>
+#include <string_view>
 #include <vector>
 
-namespace porpoise {
+namespace ghoti {
 
 namespace symbols {
 
@@ -44,4 +45,4 @@ class Indent {
     std::vector<bool> levels_;
 };
 
-} // namespace porpoise
+} // namespace ghoti

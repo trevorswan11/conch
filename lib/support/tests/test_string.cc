@@ -1,8 +1,13 @@
+#include <string>
+#include <string_view>
+#include <type_traits>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "string.hh"
+#include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("String traits") {
     STATIC_CHECK(traits::StringLike<std::string>);
@@ -68,4 +73,4 @@ TEST_CASE("String view conversion") {
     CHECK(string::to_view(view) == string::to_view(str));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

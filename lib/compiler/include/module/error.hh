@@ -2,8 +2,9 @@
 
 #include "diagnostic.hh"
 #include "result.hh"
+#include "types.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 enum class Error : u8 {
     PATH_DOES_NOT_EXIST,
@@ -22,4 +23,4 @@ template <typename... Args>
     return make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

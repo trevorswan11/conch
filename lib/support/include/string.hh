@@ -4,12 +4,13 @@
 #include <cctype>
 #include <concepts>
 #include <ranges>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace traits {
 
@@ -97,4 +98,4 @@ template <traits::StringLike S>
 
 } // namespace string
 
-} // namespace porpoise
+} // namespace ghoti

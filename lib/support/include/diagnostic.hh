@@ -1,23 +1,28 @@
 #pragma once
 
+#include <concepts>
 #include <ostream>
-#include <span>
 #include <sstream>
+#include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include <fmt/base.h>
+#include <fmt/format.h>
+#include <gsl/span>
 #include <magic_enum/magic_enum.hpp>
 
-#include <fmt/format.h>
-
+#include "assert.hh"
 #include "iterator.hh"
 #include "option.hh"
 #include "style.hh"
+#include "type_traits.hh"
 #include "types.hh"
 #include "utility.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // Should be zero indexed and only 1-indexed at print time
 struct SourceLocation {
@@ -95,7 +100,7 @@ auto format_diagnostic(std::ostream&                   os,
 
 } // namespace detail
 
-template <ScopedEnum E> class Diagnostic {
+template <traits::ScopedEnum E> class Diagnostic {
   public:
     explicit Diagnostic(E err) noexcept : error_{err} {}
     Diagnostic(E err, usize line, usize column) noexcept : loc_{{line, column}}, error_{err} {}
@@ -149,6 +154,8 @@ template <ScopedEnum E> class Diagnostic {
     opt::Option<DiagnosticLevel> level_{DiagnosticLevel::ERROR};
 };
 
+namespace traits {
+
 template <typename T> struct is_diagnostic : std::false_type {};
 template <typename T> struct is_diagnostic<Diagnostic<T>> : std::true_type {};
 template <typename T> constexpr bool is_diagnostic_v = is_diagnostic<T>::value;
@@ -156,8 +163,11 @@ template <typename T> constexpr bool is_diagnostic_v = is_diagnostic<T>::value;
 template <typename T>
 concept DiagnosticType = is_diagnostic_v<T>;
 
-template <DiagnosticType D> class DiagnosticList {
+} // namespace traits
+
+template <traits::DiagnosticType D> class DiagnosticList {
   public:
+    using value_type = D;
     MAKE_ITERATOR(Diagnostics, std::vector<D>, diagnostics_) // cppcheck-suppress syntaxError
 
   public:
@@ -173,16 +183,12 @@ template <DiagnosticType D> class DiagnosticList {
         diagnostics_.emplace_back(std::forward<Args>(args)...);
     }
 
-    template <typename Self>
-    [[nodiscard]] auto operator[](this Self&& self, usize idx) noexcept -> auto& {
+    [[nodiscard]] auto operator[](this auto&& self, usize idx) noexcept -> auto& {
+        ASSERT(idx < self.diagnostics_.size(), "Index out of range");
         return self.diagnostics_[idx];
     }
 
-    template <typename Self> [[nodiscard]] auto at(this Self&& self, usize idx) -> auto& {
-        return self.diagnostics_.at(idx);
-    }
-
-    operator std::span<const D>() const { return diagnostics_; }
+    operator gsl::span<const D>() const { return diagnostics_; }
 
     // Creates a new list with the same terminal behavior
     [[nodiscard]] auto create_new() const -> DiagnosticList { return DiagnosticList{in_terminal_}; }
@@ -193,20 +199,20 @@ template <DiagnosticType D> class DiagnosticList {
     opt::Option<bool> in_terminal_;
 };
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <> struct fmt::formatter<porpoise::SourceLocation> {
+template <> struct fmt::formatter<ghoti::SourceLocation> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const porpoise::SourceLocation& loc, F& ctx) {
+    template <typename F> static auto format(const ghoti::SourceLocation& loc, F& ctx) {
         return fmt::format_to(ctx.out(), "{}:{}", loc.line + 1, loc.column + 1);
     }
 };
 
-template <typename E> struct fmt::formatter<porpoise::Diagnostic<E>> {
+template <typename E> struct fmt::formatter<ghoti::Diagnostic<E>> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const porpoise::Diagnostic<E>& d, F& ctx) {
+    template <typename F> static auto format(const ghoti::Diagnostic<E>& d, F& ctx) {
         return fmt::format_to(ctx.out(), "{}", d.to_string());
     }
 };

@@ -1,10 +1,11 @@
 #include "arena.hh"
 
 #include "assert.hh"
+#include "types.hh"
 
-namespace porpoise::mem {
+namespace ghoti::mem {
 
-// https://github.com/trevorswan11/porpoise/blob/772707146faa9315c24fb079fd759f3715442db1/old/src/util/arena.c
+// https://github.com/trevorswan11/ghoti/blob/772707146faa9315c24fb079fd759f3715442db1/old/src/util/arena.c
 auto Arena::alloc(usize size, usize align) -> void* {
     if (current_) {
         auto        raw_addr    = reinterpret_cast<uptr>(current_ + 1);
@@ -13,7 +14,7 @@ auto Arena::alloc(usize size, usize align) -> void* {
         const usize total_size  = aligned_ptr - raw_addr + size;
 
         if (total_size <= BLOCK_SIZE) {
-            offset_ += total_size;
+            offset_ = total_size;
             return reinterpret_cast<void*>(aligned_ptr);
         } else if (current_->next) {
             current_ = current_->next;
@@ -52,4 +53,4 @@ auto Arena::Block::alloc(Arena& a, usize size, usize align) -> void* {
     return a.alloc(size, align);
 }
 
-} // namespace porpoise::mem
+} // namespace ghoti::mem

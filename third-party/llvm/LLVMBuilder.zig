@@ -678,9 +678,9 @@ fn createConfigHeaders(self: *const Self, target: std.Target) ConfigHeaders {
     }, .{
         .PACKAGE_NAME = "LLVM",
         .PACKAGE_VERSION = version_str,
-        .PACKAGE_STRING = "LLVM-porpoise-" ++ version_str,
+        .PACKAGE_STRING = "LLVM-ghoti-" ++ version_str,
         .PACKAGE_BUGREPORT = "https://github.com/llvm/llvm-project/issues/",
-        .PACKAGE_VENDOR = "https://github.com/trevorswan11/porpoise",
+        .PACKAGE_VENDOR = "https://github.com/trevorswan11/ghoti",
         .BUG_REPORT_URL = "https://github.com/llvm/llvm-project/issues/",
 
         .ENABLE_BACKTRACES = 1,

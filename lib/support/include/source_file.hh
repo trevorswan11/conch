@@ -4,12 +4,14 @@
 #include <string_view>
 #include <vector>
 
+#include "assert.hh"
 #include "diagnostic.hh"
 #include "iterator.hh"
 #include "option.hh"
+#include "types.hh"
 #include "utility.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 // A map from 0-indexed line number to the start of the line
 class LineOffsets {
@@ -22,8 +24,10 @@ class LineOffsets {
 
     MAKE_MOVE_ONLY(LineOffsets)
 
-    [[nodiscard]] auto operator[](usize line) const noexcept -> usize { return offsets_[line]; }
-    [[nodiscard]] auto at(usize line) const -> usize { return offsets_.at(line); }
+    [[nodiscard]] auto operator[](usize line) const noexcept -> usize {
+        ASSERT(line < offsets_.size(), "Line offset out of range");
+        return offsets_[line];
+    }
 
   private:
     Offsets offsets_;
@@ -60,4 +64,4 @@ class SourceFile {
     LineOffsets offsets_;
 };
 
-} // namespace porpoise
+} // namespace ghoti

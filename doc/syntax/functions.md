@@ -2,7 +2,7 @@
 - Functions are defined using the standard declaration syntax
 - Function types can be aliased with a `using` statement
 - Function parameters are immutable by default
-```porpoise
+```ghoti
 const foo := fn(a: i32, b: u32): u64 {
     // ...
 };
@@ -14,12 +14,12 @@ const foo := fn(a: i32, b: u32): u64 {
     - All parameters are implicitly constant values
 - A parameter may be passed by const reference by marking it as `&`
     - To call such a function, the call site must also indicate with the `&` operator
-    - A const pointer is created with the same operator, but the definition denotes this with `*`
+    - A const pointer is created with the `^` operator which the function must also indicate
 - A parameter may be passed by mutable reference by marking it as `&mut`
     - To call such a function, the call site must also indicate with the `&mut` operator
-    - A mutable pointer is created with the same operator, but the definition denotes this with `*mut`
+    - A mutable pointer is created with the `^mut` operator which the function must also indicate
 - There are no default parameters
-```porpoise
+```ghoti
 const foo := fn(a: &i32): u64 {
     // ...
 };
@@ -44,8 +44,8 @@ _ = baz(&mut b);    // Illegal, cannot mutate const
 ```
 
 - Variadic function parameters are supported to allow for c-interop
-    - Currently, porpoise does not expose primitives for interacting with this parameter type
-    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(*byte, ...): i32;`
+    - Currently, ghoti does not expose primitives for interacting with this parameter type
+    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(^byte, ...): i32;`
 
 ## Semantics
 - There is no function overloading
@@ -70,19 +70,19 @@ _ = baz(&mut b);    // Illegal, cannot mutate const
     - If calling a member function, the syntax is similar to other languages (`instance.func(args...)`)
         - This requires the function to have a self parameter, as discussed in the struct, enum, and union documentation
         - The callee must have mutability that matches the explicit self parameter
-    - If calling a static struct function, the syntax uses the scope resolution operator (`Struct::func(args...)`)
+    - If calling a 'static' struct function (one without a self parameter), the syntax uses the dot operator (`Struct.func(args...)`)
 
 ## Types
 - Function's signatures are their types, including parameter modifiers and the return type
     - Note that these signatures do not contain parameter names (this is not supported, even optionally)
     - Signatures do include the variadic argument distinction
 - A function can be declared verbosely by using the type before the declaration function
-```porpoise
+```ghoti
 const f: fn(bool): i32 = fn(b: bool): i32 { ... };
 ```
 
 - You can also use this to indicate that a function takes a function as an argument
-```porpoise
+```ghoti
 const f := fn(g: fn(): i32): i32 { ... };
 ```
 

@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <new>
 
 #include <catch2/catch_session.hpp>

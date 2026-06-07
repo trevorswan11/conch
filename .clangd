@@ -7,4 +7,5 @@ CompileFlags:
         ]
 
 Diagnostics:
-     Suppress: [ static_non_static ]
+    Suppress: [static_non_static]
+    MissingIncludes: Strict

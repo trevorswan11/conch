@@ -103,7 +103,7 @@ const ProjectPaths = struct {
         .src = "lib/driver/src/",
         .tests = "lib/driver/tests/",
     };
-    const porpoise = "porpoise/main.cc";
+    const ghoti = "ghoti/main.cc";
 
     const support: Project = .{
         .inc = "lib/support/include/",
@@ -203,7 +203,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     libsupport: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
     libdriver: *std.Build.Step.Compile,
-    porpoise: *std.Build.Step.Compile,
+    ghoti: *std.Build.Step.Compile,
     tests: ?TestArtifacts,
     cppcheck: ?*std.Build.Step.Compile,
 } {
@@ -217,12 +217,16 @@ fn addArtifacts(b: *std.Build, config: struct {
     const unordered_dense = b.dependency("unordered_dense", .{});
     const unordered_dense_inc = unordered_dense.path("include");
 
+    const gsl = b.dependency("gsl", .{});
+    const gsl_inc = gsl.path("include");
+
     const cli11 = b.dependency("cli11", .{});
     const cli11_inc = cli11.path("include");
 
     const system_includes = [_]std.Build.LazyPath{
         magic_enum_inc,
         unordered_dense_inc,
+        gsl_inc,
         cli11_inc,
     };
 
@@ -305,7 +309,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libdriver.step);
 
     // The shippable executable
-    const porpoise = createExecutable(b, .{
+    const ghoti = createExecutable(b, .{
         .target = target,
         .optimize = config.optimize,
         .include_paths = &.{
@@ -314,22 +318,22 @@ fn addArtifacts(b: *std.Build, config: struct {
             b.path(ProjectPaths.support.inc),
         },
         .cxx = .{
-            .files = &.{ProjectPaths.porpoise},
+            .files = &.{ProjectPaths.ghoti},
             .flags = config.cxx_flags,
         },
         .system_include_paths = &system_includes,
         .link_libraries = &.{ libdriver, fmt_dep.artifact },
     }, .{
-        .name = "porpoise",
+        .name = "ghoti",
         .behavior = config.behavior orelse .{
             .runnable = .{
                 .cmd_name = "run",
-                .cmd_desc = "Run porpoise with provided command line arguments",
+                .cmd_desc = "Run ghoti with provided command line arguments",
             },
         },
     });
-    if (config.auto_install) b.installArtifact(porpoise);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &porpoise.step);
+    if (config.auto_install) b.installArtifact(ghoti);
+    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &ghoti.step);
 
     var tests: ?TestArtifacts = null;
     if (building_for_host) {
@@ -470,7 +474,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         .libsupport = libsupport,
         .libcompiler = libcompiler,
         .libdriver = libdriver,
-        .porpoise = porpoise,
+        .ghoti = ghoti,
         .tests = tests,
         .cppcheck = if (cppcheck_dep) |dep| dep.artifact else null,
     };
@@ -885,7 +889,7 @@ const LOCCounter = struct {
         }
     };
 
-    const counted_extensions = [_][]const u8{ ".cc", ".hh", ".zig", ".p" };
+    const counted_extensions = [_][]const u8{ ".cc", ".hh", ".inc", ".zig", ".gh" };
     const dropped_file_config: CollectFilesConfig = .{
         .allowed_extensions = &.{ ".zig", ".h", ".in" },
         .return_basenames_only = true,
@@ -915,7 +919,7 @@ const LOCCounter = struct {
                 .allowed_extensions = &counted_extensions,
                 .extra_files = &.{"build.zig"},
             }),
-            try collectFiles(b, "porpoise", .{ .allowed_extensions = &counted_extensions }),
+            try collectFiles(b, "ghoti", .{ .allowed_extensions = &counted_extensions }),
             try collectFiles(b, "tools", .{ .allowed_extensions = &counted_extensions }),
         });
 
@@ -1078,23 +1082,23 @@ fn addPackageStep(b: *std.Build, config: struct {
         std.debug.assert(artifacts.tests == null);
         std.debug.assert(artifacts.cppcheck == null);
 
-        artifacts.porpoise.out_filename = blk: {
-            const name = artifacts.porpoise.name;
+        artifacts.ghoti.out_filename = blk: {
+            const name = artifacts.ghoti.name;
             break :blk if (target.result.os.tag == .windows)
                 b.fmt("{s}-{s}.exe", .{ name, version_str })
             else
                 b.fmt("{s}-{s}", .{ name, version_str });
         };
-        artifacts.porpoise.root_module.strip = true;
+        artifacts.ghoti.root_module.strip = true;
 
-        const package_artifact_dirname = b.fmt("porpoise-{s}-{s}", .{
+        const package_artifact_dirname = b.fmt("ghoti-{s}-{s}", .{
             try query.zigTriple(b.allocator),
             version_str,
         });
 
         const staging = b.addWriteFiles();
-        const artifact_dest_path = b.fmt("{s}/{s}", .{ package_artifact_dirname, artifacts.porpoise.out_filename });
-        _ = staging.addCopyFile(artifacts.porpoise.getEmittedBin(), artifact_dest_path);
+        const artifact_dest_path = b.fmt("{s}/{s}", .{ package_artifact_dirname, artifacts.ghoti.out_filename });
+        _ = staging.addCopyFile(artifacts.ghoti.getEmittedBin(), artifact_dest_path);
 
         const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
             .{ b.path("LICENSE"), "LICENSE" },

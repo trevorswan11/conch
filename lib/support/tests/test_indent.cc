@@ -3,7 +3,7 @@
 
 #include "indent.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Indents over time") {
     Indent indent;
@@ -38,4 +38,4 @@ TEST_CASE("Indents over time") {
     }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -1,12 +1,23 @@
 #pragma once
 
-#include <magic_enum/magic_enum_flags.hpp>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <magic_enum/magic_enum.hpp>
 
 #include "ast/handle.hh"
-
+#include "ast/id.hh"
 #include "syntax/error.hh"
+#include "syntax/token_type.hh"
 
-namespace porpoise {
+#include "enum.hh"
+#include "iterator.hh"
+#include "option.hh"
+#include "result.hh"
+#include "types.hh"
+
+namespace ghoti {
 
 namespace syntax { class Parser; } // namespace syntax
 
@@ -43,29 +54,13 @@ enum class DeclModifiers : u8 {
     PUBLIC    = 1 << 3,
     EXTERN    = 1 << 4,
     EXPORT    = 1 << 5,
-    STATIC    = 1 << 6,
 };
 
-constexpr auto operator|(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
-    return static_cast<DeclModifiers>(std::to_underlying(lhs) | std::to_underlying(rhs));
-}
-
-constexpr auto operator&(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
-    return static_cast<DeclModifiers>(std::to_underlying(lhs) & std::to_underlying(rhs));
-}
-
-constexpr auto operator^(DeclModifiers lhs, DeclModifiers rhs) -> DeclModifiers {
-    return static_cast<DeclModifiers>(std::to_underlying(lhs) ^ std::to_underlying(rhs));
-}
-
-constexpr auto operator|=(DeclModifiers& lhs, DeclModifiers rhs) -> DeclModifiers& {
-    lhs = lhs | rhs;
-    return lhs;
-}
+MAKE_ENUM_OPERATORS(DeclModifiers)
 
 struct DeclStatement {
-    IdentifierHandle              ident;
-    TypeHandle                    type;
+    IdentifierHandle              name;
+    opt::Option<ExplicitTypeID>   explicit_type;
     opt::Option<ExpressionHandle> value;
     DeclModifiers                 modifiers;
 
@@ -99,9 +94,11 @@ struct DiscardStatement {
 struct ExpressionStatement {
     ExpressionHandle expression;
 
-    [[nodiscard]] static auto parse(syntax::Parser& parser, bool require_semicolon)
+    [[nodiscard]] static auto parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
         -> Result<StatementHandle, syntax::Diagnostic>;
 };
+
+class AST;
 
 struct ImportStatement {
     ImportPayloadHandle           payload;
@@ -113,6 +110,9 @@ struct ImportStatement {
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
         -> Result<StatementHandle, syntax::Diagnostic>;
+
+    [[nodiscard]] auto get_name(const AST& tree) const noexcept
+        -> std::pair<ast::IdentifierHandle, std::string_view>;
 };
 
 struct ReturnStatement {
@@ -144,8 +144,8 @@ struct UsingStatement {
 
 } // namespace ast
 
-} // namespace porpoise
+} // namespace ghoti
 
-template <> struct magic_enum::customize::enum_range<porpoise::ast::DeclModifiers> {
+template <> struct magic_enum::customize::enum_range<ghoti::ast::DeclModifiers> {
     static constexpr bool is_flags = true;
 };

@@ -1,26 +1,70 @@
 #pragma once
 
 #include <algorithm>
-#include <span>
+#include <array>
+#include <concepts>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <gsl/span>
 
-#include "string.hh"
+#include "module/module.hh"
 
-namespace porpoise::tests::helpers {
+#include "option.hh"
+#include "result.hh"
+#include "types.hh"
+
+namespace ghoti::tests::helpers {
+
+template <typename T>
+concept Unwrappable =
+    traits::Option<std::remove_cvref_t<T>> || traits::Result<std::remove_cvref_t<T>> ||
+    traits::OptSize<std::remove_cvref_t<T>>;
+
+// Unpacks the value in the option or result and returns its value if present
+template <Unwrappable U> [[nodiscard]] auto unwrap(U&& u) -> decltype(auto) {
+    REQUIRE(u);
+    return *u;
+}
+
+// Unpacks the value in the option or result and returns its value if present and equal to expected
+template <Unwrappable U, typename E>
+[[nodiscard]] auto unwrap(U&& u, E&& expected_value) -> decltype(auto) {
+    REQUIRE(u);
+    REQUIRE(*u == std::forward<E>(expected_value));
+    return *u;
+}
+
+template <Unwrappable U> auto unwrap_err(U&& u) -> decltype(auto) {
+    using T = std::remove_cvref_t<U>;
+    if constexpr (traits::is_option_v<T>) {
+        REQUIRE_FALSE(u);
+    } else if constexpr (traits::is_result_v<T>) {
+        REQUIRE_FALSE(u);
+        return u.error();
+    }
+}
 
 // Checks if the error list is empty, dumping the list's contents otherwise.
-template <typename E> auto check_errors(std::span<const E> errors) {
+template <typename E> auto check_errors(gsl::span<const E> errors) {
     if (!errors.empty()) { fmt::println("{}", errors); }
-    CHECK(errors.empty());
+    REQUIRE(errors.empty());
+}
+
+// Checks if the error list is empty, dumping the list's contents otherwise.
+template <typename DiagList> auto check_errors(const mod::Module& module) {
+    if (const auto diags = module.diagnostics.as_opt<DiagList>()) {
+        check_errors<typename DiagList::value_type>(*diags);
+    }
 }
 
 // Checks if the error list is matches the expected, dumping the list's contents otherwise.
-template <typename E, typename... Es>
-auto check_errors_against(std::span<const E> errors, Es&&... expected_errors) {
+template <typename E, std::same_as<E>... Es>
+auto check_errors_against(gsl::span<const E> errors, Es&&... expected_errors) {
     const std::array expected_arr{std::forward<Es>(expected_errors)...};
     constexpr auto   expected_count = sizeof...(Es);
 
@@ -38,8 +82,11 @@ auto check_errors_against(std::span<const E> errors, Es&&... expected_errors) {
     }
 }
 
-constexpr auto trim_semicolons(std::string_view str) -> std::string_view {
-    return string::trim_right(str, [](byte b) { return b == ';'; });
+template <typename DiagList, std::same_as<typename DiagList::value_type>... Es>
+auto check_errors_against(const mod::Module& module, Es&&... expected_errors) {
+    const auto& diags = unwrap(module.diagnostics.as_opt<DiagList>());
+    check_errors_against<typename DiagList::value_type>(diags,
+                                                        std::forward<Es>(expected_errors)...);
 }
 
 template <typename T, typename... Ts> auto make_vector(Ts&&... es) -> std::vector<T> {
@@ -62,4 +109,4 @@ template <typename T, usize N> constexpr auto combinations(std::array<T, N> inpu
     return results;
 }
 
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 enum class Precedence : u8 {
     LOWEST,
@@ -32,4 +32,4 @@ struct Binding {
     [[nodiscard]] static auto try_get_from(TokenType tt) noexcept -> opt::Option<Binding>;
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

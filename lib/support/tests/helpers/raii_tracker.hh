@@ -2,16 +2,7 @@
 
 #include "types.hh"
 
-namespace porpoise::tests::helpers {
-
-struct Base {
-    virtual ~Base() = default;
-    i32 x           = 10;
-};
-
-struct Derived : Base {
-    i32 y = 20;
-};
+namespace ghoti::tests::helpers {
 
 // Non-thread-safe tracker for memory-critical testing
 struct RAIITracker {
@@ -44,38 +35,11 @@ struct RAIITracker {
         move_count++;
     }
 
-    auto operator=(RAIITracker&&) noexcept {
+    auto operator=(RAIITracker&&) noexcept -> RAIITracker& {
+        live_count++;
         move_count++;
         return *this;
     }
 };
 
-enum class MockEnum : u8 {
-    A,
-    B,
-    C,
-    D,
-};
-
-enum class MockPositiveEnum : u8 {
-    A = 1,
-    B,
-    C,
-    D,
-};
-
-enum class MockNegativeEnum : i8 {
-    A = -1,
-    B,
-    C,
-    D,
-};
-
-enum class NonMonotonicEnum : u8 {
-    A = 0,
-    B = 10,
-    C = 25,
-    D = 23,
-};
-
-} // namespace porpoise::tests::helpers
+} // namespace ghoti::tests::helpers

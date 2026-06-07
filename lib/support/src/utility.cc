@@ -11,8 +11,8 @@
 #    define ISATTY isatty
 #endif
 
-namespace porpoise {
+namespace ghoti {
 
 auto is_tty() noexcept -> bool { return ISATTY(STDOUT_FILENO); }
 
-} // namespace porpoise
+} // namespace ghoti

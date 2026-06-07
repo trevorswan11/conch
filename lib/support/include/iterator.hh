@@ -3,7 +3,9 @@
 #include <tuple>
 #include <type_traits>
 
-namespace porpoise {
+#include "type_traits.hh"
+
+namespace ghoti {
 
 // Similar to a std::pair, but the Visitor may be a function pointer
 template <typename Iterable, typename Visitor> struct IterPair {
@@ -13,9 +15,7 @@ template <typename Iterable, typename Visitor> struct IterPair {
 
 namespace traits {
 
-template <typename Self, typename T>
-using data_pointer_t =
-    std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const T*, T*>;
+template <typename Self, typename T> using data_pointer_t = const_dispatch_t<Self, T>*;
 
 template <typename T>
 concept InsertablePair = requires {
@@ -27,19 +27,14 @@ concept InsertablePair = requires {
 } // namespace traits
 
 // Gives the enclosing type an iterator interface based on an iterator-capable type
-#define MAKE_UNALIASED_ITERATOR(Container, member)                                           \
-    using iterator       = typename Container::iterator;                                     \
-    using const_iterator = typename Container::const_iterator;                               \
-                                                                                             \
-    template <typename Self> [[nodiscard]] constexpr auto begin(this Self&& self) noexcept { \
-        return self.member.begin();                                                          \
-    }                                                                                        \
-                                                                                             \
-    template <typename Self> [[nodiscard]] constexpr auto end(this Self&& self) noexcept {   \
-        return self.member.end();                                                            \
-    }                                                                                        \
-                                                                                             \
-    [[nodiscard]] constexpr auto size() const noexcept -> usize { return member.size(); }    \
+#define MAKE_UNALIASED_ITERATOR(Container, member)                                                \
+    using iterator       = typename Container::iterator;                                          \
+    using const_iterator = typename Container::const_iterator;                                    \
+                                                                                                  \
+    [[nodiscard]] constexpr auto begin(this auto&& self) noexcept { return self.member.begin(); } \
+    [[nodiscard]] constexpr auto end(this auto&& self) noexcept { return self.member.end(); }     \
+                                                                                                  \
+    [[nodiscard]] constexpr auto size() const noexcept -> usize { return member.size(); }         \
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return member.empty(); }
 
 // Gives the enclosing type an iterator interface and type alias based on an iterator-capable type
@@ -47,4 +42,4 @@ concept InsertablePair = requires {
     using Alias = Container;                    \
     MAKE_UNALIASED_ITERATOR(Alias, member)
 
-} // namespace porpoise
+} // namespace ghoti

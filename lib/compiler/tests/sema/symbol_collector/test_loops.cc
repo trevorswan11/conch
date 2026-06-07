@@ -1,30 +1,35 @@
+#include <string_view>
+#include <utility>
+
 #include <catch2/catch_test_macros.hpp>
+#include <gsl/pointers>
 
+#include "ast/statement.hh"
+#include "helpers/common.hh"
 #include "helpers/sema.hh"
+#include "sema/error.hh"
+#include "sema/symbol.hh"
+#include "sema/type.hh"
 
-namespace porpoise::tests {
+#include "memory.hh"
+#include "types.hh"
 
-namespace mut = sema::types::mut;
+namespace ghoti::tests {
 
 namespace {
 
-[[nodiscard]] auto test_loop(std::string_view input, usize expected_reg_count)
-    -> helpers::SemaTestContext {
+[[nodiscard]] auto test_loop(std::string_view input, usize expected_reg_count, usize loop_block_idx)
+    -> mem::Box<helpers::SemaTestContext> {
     auto [ctx, idx] = helpers::collect_and_check(input);
 
-    const auto& registry = ctx.analyzer.get_registry();
+    const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == expected_reg_count);
-    const auto& symbol_a = registry.get_from(0, "a");
-    CHECK_FALSE(symbol_a.has_kind());
-    CHECK_FALSE(symbol_a.has_type());
+    const auto [sym, sym_data, node_data] =
+        ctx->get_ast_sym_info<sema::symbols::Node, ast::DeclStatement>("a", 0);
+    CHECK_FALSE(sym.has_kind());
 
-    REQUIRE(symbol_a.is_symbolic_node());
-    const auto& decl = ctx.root_mod->ast.get_as<ast::DeclStatement>(*symbol_a.get_symbolic_node());
-
-    auto& pool = ctx.analyzer.get_pool();
-    REQUIRE(ctx.root_mod->has_sema_type(**decl.value));
-    auto& expected_type = pool[{sema::TypeKind::BLOCK, mut::IMMUTABLE, 1}];
-    CHECK(&expected_type == &ctx.root_mod->get_sema_type(**decl.value));
+    const auto& actual_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
+    CHECK(actual_type == ctx->get_type(sema::TypeKind::BLOCK, loop_block_idx));
     return std::move(ctx);
 }
 
@@ -32,39 +37,42 @@ namespace {
 
 TEST_CASE("Do-while loop collection") {
     auto ctx =
-        test_loop("const a := do { const foo := bar; } while (blk: { const foo := bar; });", 4);
-    ctx.test_common_decl_collection(1);
-    ctx.test_common_decl_collection(3);
+        test_loop("const a := do { const foo := bar; } while (blk: { const foo := bar; });", 4, 1);
+    ctx->test_common_decl_collection(1);
+    ctx->test_common_decl_collection(3);
 }
 
 TEST_CASE("For loop collection") {
     auto ctx = test_loop("const a := for (0..5, blk: { const foo := bar; }) |i, j| { const foo := "
                          "bar; } else { const foo := bar; };",
-                         5);
+                         5,
+                         3);
 
-    const auto& loop_table = ctx.analyzer.get_table(3);
-    REQUIRE(loop_table.has("i"));
-    CHECK(loop_table.get("i").is_for_loop_capture());
-    REQUIRE(loop_table.has("j"));
-    CHECK(loop_table.get("j").is_for_loop_capture());
+    const auto& loop_table = ctx->analyzer.get_table(3);
+    const auto& i_symbol   = helpers::unwrap(loop_table.get_opt("i"));
+    CHECK(i_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
+    const auto& j_symbol = helpers::unwrap(loop_table.get_opt("i"));
+    CHECK(j_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
 
-    ctx.test_common_decl_collection(2);
-    ctx.test_common_decl_collection(3);
-    ctx.test_common_decl_collection(4);
+    ctx->test_common_decl_collection(2);
+    ctx->test_common_decl_collection(3);
+    ctx->test_common_decl_collection(4);
 }
 
 TEST_CASE("Infinite loop collection") {
-    auto ctx = test_loop("const a := loop { const foo := bar; };", 2);
-    ctx.test_common_decl_collection(1);
+    auto ctx = test_loop("const a := loop { const foo := bar; };", 2, 1);
+    ctx->test_common_decl_collection(1);
 }
 
 TEST_CASE("While loop collection") {
-    auto ctx = test_loop("const a := while (blk: { const foo := bar; }) : (i += 1) { const foo := "
-                         "bar; } else { const foo := bar; };",
+    auto ctx = test_loop("const a := while (blk: { const foo := bar; }) : (i += blk: { const foo "
+                         ":= bar; }) { const foo := bar; } else { const foo := bar; };",
+                         7,
                          5);
-    ctx.test_common_decl_collection(2);
-    ctx.test_common_decl_collection(3);
-    ctx.test_common_decl_collection(4);
+    ctx->test_common_decl_collection(2);
+    ctx->test_common_decl_collection(4);
+    ctx->test_common_decl_collection(5);
+    ctx->test_common_decl_collection(6);
 }
 
 TEST_CASE("Well-placed loop control flow") {
@@ -100,13 +108,13 @@ TEST_CASE("Non-break collected as separate scope") {
 TEST_CASE("Non-break collection shadowing") {
     helpers::test_collector_fail(
         "const a := for (0..5) |i| { const foo := bar; } else { var a: i32; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'. Previous declaration here: 1:1",
+        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
                          std::pair{0uz, 55uz}});
 
     helpers::test_collector_fail(
         "const a := while (true) : (i += 1) { const foo := bar; } else { var a: i32; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'. Previous declaration here: 1:1",
+        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
                          std::pair{0uz, 64uz}});
 }
@@ -114,27 +122,27 @@ TEST_CASE("Non-break collection shadowing") {
 TEST_CASE("Shadowing in loops") {
     helpers::test_collector_fail(
         "const a := for (0..5) |i| { var a: i32; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'. Previous declaration here: 1:1",
+        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
                          std::pair{0uz, 28uz}});
 
     helpers::test_collector_fail(
         "const a := for (0..5) |i| { var i: i32; };",
-        sema::Diagnostic{"Redeclaration of symbol 'i'. Previous declaration here: 1:24",
+        sema::Diagnostic{"Redeclaration of symbol 'i'; previous declaration here: 1:24",
                          sema::Error::IDENTIFIER_REDECLARATION,
                          std::pair{0uz, 28uz}});
 
     helpers::test_collector_fail(
         "const a := loop { var a: i32; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'. Previous declaration here: 1:1",
+        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
                          std::pair{0uz, 18uz}});
 
     helpers::test_collector_fail(
         "const a := while (true) { var a: i32; };",
-        sema::Diagnostic{"Attempt to shadow identifier 'a'. Previous declaration here: 1:1",
+        sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
                          std::pair{0uz, 26uz}});
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

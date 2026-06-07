@@ -1,16 +1,15 @@
 #pragma once
 
 #include <string_view>
-#include <utility>
 
-#include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
 #include "enum.hh"
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
-using Builtin = std::pair<std::string_view, TokenType>;
+using Builtin = TypedIdentifier;
 
 namespace builtins {
 
@@ -29,6 +28,7 @@ constexpr Builtin SLICE_FROM_PTR{"@sliceFromPtr", TokenType::BUILTIN_SLICE_FROM_
 constexpr Builtin ALIGN_OF{"@alignOf", TokenType::BUILTIN_ALIGN_OF};
 constexpr Builtin SIZE_OF{"@sizeOf", TokenType::BUILTIN_SIZE_OF};
 constexpr Builtin TYPE_OF{"@typeOf", TokenType::BUILTIN_TYPE_OF};
+constexpr Builtin THIS{"@this", TokenType::BUILTIN_THIS};
 constexpr Builtin TAG_NAME{"@tagName", TokenType::BUILTIN_TAG_NAME};
 
 constexpr Builtin MEMCPY{"@memcpy", TokenType::BUILTIN_MEMCPY};
@@ -38,7 +38,6 @@ constexpr Builtin MEMMOVE{"@memmove", TokenType::BUILTIN_MEMMOVE};
 constexpr Builtin MUL_ADD{"@mulAdd", TokenType::BUILTIN_MUL_ADD};
 constexpr Builtin CLZ{"@clz", TokenType::BUILTIN_CLZ};
 constexpr Builtin CTZ{"@ctz", TokenType::BUILTIN_CTZ};
-constexpr Builtin DIV_MOD{"@divMod", TokenType::BUILTIN_DIV_MOD};
 constexpr Builtin POP_COUNT{"@popCount", TokenType::BUILTIN_POP_COUNT};
 constexpr Builtin SQRT{"@sqrt", TokenType::BUILTIN_SQRT};
 constexpr Builtin SIN{"@sin", TokenType::BUILTIN_SIN};
@@ -63,4 +62,4 @@ constexpr auto ALL_TOKEN_TYPES =
 [[nodiscard]] auto get_builtin_opt(TokenType tok) noexcept -> opt::Option<std::string_view>;
 [[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

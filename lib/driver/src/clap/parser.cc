@@ -1,37 +1,44 @@
-#include <iostream>
-
-#include <fmt/color.h>
-#include <fmt/ostream.h>
-
-#include <CLI/CLI.hpp>
-
-#include "clap/formatter.hh"
 #include "clap/parser.hh"
 
+#include <iostream>
+
+#include <CLI/CLI.hpp>
+#include <fmt/color.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+
+#include "clap/formatter.hh"
+#include "cmd/debug.hh"
+
+#include "assert.hh"
 #include "memory.hh"
+#include "result.hh"
 #include "style.hh"
+#include "types.hh"
 
 #include <config.h>
 
-namespace porpoise::clap {
+namespace ghoti::clap {
 
-Parser::Parser(i32 argc, byte** argv) noexcept : argc_{argc} {
-    app_.formatter(mem::make_rc<CLIFmt>());
-    argv_ = app_.ensure_utf8(argv);
+Parser::Parser(i32 argc, byte** argv, std::ostream& os, bool ensure_utf8) noexcept
+    : argc_{argc}, os_{os} {
+    ASSERT(argc > 0, "The program name must be present");
+    app_.formatter(mem::make_rc<Fmt>());
+    argv_ = ensure_utf8 ? app_.ensure_utf8(argv) : argv;
 }
 
-auto Parser::parse() -> Result<Unit, i32> {
-    app_.usage("Usage: porpoise [command] [options]");
-    app_.set_version_flag("-v,--version", fmt::format("porpoise v{} ({})", VERSION_STR, GIT_INFO));
+auto Parser::parse() -> Result<void, i32> {
+    app_.usage("Usage: ghoti [command] [options]");
+    app_.set_version_flag("-v,--version", fmt::format("ghoti v{} ({})", VERSION_STR, GIT_INFO));
     app_.require_subcommand(1);
 
     const auto* ast_app = app_.add_subcommand("debug", "Run the CLI interactive debugger");
 
     // No arguments should be handled by printing help an exiting
     if (argc_ == 1) {
-        fmt::println(std::cerr, "{}", app_.help());
-        fmt::print(style::RED_BOLD, "error");
-        fmt::println(std::cerr, ": expected command argument");
+        fmt::println(os_, "{}", app_.help());
+        os_ << fmt::format(style::RED_BOLD, "error");
+        fmt::println(os_, ": expected command argument");
         return Err{1};
     }
 
@@ -40,7 +47,7 @@ auto Parser::parse() -> Result<Unit, i32> {
     } catch (const CLI::ParseError& e) { return Err{app_.exit(e)}; };
     if (ast_app->parsed()) { parsed_.emplace<cmd::Debug>(); }
 
-    return Unit{};
+    return {};
 }
 
-} // namespace porpoise::clap
+} // namespace ghoti::clap

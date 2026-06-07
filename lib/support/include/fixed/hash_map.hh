@@ -5,21 +5,23 @@
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <span>
-#include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include <gsl/span>
+
+#include "assert.hh"
+#include "fixed/storage.hh"
 #include "hash.hh"
 #include "iterator.hh"
 #include "math.hh"
 #include "option.hh"
 #include "string.hh"
+#include "type_traits.hh"
 #include "types.hh"
 
-#include "fixed/storage.hh"
-
-namespace porpoise::fixed {
+namespace ghoti::fixed {
 
 namespace detail {
 
@@ -90,9 +92,7 @@ class HashMapIterator {
     using value_type        = std::pair<const Key, Value>;
     using difference_type   = idiff;
     using pointer           = void;
-    using reference =
-        std::pair<const Key&,
-                  std::conditional_t<std::is_const_v<HashMapSelf>, const Value, Value>&>;
+    using reference         = std::pair<const Key&, traits::const_dispatch_t<HashMapSelf, Value>&>;
 
     // Facilitates `->` operator usage without violating memory safety
     struct Proxy {
@@ -152,11 +152,10 @@ class HashMapIterator {
 };
 
 // Heavily inspired by Zig's hash map implementation and trevor's C version:
-// https://github.com/trevorswan11/porpoise/blob/4577f3279f5ab09e32a13b8cacb044da686e64bd/src/util/containers/hash_map.c
+// https://github.com/trevorswan11/ghoti/blob/4577f3279f5ab09e32a13b8cacb044da686e64bd/src/util/containers/hash_map.c
 template <typename Key, typename Value, usize Capacity, typename Hash, typename Equal>
+    requires(is_power_of_two(Capacity))
 class HashMap {
-    static_assert(is_power_of_two(Capacity), "HashMap capacity must be a power of two");
-
   public:
     using iterator       = HashMapIterator<HashMap, Key, Value, Capacity>;
     using const_iterator = HashMapIterator<std::add_const_t<HashMap>, Key, Value, Capacity>;
@@ -165,11 +164,11 @@ class HashMap {
     constexpr HashMap() noexcept = default;
     constexpr ~HashMap() { clear(); }
     constexpr ~HashMap()
-        requires(TriviallyDestructible<Key> && TriviallyDestructible<Value>)
+        requires(traits::TriviallyDestructible<Key> && traits::TriviallyDestructible<Value>)
     = default;
 
     constexpr HashMap(const HashMap&)
-        requires(TriviallyCopyable<Key> && TriviallyCopyable<Value>)
+        requires(traits::TriviallyCopyable<Key> && traits::TriviallyCopyable<Value>)
     = default;
 
     constexpr HashMap(const HashMap& other) {
@@ -184,7 +183,7 @@ class HashMap {
     }
 
     constexpr auto operator=(const HashMap&) -> HashMap&
-        requires(TriviallyCopyable<Key> && TriviallyCopyable<Value>)
+        requires(traits::TriviallyCopyable<Key> && traits::TriviallyCopyable<Value>)
     = default;
 
     constexpr auto operator=(const HashMap& other) -> HashMap& {
@@ -216,7 +215,7 @@ class HashMap {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto get_metadata() const noexcept -> std::span<const Metadata> {
+    [[nodiscard]] constexpr auto get_metadata() const noexcept -> gsl::span<const Metadata> {
         return metadata_;
     }
 
@@ -250,11 +249,8 @@ class HashMap {
         }
 
         // It's cheaper to lower probing distance after deletions by recycling a tombstone
-        if (first_tombstone_idx < Capacity) {
-            probe = first_tombstone_idx;
-        } else if (limit == 0) {
-            throw std::out_of_range{"HashMap is full"};
-        }
+        if (first_tombstone_idx < Capacity) { probe = first_tombstone_idx; }
+        ASSERT(limit != 0, "HashMap is full");
         metadata_[probe].fill(fingerprint);
         size_ += 1;
 
@@ -267,22 +263,18 @@ class HashMap {
     }
 
     // Returns a reference to the value at the key if present
-    template <typename Self>
-    [[nodiscard]] constexpr auto get(this Self&& self, const Key& key) -> auto& {
+    [[nodiscard]] constexpr auto get(this auto&& self, const Key& key) noexcept -> auto& {
         const auto idx = self.index_of(key);
-        if (!idx) { throw std::out_of_range{"Illegal get on missing key"}; }
+        ASSERT(idx, "Illegal get on missing key");
         return *(self.value_data() + *idx);
     }
 
     // Returns a reference to the value at the key or none if the key is not present
     template <typename Self>
-    [[nodiscard]] constexpr auto get_opt(this Self&& self, const Key& key) noexcept {
-        using ReturnType = std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>,
-                                              opt::Option<const Value&>,
-                                              opt::Option<Value&>>;
-
-        const auto idx = self.index_of(key);
-        return idx ? ReturnType{*(self.value_data() + *idx)} : ReturnType{};
+    [[nodiscard]] constexpr auto get_opt(this Self&& self, const Key& key) noexcept
+        -> opt::Option<traits::const_dispatch_t<Self, Value>&> {
+        if (const auto idx = self.index_of(key)) { return *(self.value_data() + *idx); }
+        return opt::none;
     }
 
     // Removes the key value pair from the map, NOOP if not present
@@ -309,23 +301,24 @@ class HashMap {
         return HashMapIterator<std::remove_reference_t<Self>, Key, Value, Capacity>{self, Capacity};
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto key_data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto key_data(this auto&& self) noexcept -> auto* {
         return self.keys_.data();
     }
 
-    template <typename Self>
-    [[nodiscard]] constexpr auto value_data(this Self&& self) noexcept -> auto* {
+    [[nodiscard]] constexpr auto value_data(this auto&& self) noexcept -> auto* {
         return self.values_.data();
     }
 
     // Destroys all key-value pairs and resets the tracked size
     constexpr auto clear() noexcept -> void {
-        if constexpr (!TriviallyDestructible<Key> || !TriviallyDestructible<Value>) {
+        if constexpr (!traits::TriviallyDestructible<Key> ||
+                      !traits::TriviallyDestructible<Value>) {
             for (usize i = 0; i < Capacity; ++i) {
                 if (metadata_[i].is_used()) {
-                    if constexpr (!TriviallyDestructible<Key>) { std::destroy_at(key_data() + i); }
-                    if constexpr (!TriviallyDestructible<Value>) {
+                    if constexpr (!traits::TriviallyDestructible<Key>) {
+                        std::destroy_at(key_data() + i);
+                    }
+                    if constexpr (!traits::TriviallyDestructible<Value>) {
                         std::destroy_at(value_data() + i);
                     }
                 }
@@ -425,12 +418,13 @@ template <traits::InsertablePair... Pairs>
     using Key   = std::common_type_t<std::tuple_element_t<0, std::remove_cvref_t<Pairs>>...>;
     using Value = std::common_type_t<std::tuple_element_t<1, std::remove_cvref_t<Pairs>>...>;
 
+    using std::get;
     HashMap<Key, Value, N> map;
-    (..., [&map](auto&& pair) {
-        map.emplace(std::get<0>(std::forward<decltype(pair)>(pair)),
-                    std::get<1>(std::forward<decltype(pair)>(pair)));
-    }(kv_pairs));
+    (..., [&] {
+        map.emplace(get<0>(std::forward<decltype(kv_pairs)>(kv_pairs)),
+                    get<1>(std::forward<decltype(kv_pairs)>(kv_pairs)));
+    }());
     return map;
 }
 
-} // namespace porpoise::fixed
+} // namespace ghoti::fixed

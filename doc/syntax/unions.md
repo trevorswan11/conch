@@ -1,5 +1,5 @@
 # Unions
-- Unions in porpoise act very similar to tagged unions in other languages
+- Unions in ghoti act very similar to tagged unions in other languages
 - Unions are defined using the standard declaration syntax or with a `using` statement
     - In the event that the standard declaration syntax is used, it must be `const`
 - A union is defined by a a comma separated list of key-value pairs, where:
@@ -11,7 +11,8 @@
     - You can also use this to match over an union, capturing the active fields value with a capture clause
 - The inner types of a union are not restricted to any subset or superset of the language (i.e. you are not restricted to only primitive types nor are you prohibited from using user-defined types)
 - Initializing a union is done through the exact same mechanism as structs, using the `Name{.field = value}` syntax (shorthand `.{.field = value}`)
-```porpoise
+- To access a union's members, the `.` operator is used
+```ghoti
 const Hand := union {
     card: bool,
     pen: i32,
@@ -31,9 +32,7 @@ match (h1) {
 };
 ```
 - You can put declarations inside of an union as you would with a struct
-    - These can be member functions, static functions, or static variables only
-        - Member functions have a first argument which is an instance of the union as explained in the struct documentation
-    - Attempting to emplace an instance variable in an union is not supported
-        - This means that all non-function declarations must be explicitly marked `static`
+    - Member functions have a first argument which is an instance of the enum as explained in the struct documentation
+    - There is no concept of an instance field in an enum
     - These members must appear after all fields
 - Union 'members' can also be `using` or `import` statements

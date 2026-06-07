@@ -1,16 +1,32 @@
+#include "syntax/parser.hh"
+
+#include <string_view>
+#include <utility>
+
 #include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 
+#include "ast/expression.hh"
+#include "ast/handle.hh"
+#include "ast/id.hh"
+#include "ast/primitive.hh"
+#include "ast/statement.hh"
 #include "syntax/builtins.hh"
+#include "syntax/error.hh"
 #include "syntax/keywords.hh"
-#include "syntax/parser.hh"
 #include "syntax/precedence.hh"
 #include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
+#include "diagnostic.hh"
 #include "enum.hh"
 #include "fixed/enum_map.hh"
+#include "option.hh"
+#include "result.hh"
+#include "types.hh"
+#include "variant.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 auto Parser::reset(std::string_view input) noexcept -> void {
     ast_.reset();
@@ -42,7 +58,7 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
 
         // Comments are entirely discarded from the tree
         if (!current_token_is(TokenType::COMMENT)) {
-            auto stmt = parse_statement(true);
+            auto stmt = parse_statement();
             if (stmt) {
                 ast.add_root(**stmt);
             } else {
@@ -66,12 +82,18 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
     return diagnostics;
 }
 
-auto Parser::expect_peek(TokenType expected) -> Result<Unit, Diagnostic> {
+auto Parser::expect_peek(TokenType expected) -> Result<void, Diagnostic> {
     if (peek_token_is(expected)) {
         advance();
         return {};
     }
     return Err{peek_error(expected)};
+}
+
+auto Parser::expect_semicolon() -> Result<void, Diagnostic> {
+    using TokenType::SEMICOLON;
+    if (current_token_is(SEMICOLON)) { return {}; }
+    return expect_peek(SEMICOLON);
 }
 
 auto Parser::peek_error(TokenType expected) -> Diagnostic {
@@ -99,7 +121,8 @@ auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, opt::
         .value_or(std::pair{Precedence::LOWEST, opt::none});
 }
 
-auto Parser::parse_statement(bool require_semicolon) -> Result<ast::StatementHandle, Diagnostic> {
+auto Parser::parse_statement(SemicolonBehavior behavior)
+    -> Result<ast::StatementHandle, Diagnostic> {
     // Not all decls are public so the condition needs to be rechecked
     if (current_token_.type == TokenType::PUBLIC) {
         switch (peek_token_.type) {
@@ -121,7 +144,7 @@ auto Parser::parse_statement(bool require_semicolon) -> Result<ast::StatementHan
     case TokenType::RETURN:     return ast::ReturnStatement::parse(*this);
     case TokenType::TEST:       return ast::TestStatement::parse(*this);
     case TokenType::USING:      return ast::UsingStatement::parse(*this);
-    default:                    return ast::ExpressionStatement::parse(*this, require_semicolon);
+    default:                    return ast::ExpressionStatement::parse(*this, behavior);
     }
 }
 
@@ -150,9 +173,9 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
     return lhs_expression;
 }
 
-[[nodiscard]] auto Parser::parse_restricted_statement(Error error, bool require_semicolon)
+[[nodiscard]] auto Parser::parse_restricted_statement(Error error, SemicolonBehavior behavior)
     -> Result<ast::StatementHandle, Diagnostic> {
-    auto clause = TRY(parse_statement(require_semicolon));
+    auto clause = TRY(parse_statement(behavior));
 
     // The clause can only be a jump, block, or expression statement
     if (!clause.any<ast::ExpressionStatement,
@@ -165,12 +188,12 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
     return clause;
 }
 
-[[nodiscard]] auto Parser::try_parse_restricted_alternate(Error error, bool require_semicolon)
+[[nodiscard]] auto Parser::try_parse_restricted_alternate(Error error, SemicolonBehavior behavior)
     -> Result<opt::Option<ast::StatementHandle>, Diagnostic> {
     if (peek_token_is(TokenType::ELSE)) {
         // Advance twice to actually look at the statement's first token
         advance(2);
-        return TRY(parse_restricted_statement(error, require_semicolon));
+        return TRY(parse_restricted_statement(error, behavior));
     }
     return opt::none;
 }
@@ -191,9 +214,12 @@ constexpr auto PREFIX_FNS = [] {
     fns[TokenType::STAR]             = ast::DereferenceExpression::parse;
     fns[TokenType::BW_AND]           = ast::ReferenceExpression::parse;
     fns[TokenType::AND_MUT]          = ast::ReferenceExpression::parse;
+    fns[TokenType::CARET]            = ast::AddressOfExpression::parse;
+    fns[TokenType::CARET_MUT]        = ast::AddressOfExpression::parse;
     fns[TokenType::DOT]              = ast::ImplicitAccessExpression::parse;
     fns[TokenType::BOOLEAN_TRUE]     = ast::BoolExpression::parse;
     fns[TokenType::BOOLEAN_FALSE]    = ast::BoolExpression::parse;
+    fns[TokenType::UNDEFINED]        = ast::UndefinedExpression::parse;
     fns[TokenType::LBRACE]           = ast::VoidExpression::parse;
     fns[TokenType::STRING]           = ast::StringExpression::parse;
     fns[TokenType::MULTILINE_STRING] = ast::StringExpression::parse;
@@ -246,7 +272,7 @@ constexpr auto INFIX_FNS = [] {
     fns[TokenType::BOOLEAN_OR]     = ast::BinaryExpression::parse;
     fns[TokenType::BW_AND]         = ast::BinaryExpression::parse;
     fns[TokenType::BW_OR]          = ast::BinaryExpression::parse;
-    fns[TokenType::XOR]            = ast::BinaryExpression::parse;
+    fns[TokenType::CARET]          = ast::BinaryExpression::parse;
     fns[TokenType::SHR]            = ast::BinaryExpression::parse;
     fns[TokenType::SHL]            = ast::BinaryExpression::parse;
     fns[TokenType::DOT]            = ast::DotExpression::parse;
@@ -267,7 +293,7 @@ constexpr auto INFIX_FNS = [] {
     fns[TokenType::SHR_ASSIGN]     = ast::AssignmentExpression::parse;
     fns[TokenType::NOT_ASSIGN]     = ast::AssignmentExpression::parse;
     fns[TokenType::XOR_ASSIGN]     = ast::AssignmentExpression::parse;
-    fns[TokenType::COLON_COLON]    = ast::ScopeResolutionExpression::parse;
+    fns[TokenType::COLON_COLON]    = ast::ModuleAccessExpression::parse;
     fns[TokenType::COLON]          = ast::LabelExpression::parse;
 
     return fns;
@@ -289,4 +315,4 @@ auto Parser::get_location_of(ast::ExplicitTypeID id) -> SourceLocation {
     return ast_->location_of(id);
 }
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

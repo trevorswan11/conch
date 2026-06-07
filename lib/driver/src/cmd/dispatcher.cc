@@ -2,11 +2,14 @@
 
 #include "cmd/debug.hh"
 
-namespace porpoise::cmd {
+#include "result.hh"
+#include "types.hh"
 
-auto Dispatcher::operator()(Debug& dump) -> Result<Unit, i32> {
+namespace ghoti::cmd {
+
+auto Dispatcher::operator()(Debug& dump) -> Result<void, i32> {
     dump.run();
-    return Unit{};
+    return {};
 }
 
-} // namespace porpoise::cmd
+} // namespace ghoti::cmd

@@ -1,15 +1,14 @@
 #pragma once
 
 #include <string_view>
-#include <utility>
 
-#include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
 #include "option.hh"
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
-using Operator = std::pair<std::string_view, TokenType>;
+using Operator = TypedIdentifier;
 
 namespace operators {
 
@@ -27,7 +26,7 @@ constexpr Operator PERCENT{"%", TokenType::PERCENT};
 constexpr Operator PERCENT_ASSIGN{"%=", TokenType::PERCENT_ASSIGN};
 constexpr Operator BANG{"!", TokenType::BANG};
 constexpr Operator AND_MUT{"&mut", TokenType::AND_MUT};
-constexpr Operator STAR_MUT{"*mut", TokenType::STAR_MUT};
+constexpr Operator CARET_MUT{"^mut", TokenType::CARET_MUT};
 
 constexpr Operator BW_AND{"&", TokenType::BW_AND};
 constexpr Operator BW_AND_ASSIGN{"&=", TokenType::BW_AND_ASSIGN};
@@ -39,7 +38,7 @@ constexpr Operator SHR{">>", TokenType::SHR};
 constexpr Operator SHR_ASSIGN{">>=", TokenType::SHR_ASSIGN};
 constexpr Operator NOT{"~", TokenType::NOT};
 constexpr Operator NOT_ASSIGN{"~=", TokenType::NOT_ASSIGN};
-constexpr Operator XOR{"^", TokenType::XOR};
+constexpr Operator CARET{"^", TokenType::CARET};
 constexpr Operator XOR_ASSIGN{"^=", TokenType::XOR_ASSIGN};
 
 constexpr Operator BOOLEAN_AND{"and", TokenType::BOOLEAN_AND};
@@ -66,4 +65,4 @@ constexpr Operator NULL_TERMINATED{":0", TokenType::NULL_TERMINATED};
 [[nodiscard]] auto max_operator_length() noexcept -> usize;
 [[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

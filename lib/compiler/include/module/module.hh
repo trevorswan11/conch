@@ -1,71 +1,70 @@
 #pragma once
 
+#include <concepts>
 #include <filesystem>
+#include <functional>
 #include <ostream>
 #include <string>
+#include <string_view>
+#include <type_traits>
 
 #include <ankerl/unordered_dense.h>
+#include <gsl/pointers>
 
 #include "ast/ast.hh"
-
-#include "sema/attachments.hh"
-#include "sema/error.hh"
-
-#include "syntax/error.hh"
-
+#include "ast/expression.hh"
+#include "ast/traits.hh"
+#include "module/error.hh"
 #include "module/source_loader.hh"
+#include "sema/error.hh"
+#include "sema/side_tables.hh"
+#include "syntax/error.hh"
 
 #include "hash.hh"
 #include "memory.hh"
+#include "option.hh"
 #include "result.hh"
 #include "source_file.hh"
+#include "types.hh"
 #include "utility.hh"
 #include "variant.hh"
 
-namespace porpoise::mod {
+namespace ghoti::mod {
 
 enum class ModuleState : u8 {
     PARSED,
     SYMBOLS_COLLECTED,
+    TYPE_RESOLVING,
     TYPE_RESOLVED,
     TYPE_CHECKED,
 
     POISONED_SYMBOL_COLLECTION,
+    POISONED_TYPE_RESOLVING,
     POISONED_TYPE_RESOLVED,
     POISONED_TYPE_CHECKED,
     ERRORED,
 };
 
-// cppcheck-suppress-begin internalAstError
-using DiagnosticListVariant = std::variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
-// cppcheck-suppress-end internalAstError
-
-#define MAKE_MODULE_DIAGNOSTIC_UNPACKER(name, checker, DiagType)                \
-    [[nodiscard]] auto CONCAT(get_, name)() const noexcept -> const DiagType& { \
-        try {                                                                   \
-            return std::get<DiagType>(diagnostics);                             \
-        } catch (...) { std::unreachable(); }                                   \
-    }                                                                           \
-                                                                                \
-    [[nodiscard]] auto CONCAT(has_, name)() const noexcept -> bool {            \
-        return checker() && std::holds_alternative<DiagType>(diagnostics);      \
-    }
+using DiagnosticListVariant = Variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
 
 struct Module {
     std::filesystem::path path;
     std::filesystem::path parent_path;
     SourceFile            source;
-    ast::AST              ast;
+    ast::AST              ast{};
     sema::SideTables      sema_side_tables;
-    opt::Index            root_table_idx;
-    ModuleState           state;
+    opt::Size             root_table_idx;
+    ModuleState           state{ModuleState::PARSED};
 
     DiagnosticListVariant diagnostics{Unit{}};
 
-    MAKE_MODULE_DIAGNOSTIC_UNPACKER(parser_diagnostics, is_errored, syntax::Diagnostics)
-    MAKE_MODULE_DIAGNOSTIC_UNPACKER(sema_diagnostics, is_poisoned, sema::Diagnostics)
+    Module(std::filesystem::path path,
+           std::filesystem::path parent_path,
+           SourceFile            source) noexcept
+        : path{std::move(path)}, parent_path{std::move(parent_path)}, source{std::move(source)} {}
 
-    MAKE_VARIANT_MATCHER(diagnostics)
+    ~Module() = default;
+    MAKE_MOVE_ONLY(Module)
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>
@@ -99,31 +98,65 @@ struct Module {
                                   state == mod::ModuleState::POISONED_SYMBOL_COLLECTION);
     }
 
-    template <ast::traits::IndexableID ID>
+    template <traits::IndexableID ID>
     [[nodiscard]] constexpr auto has_sema_type(ID id) const noexcept -> bool {
-        if constexpr (ast::traits::IndexableNodeID<ID>) {
+        if constexpr (traits::IndexableNodeID<ID>) {
             return sema_side_tables.node_types[id].has_value();
         } else {
             return sema_side_tables.explicit_types[id].has_value();
         }
     }
 
-    template <ast::traits::IndexableID ID>
-    [[nodiscard]] constexpr auto get_sema_type(ID id) noexcept -> sema::Type& {
-        if constexpr (ast::traits::IndexableNodeID<ID>) {
-            return *sema_side_tables.node_types[id];
+    [[nodiscard]] auto has_sema_type(const ast::MatchExpression::Arm& arm) const noexcept -> bool {
+        return sema_side_tables.match_arm_types[arm.pattern].has_value();
+    }
+
+    template <traits::IndexableID ID>
+    [[nodiscard]] constexpr auto get_sema_type_opt(this auto&& self, ID id) noexcept {
+        if constexpr (traits::IndexableNodeID<ID>) {
+            return self.sema_side_tables.node_types[id];
         } else {
-            return *sema_side_tables.explicit_types[id];
+            return self.sema_side_tables.explicit_types[id];
         }
     }
 
-    template <ast::traits::IndexableID ID>
+    template <traits::IndexableID ID>
+    [[nodiscard]] constexpr auto get_sema_type(this auto&& self, ID id) noexcept -> auto& {
+        return *self.get_sema_type_opt(id);
+    }
+
+    [[nodiscard]] auto get_sema_type_opt(this auto&&                      self,
+                                         const ast::MatchExpression::Arm& arm) noexcept {
+        return self.sema_side_tables.match_arm_types[arm.pattern];
+    }
+
+    [[nodiscard]] auto get_sema_type(const ast::MatchExpression::Arm& arm) const noexcept -> auto& {
+        return *get_sema_type_opt(arm);
+    }
+
+    template <traits::IndexableID ID>
     constexpr auto set_sema_type(ID id, sema::Type& type) noexcept -> void {
-        if constexpr (ast::traits::IndexableNodeID<ID>) {
+        if constexpr (traits::IndexableNodeID<ID>) {
             sema_side_tables.node_types[id].emplace(type);
         } else {
             sema_side_tables.explicit_types[id].emplace(type);
         }
+    }
+
+    // Sets the sema type only if there wasn't one already, returns true if modified
+    template <traits::IndexableID ID>
+    constexpr auto set_sema_type_if(ID id, sema::Type& type) noexcept -> bool {
+        if (has_sema_type(id)) { return false; }
+        if constexpr (traits::IndexableNodeID<ID>) {
+            sema_side_tables.node_types[id].emplace(type);
+        } else {
+            sema_side_tables.explicit_types[id].emplace(type);
+        }
+        return true;
+    }
+
+    auto set_sema_type(const ast::MatchExpression::Arm& arm, sema::Type& type) noexcept -> void {
+        sema_side_tables.match_arm_types[arm.pattern].emplace(type);
     }
 };
 
@@ -141,28 +174,28 @@ class ModuleManager {
     // Asserts that the path is relative and its parent is absolute
     [[nodiscard]] auto try_get_file_module(const std::filesystem::path& path,
                                            const std::filesystem::path& parent_path = {})
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Attempts to load the module from the loader and parse its contents
     [[nodiscard]] auto try_get_library_module(std::string_view name)
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Adds a library module and its underlying path to the lookup table
     [[nodiscard]] auto add_library_module(std::string_view name, const std::filesystem::path& path)
-        -> Result<Unit, Diagnostic>;
+        -> Result<void, Diagnostic>;
 
   private:
     [[nodiscard]] auto try_get(const std::filesystem::path& path)
-        -> Result<mem::NonNull<Module>, Diagnostic>;
+        -> Result<gsl::not_null<Module*>, Diagnostic>;
 
   private:
     SourceLoader&                                                         loader_;
     ankerl::unordered_dense::map<std::filesystem::path, mem::Box<Module>> modules_;
 
-    // Maps physical porpoise modules to their path on disk
+    // Maps physical ghoti modules to their path on disk
     ankerl::unordered_dense::
         map<std::string, std::filesystem::path, hash::StringTransparentHash, std::equal_to<>>
             module_lut_;
 };
 
-} // namespace porpoise::mod
+} // namespace ghoti::mod

@@ -2,18 +2,21 @@
 
 #include <bit>
 #include <limits>
+#include <string_view>
 
+#include <fmt/base.h>
 #include <fmt/format.h>
+#include <magic_enum/magic_enum.hpp>
 
 #include "ast/kind.hh"
-
 #include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
 #include "assert.hh"
 #include "option.hh"
 #include "types.hh"
 
-namespace porpoise {
+namespace ghoti {
 
 namespace ast {
 
@@ -31,6 +34,12 @@ class NodeID {
 
     [[nodiscard]] constexpr auto get_kind() const noexcept -> NodeKind {
         return static_cast<NodeKind>((raw_ & KIND_MASK) >> KIND_OFFSET);
+    }
+
+    // Useful when the token type holds information about a node that is not known at creation
+    constexpr auto set_token_type(syntax::TokenType type) noexcept -> void {
+        raw_ &= ~TOKEN_TYPE_MASK;
+        raw_ |= static_cast<u64>(type) << TOKEN_TYPE_OFFSET;
     }
 
     [[nodiscard]] constexpr auto get_token_type() const noexcept -> syntax::TokenType {
@@ -109,6 +118,7 @@ class TypeModifier {
         PTR,
         MUT_PTR,
         VOLATILE,
+        MUT_VOLATILE,
     };
 
   public:
@@ -116,6 +126,8 @@ class TypeModifier {
     constexpr explicit TypeModifier(Modifier underlying) noexcept : underlying_{underlying} {}
     constexpr explicit TypeModifier(u64 raw) noexcept : underlying_{static_cast<Modifier>(raw)} {}
     explicit TypeModifier(const syntax::Token& tok) noexcept;
+
+    [[nodiscard]] constexpr auto get_raw() const noexcept -> Modifier { return underlying_; }
 
     // Whether or not the type is a 'value' type (no modifier), mutually exclusive result.
     [[nodiscard]] constexpr auto is_value() const noexcept -> bool {
@@ -134,12 +146,14 @@ class TypeModifier {
         return is_mutable_ptr() || is_const_ptr();
     }
 
-    MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY(volatile, Modifier::VOLATILE)
-
-    constexpr friend auto operator==(const TypeModifier& lhs, const TypeModifier& rhs) noexcept
-        -> bool {
-        return lhs.underlying_ == rhs.underlying_;
+    MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY(mutable_volatile, Modifier::MUT_VOLATILE)
+    MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY(const_volatile, Modifier::VOLATILE)
+    [[nodiscard]] constexpr auto is_volatile() const noexcept -> bool {
+        return is_mutable_volatile() || is_const_volatile();
     }
+
+    [[nodiscard]] constexpr auto operator==(const TypeModifier& other) const noexcept
+        -> bool = default;
 
     [[nodiscard]] constexpr explicit operator u64() const noexcept {
         return static_cast<u64>(underlying_);
@@ -148,7 +162,7 @@ class TypeModifier {
   private:
     Modifier underlying_{Modifier::VALUE};
 
-    friend struct fmt::formatter<porpoise::ast::TypeModifier>;
+    friend struct fmt::formatter<ghoti::ast::TypeModifier>;
 };
 
 // A compact id for all AST explicit types
@@ -239,4 +253,4 @@ template <> struct Nullable<ast::ExplicitTypeID> {
 
 } // namespace traits
 
-} // namespace porpoise
+} // namespace ghoti

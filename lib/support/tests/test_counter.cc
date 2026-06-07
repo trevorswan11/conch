@@ -1,8 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "counter.hh"
+#include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 TEST_CASE("Default counter") {
     DefaultCounter c;
@@ -38,4 +39,4 @@ TEST_CASE("Counter operators") {
     CHECK(c);
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

@@ -1,6 +1,6 @@
 #include <config.h>
 
-// I hate that this exists, made with the help of Gemini because microslop
+// "Abandon hope, all ye who enter here"
 #if PLATFORM_WINDOWS
 #    include <atomic>
 #    include <windows.h>
@@ -8,7 +8,7 @@
 #    include "platform/win32.hh"
 #    include "types.hh"
 
-namespace porpoise::win32 {
+namespace ghoti::win32 {
 
 namespace {
 
@@ -48,6 +48,6 @@ RichConsole::~RichConsole() {
     }
 }
 
-} // namespace porpoise::win32
+} // namespace ghoti::win32
 
 #endif

@@ -1,13 +1,20 @@
 #pragma once
 
+#include <filesystem>
 #include <ostream>
 
 #include "module/module.hh"
-
 #include "sema/context.hh"
+#include "sema/error.hh"
 #include "sema/symbol.hh"
+#include "sema/type.hh"
 
-namespace porpoise::sema {
+#include "option.hh"
+#include "result.hh"
+#include "types.hh"
+#include "utility.hh"
+
+namespace ghoti::sema {
 
 // The manager for all steps of semantic analysis.
 class Analyzer {
@@ -22,19 +29,22 @@ class Analyzer {
     MAKE_MOVE_CONSTRUCTABLE_ONLY(Analyzer)
 
     // Runs the entire sema pipeline
-    auto analyze(const std::filesystem::path& entry_path) -> Result<Unit, Diagnostic>;
+    auto analyze(const std::filesystem::path& entry_path) -> Result<void, Diagnostic>;
 
-    template <typename Self> [[nodiscard]] auto get_table(this Self&& self, usize idx) -> auto& {
+    [[nodiscard]] auto get_table(this auto&& self, usize idx) -> auto& {
         return self.registry_.get(idx);
     }
 
-    template <typename Self>
-    [[nodiscard]] auto get_table_opt(this Self&& self, usize idx) noexcept -> auto& {
+    [[nodiscard]] auto get_table_opt(this auto&& self, usize idx) noexcept {
         return self.registry_.get_opt(idx);
     }
 
-    MAKE_DEDUCING_GETTER(registry, SymbolTableRegistry&)
-    MAKE_DEDUCING_GETTER(pool, TypePool&)
+    MAKE_DEDUCING_GETTER(registry)
+    MAKE_DEDUCING_GETTER(pool)
+
+    [[nodiscard]] auto get_prelude_index_opt() const noexcept -> opt::Size {
+        return ctx_.prelude_index;
+    }
 
     auto collect_symbols(mod::Module& module) -> mod::ModuleState;
     auto resolve_types(mod::Module& module) -> mod::ModuleState;
@@ -49,4 +59,4 @@ class Analyzer {
     Context ctx_;
 };
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

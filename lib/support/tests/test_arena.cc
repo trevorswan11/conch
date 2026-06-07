@@ -1,29 +1,39 @@
+#include <array>
+#include <vector>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "arena.hh"
+#include "types.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
+
+namespace {
 
 constexpr usize MARKER{42};
 
-struct Foo {
+struct Large {
     usize                      marker{MARKER};
     std::array<i32, 4 * 1'024> _;
 };
 
-TEST_CASE("Arena pointer stability") {
-    mem::Arena        arena;
-    std::vector<Foo*> foos;
+} // namespace
 
-    SECTION("First use") {
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Foo>().get()); }
+TEST_CASE("Arena pointer stability") {
+    mem::Arena          arena;
+    std::vector<Large*> foos;
+
+    // First use
+    {
+        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 
-    SECTION("Reset and reuse") {
+    // Reset and reuse
+    {
         arena.reset();
         foos.clear();
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Foo>().get()); }
+        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 }
@@ -41,4 +51,4 @@ TEST_CASE("Arena array construction") {
     for (const auto& i : array) { CHECK(i == 0); }
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests

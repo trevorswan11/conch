@@ -4,18 +4,23 @@
 #include <utility>
 
 #include "ast/ast.hh"
-
+#include "ast/handle.hh"
+#include "ast/id.hh"
+#include "ast/kind.hh"
 #include "syntax/error.hh"
 #include "syntax/lexer.hh"
 #include "syntax/precedence.hh"
 #include "syntax/token.hh"
+#include "syntax/token_type.hh"
 
+#include "diagnostic.hh"
+#include "option.hh"
 #include "result.hh"
-#include "variant.hh"
+#include "types.hh"
 
-namespace porpoise::ast { class AST; } // namespace porpoise::ast
+namespace ghoti::ast { class AST; } // namespace ghoti::ast
 
-namespace porpoise::syntax {
+namespace ghoti::syntax {
 
 class Parser {
   public:
@@ -73,7 +78,12 @@ class Parser {
     auto peek_token_is(TokenType t) const noexcept -> bool { return peek_token_.type == t; }
 
     // Advances the cursor tokens only if the expected token type matches the actual peek token.
-    [[nodiscard]] auto expect_peek(TokenType expected) -> Result<Unit, Diagnostic>;
+    [[nodiscard]] auto expect_peek(TokenType expected) -> Result<void, Diagnostic>;
+
+    // Checks for a semicolon in either the current or peak token and advances state accordingly
+    //
+    // Only use this over `expect_peek` when a potentially-block expr has just been parsed
+    [[nodiscard]] auto expect_semicolon() -> Result<void, Diagnostic>;
 
     // Indiscriminately returns an error citing the peek token.
     [[nodiscard]] auto peek_error(TokenType expected) -> Diagnostic;
@@ -81,18 +91,21 @@ class Parser {
     auto get_current_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
     auto get_peek_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
 
-    [[nodiscard]] auto parse_statement(bool require_semicolon)
+    [[nodiscard]] auto parse_statement(SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<ast::StatementHandle, Diagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
         -> Result<ast::ExpressionHandle, Diagnostic>;
 
     // Assumes that the current token is looking at the start of the expression.
     // The resulting statement can only be a jump, block, or expression statement.
-    [[nodiscard]] auto parse_restricted_statement(Error error, bool require_semicolon = true)
+    [[nodiscard]] auto
+    parse_restricted_statement(Error error, SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<ast::StatementHandle, Diagnostic>;
 
     // Parses a restricted statement only if an else token is currently looked at.
-    [[nodiscard]] auto try_parse_restricted_alternate(Error error, bool require_semicolon = true)
+    [[nodiscard]] auto
+    try_parse_restricted_alternate(Error             error,
+                                   SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<opt::Option<ast::StatementHandle>, Diagnostic>;
 
     static auto get_prefix_fn_opt(TokenType tt) noexcept -> opt::Option<PrefixFn>;
@@ -100,8 +113,7 @@ class Parser {
 
     [[nodiscard]] auto get_ast() noexcept -> ast ::AST& { return *ast_; }
 
-    template <ast::traits::ASTNode N>
-    [[nodiscard]] constexpr auto get_node(ast::NodeID id) -> const N& {
+    template <traits::ASTNode N> [[nodiscard]] constexpr auto get_node(ast::NodeID id) -> const N& {
         return ast_->get_as<N>(id);
     }
 
@@ -109,29 +121,28 @@ class Parser {
     [[nodiscard]] auto get_location_of(ast::ExplicitTypeID id) -> SourceLocation;
 
     // Adds an expression to the ast and returns its handle
-    template <ast::traits::ASTNode Data>
-    [[nodiscard]] constexpr auto add_expr(const syntax::Token& start_token, Data&& data) {
-        return add_node<ast::ExpressionHandle>(start_token, std::forward<Data>(data));
+    template <traits::ASTNode Data, typename... Args>
+    [[nodiscard]] constexpr auto add_expr(const syntax::Token& start_token, Args&&... args) {
+        return add_node<ast::ExpressionHandle, Data>(start_token, std::forward<Args>(args)...);
     }
 
     // Adds a statement to the ast and returns its handle
-    template <ast::traits::ASTNode Data>
-    [[nodiscard]] constexpr auto add_stmt(const syntax::Token& start_token, Data&& data) {
-        return add_node<ast::StatementHandle>(start_token, std::forward<Data>(data));
+    template <traits::ASTNode Data, typename... Args>
+    [[nodiscard]] constexpr auto add_stmt(const syntax::Token& start_token, Args&&... args) {
+        return add_node<ast::StatementHandle, Data>(start_token, std::forward<Args>(args)...);
     }
 
     // Adds a node to the ast and casts the result to the requested handle
-    template <typename Handle, ast::traits::ASTNode Data>
-    [[nodiscard]] constexpr auto add_node(const syntax::Token& start_token, Data&& data) -> Handle {
-        return Handle{ast_->add_node(start_token, std::forward<Data>(data))};
+    template <typename Handle, traits::ASTNode Data, typename... Args>
+    [[nodiscard]] constexpr auto add_node(const syntax::Token& start_token, Args&&... args) {
+        return Handle{ast_->add_node(start_token, Data{std::forward<Args>(args)...})};
     }
 
     // Helper for type-ast insertion, reducing a layer of call-site indirection
-    template <ast::traits::ASTExplicitType Data>
-    [[nodiscard]] constexpr auto add_type(const syntax::Token& start_token,
-                                          ast::TypeModifier    mod,
-                                          Data&&               data) -> ast::ExplicitTypeID {
-        return ast_->add_type(start_token, mod, std::forward<Data>(data));
+    template <traits::ASTExplicitType Data, typename... Args>
+    [[nodiscard]] constexpr auto
+    add_type(const syntax::Token& start_token, ast::TypeModifier mod, Args&&... args) {
+        return ast_->add_type(start_token, mod, Data{std::forward<Args>(args)...});
     }
 
   private:
@@ -150,4 +161,4 @@ class Parser {
     opt::Option<ast::AST&> ast_;
 };
 
-} // namespace porpoise::syntax
+} // namespace ghoti::syntax

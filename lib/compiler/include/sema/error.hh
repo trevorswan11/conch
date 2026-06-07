@@ -2,8 +2,9 @@
 
 #include "diagnostic.hh"
 #include "result.hh"
+#include "types.hh"
 
-namespace porpoise::sema {
+namespace ghoti::sema {
 
 enum class Error : u8 {
     IDENTIFIER_REDECLARATION,
@@ -20,6 +21,18 @@ enum class Error : u8 {
     NON_CALLABLE_EXPRESSION,
     ARITY_MISMATCH,
     UNDECLARED_IDENTIFIER,
+    TYPE_MISMATCH,
+    OUTER_SCOPE_NOT_FOUND,
+    CYCLIC_DEPENDENCY,
+    ILLEGAL_SELF_PARAMETER,
+    ILLEGAL_LABEL_USAGE,
+    DUPLICATE_TEST_NAME,
+    DUPLICATE_FIELD,
+    MISSING_FIELD,
+    UNKNOWN_FIELD,
+    DUPLICATE_ENUMERATION,
+    UNKNOWN_ENUMERATION,
+    ILLEGAL_MATCH_PATTERN,
 };
 
 using Diagnostic  = Diagnostic<Error>;
@@ -30,4 +43,4 @@ template <typename... Args>
     return make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
-} // namespace porpoise::sema
+} // namespace ghoti::sema

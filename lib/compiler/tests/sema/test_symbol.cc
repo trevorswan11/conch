@@ -1,11 +1,20 @@
-#include <catch2/catch_test_macros.hpp>
+#include <ranges>
+#include <string>
 #include <tuple>
+#include <utility>
 
+#include <catch2/catch_test_macros.hpp>
+
+#include "ast/handle.hh"
+#include "ast/statement.hh"
+#include "helpers/common.hh"
 #include "helpers/sema.hh"
-
+#include "module/memory_loader.hh"
+#include "module/module.hh"
+#include "sema/error.hh"
 #include "sema/symbol.hh"
 
-namespace porpoise::tests {
+namespace ghoti::tests {
 
 namespace {
 
@@ -17,7 +26,8 @@ namespace {
     const auto mod_result = manager.try_get_library_module("a");
     const auto module     = *mod_result;
     REQUIRE_FALSE(module->is_errored());
-    const auto import_handle = ast::ImportHandle{module->ast[0]};
+    const auto first_node    = module->ast | std::views::take(1);
+    const auto import_handle = ast::ImportHandle{*first_node.begin()};
 
     return std::tuple{module, import_handle, std::pair{std::move(loader), std::move(manager)}};
 }
@@ -29,42 +39,38 @@ TEST_CASE("Basic table operations") {
 
     sema::SymbolTable table;
     CHECK(table.empty());
-    CHECK(table.insert<sema::SymbolicImport>("a", *module, import_handle, opt::none));
+    CHECK(table.insert<sema::symbols::Node>("a", *module, import_handle));
     CHECK(table.size() == 1);
     CHECK_FALSE(table.empty());
 
     CHECK(table.has("a"));
-    const auto& retrieved = table.get_opt("a");
-    CHECK(retrieved);
-    CHECK(retrieved->get_name() == "a");
-    CHECK_FALSE(retrieved->has_type());
-    CHECK(retrieved->is_import_stmt());
+    const auto& retrieved = helpers::unwrap(table.get_opt("a"));
+    CHECK(retrieved.get_name() == "a");
+
+    const auto symbolic_node = helpers::unwrap(retrieved.get_data().as_opt<sema::symbols::Node>());
+    CHECK(symbolic_node->is<ast::ImportStatement>());
 }
 
 TEST_CASE("Duplicate table inserts") {
     const auto [module, import_handle, memory] = setup_basic_import();
     sema::SymbolTable table;
-    CHECK(table.insert<sema::SymbolicImport>("a", *module, import_handle, opt::none));
-    CHECK_FALSE(table.insert<sema::SymbolicImport>("a", *module, import_handle, opt::none));
+    CHECK(table.insert<sema::symbols::Node>("a", *module, import_handle));
+    CHECK_FALSE(table.insert<sema::symbols::Node>("a", *module, import_handle));
     CHECK(table.size() == 1);
 }
 
 TEST_CASE("Illegal registry insert") {
     const auto [module, import_handle, memory] = setup_basic_import();
     sema::SymbolTableRegistry registry;
-    const auto                result =
-        registry.insert_into<sema::SymbolicImport>(0, *module, "a", import_handle, opt::none);
-
-    CHECK_FALSE(result);
-    CHECK(result.error() == sema::Diagnostic{sema::Error::INVALID_TABLE_IDX});
+    const auto                actual = helpers::unwrap_err(
+        registry.insert_into<sema::symbols::Node>(0, *module, "a", import_handle));
+    CHECK(actual == sema::Diagnostic{sema::Error::INVALID_TABLE_IDX});
 }
 
 TEST_CASE("Safety checked registry operations") {
     sema::SymbolTableRegistry registry;
-    CHECK_THROWS(registry.get(1));
     CHECK_FALSE(registry.get_opt(1));
-    CHECK_THROWS(registry.get_from(1, "a"));
     CHECK_FALSE(registry.get_from_opt(1, "a"));
 }
 
-} // namespace porpoise::tests
+} // namespace ghoti::tests
