@@ -15,6 +15,9 @@ concept Signed = std::is_signed_v<T>;
 template <typename T>
 concept Unsigned = std::is_unsigned_v<T>;
 
+template <typename T>
+concept FloatingPoint = std::is_floating_point_v<T>;
+
 template <typename T, typename... Args>
 concept NoThrowConstructible = std::is_nothrow_constructible_v<T, Args...>;
 

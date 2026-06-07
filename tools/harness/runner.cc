@@ -4,7 +4,10 @@
 #include <catch2/catch_session.hpp>
 
 extern "C" {
-auto launch(int argc, char** proc) -> int { return Catch::Session().run(argc, proc); }
+auto launch(int argc, char** proc) -> int {
+    const auto result = Catch::Session().run(argc, proc);
+    return result;
+}
 
 auto alloc(std::size_t size) -> void*;
 auto dealloc(void* ptr) -> void;

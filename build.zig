@@ -117,7 +117,6 @@ const ProjectPaths = struct {
     const stdlib = "lib/std/";
     const compressor = "tools/compressor/";
     const harness = "tools/harness/";
-    const instrumentor = "tools/instrumentor/";
 
     pub fn collectCXXToolingFiles(b: *std.Build) ![]const []const u8 {
         return std.mem.concat(b.allocator, []const u8, &.{
@@ -232,7 +231,6 @@ fn addArtifacts(b: *std.Build, config: struct {
         unordered_dense_inc,
         gsl_inc,
         cli11_inc,
-        b.path(ProjectPaths.instrumentor),
     };
 
     const fmt_dep = fmt.build(b, .{
