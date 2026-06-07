@@ -17,15 +17,15 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "result.hh"
-#include "type_traits.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <result.hh>
+#include <type_traits.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::sema {
 

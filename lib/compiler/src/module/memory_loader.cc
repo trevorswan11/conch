@@ -8,8 +8,8 @@
 
 #include "module/error.hh"
 
-#include "assert.hh"
-#include "result.hh"
+#include <assert.hh>
+#include <result.hh>
 
 namespace ghoti::mod {
 

@@ -14,8 +14,8 @@ namespace ghoti::tests {
 using Foo     = helpers::Foo;
 using Bar     = helpers::Bar;
 using Baz     = helpers::Baz;
-using Tracker = helpers::RAIITracker;
 using FBB     = Variant<Foo, Bar, Baz>;
+using Tracker = helpers::RAIITracker;
 
 TEST_CASE("Variant default construction activates first alternative") {
     Variant<Foo, Bar> v;

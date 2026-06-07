@@ -8,12 +8,12 @@
 #include "ast/visitor.hh"
 #include "syntax/token.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "types.hh"
-#include "utility.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <types.hh>
+#include <utility.hh>
 
 namespace ghoti::ast {
 

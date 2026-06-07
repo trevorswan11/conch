@@ -9,7 +9,7 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 

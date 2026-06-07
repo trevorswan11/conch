@@ -11,9 +11,9 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 

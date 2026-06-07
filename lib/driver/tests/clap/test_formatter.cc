@@ -3,7 +3,7 @@
 
 #include "clap/formatter.hh"
 
-#include "memory.hh"
+#include <memory.hh>
 
 namespace ghoti::tests {
 

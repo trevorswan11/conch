@@ -12,9 +12,9 @@
 #include "ast/traits.hh"
 #include "ast/type.hh"
 
-#include "assert.hh"
-#include "indent.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <indent.hh>
+#include <variant.hh>
 
 namespace ghoti::ast {
 

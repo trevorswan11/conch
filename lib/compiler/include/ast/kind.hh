@@ -2,8 +2,8 @@
 
 #include <concepts>
 
-#include "types.hh"
-#include "variant.hh"
+#include <types.hh>
+#include <variant.hh>
 
 namespace ghoti {
 

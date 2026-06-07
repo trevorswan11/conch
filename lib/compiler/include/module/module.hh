@@ -20,14 +20,14 @@
 #include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
-#include "hash.hh"
-#include "memory.hh"
-#include "option.hh"
-#include "result.hh"
-#include "source_file.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <hash.hh>
+#include <memory.hh>
+#include <option.hh>
+#include <result.hh>
+#include <source_file.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::mod {
 

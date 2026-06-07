@@ -9,10 +9,10 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
-#include "utility.hh"
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
+#include <utility.hh>
 
 namespace ghoti::sema {
 

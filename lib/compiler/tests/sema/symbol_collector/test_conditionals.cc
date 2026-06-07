@@ -5,11 +5,11 @@
 
 #include "helpers/common.hh"
 #include "helpers/sema.hh"
-#include "option.hh"
 #include "sema/error.hh"
-
 #include "sema/symbol.hh"
-#include "types.hh"
+
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 

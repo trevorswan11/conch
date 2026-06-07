@@ -17,9 +17,9 @@
 #include "syntax/parser.hh"
 #include "syntax/token_type.hh"
 
-#include "fixed/enum_map.hh"
-#include "option.hh"
-#include "result.hh"
+#include <fixed/enum_map.hh>
+#include <option.hh>
+#include <result.hh>
 
 namespace ghoti::ast {
 

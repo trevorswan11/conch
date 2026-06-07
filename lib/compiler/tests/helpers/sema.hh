@@ -24,13 +24,13 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include "memory.hh"
-#include "option.hh"
 #include "syntax/error.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+
+#include <memory.hh>
+#include <option.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::tests::helpers {
 

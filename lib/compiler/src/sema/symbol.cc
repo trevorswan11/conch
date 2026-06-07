@@ -11,10 +11,10 @@
 #include "sema/error.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "result.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 

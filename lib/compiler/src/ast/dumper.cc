@@ -14,8 +14,8 @@
 #include "syntax/builtins.hh"
 #include "syntax/token_type.hh"
 
-#include "indent.hh"
-#include "types.hh"
+#include <indent.hh>
+#include <types.hh>
 
 namespace ghoti::ast {
 

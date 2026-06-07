@@ -25,6 +25,14 @@ Upon PR creation and workflow approval, GitHub actions will run `zig build fmt-c
 - Use the `#pragma once` directive over `#ifdef` include guards
 - `#undef` macros in header files after use when possible
 - All files should include only what they use and should avoid transitive includes wherever possible
+- Include groups should be newline-separated and should be ordered as:
+1. The respective header file for the source file (if in a `.cc` file) in quotes
+2. Any standard library includes in angle brackets
+3. Any third party library includes in angle brackets
+4. Any includes from the current library in quotes
+    - This group should include test helpers when applicable
+5. Any includes from other internal libraries in angle brackets
+    - This group should include config headers when applicable
 
 ### Zig
 - Use PascalCase for functions that return a type

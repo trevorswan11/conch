@@ -1,12 +1,19 @@
-#include <config.h>
+#include "platform/win32.hh"
 
 // "Abandon hope, all ye who enter here"
-#if PLATFORM_WINDOWS
+#if GHOTI_WINDOWS
 #    include <atomic>
-#    include <windows.h>
+#    include <handleapi.h>
 
-#    include "platform/win32.hh"
-#    include "types.hh"
+#    include <consoleapi.h>
+#    include <consoleapi2.h>
+
+#    include <minwindef.h>
+#    include <processenv.h>
+#    include <windows.h>
+#    include <winnls.h>
+
+#    include <types.hh>
 
 namespace ghoti::win32 {
 

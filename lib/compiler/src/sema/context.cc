@@ -10,8 +10,8 @@
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
 
-#include "assert.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 

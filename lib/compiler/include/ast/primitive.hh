@@ -6,8 +6,8 @@
 #include "ast/handle.hh"
 #include "syntax/error.hh"
 
-#include "result.hh"
-#include "types.hh"
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti {
 

@@ -10,13 +10,12 @@
 #include <fmt/ranges.h>
 #include <magic_enum/magic_enum.hpp>
 
-#include "ast/dumper.hh"
-#include "module/memory_loader.hh"
-#include "module/module.hh"
-#include "sema/analyzer.hh"
-
-#include "string.hh"
-#include "types.hh"
+#include <ast/dumper.hh>
+#include <module/memory_loader.hh>
+#include <module/module.hh>
+#include <sema/analyzer.hh>
+#include <string.hh>
+#include <types.hh>
 
 namespace ghoti::cmd {
 

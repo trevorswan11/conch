@@ -8,9 +8,9 @@
 #include "syntax/error.hh"
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "result.hh"
-#include "variant.hh"
+#include <option.hh>
+#include <result.hh>
+#include <variant.hh>
 
 namespace ghoti {
 

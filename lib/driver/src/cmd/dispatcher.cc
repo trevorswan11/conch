@@ -2,8 +2,8 @@
 
 #include "cmd/debug.hh"
 
-#include "result.hh"
-#include "types.hh"
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::cmd {
 

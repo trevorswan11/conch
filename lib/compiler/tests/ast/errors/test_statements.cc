@@ -12,7 +12,7 @@
 #include "syntax/error.hh"
 #include "syntax/keywords.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 

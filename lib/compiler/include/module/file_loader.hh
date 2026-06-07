@@ -4,9 +4,9 @@
 #include <string>
 
 #include "module/error.hh"
+#include "module/source_loader.hh"
 
-#include "result.hh"
-#include "source_loader.hh"
+#include <result.hh>
 
 namespace ghoti::mod {
 

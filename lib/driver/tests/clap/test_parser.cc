@@ -9,7 +9,7 @@
 #include "cmd/debug.hh"
 #include "helpers/argv.hh"
 
-#include "variant.hh"
+#include <variant.hh>
 
 namespace ghoti::tests {
 

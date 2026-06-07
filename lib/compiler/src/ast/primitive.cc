@@ -10,11 +10,11 @@
 #include "syntax/parser.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "fixed/vector.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <fixed/vector.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::ast {
 

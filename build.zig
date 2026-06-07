@@ -36,20 +36,23 @@ pub fn build(b: *std.Build) !void {
         "-Wno-gnu-statement-expression-from-macro-expansion",
         "-DMAGIC_ENUM_RANGE_MAX=255",
     });
+    const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DGHOTI_DIST" };
 
     var package_flags = try compiler_flags.clone(b.allocator);
-    const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
     try package_flags.appendSlice(b.allocator, dist_flags);
 
-    const cdb_flags = [_][]const u8{
+    if (b.option(bool, "profile", "Enable chromium tracing") orelse false) {
+        try compiler_flags.append(b.allocator, "-DGHOTI_PROFILE");
+    }
+
+    try compiler_flags.appendSlice(b.allocator, &.{
         "-gen-cdb-fragment-path",
         b.cache_root.join(b.allocator, &.{CDBGenerator.cdb_frags_dirname}) catch @panic("OOM"),
-    };
+    });
 
-    try compiler_flags.appendSlice(b.allocator, &cdb_flags);
     switch (optimize) {
-        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
-        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
+        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DGHOTI_DEBUG" }),
+        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DGHOTI_RELEASE"}),
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
     }
 
@@ -114,6 +117,7 @@ const ProjectPaths = struct {
     const stdlib = "lib/std/";
     const compressor = "tools/compressor/";
     const harness = "tools/harness/";
+    const instrumentor = "tools/instrumentor/";
 
     pub fn collectCXXToolingFiles(b: *std.Build) ![]const []const u8 {
         return std.mem.concat(b.allocator, []const u8, &.{
@@ -178,15 +182,15 @@ fn makeConfigHeader(b: *std.Build, target: std.Build.ResolvedTarget) *std.Build.
     const git_tag = std.mem.trimEnd(u8, git_tag_raw, " \r\n");
 
     return b.addConfigHeader(.{}, .{
-        .VERSION_STR = version_str,
-        .VERSION_MAJOR = @as(i64, version.major),
-        .VERSION_MINOR = @as(i64, version.minor),
-        .VERSION_PATCH = @as(i64, version.patch),
-        .VERSION_PRE = version.pre orelse "",
-        .GIT_INFO = b.fmt("git-{s}{s}{s}", .{ git_hash, if (git_tag_raw.len == 0) "" else "-", git_tag }),
-        .PLATFORM_WINDOWS = target.result.os.tag == .windows,
-        .PLATFORM_LINUX = target.result.os.tag == .linux,
-        .PLATFORM_APPLE = target.result.os.tag == .macos,
+        .GHOTI_VERSION_STR = version_str,
+        .GHOTI_VERSION_MAJOR = @as(i64, version.major),
+        .GHOTI_VERSION_MINOR = @as(i64, version.minor),
+        .GHOTI_VERSION_PATCH = @as(i64, version.patch),
+        .GHOTI_VERSION_PRE = version.pre orelse "",
+        .GHOTI_GIT_INFO = b.fmt("git-{s}{s}{s}", .{ git_hash, if (git_tag_raw.len == 0) "" else "-", git_tag }),
+        .GHOTI_WINDOWS = target.result.os.tag == .windows,
+        .GHOTI_LINUX = target.result.os.tag == .linux,
+        .GHOTI_APPLE = target.result.os.tag == .macos,
     });
 }
 
@@ -228,6 +232,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         unordered_dense_inc,
         gsl_inc,
         cli11_inc,
+        b.path(ProjectPaths.instrumentor),
     };
 
     const fmt_dep = fmt.build(b, .{

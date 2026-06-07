@@ -6,16 +6,12 @@
 #include <CLI/App.hpp>
 
 #include "cmd/debug.hh"
+#include "platform/win32.hh"
 
 #include <config.h>
-
-#if PLATFORM_WINDOWS
-#    include "platform/win32.hh"
-#endif
-
-#include "result.hh"
-#include "types.hh"
-#include "variant.hh"
+#include <result.hh>
+#include <types.hh>
+#include <variant.hh>
 
 namespace ghoti::clap {
 
@@ -36,7 +32,7 @@ class Parser {
     CLI::App app_;
     Parsed   parsed_;
 
-#if PLATFORM_WINDOWS
+#if GHOTI_WINDOWS
     win32::RichConsole console_;
 #endif
 };

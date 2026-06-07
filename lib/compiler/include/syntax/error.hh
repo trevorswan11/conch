@@ -1,8 +1,10 @@
 #pragma once
 
-#include "diagnostic.hh"
-#include "result.hh"
-#include "types.hh"
+#include <utility>
+
+#include <diagnostic.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

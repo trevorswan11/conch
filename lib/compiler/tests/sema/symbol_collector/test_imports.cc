@@ -10,7 +10,7 @@
 #include "sema/type.hh"
 #include "syntax/error.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 

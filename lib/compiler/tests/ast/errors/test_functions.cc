@@ -7,7 +7,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 

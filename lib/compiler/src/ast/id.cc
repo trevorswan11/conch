@@ -7,8 +7,8 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "enum.hh"
-#include "fixed/enum_map.hh"
+#include <enum.hh>
+#include <fixed/enum_map.hh>
 
 namespace ghoti::ast {
 

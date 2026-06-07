@@ -11,16 +11,16 @@
 #include "ast/type.hh"
 #include "module/module.hh"
 
-#include "arena.hh"
-#include "assert.hh"
-#include "enum.hh"
-#include "fixed/vector.hh"
-#include "hash.hh"
-#include "option.hh"
-#include "type_traits.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <arena.hh>
+#include <assert.hh>
+#include <enum.hh>
+#include <fixed/vector.hh>
+#include <hash.hh>
+#include <option.hh>
+#include <type_traits.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::sema {
 

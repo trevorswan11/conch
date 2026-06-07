@@ -8,8 +8,8 @@
 #include <fmt/color.h>
 #include <fmt/ostream.h>
 
-#include "string.hh"
-#include "style.hh"
+#include <string.hh>
+#include <style.hh>
 
 namespace ghoti::clap {
 

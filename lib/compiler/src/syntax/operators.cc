@@ -5,9 +5,9 @@
 
 #include "syntax/token_type.hh"
 
-#include "fixed/hash_map.hh"
-#include "option.hh"
-#include "types.hh"
+#include <fixed/hash_map.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

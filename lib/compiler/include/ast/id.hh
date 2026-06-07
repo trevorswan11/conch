@@ -12,9 +12,9 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "option.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti {
 

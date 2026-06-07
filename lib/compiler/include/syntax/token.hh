@@ -5,8 +5,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "diagnostic.hh"
-#include "types.hh"
+#include <diagnostic.hh>
+#include <types.hh>
 
 namespace ghoti {
 

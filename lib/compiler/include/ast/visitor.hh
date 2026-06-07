@@ -9,7 +9,7 @@
 #include "ast/type.hh"
 // IWYU pragma: end_keep
 
-#include "variant.hh"
+#include <variant.hh>
 
 namespace ghoti::ast {
 

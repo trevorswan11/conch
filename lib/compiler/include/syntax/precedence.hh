@@ -2,8 +2,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "types.hh"
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

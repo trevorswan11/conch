@@ -4,8 +4,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "enum.hh"
-#include "option.hh"
+#include <enum.hh>
+#include <option.hh>
 
 namespace ghoti::syntax {
 

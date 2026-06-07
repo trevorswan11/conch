@@ -12,8 +12,8 @@
 #include "syntax/precedence.hh"
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "result.hh"
+#include <option.hh>
+#include <result.hh>
 
 namespace ghoti::ast {
 

@@ -10,13 +10,12 @@
 #include "clap/formatter.hh"
 #include "cmd/debug.hh"
 
-#include "assert.hh"
-#include "memory.hh"
-#include "result.hh"
-#include "style.hh"
-#include "types.hh"
-
+#include <assert.hh>
 #include <config.h>
+#include <memory.hh>
+#include <result.hh>
+#include <style.hh>
+#include <types.hh>
 
 namespace ghoti::clap {
 
@@ -29,7 +28,8 @@ Parser::Parser(i32 argc, byte** argv, std::ostream& os, bool ensure_utf8) noexce
 
 auto Parser::parse() -> Result<void, i32> {
     app_.usage("Usage: ghoti [command] [options]");
-    app_.set_version_flag("-v,--version", fmt::format("ghoti v{} ({})", VERSION_STR, GIT_INFO));
+    app_.set_version_flag("-v,--version",
+                          fmt::format("ghoti v{} ({})", GHOTI_VERSION_STR, GHOTI_GIT_INFO));
     app_.require_subcommand(1);
 
     const auto* ast_app = app_.add_subcommand("debug", "Run the CLI interactive debugger");

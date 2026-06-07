@@ -16,14 +16,14 @@
 #include "source_file.hh"
 #include "syntax/parser.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "memory.hh"
-#include "option.hh"
-#include "result.hh"
-#include "style.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <memory.hh>
+#include <option.hh>
+#include <result.hh>
+#include <style.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::mod {
 

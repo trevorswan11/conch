@@ -7,9 +7,9 @@
 #include "sema/error.hh"
 #include "sema/passes/symbol_collector.hh"
 #include "sema/passes/type_resolver.hh"
-
-#include "result.hh"
 #include "syntax/error.hh"
+
+#include <result.hh>
 
 namespace ghoti::sema {
 

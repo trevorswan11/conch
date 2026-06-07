@@ -1,6 +1,5 @@
 #pragma once
 
-#include <gsl/pointers>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -24,12 +23,12 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
-#include "utility.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
+#include <utility.hh>
 
 namespace ghoti::sema {
 

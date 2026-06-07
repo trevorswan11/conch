@@ -5,7 +5,7 @@
 
 #include "module/error.hh"
 
-#include "result.hh"
+#include <result.hh>
 
 namespace ghoti::mod {
 

@@ -3,8 +3,8 @@
 #include "clap/parser.hh"
 #include "cmd/dispatcher.hh"
 
-#include "result.hh"
-#include "types.hh"
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::driver {
 

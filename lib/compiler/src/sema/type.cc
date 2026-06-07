@@ -1,12 +1,12 @@
 #include "sema/type.hh"
 
-#include <gsl/pointers>
 #include <string_view>
 
+#include <gsl/pointers>
 #include <gsl/span>
 
-#include "fixed/enum_map.hh"
-#include "types.hh"
+#include <fixed/enum_map.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 

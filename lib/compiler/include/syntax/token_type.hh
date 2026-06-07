@@ -7,10 +7,10 @@
 
 #include <ankerl/unordered_dense.h>
 
-#include "assert.hh"
-#include "hash.hh"
-#include "option.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <hash.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

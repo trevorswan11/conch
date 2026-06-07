@@ -1,10 +1,10 @@
 #include "sema/passes/symbol_collector.hh"
 
-#include <gsl/pointers>
 #include <string_view>
 #include <utility>
 
 #include <fmt/format.h>
+#include <gsl/pointers>
 #include <gsl/span>
 
 #include "ast/expression.hh"
@@ -22,11 +22,11 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "assert.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 

@@ -13,10 +13,10 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "diagnostic.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <diagnostic.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::ast { class AST; } // namespace ghoti::ast
 

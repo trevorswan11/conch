@@ -11,9 +11,9 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "string.hh"
-#include "types.hh"
+#include <option.hh>
+#include <string.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

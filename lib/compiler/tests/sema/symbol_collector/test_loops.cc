@@ -11,8 +11,8 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "memory.hh"
-#include "types.hh"
+#include <memory.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
