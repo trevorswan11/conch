@@ -41,7 +41,7 @@ template <traits::ScopedEnum E> struct Nullable<E> {
 namespace opt {
 
 using None          = std::nullopt_t;
-constexpr None none = std::nullopt;
+constexpr None none = std::nullopt; // NOLINT
 
 namespace detail {
 
@@ -145,7 +145,10 @@ template <traits::Compactable T> class CompactOpt {
 
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
-    constexpr auto emplace(const T& value) noexcept -> void { value_ = value; }
+    template <typename... Args> constexpr auto emplace(Args&&... args) noexcept -> void {
+        value_ = T{std::forward<Args>(args)...};
+    }
+
     constexpr auto reset() noexcept -> void { value_ = NO_VALUE; }
 
     // Resets the optional and returns the stored value
@@ -247,7 +250,7 @@ class Tribool {
     constexpr Tribool(bool value) noexcept : value_{static_cast<u8>(value)} {}
     constexpr Tribool(None) noexcept : value_{NO_VALUE} {}
     constexpr Tribool(const std::optional<bool>& ob) noexcept
-        : value_{ob.transform([](bool b) { return static_cast<u8>(b); }).value_or(NO_VALUE)} {}
+        : value_{ob.transform([](bool b) -> u8 { return b; }).value_or(NO_VALUE)} {}
     // cppcheck-suppress-end noExplicitConstructor
 
     [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return value_ != NO_VALUE; }
@@ -350,17 +353,15 @@ template <typename T> struct is_option : std::false_type {};
 template <typename T> struct is_option<std::optional<T>> : std::true_type {};
 template <typename T> struct is_option<opt::detail::Ref<T>> : std::true_type {};
 template <typename T> struct is_option<opt::detail::CompactOpt<T>> : std::true_type {};
-template <typename T> constexpr bool is_option_v = is_option<T>::value;
 
 template <typename T>
-concept Option = is_option_v<T>;
+concept Option = is_option<T>::value;
 
 template <typename T> struct is_opt_size : std::false_type {};
 template <> struct is_opt_size<opt::Size> : std::true_type {};
-template <typename T> constexpr bool is_opt_size_v = is_opt_size<T>::value;
 
 template <typename T>
-concept OptSize = is_opt_size_v<T>;
+concept OptSize = is_opt_size<T>::value;
 
 } // namespace traits
 

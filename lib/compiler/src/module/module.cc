@@ -27,17 +27,17 @@
 
 namespace ghoti::mod {
 
-auto format_module_diagnostic(std::ostream&                   os,
-                              detail::FormattableDiagnostic&& diag,
-                              opt::Option<const mod::Module&> module,
-                              opt::Option<bool>               in_terminal) -> std::ostream& {
+auto format_module_diagnostic(std::ostream&                        os, // NOLINT
+                              const detail::FormattableDiagnostic& diag,
+                              opt::Option<const mod::Module&>      module,
+                              opt::Option<bool>                    in_terminal) -> std::ostream& {
     const auto tty = in_terminal.value_or(is_tty());
 
     // Without a module, there is no source path and formatting is done trivially
-    if (!module) { return format_diagnostic(os, std::move(diag), opt::none, tty); }
+    if (!module) { return format_diagnostic(os, diag, opt::none, tty); }
 
     // Without location, there's no way to point to an error
-    format_diagnostic(os, std::move(diag), module->path.string(), tty);
+    format_diagnostic(os, diag, module->path.string(), tty);
     if (!diag.location) { return os; }
 
     // Diagnostic error messages can include the location
@@ -50,14 +50,16 @@ auto format_module_diagnostic(std::ostream&                   os,
 auto Module::print_diagnostics(std::ostream& os) const -> void {
     if (is_ok()) { return; }
     diagnostics.visit(
-        [this, &os](const auto& list) {
+        [this, &os](const auto& list) -> void {
             for (const auto& diag : list) {
                 format_module_diagnostic(
                     os, diag.to_formattable(), *this, list.get_terminal_status())
                     << "\n";
             }
         },
-        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); });
+        [](const Unit&) -> void {
+            UNREACHABLE("This function should've never been called with Unit");
+        });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
@@ -107,8 +109,7 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
-    auto       source       = TRY(loader_.load(path));
-    const auto abs_path_str = path.string();
+    auto source = TRY(loader_.load(path));
 
     auto mod = mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)});
     syntax::Parser p{mod->source};

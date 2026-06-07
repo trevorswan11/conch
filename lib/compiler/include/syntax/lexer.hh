@@ -71,8 +71,8 @@ class Lexer {
     auto advance() noexcept -> Token;
     auto consume() -> std::vector<Token>;
 
-    auto begin() noexcept -> Iterator { return Iterator{*this, advance()}; }
-    auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
+    auto        begin() noexcept -> Iterator { return Iterator{*this, advance()}; }
+    static auto end() noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 
   private:
     auto        skip_whitespace() noexcept -> void;
@@ -80,15 +80,15 @@ class Lexer {
     static auto lu_ident(std::string_view ident) noexcept -> TokenType;
 
     // Reads n characters from the input stream
-    auto read_character(u8 n = 1) noexcept -> void;
-    auto read_operator() const noexcept -> opt::Option<Token>;
-    auto read_ident(bool builtin) noexcept -> std::string_view;
-    auto read_number() noexcept -> Token;
-    auto read_escape() noexcept -> byte;
-    auto read_string() noexcept -> Token;
-    auto read_multiline_string() noexcept -> Token;
-    auto read_byte_literal() noexcept -> Token;
-    auto read_comment() noexcept -> Token;
+    auto               read_character(u8 n = 1) noexcept -> void;
+    [[nodiscard]] auto read_operator() const noexcept -> opt::Option<Token>;
+    auto               read_ident(bool builtin) noexcept -> std::string_view;
+    auto               read_number() noexcept -> Token;
+    auto               read_escape() noexcept -> byte;
+    auto               read_string() noexcept -> Token;
+    auto               read_multiline_string() noexcept -> Token;
+    auto               read_byte_literal() noexcept -> Token;
+    auto               read_comment() noexcept -> Token;
 
     // Sets the lexer to the snapshot, very cheap operation.
     constexpr auto restore(const Snapshot& state) noexcept -> void {
@@ -100,7 +100,7 @@ class Lexer {
     }
 
   private:
-    std::string_view input_{};
+    std::string_view input_;
     usize            pos_{0};
     usize            peek_pos_{0};
     byte             current_byte_{0};

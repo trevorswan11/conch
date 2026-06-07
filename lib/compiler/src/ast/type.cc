@@ -31,7 +31,10 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
         // There is no self parameter for types
         while (!parser.peek_token_is(syntax::TokenType::RPAREN) &&
                !parser.peek_token_is(syntax::TokenType::END)) {
-            if ((variadic = TRY(try_parse_variadic_fn(parser)))) { break; }
+            if (TRY(try_parse_variadic_fn(parser))) {
+                variadic = true;
+                break;
+            }
 
             // There are no default values for parameters, and they must be explicitly typed
             auto type = TRY(ExplicitType::parse(parser));
@@ -61,7 +64,9 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
                                start_token);
     }
 
-    return ExplicitFunctionType{std::move(parameter_types), variadic, return_type};
+    return ExplicitFunctionType{.parameter_types      = std::move(parameter_types),
+                                .variadic             = variadic,
+                                .explicit_return_type = return_type};
 }
 
 auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, syntax::Diagnostic> {
@@ -95,7 +100,9 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         const auto inner = TRY(ExplicitType::parse(parser));
         return parser.add_type<ExplicitArrayType>(
             modifier_token, modifier, dimension, null_terminated, inner);
-    } else if (!TypeModifier{parser.get_peek_token()}.is_value()) {
+    }
+
+    if (!TypeModifier{parser.get_peek_token()}.is_value()) {
         // Don't advance since the parser does it implicitly here (costs two modifier queries)
         const auto inner = TRY(ExplicitType::parse(parser));
         return parser.add_type<ExplicitTypeID>(modifier_token, modifier, inner);
@@ -131,10 +138,14 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
             if (parsed.is<ModuleAccessExpression>()) {
                 return parser.add_type<ModuleAccessExpression>(
                     modifier_token, modifier, parser.get_node<ModuleAccessExpression>(*parsed));
-            } else if (parsed.is<DotExpression>()) {
+            }
+
+            if (parsed.is<DotExpression>()) {
                 return parser.add_type<DotExpression>(
                     modifier_token, modifier, parser.get_node<DotExpression>(*parsed));
-            } else if (parsed.is<CallExpression>()) {
+            }
+
+            if (parsed.is<CallExpression>()) {
                 return parser.add_type<CallExpression>(
                     modifier_token, modifier, parser.get_node<CallExpression>(*parsed));
             }
@@ -160,7 +171,7 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         }
 
         // Function types cannot have bodies
-        return parser.add_type<ExplicitFunctionType>(modifier_token, modifier, std::move(fn_type));
+        return parser.add_type<ExplicitFunctionType>(modifier_token, modifier, fn_type);
     }
 
     // The user-defined types can be handled by parsing any expression and verifying it
@@ -206,7 +217,9 @@ namespace {
     if (parser.peek_token_is(syntax::TokenType::WALRUS)) {
         parser.advance();
         return std::pair{opt::none, true};
-    } else if (parser.peek_token_is(syntax::TokenType::COLON)) {
+    }
+
+    if (parser.peek_token_is(syntax::TokenType::COLON)) {
         parser.advance();
         const auto explicit_type = TRY(ExplicitType::parse(parser));
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {

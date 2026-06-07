@@ -41,7 +41,7 @@ template <MappableEnum E, typename Value> class EnumMap {
     //
     // Contextually convertible Values are pointers and optional types
     [[nodiscard]] constexpr auto get_opt(E key) const noexcept {
-        if constexpr (traits::is_option_v<Value>) {
+        if constexpr (traits::Option<Value>) {
             return operator[](key);
         } else if constexpr (traits::Pointer<Value>) {
             const auto value = operator[](key);

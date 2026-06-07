@@ -147,5 +147,5 @@ struct UsingStatement {
 } // namespace ghoti
 
 template <> struct magic_enum::customize::enum_range<ghoti::ast::DeclModifiers> {
-    static constexpr bool is_flags = true;
+    static constexpr bool is_flags = true; // NOLINT
 };

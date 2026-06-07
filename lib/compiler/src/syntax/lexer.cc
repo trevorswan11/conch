@@ -144,6 +144,8 @@ enum class NumberSuffix : u8 {
     SIZE     = 2 << 2,
 };
 
+namespace {
+
 constexpr auto operator|=(NumberSuffix& lhs, NumberSuffix rhs) noexcept -> NumberSuffix& {
     lhs = static_cast<NumberSuffix>(std::to_underlying(lhs) | std::to_underlying(rhs));
     return lhs;
@@ -156,6 +158,8 @@ constexpr auto operator&(NumberSuffix lhs, NumberSuffix rhs) noexcept -> NumberS
 constexpr auto suffix_has(NumberSuffix suffix, NumberSuffix flag) noexcept -> bool {
     return static_cast<bool>(suffix & flag);
 }
+
+} // namespace
 
 auto Lexer::read_number() noexcept -> Token {
     const auto start           = pos_;

@@ -56,7 +56,7 @@ class TypeResolver {
     static auto resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
     template <traits::IndexableID ID> auto resolve(ID id) -> void {
-        resolving_.ast[id].visit([&](const auto& data) { visit(id, data); });
+        resolving_.ast[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
   private:
@@ -88,7 +88,7 @@ class TypeResolver {
 
         MAKE_MOVE_CONSTRUCTABLE_ONLY(StructuralTypeStack)
 
-        auto push(Type& type) -> void { stack_.push_back(&type); }
+        auto push(Type& type) -> void { stack_.emplace_back(&type); }
         auto pop() noexcept -> void {
             if (!stack_.empty()) { stack_.pop_back(); }
         }
@@ -109,7 +109,7 @@ class TypeResolver {
     template <typename Resolvee> class CommittableResolution {
       public:
         template <typename... Args>
-        CommittableResolution(Type& type, Args&&... resolvee) : type_{type} {
+        explicit CommittableResolution(Type& type, Args&&... resolvee) : type_{type} {
             type_.resolve<Resolvee>(std::forward<Args>(resolvee)...);
         }
 
@@ -174,7 +174,8 @@ class TypeResolver {
         -> Result<gsl::not_null<Type*>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
-    auto get_rightmost_name(ast::OuterAccessHandle) noexcept -> std::string_view;
+    [[nodiscard]] auto get_rightmost_name(ast::OuterAccessHandle) const noexcept
+        -> std::string_view;
     template <traits::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::DotExpression&) -> void;
@@ -248,7 +249,7 @@ class TypeResolver {
     auto visit(ast::ExplicitTypeID, const ast::DotExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::CallExpression&) -> void;
     auto visit(ast::ExplicitTypeID, const ast::ExplicitFunctionType&) -> void;
-    auto visit(ast::ExplicitTypeID, const ast::ExplicitTypeID) -> void;
+    auto visit(ast::ExplicitTypeID, ast::ExplicitTypeID) -> void;
     auto visit(ast::ExplicitTypeID, const ast::ExplicitArrayType&) -> void;
 
     // Looks up the symbol by name in the current index ONLY. Changes no state on failure

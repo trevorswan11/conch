@@ -66,9 +66,9 @@ auto ASTDumper::visit(NodeID, const CallExpression& call) -> void {
     if (has_args) {
         const Indent::Guard g{indent_, true};
         fmt::println(out_, "{}Arguments:", indent_.current_branch());
-        dump_container(call.arguments, [this](const CallExpression::Argument& arg) {
+        dump_container(call.arguments, [this](const CallExpression::Argument& arg) -> void {
             fmt::print(out_, "{}", indent_.current_branch());
-            arg.visit([this](auto arg_id) { dump(arg_id); });
+            arg.visit([this](auto arg_id) -> void { dump(arg_id); });
         });
     }
 }
@@ -102,7 +102,7 @@ auto ASTDumper::visit(NodeID, const EnumExpression& enum_expr) -> void {
         const Indent::Guard g{indent_, false};
         fmt::println(out_, "{}Enumerations:", indent_.current_branch());
         dump_container(enum_expr.enumerations,
-                       [this](const EnumExpression::Enumeration& enumeration) {
+                       [this](const EnumExpression::Enumeration& enumeration) -> void {
                            {
                                fmt::print(out_, "{}Name: ", indent_.current_branch());
                                const Indent::Guard g_name{indent_, !enumeration.value};
@@ -142,15 +142,16 @@ auto ASTDumper::visit(NodeID, const ForLoopExpression& for_loop) -> void {
     {
         const Indent::Guard g{indent_, false};
         fmt::println(out_, "{}Captures:", indent_.current_branch());
-        dump_container(for_loop.captures, [this](const ForLoopExpression::Capture& capture) {
-            fmt::print(out_, "{}", indent_.current_branch());
-            if (capture.payload.is<ast::Discarded>()) {
-                fmt::println(out_, "<discarded>");
-            } else {
-                const auto& ident = ast_.get_as<IdentifierExpression>(*capture.payload);
-                fmt::println(out_, "{} (modifier: {})", ident, capture.modifier);
-            }
-        });
+        dump_container(
+            for_loop.captures, [this](const ForLoopExpression::Capture& capture) -> void {
+                fmt::print(out_, "{}", indent_.current_branch());
+                if (capture.payload.is<ast::Discarded>()) {
+                    fmt::println(out_, "<discarded>");
+                } else {
+                    const auto& ident = ast_.get_as<IdentifierExpression>(*capture.payload);
+                    fmt::println(out_, "{} (modifier: {})", ident, capture.modifier);
+                }
+            });
     }
 
     const auto has_non_break = for_loop.non_break.has_value();
@@ -180,20 +181,21 @@ auto ASTDumper::visit(NodeID, const FunctionExpression& function) -> void {
     if (!function.parameters.empty()) {
         const Indent::Guard g{indent_, false};
         fmt::println(out_, "{}Parameters:", indent_.current_branch());
-        dump_container(function.parameters, [this](const FunctionExpression::Parameter& parameter) {
-            fmt::println(out_, "{}Param:", indent_.current_branch());
-            {
-                const Indent::Guard g_name{indent_, false};
-                fmt::print(out_, "{}Name: ", indent_.current_branch());
-                dump(*parameter.name);
-            }
+        dump_container(function.parameters,
+                       [this](const FunctionExpression::Parameter& parameter) -> void {
+                           fmt::println(out_, "{}Param:", indent_.current_branch());
+                           {
+                               const Indent::Guard g_name{indent_, false};
+                               fmt::print(out_, "{}Name: ", indent_.current_branch());
+                               dump(*parameter.name);
+                           }
 
-            {
-                const Indent::Guard g_type{indent_, true};
-                fmt::print(out_, "{}Type: ", indent_.current_branch());
-                dump(parameter.explicit_type);
-            }
-        });
+                           {
+                               const Indent::Guard g_type{indent_, true};
+                               fmt::print(out_, "{}Type: ", indent_.current_branch());
+                               dump(parameter.explicit_type);
+                           }
+                       });
     }
 
     {
@@ -323,7 +325,7 @@ auto ASTDumper::visit(NodeID, const InitializerExpression& init) -> void {
         const Indent::Guard g{indent_, true};
         fmt::println(out_, "{}Initializers:", indent_.current_branch());
         dump_container(init.initializers,
-                       [this](const InitializerExpression::Initializer& initializer) {
+                       [this](const InitializerExpression::Initializer& initializer) -> void {
                            fmt::println(out_, "{}Initializer:", indent_.current_branch());
                            {
                                const Indent::Guard g_inner{indent_, false};
@@ -368,7 +370,7 @@ auto ASTDumper::visit(NodeID, const MatchExpression& match) -> void {
         usize               idx = 0;
 
         fmt::println(out_, "{}Arms:", indent_.current_branch());
-        dump_container(match.arms, [&](const MatchExpression::Arm& arm) {
+        dump_container(match.arms, [&](const MatchExpression::Arm& arm) -> void {
             if (match.catch_all_idx && idx == *match.catch_all_idx) {
                 fmt::println(out_, "{}Catch-All Arm:", indent_.current_branch());
             } else {
@@ -470,7 +472,7 @@ auto ASTDumper::visit(NodeID, const StructExpression& struct_expr) -> void {
     if (!struct_expr.fields.empty()) {
         const Indent::Guard g{indent_, !has_members};
         fmt::println(out_, "{}Fields:", indent_.current_branch());
-        dump_container(struct_expr.fields, [this](const StructExpression::Field& field) {
+        dump_container(struct_expr.fields, [this](const StructExpression::Field& field) -> void {
             {
                 fmt::print(out_, "{}Name: ", indent_.current_branch());
                 dump(field.name);
@@ -511,7 +513,7 @@ auto ASTDumper::visit(NodeID, const UnionExpression& union_expr) -> void {
     {
         const Indent::Guard g{indent_, !has_members};
         fmt::println(out_, "{}Fields:", indent_.current_branch());
-        dump_container(union_expr.fields, [this](const UnionExpression::Field& field) {
+        dump_container(union_expr.fields, [this](const UnionExpression::Field& field) -> void {
             fmt::println(out_, "{}Field:", indent_.current_branch());
             {
                 const Indent::Guard g_pattern{indent_, false};
@@ -736,7 +738,7 @@ auto ASTDumper::visit(ExplicitTypeID, const ExplicitFunctionType& function) -> v
     if (!function.parameter_types.empty()) {
         const Indent::Guard g{indent_, false};
         fmt::println(out_, "{}Parameters:", indent_.current_branch());
-        dump_container(function.parameter_types, [this](ExplicitTypeID type) {
+        dump_container(function.parameter_types, [this](ExplicitTypeID type) -> void {
             fmt::println(out_, "{}Param:", indent_.current_branch());
             {
                 const Indent::Guard g_type{indent_, true};

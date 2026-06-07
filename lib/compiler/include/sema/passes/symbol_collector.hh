@@ -32,7 +32,7 @@ class SymbolCollector {
     static auto collect_symbols(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
     template <traits::IndexableID ID> auto collect(ID id) -> void {
-        collecting_.ast[id].visit([&](const auto& data) { visit(id, data); });
+        collecting_.ast[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
   private:
@@ -108,7 +108,7 @@ class SymbolCollector {
     [[nodiscard]] auto visit_scopes(TypeKind kind, IterPairs&&... pairs) -> usize {
         const auto  new_idx = ctx_.registry.create();
         const Scope s{table_stack_, new_idx, table_idx_};
-        (..., [&pairs] {
+        (..., [&pairs] -> void {
             for (const auto& item : pairs.iterable) { pairs.visitor(item); }
         }());
         last_type_.emplace(ctx_.pool[{kind, types::mut::CONSTANT, new_idx}]);

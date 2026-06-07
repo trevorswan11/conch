@@ -12,9 +12,8 @@ namespace ghoti::tests {
 TEST_CASE("Result traits") {
     STATIC_CHECK(traits::is_result<Result<i32, i64>>::value);
     STATIC_CHECK(traits::is_result<Result<i32&, std::string>>::value);
-    STATIC_CHECK(traits::is_result_v<Result<i32, i64>>);
-    STATIC_CHECK_FALSE(traits::is_result_v<i32>);
     STATIC_CHECK(traits::Result<Result<i32, i64>>);
+    STATIC_CHECK_FALSE(traits::Result<i32>);
 }
 
 TEST_CASE("Try macro usage") {

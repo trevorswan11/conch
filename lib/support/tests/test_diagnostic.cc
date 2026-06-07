@@ -4,6 +4,7 @@
 
 #include "diagnostic.hh"
 #include "option.hh"
+#include "types.hh"
 
 namespace ghoti {
 
@@ -24,14 +25,14 @@ template <> struct SourceInfo<SomethingElseLocationed> {
 
 namespace tests {
 
-enum class TestEnum {
+enum class TestEnum : u8 {
     SAD,
     MAD,
 };
 
 TEST_CASE("Diagnostic traits") {
-    STATIC_CHECK(traits::is_diagnostic_v<Diagnostic<TestEnum>>);
-    STATIC_CHECK_FALSE(traits::is_diagnostic_v<TestEnum>);
+    STATIC_CHECK(traits::DiagnosticType<Diagnostic<TestEnum>>);
+    STATIC_CHECK_FALSE(traits::DiagnosticType<TestEnum>);
 }
 
 TEST_CASE("Location and error only") {

@@ -62,8 +62,11 @@ pub const println := fn(str: []u8): void {};
 } // namespace
 
 TEST_CASE("Full sema pipeline") {
-    auto ctx = helpers::analyze_and_check(
-        "main.gh", main_gh, MockFile{"std.gh", std_gh, "std"}, MockFile{"io.gh", io_gh});
+    auto ctx =
+        helpers::analyze_and_check("main.gh",
+                                   main_gh,
+                                   MockFile{.path = "std.gh", .source = std_gh, .name = "std"},
+                                   MockFile{.path = "io.gh", .source = io_gh});
     ctx->verify_registry_resolved();
 
     REQUIRE(ctx->analyzer.get_registry().size() == 6);
@@ -83,7 +86,7 @@ TEST_CASE("Full sema pipeline") {
         const auto& fn_expr = helpers::unwrap(
             root_module.ast.get_as_opt<ast::FunctionExpression>(*main_node_data.value));
 
-        const auto fn_idx = helpers::unwrap(main_type.get_symbol_table_idx_opt(), 4uz);
+        const auto fn_idx = helpers::unwrap(main_type.get_symbol_table_idx_opt(), 4UZ);
         CHECK(main_type == ctx->get_type(sema::TypeKind::FUNCTION, fn_idx));
         CHECK(main_type_data.params.size() == 1);
 
@@ -164,7 +167,7 @@ TEST_CASE("Full sema pipeline") {
         CHECK(println_sym.is_public(io_module));
         CHECK(println_sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
 
-        const auto fn_idx = helpers::unwrap(println_type.get_symbol_table_idx_opt(), 3uz);
+        const auto fn_idx = helpers::unwrap(println_type.get_symbol_table_idx_opt(), 3UZ);
         CHECK(println_type == ctx->get_type(sema::TypeKind::FUNCTION, fn_idx));
         CHECK(println_type_data.params.size() == 1);
 

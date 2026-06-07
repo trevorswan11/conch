@@ -14,7 +14,7 @@ namespace ghoti::ast {
 
 namespace {
 
-constexpr auto NODE_NAMES = [] {
+constexpr auto NODE_NAMES = [] -> auto {
     fixed::EnumMap<NodeKind, std::string_view> names{"expression"};
 
     names[NodeKind::ARRAY_EXPRESSION]           = "array";
@@ -71,7 +71,7 @@ namespace {
 
 using Modifier           = TypeModifier::Modifier;
 using ModifierMapping    = std::pair<syntax::TokenType, Modifier>;
-constexpr auto MODIFIERS = [] {
+constexpr auto MODIFIERS = [] -> auto {
     using TokenType = syntax::TokenType;
     fixed::EnumMap<TokenType, Modifier> modifiers{Modifier::VALUE};
     modifiers[TokenType::BW_AND]       = Modifier::REF;

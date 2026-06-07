@@ -324,7 +324,7 @@ class Type {
   private:
     // This should only be used when allocating an immediately-to-be-filled span
     Type() noexcept = default;
-    explicit Type(types::Key key) noexcept : key_{std::move(key)} {}
+    explicit Type(types::Key key) noexcept : key_{key} {}
 
   private:
     types::Key key_;
@@ -355,7 +355,7 @@ class TypePool {
     [[nodiscard]] auto get_many(Keys&&... keys) noexcept -> gsl::span<Type*> {
         auto  types = arena_.make_span<Type*>(sizeof...(Keys));
         usize i     = 0;
-        (..., [&] { types[i++] = get_or_emplace(keys); }());
+        (..., (types[i++] = get_or_emplace(keys)));
         return types;
     }
 

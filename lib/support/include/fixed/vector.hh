@@ -73,7 +73,7 @@ template <typename Item, usize Capacity> class Vector {
         other.clear();
     }
 
-    constexpr auto operator=(Vector&& other) -> Vector& {
+    constexpr auto operator=(Vector&& other) noexcept -> Vector& {
         if (this != &other) {
             clear();
             if constexpr (traits::TriviallyCopyable<Item>) {

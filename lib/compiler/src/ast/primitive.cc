@@ -59,20 +59,22 @@ template <typename ValueType>
     return opt::none;
 }
 
-template <traits::ValuedPrimitiveNode Primitive>
+template <traits::ValuedPrimitive Primitive>
 auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     using value_type       = typename Primitive::value_type;
     const auto start_token = parser.get_current_token();
     const auto value       = parse_primitive_value<value_type>(start_token.slice, start_token.type);
     if (value) { return parser.add_expr<Primitive>(start_token, *value); }
 
-    return make_syntax_err("Overflow of literal",
-                           std::is_same_v<value_type, f64>
-                               ? syntax::Error::DOUBLE_OVERFLOW
-                               : (std::is_same_v<value_type, f32>
-                                      ? syntax::Error::FLOAT_OVERFLOW
-                                      : syntax::Error::INTEGER_OVERFLOW),
-                           start_token);
+    syntax::Error error_code;
+    if constexpr (std::is_same_v<value_type, f64>) {
+        error_code = syntax::Error::DOUBLE_OVERFLOW;
+    } else if constexpr (std::is_same_v<value_type, f32>) {
+        error_code = syntax::Error::FLOAT_OVERFLOW;
+    } else {
+        error_code = syntax::Error::INTEGER_OVERFLOW;
+    }
+    return make_syntax_err("Overflow of literal", error_code, start_token);
 }
 
 } // namespace

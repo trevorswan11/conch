@@ -9,6 +9,8 @@
 
 namespace ghoti {
 
+// NOLINTBEGIN
+
 #define MAKE_GETTER_2(name, ReturnType) \
     [[nodiscard]] auto get_##name() const noexcept -> ReturnType { return name##_; }
 #define MAKE_GETTER_3(name, ReturnType, getter) \
@@ -42,6 +44,8 @@ namespace ghoti {
 
 #define CONCAT_INNER(a, b) a##b
 #define CONCAT(a, b) CONCAT_INNER(a, b)
+
+// NOLINTEND
 
 [[nodiscard]] auto is_tty() noexcept -> bool;
 

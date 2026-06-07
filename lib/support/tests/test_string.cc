@@ -45,8 +45,8 @@ TEST_CASE("Trim spaces") {
 }
 
 TEST_CASE("Trim pred") {
-    CHECK(string::trim("theasdaefae",
-                       [](byte b) { return std::string_view{"asdaefae"}.contains(b); }) == "th");
+    constexpr std::string_view against{"asdaefae"};
+    CHECK(string::trim("theasdaefae", [&](byte b) -> bool { return against.contains(b); }) == "th");
 }
 
 TEST_CASE("String view substrings") {

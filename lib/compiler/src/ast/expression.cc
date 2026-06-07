@@ -74,7 +74,7 @@ auto CallExpression::parse(syntax::Parser& parser, ExpressionHandle function)
     const auto            start_token = parser.get_current_token();
     std::vector<Argument> arguments;
     // Guaranteed to roll back if there is an error
-    const auto parse_expr_unsuccessful = [&] {
+    const auto parse_expr_unsuccessful = [&] -> bool {
         // Try an expression first to prevent ambiguity between reference operators
         syntax::Parser::Transaction transaction{parser};
         parser.advance();
@@ -344,7 +344,8 @@ auto FunctionExpression::parse(syntax::Parser& parser)
     bool                       variadic = false;
     if (parser.peek_token_is(syntax::TokenType::RPAREN)) {
         parser.advance();
-    } else if ((variadic = TRY(try_parse_variadic_fn(parser)))) {
+    } else if (TRY(try_parse_variadic_fn(parser))) {
+        variadic = true;
         TRY(parser.expect_peek(syntax::TokenType::RPAREN));
     } else {
         // The 'self' parameter can be a value type, ref, or mutable ref
@@ -356,10 +357,12 @@ auto FunctionExpression::parse(syntax::Parser& parser)
                 "Self parameters cannot be marked volatile; they must be values, refs, or pointers",
                 syntax::Error::ILLEGAL_SELF_PARAMETER_MODIFIER,
                 modifier_start);
-        } else if (self_modifier.is_value() && (parser.peek_token_is(syntax::TokenType::COMMA) ||
-                                                parser.peek_token_is(syntax::TokenType::RPAREN))) {
+        }
+
+        if (self_modifier.is_value() && (parser.peek_token_is(syntax::TokenType::COMMA) ||
+                                         parser.peek_token_is(syntax::TokenType::RPAREN))) {
             const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
-            self.emplace(SelfParameter{self_modifier, ident});
+            self.emplace(self_modifier, ident);
 
             // Still end on a comma
             if (!parser.peek_token_is(syntax::TokenType::RPAREN)) {
@@ -369,7 +372,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
             // Move up to the ident before parsing it
             parser.advance();
             const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
-            self.emplace(SelfParameter{self_modifier, ident});
+            self.emplace(self_modifier, ident);
 
             // Move to the comma if present
             if (!parser.peek_token_is(syntax::TokenType::RPAREN)) {
@@ -381,7 +384,10 @@ auto FunctionExpression::parse(syntax::Parser& parser)
         bool first = true;
         while (!parser.peek_token_is(syntax::TokenType::RPAREN) &&
                !parser.peek_token_is(syntax::TokenType::END)) {
-            if ((variadic = TRY(try_parse_variadic_fn(parser)))) { break; }
+            if (TRY(try_parse_variadic_fn(parser))) {
+                variadic = true;
+                break;
+            }
 
             // If there was no self parameter then we can't advance on the first pass
             if (!first || self) { parser.advance(); }
@@ -816,15 +822,15 @@ auto StructExpression::parse(syntax::Parser& parser)
             // Use a transaction to preserve the public modifier
             syntax::Parser::Transaction transaction{parser};
             parser.advance();
-            if (parser.get_peek_token().is_member_token()) {
-                // With two modifiers a decl is required
-                break;
-            } else {
-                // There must an ident here since pub is the only modifier
-                is_public = true;
-                transaction.commit();
-                TRY(parser.expect_peek(syntax::TokenType::IDENT));
-            }
+
+            // With two modifiers a decl is required
+            if (parser.get_peek_token().is_member_token()) { break; }
+
+            // There must an ident here since pub is the only modifier
+            is_public = true;
+            transaction.commit();
+            TRY(parser.expect_peek(syntax::TokenType::IDENT));
+
         } else if (parser.get_peek_token().is_member_token()) {
             break;
         } else {

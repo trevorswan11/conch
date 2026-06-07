@@ -20,7 +20,7 @@ using Tracker = helpers::RAIITracker;
 TEST_CASE("Variant default construction activates first alternative") {
     Variant<Foo, Bar> v;
     CHECK(v.is<Foo>());
-    CHECK(v.index() == 0uz);
+    CHECK(v.index() == 0UZ);
 }
 
 TEST_CASE("Variant implicit construction from alternative type") {
@@ -60,9 +60,9 @@ TEST_CASE("Variant::is<T>") {
 }
 
 TEST_CASE("Variant::index") {
-    CHECK(FBB{Foo{}}.index() == 0uz);
-    CHECK(FBB{Bar{}}.index() == 1uz);
-    CHECK(FBB{Baz{}}.index() == 2uz);
+    CHECK(FBB{Foo{}}.index() == 0UZ);
+    CHECK(FBB{Bar{}}.index() == 1UZ);
+    CHECK(FBB{Baz{}}.index() == 2UZ);
 }
 
 TEST_CASE("Variant::as<T> returns mutable reference") {
@@ -104,32 +104,34 @@ TEST_CASE("Variant::as_opt<T> const yields const ref") {
 
 TEST_CASE("Variant::as_opt<T> supports transform()") {
     FBB  v   = Bar{"transform"};
-    auto len = v.as_opt<Bar>().transform([](const Bar& b) { return b.value.size(); });
+    auto len = v.as_opt<Bar>().transform([](const Bar& b) -> usize { return b.value.size(); });
     REQUIRE(len.has_value());
-    CHECK(*len == 9uz);
+    CHECK(*len == 9UZ);
 }
 
 TEST_CASE("Variant::visit variadic lambda form with non-void return") {
     FBB v = Foo{10};
-    i32 r = v.visit([](const Foo& f) { return f.value; },
-                    [](const Bar&) { return -1; },
-                    [](const Baz&) { return -2; });
+    i32 r = v.visit([](const Foo& f) -> i32 { return f.value; },
+                    [](const Bar&) -> i32 { return -1; },
+                    [](const Baz&) -> i32 { return -2; });
     CHECK(r == 10);
 }
 
 TEST_CASE("Variant::visit variadic lambda form with void return") {
     FBB  v      = Bar{"side effect"};
     bool called = false;
-    v.visit([](const Foo&) {}, [&](const Bar&) { called = true; }, [](const Baz&) {});
+    v.visit([](const Foo&) -> void {},
+            [&](const Bar&) -> void { called = true; },
+            [](const Baz&) -> void {});
     CHECK(called);
 }
 
 TEST_CASE("Variant::visit on const Variant") {
     const FBB v   = Bar{"const visit"};
-    auto      len = v.visit([](const Foo&) { return 0uz; },
-                       [](const Bar& b) { return b.value.size(); },
-                       [](const Baz&) { return 0uz; });
-    CHECK(len == 11uz);
+    auto      len = v.visit([](const Foo&) -> usize { return 0UZ; },
+                       [](const Bar& b) -> usize { return b.value.size(); },
+                       [](const Baz&) -> usize { return 0UZ; });
+    CHECK(len == 11UZ);
 }
 
 TEST_CASE("Variant::operator==") {

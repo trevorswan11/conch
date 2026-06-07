@@ -94,7 +94,7 @@ struct FormattableDiagnostic {
 };
 
 auto format_diagnostic(std::ostream&                   os,
-                       FormattableDiagnostic&&         diag,
+                       const FormattableDiagnostic&    diag,
                        const opt::Option<std::string>& source_path,
                        opt::Option<bool>               in_terminal) -> std::ostream&;
 
@@ -118,7 +118,7 @@ template <traits::ScopedEnum E> class Diagnostic {
 
     // Moves the passed diagnostic into a new one with an error code
     Diagnostic(Diagnostic&& other, E err) noexcept
-        : message_{std::move(other.message_)}, loc_{std::move(other.loc_)}, error_{err} {}
+        : message_{std::move(other.message_)}, loc_{other.loc_}, error_{err} {}
 
     // Moves the passed diagnostic into a new one with a specified source location
     template <traits::Locateable T>
@@ -148,8 +148,8 @@ template <traits::ScopedEnum E> class Diagnostic {
     auto unset_level() noexcept -> void { level_.reset(); }
 
   private:
-    opt::Option<std::string>     message_{};
-    opt::Option<SourceLocation>  loc_{};
+    opt::Option<std::string>     message_;
+    opt::Option<SourceLocation>  loc_;
     E                            error_;
     opt::Option<DiagnosticLevel> level_{DiagnosticLevel::ERROR};
 };
@@ -158,10 +158,9 @@ namespace traits {
 
 template <typename T> struct is_diagnostic : std::false_type {};
 template <typename T> struct is_diagnostic<Diagnostic<T>> : std::true_type {};
-template <typename T> constexpr bool is_diagnostic_v = is_diagnostic<T>::value;
 
 template <typename T>
-concept DiagnosticType = is_diagnostic_v<T>;
+concept DiagnosticType = is_diagnostic<T>::value;
 
 } // namespace traits
 
@@ -192,7 +191,9 @@ template <traits::DiagnosticType D> class DiagnosticList {
 
     // Creates a new list with the same terminal behavior
     [[nodiscard]] auto create_new() const -> DiagnosticList { return DiagnosticList{in_terminal_}; }
-    auto get_terminal_status() const noexcept -> const opt::Option<bool>& { return in_terminal_; }
+    [[nodiscard]] auto get_terminal_status() const noexcept -> opt::Option<bool> {
+        return in_terminal_;
+    }
 
   private:
     Diagnostics       diagnostics_;

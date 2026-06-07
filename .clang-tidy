@@ -1,0 +1,49 @@
+Checks: >
+  -*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  google-*,
+  bugprone-*,
+  -performance-no-int-to-ptr,
+  -portability-avoid-pragma-once,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+  -readability-implicit-bool-conversion,
+  -readability-redundant-access-specifiers,
+  -readability-isolate-declaration,
+  -readability-named-parameter,
+  -readability-avoid-return-with-void-value,
+  -readability-static-accessed-through-instance,
+  -readability-inconsistent-declaration-parameter-name,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -modernize-avoid-c-arrays,
+  -google-build-using-namespace,
+  -google-explicit-constructor,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-unchecked-optional-access,
+  -bugprone-exception-escape,
+
+WarningsAsErrors: "*"
+
+CheckOptions:
+  - { key: readability-identifier-naming.FunctionCase,                value: lower_case  }
+  - { key: readability-identifier-naming.VariableCase,                value: lower_case }
+  - { key: readability-identifier-naming.MacroDefinitionCase,         value: UPPER_CASE }
+  - { key: readability-identifier-naming.EnumConstantCase,            value: UPPER_CASE }
+  - { key: readability-identifier-naming.StaticConstexprVariableCase, value: aNy_CasE }
+  - { key: readability-identifier-naming.StaticConstantCase,          value: aNy_CasE }
+  - { key: readability-identifier-naming.GlobalConstantCase,          value: aNy_CasE }
+  - { key: readability-identifier-naming.ConceptCase,                 value: CamelCase }
+
+  - { key: readability-identifier-naming.PublicMemberCase,      value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberCase,     value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,   value: _          }
+  - { key: readability-identifier-naming.ProtectedMemberCase,   value: lower_case }
+  - { key: readability-identifier-naming.ProtectedMemberPrefix, value: _          }

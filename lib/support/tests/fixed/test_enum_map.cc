@@ -84,7 +84,7 @@ TEST_CASE("EnumMap ranges compatibility") {
     STATIC_REQUIRE(std::forward_iterator<EnumMap::const_iterator>);
 
     constexpr EnumMap map{0xDEADBEEF};
-    std::ranges::for_each(map, [](usize value) { CHECK(value == 0xDEADBEEF); });
+    std::ranges::for_each(map, [](usize value) -> void { CHECK(value == 0xDEADBEEF); });
 }
 
 } // namespace ghoti::tests

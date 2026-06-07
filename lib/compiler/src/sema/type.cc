@@ -12,7 +12,7 @@ namespace ghoti::sema {
 
 namespace {
 
-constexpr auto TYPE_KIND_NAMES = [] {
+constexpr auto TYPE_KIND_NAMES = [] -> auto {
     fixed::EnumMap<TypeKind, std::string_view> names;
 
     names[TypeKind::POISON]    = "poison";

@@ -65,8 +65,8 @@ auto to_base(TokenType tt) noexcept -> opt::Option<Base> {
     }
 }
 
-auto misc_from_char(byte c) noexcept -> opt::Option<TokenType> {
-    switch (c) {
+auto misc_from_char(byte b) noexcept -> opt::Option<TokenType> {
+    switch (b) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
     case ';': return TokenType::SEMICOLON;
@@ -117,7 +117,7 @@ auto suffix_length(TokenType tt) noexcept -> usize {
     // Returns the suffix (second of pair) for the first range that returns true
     return std::ranges::find_if(
                INT_SUFFIX_MAPPINGS,
-               [tt](auto* in_range) { return in_range(tt); },
+               [tt](auto* in_range) -> bool { return in_range(tt); },
                &SuffixMapping::first)
         ->second;
 }

@@ -15,7 +15,7 @@ namespace ghoti::mem {
 // Do not free returned memory directly!
 class Arena {
   public:
-    static constexpr usize BLOCK_SIZE{64 * 1'024};
+    static constexpr usize BLOCK_SIZE{64UZ * 1'024UZ};
 
   public:
     Arena() noexcept = default;

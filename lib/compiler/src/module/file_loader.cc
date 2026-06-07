@@ -19,7 +19,9 @@ auto FileLoader::load(const std::filesystem::path& path) -> Result<std::string, 
     if (!std::filesystem::exists(path)) {
         return make_mod_err(fmt::format("Path '{}' does not exist", path.string()),
                             Error::PATH_DOES_NOT_EXIST);
-    } else if (!std::filesystem::is_regular_file(path)) {
+    }
+
+    if (!std::filesystem::is_regular_file(path)) {
         return make_mod_err(fmt::format("Path '{}' is not a file", path.string()),
                             Error::PATH_IS_NOT_FILE);
     }
@@ -37,7 +39,7 @@ auto FileLoader::load(const std::filesystem::path& path) -> Result<std::string, 
 auto FileLoader::normalize(const std::filesystem::path& path)
     -> Result<std::filesystem::path, Error> {
     std::error_code ec;
-    const auto      canonical_path = std::filesystem::weakly_canonical(path, ec);
+    auto            canonical_path = std::filesystem::weakly_canonical(path, ec);
     if (ec) { return Err{Error::NORMALIZATION_FAILED}; }
     return canonical_path;
 }

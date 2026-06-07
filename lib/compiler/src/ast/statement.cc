@@ -92,7 +92,7 @@ auto ContinueStatement::parse(syntax::Parser& parser)
 namespace {
 
 using ModifierMapping          = std::pair<syntax::TokenType, DeclModifiers>;
-constexpr auto LEGAL_MODIFIERS = [] {
+constexpr auto LEGAL_MODIFIERS = [] -> auto {
     using TokenType = syntax::TokenType;
     fixed::EnumMap<TokenType, opt::Option<DeclModifiers>> modifiers{opt::none};
     modifiers[TokenType::VAR]       = DeclModifiers::VARIABLE;
@@ -255,7 +255,9 @@ namespace {
     if (parser.peek_token_is(syntax::TokenType::IDENT)) {
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
         return TRY(IdentifierExpression::parse(parser));
-    } else if (parser.peek_token_is(syntax::TokenType::STRING)) {
+    }
+
+    if (parser.peek_token_is(syntax::TokenType::STRING)) {
         TRY(parser.expect_peek(syntax::TokenType::STRING));
         const StringHandle string = TRY(StringExpression::parse(parser));
 

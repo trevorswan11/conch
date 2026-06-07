@@ -39,7 +39,8 @@ TEST_CASE("Function declaration and call type resolution") {
     SECTION("Function validation") {
         CHECK(a_decl_sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
 
-        const auto check_param_type = [&](std::string_view name, const sema::Type& expected_type) {
+        const auto check_param_type = [&](std::string_view  name,
+                                          const sema::Type& expected_type) -> void {
             const auto [sym, sym_data, type] =
                 ctx->get_type_sym_info<syms::Parameter>(name, 1, opt::none, &syms::Parameter::name);
             CHECK(sym.get_kind_opt() == sema::SymbolKind::VALUE);
@@ -77,7 +78,7 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto& call_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(call.function));
         CHECK(a_decl_type == call_type);
 
-        const auto check_arg_type = [&](usize arg_idx, const sema::Type& expected_type) {
+        const auto check_arg_type = [&](usize arg_idx, const sema::Type& expected_type) -> void {
             REQUIRE(arg_idx < call.arguments.size());
             const auto arg =
                 helpers::unwrap(call.arguments[arg_idx].as_opt<ast::ExpressionHandle>());
@@ -102,13 +103,14 @@ TEST_CASE("Function declaration and call type resolution") {
 
 TEST_CASE("Self parameters in structural types") {
     // Assumes the type has a member function called foo that takes self by reference
-    const auto check_structural_type = [](std::string_view input, sema::TypeKind self_kind) {
+    const auto check_structural_type = [](std::string_view input,
+                                          sema::TypeKind   self_kind) -> void {
         auto [ctx, idx] = helpers::resolve_and_check(input);
 
         const auto [a_decl_sym, a_decl_sym_data, a_decl_node_data, a_decl_type] =
             ctx->get_ast_type_sym_info<syms::Node, ast::DeclStatement>("a", idx);
         CHECK(a_decl_sym.get_kind_opt() == sema::SymbolKind::TYPE);
-        const auto struct_idx = helpers::unwrap(a_decl_type.get_symbol_table_idx_opt(), 1uz);
+        const auto struct_idx = helpers::unwrap(a_decl_type.get_symbol_table_idx_opt(), 1UZ);
 
         const auto [fn_sym, fn_sym_data, fn_node_data, fn_type, fn_type_data] =
             ctx->get_full_sym_info<syms::Node, ast::DeclStatement, sema::types::Function>(
@@ -170,7 +172,8 @@ TEST_CASE("Function with syntactically ambiguous arguments") {
         using f = @typeOf(^mut ^i32);
     )");
 
-    const auto check_ambiguous = [&](std::string_view name, const sema::Type& instance_type) {
+    const auto check_ambiguous = [&](std::string_view  name,
+                                     const sema::Type& instance_type) -> void {
         const auto& meta_type = ctx->get_type(sema::TypeKind::TYPE, instance_type);
         const auto [sym, _, type, data] =
             ctx->get_full_type_sym_info<syms::Node, sema::types::MetaType>(name, idx);
@@ -194,7 +197,7 @@ TEST_CASE("Self parameters in non-structural types") {
         "const foo := fn(&self): void {};",
         sema::Diagnostic{"Self parameters may only be used inside member functions",
                          sema::Error::ILLEGAL_SELF_PARAMETER,
-                         std::pair{0uz, 17uz}});
+                         std::pair{0UZ, 17UZ}});
     ctx->check_poisoned<syms::Node>("foo", idx);
 }
 
@@ -202,7 +205,7 @@ TEST_CASE("Declared function arity mismatch") {
     auto [ctx, idx] = helpers::test_resolver_fail(
         "const foo := fn(a: i32, b: i32): void {}; const bar := foo(1);",
         sema::Diagnostic{
-            "Expected 2 arguments, found 1", sema::Error::ARITY_MISMATCH, std::pair{0uz, 55uz}});
+            "Expected 2 arguments, found 1", sema::Error::ARITY_MISMATCH, std::pair{0UZ, 55UZ}});
     ctx->check_poisoned<syms::Node>("bar", idx);
 }
 
@@ -211,7 +214,7 @@ TEST_CASE("Non-callable expression") {
         helpers::test_resolver_fail("const bar := 5; const foo := bar();",
                                     sema::Diagnostic{"Expression is not callable",
                                                      sema::Error::NON_CALLABLE_EXPRESSION,
-                                                     std::pair{0uz, 29uz}});
+                                                     std::pair{0UZ, 29UZ}});
     ctx->check_poisoned<syms::Node>("foo", idx);
 }
 

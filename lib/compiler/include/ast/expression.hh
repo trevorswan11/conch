@@ -87,7 +87,7 @@ namespace traits {
 
 template <> struct Nullable<ast::SelfParameter> {
     [[nodiscard]] static constexpr auto invalid() noexcept -> ast::SelfParameter {
-        return ast::SelfParameter{{}, ast::IdentifierHandle::make_invalid()};
+        return {.modifier = {}, .name = ast::IdentifierHandle::make_invalid()};
     }
 
     [[nodiscard]] static constexpr auto is_valid(const ast::SelfParameter& self) noexcept -> bool {

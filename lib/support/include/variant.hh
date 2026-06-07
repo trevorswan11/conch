@@ -59,7 +59,7 @@ class Variant {
   private:
     template <usize I> using nth = __type_pack_element<I, Ts...>;
     template <typename T>
-    static constexpr usize index_of = [] {
+    static constexpr usize index_of = [] -> usize {
         usize i     = 0;
         bool  found = (... || (std::is_same_v<std::remove_cvref_t<T>, Ts> ? true : (++i, false)));
         return found ? i : N;
@@ -105,6 +105,7 @@ class Variant {
     = default;
     ~Variant() { destroy_active(); }
 
+    // NOLINTBEGIN
     Variant(const Variant& other) noexcept(nothrow_copy) { copy_construct(other); }
     auto operator=(const Variant& other) noexcept(nothrow_copy) -> Variant& {
         return copy_assign(other);
@@ -114,6 +115,7 @@ class Variant {
     auto operator=(Variant&& other) noexcept(nothrow_move) -> Variant& {
         return move_assign(std::move(other));
     }
+    // NOLINTEND
 
     [[nodiscard]] auto                       index() const noexcept -> usize { return index_; }
     template <typename T> [[nodiscard]] auto is() const noexcept -> bool {
@@ -168,7 +170,7 @@ class Variant {
     [[nodiscard]] auto operator==(const Variant& other) const noexcept -> bool {
         if (index_ != other.index_) { return false; }
         bool result = false;
-        [&]<usize... Is>(std::index_sequence<Is...>) noexcept {
+        [&]<usize... Is>(std::index_sequence<Is...>) noexcept -> void {
             (void)(... ||
                    (index_ == Is ? (result = (*as_raw<nth<Is>>() == *other.as_raw<nth<Is>>()), true)
                                  : false));
@@ -186,13 +188,13 @@ class Variant {
 
     auto destroy_active() noexcept -> void {
         if (index_ >= static_cast<index_type>(N)) { return; }
-        [this]<usize... Is>(std::index_sequence<Is...>) noexcept {
+        [this]<usize... Is>(std::index_sequence<Is...>) noexcept -> void {
             (void)(... || (index_ == Is ? (as_raw<nth<Is>>()->~nth<Is>(), true) : false));
         }(std::index_sequence_for<Ts...>{});
     }
 
     auto copy_construct(const Variant& other) noexcept(nothrow_copy) -> void {
-        [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_copy) {
+        [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_copy) -> void {
             (void)(... ||
                    (other.index_ == Is
                         ? (::new (storage_) nth<Is>{*other.as_raw<nth<Is>>()}, index_ = Is, true)
@@ -210,7 +212,7 @@ class Variant {
 
     // Also destroys the moved-from object
     auto move_construct(Variant&& other) noexcept(nothrow_move) -> void {
-        [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_move) {
+        [&]<usize... Is>(std::index_sequence<Is...>) noexcept(nothrow_move) -> void {
             (void)(... || (other.index_ == Is
                                ? (::new (storage_) nth<Is>{std::move(*other.as_raw<nth<Is>>())},
                                   index_ = Is,

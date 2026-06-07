@@ -14,7 +14,7 @@
 namespace ghoti::detail {
 
 auto format_diagnostic(std::ostream&                   os,
-                       FormattableDiagnostic&&         diag,
+                       const FormattableDiagnostic&    diag,
                        const opt::Option<std::string>& source_path,
                        opt::Option<bool>               in_terminal) -> std::ostream& {
     const auto tty = in_terminal.value_or(is_tty());

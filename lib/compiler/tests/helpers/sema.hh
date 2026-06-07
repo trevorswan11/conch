@@ -39,7 +39,7 @@ constexpr std::string_view TEST_FILENAME{"test.gh"};
 struct MockFile {
     std::string_view              path;
     std::string_view              source;
-    opt::Option<std::string_view> name{};
+    opt::Option<std::string_view> name{}; // NOLINT
 };
 
 // Tests the collected state of a minimal non-public implicit declaration

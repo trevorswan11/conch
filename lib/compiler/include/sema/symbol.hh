@@ -2,6 +2,7 @@
 
 #include <ranges>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
@@ -114,7 +115,7 @@ class Symbol {
                          symbols::ForLoopCapture>;
 
   public:
-    Symbol(std::string_view name, const Data& data) noexcept : name_{name}, data_{data} {}
+    Symbol(std::string_view name, Data data) noexcept : name_{name}, data_{std::move(data)} {}
     ~Symbol() = default;
 
     MAKE_MOVE_CONSTRUCTABLE_ONLY(Symbol)

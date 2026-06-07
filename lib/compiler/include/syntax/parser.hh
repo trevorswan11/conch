@@ -71,11 +71,15 @@ class Parser {
     // Fills the AST with the parser's output, clearing it before use
     auto consume(ast::AST& ast) -> Diagnostics;
 
-    auto get_current_token() const noexcept -> const Token& { return current_token_; }
-    auto get_peek_token() const noexcept -> const Token& { return peek_token_; }
+    [[nodiscard]] auto get_current_token() const noexcept -> const Token& { return current_token_; }
+    [[nodiscard]] auto get_peek_token() const noexcept -> const Token& { return peek_token_; }
 
-    auto current_token_is(TokenType t) const noexcept -> bool { return current_token_.type == t; }
-    auto peek_token_is(TokenType t) const noexcept -> bool { return peek_token_.type == t; }
+    [[nodiscard]] auto current_token_is(TokenType t) const noexcept -> bool {
+        return current_token_.type == t;
+    }
+    [[nodiscard]] auto peek_token_is(TokenType t) const noexcept -> bool {
+        return peek_token_.type == t;
+    }
 
     // Advances the cursor tokens only if the expected token type matches the actual peek token.
     [[nodiscard]] auto expect_peek(TokenType expected) -> Result<void, Diagnostic>;
@@ -88,8 +92,10 @@ class Parser {
     // Indiscriminately returns an error citing the peek token.
     [[nodiscard]] auto peek_error(TokenType expected) -> Diagnostic;
 
-    auto get_current_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
-    auto get_peek_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>>;
+    [[nodiscard]] auto get_current_precedence() const noexcept
+        -> std::pair<Precedence, opt::Option<Binding>>;
+    [[nodiscard]] auto get_peek_precedence() const noexcept
+        -> std::pair<Precedence, opt::Option<Binding>>;
 
     [[nodiscard]] auto parse_statement(SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
         -> Result<ast::StatementHandle, Diagnostic>;
@@ -155,9 +161,9 @@ class Parser {
 
   private:
     std::string_view       input_;
-    Lexer                  lexer_{};
-    Token                  current_token_{};
-    Token                  peek_token_{};
+    Lexer                  lexer_;
+    Token                  current_token_;
+    Token                  peek_token_;
     opt::Option<ast::AST&> ast_;
 };
 

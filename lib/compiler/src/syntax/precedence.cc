@@ -9,9 +9,10 @@ namespace ghoti::syntax {
 
 namespace {
 
-constexpr auto ALL_BINDINGS = [] {
+constexpr auto ALL_BINDINGS = [] -> auto {
     fixed::EnumMap<TokenType, opt::Option<Binding>> bindings;
 
+    // NOLINTBEGIN
     bindings[TokenType::PLUS]           = {Precedence::ADD_SUB};
     bindings[TokenType::MINUS]          = {Precedence::ADD_SUB};
     bindings[TokenType::STAR]           = {Precedence::MUL_DIV};
@@ -50,6 +51,7 @@ constexpr auto ALL_BINDINGS = [] {
     bindings[TokenType::COLON_COLON]    = {Precedence::SCOPE_RESOLUTION};
     bindings[TokenType::LBRACE]         = {Precedence::INITIALIZATION};
     bindings[TokenType::COLON]          = {Precedence::LABEL};
+    // NOLINTEND
 
     return bindings;
 }();

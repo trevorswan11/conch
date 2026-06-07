@@ -129,7 +129,7 @@ TEST_CASE("HashMap copy correctness") {
         original.emplace(1, 0);
 
         SECTION("Copy constructor") {
-            HM copy = original;
+            HM copy = original; // NOLINT
             CHECK(copy.size() == 2);
             CHECK(Tracker::copy_count == 2);
 
@@ -228,7 +228,7 @@ TEST_CASE("HashMap ranges compatibility") {
     constexpr auto hm = fixed::make_hash_map(std::pair{-2, -1}, std::pair{1, -1}, std::pair{5, -1});
     i32            sum        = 0;
     usize          iter_count = 0;
-    std::ranges::for_each(hm, [&sum, &iter_count](auto pair) {
+    std::ranges::for_each(hm, [&sum, &iter_count](auto pair) -> void {
         sum += pair.first;
         iter_count++;
     });

@@ -20,7 +20,7 @@ TEST_CASE("Function missing return type") {
     helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ;",
                               syntax::Diagnostic{"No prefix parse function for SEMICOLON(;) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
-                                                 std::pair{0uz, 30uz}});
+                                                 std::pair{0UZ, 30UZ}});
 
     helpers::test_parser_fail("fn(^mut this, a: A, b: ^B, ): ",
                               syntax::Diagnostic{syntax::Error::MISSING_EXPLICIT_TYPE, 0, 28});
@@ -44,13 +44,13 @@ TEST_CASE("Out-of-place self parameter") {
 }
 
 TEST_CASE("Illegal self parameter modifier") {
-    const auto test_illegal_self = [](std::string_view modifier) {
+    const auto test_illegal_self = [](std::string_view modifier) -> void {
         helpers::test_parser_fail(
             fmt::format("fn({} self): i32 {{}};", modifier),
             syntax::Diagnostic{
                 "Self parameters cannot be marked volatile; they must be values, refs, or pointers",
                 syntax::Error::ILLEGAL_SELF_PARAMETER_MODIFIER,
-                std::pair{0uz, 3uz}});
+                std::pair{0UZ, 3UZ}});
     };
 
     test_illegal_self("volatile");
@@ -68,32 +68,32 @@ TEST_CASE("Default function parameter") {
     helpers::test_parser_fail("fn(a: A = 2): i32;",
                               syntax::Diagnostic{"Function parameters may not have default values",
                                                  syntax::Error::FN_PARAMETER_HAS_DEFAULT_VALUE,
-                                                 std::pair{0uz, 6uz}});
+                                                 std::pair{0UZ, 6UZ}});
 }
 
 TEST_CASE("Noreturn function types") {
     helpers::test_parser_fail("fn(a: &noreturn): i32;",
                               syntax::Diagnostic{"Explicit `noreturn` type cannot have a modifier",
                                                  syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER,
-                                                 std::pair{0uz, 6uz}});
+                                                 std::pair{0UZ, 6UZ}});
 
     helpers::test_parser_fail(
         "fn(a: noreturn): i32;",
         syntax::Diagnostic{"Function parameter types may not be marked `noreturn`",
                            syntax::Error::FN_PARAMETER_IS_NORETURN,
-                           std::pair{0uz, 6uz}});
+                           std::pair{0UZ, 6UZ}});
 
     helpers::test_parser_fail("fn(a: A): &noreturn;",
                               syntax::Diagnostic{"Explicit `noreturn` type cannot have a modifier",
                                                  syntax::Error::ILLEGAL_NORETURN_TYPE_MODIFIER,
-                                                 std::pair{0uz, 10uz}});
+                                                 std::pair{0UZ, 10UZ}});
 }
 
 TEST_CASE("Illegal type function types") {
-    const auto expected_diag = [](usize col) {
-        return syntax::Diagnostic{"Explicit `type` type cannot have a modifier",
-                                  syntax::Error::ILLEGAL_TYPE_TYPE_MODIFIER,
-                                  std::pair{0uz, col}};
+    const auto expected_diag = [](usize col) -> syntax::Diagnostic {
+        return {"Explicit `type` type cannot have a modifier",
+                syntax::Error::ILLEGAL_TYPE_TYPE_MODIFIER,
+                std::pair{0UZ, col}};
     };
 
     helpers::test_parser_fail("fn(A: &type): i32;", expected_diag(6));

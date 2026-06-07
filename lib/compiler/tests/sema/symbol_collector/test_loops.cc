@@ -110,13 +110,13 @@ TEST_CASE("Non-break collection shadowing") {
         "const a := for (0..5) |i| { const foo := bar; } else { var a: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 55uz}});
+                         std::pair{0UZ, 55UZ}});
 
     helpers::test_collector_fail(
         "const a := while (true) : (i += 1) { const foo := bar; } else { var a: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 64uz}});
+                         std::pair{0UZ, 64UZ}});
 }
 
 TEST_CASE("Shadowing in loops") {
@@ -124,25 +124,25 @@ TEST_CASE("Shadowing in loops") {
         "const a := for (0..5) |i| { var a: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 28uz}});
+                         std::pair{0UZ, 28UZ}});
 
     helpers::test_collector_fail(
         "const a := for (0..5) |i| { var i: i32; };",
         sema::Diagnostic{"Redeclaration of symbol 'i'; previous declaration here: 1:24",
                          sema::Error::IDENTIFIER_REDECLARATION,
-                         std::pair{0uz, 28uz}});
+                         std::pair{0UZ, 28UZ}});
 
     helpers::test_collector_fail(
         "const a := loop { var a: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 18uz}});
+                         std::pair{0UZ, 18UZ}});
 
     helpers::test_collector_fail(
         "const a := while (true) { var a: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 26uz}});
+                         std::pair{0UZ, 26UZ}});
 }
 
 } // namespace ghoti::tests

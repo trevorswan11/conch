@@ -15,10 +15,10 @@ namespace ghoti::tests {
 using helpers::MockFile;
 
 TEST_CASE("Array/Index collection") {
-    helpers::collect_and_check("const a := [2uz]i32{A, B, }; const b := a[0];");
+    helpers::collect_and_check("const a := [2UZ]i32{A, B, }; const b := a[0];");
     helpers::collect_and_check("const a := [_]^N{a, b, c, d, e, }; const b := a[2];");
     helpers::collect_and_check("const a := [_]^N{a, b, c, d, if (e > f) g else h, };");
-    helpers::collect_and_check("const a := [2uz]i32{A, match (B) { c => d }, };");
+    helpers::collect_and_check("const a := [2UZ]i32{A, match (B) { c => d }, };");
 }
 
 TEST_CASE("Builtin calling collection") {
@@ -50,35 +50,36 @@ TEST_CASE("Prefix expression collection") {
 TEST_CASE("Duplicate identifiers") {
     helpers::test_collector_fail(
         "const a := 2; import a;",
-        helpers::make_vector<MockFile>(MockFile{"a.gh", "const foo := bar;", "a"}),
+        helpers::make_vector<MockFile>(
+            MockFile{.path = "a.gh", .source = "const foo := bar;", .name = "a"}),
         sema::Diagnostic{"Redeclaration of symbol 'a'; previous declaration here: 1:1",
                          sema::Error::IDENTIFIER_REDECLARATION,
-                         std::pair{0uz, 14uz}});
+                         std::pair{0UZ, 14UZ}});
 }
 
 TEST_CASE("Semantically illegal statements") {
     helpers::test_collector_fail("{}",
                                  sema::Diagnostic{"Cannot have block at the top level",
                                                   sema::Error::ILLEGAL_TOP_LEVEL_STATEMENT,
-                                                  std::pair{0uz, 0uz}});
+                                                  std::pair{0UZ, 0UZ}});
 
     helpers::test_collector_fail("defer 2;",
                                  sema::Diagnostic{"Cannot have defer outside of a function's scope",
                                                   sema::Error::ILLEGAL_TOP_LEVEL_STATEMENT,
-                                                  std::pair{0uz, 0uz}});
+                                                  std::pair{0UZ, 0UZ}});
 
     helpers::test_collector_fail("return 2;",
                                  sema::Diagnostic{"Cannot return outside of a function",
                                                   sema::Error::ILLEGAL_CONTROL_FLOW,
-                                                  std::pair{0uz, 0uz}});
+                                                  std::pair{0UZ, 0UZ}});
 
     helpers::test_collector_fail("break; continue;",
                                  sema::Diagnostic{"Cannot break outside of a loop or label",
                                                   sema::Error::ILLEGAL_CONTROL_FLOW,
-                                                  std::pair{0uz, 0uz}},
+                                                  std::pair{0UZ, 0UZ}},
                                  sema::Diagnostic{"Cannot continue outside of a loop",
                                                   sema::Error::ILLEGAL_CONTROL_FLOW,
-                                                  std::pair{0uz, 7uz}});
+                                                  std::pair{0UZ, 7UZ}});
 }
 
 using namespace std::string_view_literals;
@@ -95,7 +96,7 @@ TEST_CASE("Redundant constexpr usage for declarations") {
             fmt::format("constexpr {}", input),
             sema::Diagnostic{fmt::format("All {}s are implicitly constexpr", desc),
                              sema::Error::REDUNDANT_CONSTEXPR,
-                             std::pair{0uz, 0uz}});
+                             std::pair{0UZ, 0UZ}});
     }
 }
 
@@ -105,7 +106,7 @@ TEST_CASE("Restricted non-const top level declarations") {
             fmt::format("var {}", input),
             sema::Diagnostic{fmt::format("All {}s must be marked const", desc),
                              sema::Error::ILLEGAL_NON_CONST_STATEMENT,
-                             std::pair{0uz, 0uz}});
+                             std::pair{0UZ, 0UZ}});
     }
 }
 
@@ -115,7 +116,7 @@ TEST_CASE("Restricted non-const member types") {
             fmt::format("const S := struct {{ var {} }};", input),
             sema::Diagnostic{fmt::format("All {}s must be marked const", desc),
                              sema::Error::ILLEGAL_NON_CONST_STATEMENT,
-                             std::pair{0uz, 20uz}});
+                             std::pair{0UZ, 20UZ}});
     }
 }
 

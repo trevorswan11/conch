@@ -106,7 +106,7 @@ namespace ast {
 #define MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY(name, modifier)            \
     [[nodiscard]] constexpr auto is_##name() const noexcept -> bool { \
         if (is_value()) { return false; }                             \
-        return underlying_ == modifier;                               \
+        return underlying_ == (modifier);                             \
     }
 
 class TypeModifier {

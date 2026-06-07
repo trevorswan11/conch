@@ -16,7 +16,7 @@ namespace ghoti::mod {
 auto MemoryLoader::add(const std::filesystem::path& path, const std::string& content) -> void {
     const auto normalized = normalize(path);
     ASSERT(normalized);
-    files_[*normalized] = std::move(content);
+    files_[*normalized] = content;
 }
 
 auto MemoryLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {

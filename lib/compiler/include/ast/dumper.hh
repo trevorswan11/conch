@@ -24,14 +24,14 @@ class ASTDumper {
 
     template <traits::IndexableNodeID ID> auto dump(ID id) -> void {
         ASSERT(id.is_valid(), "Attempt to dump invalid handle");
-        ast_[id].visit([&](const auto& data) { this->visit(id, data); });
+        ast_[id].visit([&](const auto& data) -> void { this->visit(id, data); });
     }
 
     auto dump(ExplicitTypeID id) -> void {
         ASSERT(id.is_valid(), "Attempt to dump invalid handle");
         fmt::println(out_, "ExplicitType (modifier: {})", id.get_modifier());
         const Indent::Guard g{indent_, true};
-        ast_[id].visit([&](const auto& data) { visit(id, data); });
+        ast_[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
   private:
@@ -106,14 +106,14 @@ class ASTDumper {
     }
 
     template <typename T> void dump_node_list(const T& list) {
-        dump_container(list, [this](const auto& node_handle) {
+        dump_container(list, [this](const auto& node_handle) -> void {
             fmt::print(out_, "{}", indent_.current_branch());
             dump(*node_handle);
         });
     }
 
     template <> void dump_node_list<Members>(const Members& list) {
-        dump_container(list, [this](const MemberHandle& member_handle) {
+        dump_container(list, [this](const MemberHandle& member_handle) -> void {
             fmt::print(out_, "{}", indent_.current_branch());
             dump(*member_handle);
         });

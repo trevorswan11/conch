@@ -16,7 +16,9 @@ auto Arena::alloc(usize size, usize align) -> void* {
         if (total_size <= BLOCK_SIZE) {
             offset_ = total_size;
             return reinterpret_cast<void*>(aligned_ptr);
-        } else if (current_->next) {
+        }
+
+        if (current_->next) {
             current_ = current_->next;
             offset_  = 0;
             return alloc(size, align);
@@ -38,8 +40,8 @@ auto Arena::clear() noexcept -> void {
 }
 
 auto Arena::Block::alloc(Arena& a, usize size, usize align) -> void* {
-    void*  raw   = ::operator new(sizeof(Block) + BLOCK_SIZE);
-    Block* block = new (raw) Block{};
+    void* raw   = ::operator new(sizeof(Block) + BLOCK_SIZE);
+    auto* block = new (raw) Block{};
 
     if (!a.head_) {
         a.head_ = block;

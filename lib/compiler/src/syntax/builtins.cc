@@ -48,7 +48,7 @@ constexpr auto ALL_BUILTINS_BY_SV = fixed::make_hash_map(builtins::ALIGN_CAST,
                                                          builtins::CEIL,
                                                          builtins::PANIC);
 
-constexpr auto ALL_BUILTINS_BY_TT = [] {
+constexpr auto ALL_BUILTINS_BY_TT = [] -> auto {
     fixed::EnumMap<TokenType, opt::Option<std::string_view>> builtins;
     for (const auto& [name, tok] : ALL_BUILTINS_BY_SV) { builtins[tok] = name; }
     return builtins;

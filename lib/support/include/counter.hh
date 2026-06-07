@@ -30,7 +30,7 @@ template <traits::Integral Underlying> class Counter {
     constexpr auto decrement() noexcept -> void { count_ -= ONE; }
 
     constexpr operator bool() noexcept { return count_ != ZERO; }
-    constexpr operator Underlying() noexcept { return static_cast<Underlying>(count_); }
+    constexpr operator Underlying() noexcept { return count_; }
 
     constexpr auto               operator<=>(const Counter&) const noexcept        = default;
     [[nodiscard]] constexpr auto operator==(const Counter&) const noexcept -> bool = default;
