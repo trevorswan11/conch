@@ -30,7 +30,6 @@
 #include "result.hh"
 #include "types.hh"
 #include "utility.hh"
-#include "variant.hh"
 
 namespace ghoti::sema {
 
@@ -240,7 +239,7 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::ReturnStatement&) -> void;
     auto visit(ast::NodeID, const ast::TestStatement&) -> void;
     auto visit(ast::NodeID, const ast::UsingStatement&) -> void;
-    auto visit(ast::NodeID, const Unit&) noexcept -> void {}
+    auto visit(ast::NodeID, ast::Discarded) noexcept -> void {}
 
     // Creates a potentially new type with the id-stored modifiers
     auto apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_type) -> Type&;

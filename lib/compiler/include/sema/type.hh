@@ -349,7 +349,6 @@ class TypePool {
     [[nodiscard]] auto operator[](const types::Key& key) -> gsl::not_null<Type*> {
         return get_or_emplace(key);
     }
-    [[nodiscard]] auto get_opt(const types::Key& key) noexcept -> opt::Option<Type&>;
 
     // Allocate a quasi-contiguous span of types with the provided keys
     template <std::same_as<types::Key>... Keys>

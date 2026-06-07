@@ -9,6 +9,8 @@
 #include "helpers/common.hh"
 #include "helpers/sema.hh"
 #include "sema/error.hh"
+#include "sema/symbol.hh"
+#include "sema/type.hh"
 #include "types.hh"
 
 namespace ghoti::tests {
@@ -28,6 +30,31 @@ TEST_CASE("Resolving well-formed union matching") {
         "using U = union { a: i32, b: i64 }; match (U) { .a => 5, .b => 4 };");
     helpers::resolve_and_check(
         "using U = union { a: i32, b: i64 }; match (U) { .a => 5, _ => 4 };");
+}
+
+TEST_CASE("Resolving capturing match arms") {
+    const auto test_arm_capture = [](std::string_view input,
+                                     std::string_view capture_name,
+                                     usize            capture_idx,
+                                     auto&&           expected_type_fn) {
+        auto [ctx, _] = helpers::resolve_and_check(input);
+        auto [sym, data, actual_data] =
+            ctx->get_type_sym_info<sema::symbols::MatchCapture>(capture_name, capture_idx);
+        CHECK(actual_data == expected_type_fn(*ctx));
+    };
+
+    test_arm_capture("using E = enum { a }; match (E) { .a => |a| 5 };",
+                     "a",
+                     2,
+                     [](helpers::SemaTestContext& ctx) -> auto& {
+                         return ctx.get_type(sema::TypeKind::ENUM, 1);
+                     });
+
+    test_arm_capture(
+        "using U = union { a: i32 }; match (U) { .a => |a| 5 };",
+        "a",
+        2,
+        [](helpers::SemaTestContext& ctx) -> auto& { return ctx.get_type(sema::TypeKind::I32); });
 }
 
 TEST_CASE("Resolving well-formed builtin-type matching") {

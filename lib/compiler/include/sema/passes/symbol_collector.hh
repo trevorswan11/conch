@@ -8,6 +8,7 @@
 #include "ast/expression.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
+#include "ast/kind.hh"
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "ast/traits.hh"
@@ -22,7 +23,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::sema {
 
@@ -78,7 +78,7 @@ class SymbolCollector {
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
     template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
     auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
-    auto visit(ast::NodeID, const Unit&) noexcept -> void {}
+    auto visit(ast::NodeID, ast::Discarded) noexcept -> void {}
 
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
     auto visit(ast::NodeID, const ast::BreakStatement&) -> void;

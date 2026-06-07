@@ -7,6 +7,7 @@
 
 #include "ast/expression.hh"
 #include "ast/id.hh"
+#include "ast/kind.hh"
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "ast/type.hh"
@@ -15,7 +16,6 @@
 
 #include "indent.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::ast {
 
@@ -144,7 +144,7 @@ auto ASTDumper::visit(NodeID, const ForLoopExpression& for_loop) -> void {
         fmt::println(out_, "{}Captures:", indent_.current_branch());
         dump_container(for_loop.captures, [this](const ForLoopExpression::Capture& capture) {
             fmt::print(out_, "{}", indent_.current_branch());
-            if (capture.payload.is<Unit>()) {
+            if (capture.payload.is<ast::Discarded>()) {
                 fmt::println(out_, "<discarded>");
             } else {
                 const auto& ident = ast_.get_as<IdentifierExpression>(*capture.payload);

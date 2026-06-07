@@ -6,7 +6,6 @@
 #include <gsl/span>
 
 #include "fixed/enum_map.hh"
-#include "option.hh"
 #include "types.hh"
 
 namespace ghoti::sema {
@@ -53,11 +52,6 @@ constexpr auto TYPE_KIND_NAMES = [] {
 
 auto type_kind_display_name(TypeKind kind) noexcept -> std::string_view {
     return TYPE_KIND_NAMES[kind];
-}
-
-auto TypePool::get_opt(const types::Key& key) noexcept -> opt::Option<Type&> {
-    if (auto it = cache_.find(key); it != cache_.end()) { return *it->second; }
-    return opt::none;
 }
 
 auto TypePool::get_or_emplace(const types::Key& key) -> gsl::not_null<Type*> {

@@ -21,7 +21,6 @@
 #include "option.hh"
 #include "result.hh"
 #include "types.hh"
-#include "variant.hh"
 
 namespace ghoti::ast {
 
@@ -281,7 +280,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
         parser.advance();
         if (parser.current_token_is(syntax::TokenType::UNDERSCORE)) {
             const auto discarded =
-                parser.add_node<DiscardableIdentHandle, Unit>(parser.get_current_token());
+                parser.add_node<DiscardableIdentHandle, ast::Discarded>(parser.get_current_token());
             captures.emplace_back(TypeModifier{}, discarded);
         } else {
             // Always check for a modifier and advance past it if present
@@ -667,8 +666,8 @@ auto MatchExpression::parse(syntax::Parser& parser)
                                        parser.get_current_token());
             }
 
-            pattern_opt.emplace(
-                parser.add_node<DiscardableIdentHandle, Unit>(parser.get_current_token()));
+            pattern_opt.emplace(parser.add_node<DiscardableIdentHandle, ast::Discarded>(
+                parser.get_current_token()));
             catch_all_idx.emplace(arm_idx);
         } else {
             const auto pattern_tok = parser.get_current_token();
@@ -694,8 +693,8 @@ auto MatchExpression::parse(syntax::Parser& parser)
             // An underscore is equivalent to a lack of capture
             if (parser.peek_token_is(syntax::TokenType::UNDERSCORE)) {
                 parser.advance();
-                capture.emplace(
-                    parser.add_node<DiscardableIdentHandle, Unit>(parser.get_current_token()));
+                capture.emplace(parser.add_node<DiscardableIdentHandle, ast::Discarded>(
+                    parser.get_current_token()));
             } else {
                 TRY(parser.expect_peek(syntax::TokenType::IDENT));
                 capture.emplace(TRY(IdentifierExpression::parse(parser)));

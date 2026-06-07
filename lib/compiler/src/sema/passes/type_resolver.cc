@@ -13,6 +13,7 @@
 #include "ast/format.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
+#include "ast/kind.hh"
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "ast/traits.hh"
@@ -157,8 +158,7 @@ template <traits::IndexableID ID>
         ASSERT(builtin.return_type.get_kind() == TypeKind::TYPE);
         auto&       instance_type = *get_resolved_call_arg_type(call.arguments[0]);
         const auto& instance_data = instance_type.get_data();
-        if (instance_data.as_opt<types::DeferredCall>() ||
-            instance_data.as_opt<types::DeferredArray>()) {
+        if (instance_data.is<types::DeferredCall>() || instance_data.is<types::DeferredArray>()) {
             return_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
             return_type->resolve_if<types::DeferredCall>(call);
         } else {
@@ -206,7 +206,7 @@ template <traits::IndexableID ID>
     }
     case TokenType::BUILTIN_SLICE_FROM_PTR: {
         auto& ptr_type = *get_resolved_call_arg_type(call.arguments[0]);
-        if (const auto& ptr_data = ptr_type.get_data().as_opt<types::Pointer>()) {
+        if (const auto ptr_data = ptr_type.get_data().as_opt<types::Pointer>()) {
             // The resulting slice isn't null terminated since the pointer gives no guarantee
             return_type = &ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
             break;
@@ -778,7 +778,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> v
     auto& access_type = *last_type_.take();
 
     // There may be a slice accessor which results in a slice type
-    if (access_type.get_data().as_opt<types::Slice>()) {
+    if (access_type.get_data().is<types::Slice>()) {
         last_type_.emplace(ctx_.get_slice(types::mut::CONSTANT, false, single_item_type));
     } else {
         last_type_.emplace(single_item_type);
@@ -937,7 +937,7 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
 
     // Check for duplicates
     for (const auto& [accessor, value] : init.initializers) {
-        const auto& accessor_node = resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
+        const auto  accessor_node = resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
         const auto& accessor_ident =
             resolving_.ast.get_as<ast::IdentifierExpression>(accessor_node.member);
         const auto field_name = accessor_ident.name;
@@ -1018,7 +1018,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
 
     const auto  num_initializers = init.initializers.size();
     const auto& object_data      = object_type.get_data();
-    if (object_data.as_opt<types::Enum>()) {
+    if (object_data.is<types::Enum>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1026,7 +1026,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
                              "they lack member variables",
                              Error::ARITY_MISMATCH,
                              resolving_.ast.location_of(id)));
-    } else if (object_data.as_opt<types::Union>()) {
+    } else if (object_data.is<types::Union>()) {
         // This is a restriction naturally imposed by the definition of a union in theory
         if (num_initializers != 1) {
             return last_type_.emplace(ctx_.poison_node(
@@ -1043,7 +1043,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
         }
     }
 
-    if (!object_data.as_opt<types::Struct>() && !object_data.as_opt<types::Union>()) {
+    if (!object_data.is<types::Struct>() && !object_data.is<types::Union>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1108,7 +1108,7 @@ auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
                            TypeResolver::StructuralValidator&         validator,
                            bool require_implicit_access) -> opt::Option<Diagnostic> {
     for (const auto& arm : arms) {
-        if (arm.pattern.is<Unit>()) { continue; }
+        if (arm.pattern.is<ast::Discarded>()) { continue; }
 
         // It's only possible to verify access expressions
         const auto pattern_node =
@@ -1246,15 +1246,15 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
 
     // Rip through the arms once to validate structural arm rules
     const auto& matcher_data = matcher_type.get_data();
-    if (matcher_data.as_opt<types::Enum>()) {
+    if (matcher_data.is<types::Enum>()) {
         if (auto diag = validate_enum_arms(id, match, matcher_type); diag) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
-    } else if (matcher_data.as_opt<types::Union>()) {
+    } else if (matcher_data.is<types::Union>()) {
         if (auto diag = validate_union_arms(id, match, matcher_type); diag) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
-    } else if (matcher_data.as_opt<types::BuiltinType>()) {
+    } else if (matcher_data.is<types::BuiltinType>()) {
         // It's assumed that any sufficiently large type cannot be fully enumerated
         opt::Option<u16> required_arm_count;
         switch (matcher_type.get_kind()) {
@@ -1331,26 +1331,36 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
     }
 
     // Each arm was assigned a new scope index on the first pass
-    for (usize i = 0; const auto& arm : match.arms) {
+    for (const auto& arm : match.arms) {
         // Tabled types have prefilled types that should be pushed on the table stack
-        opt::Option<Scope> scope;
-        const auto         arm_type = resolving_.get_sema_type_opt(arm.pattern);
-        if (arm_type && arm_type->has_symbol_table_idx()) {
-            scope.emplace(table_stack_, arm_type->get_symbol_table_idx(), table_idx_);
-        }
+        auto&       arm_type = resolving_.get_sema_type(arm);
+        const Scope scope{table_stack_, arm_type.get_symbol_table_idx(), table_idx_};
 
         if (arm.capture && arm.capture->is<ast::IdentifierExpression>()) {
-            resolving_.set_sema_type(*arm.capture, matcher_type);
+            // Unions implicitly unpack the value since the field is guaranteed to be valid
+            if (const auto union_data = matcher_data.as_opt<types::Union>()) {
+                // At this point the pattern is guaranteed to be an implicit access
+                const auto implicit_access =
+                    resolving_.ast.get_as_opt<ast::ImplicitAccessExpression>(arm.pattern);
+                ASSERT(implicit_access, "Union validator failed to error");
+                const auto& ident =
+                    resolving_.ast.get_as<ast::IdentifierExpression>(implicit_access->member);
+
+                const auto& table = ctx_.registry.get(matcher_type.get_symbol_table_idx());
+                const auto& proxy = table.get_proxy(ident.name);
+                resolving_.set_sema_type(*arm.capture, union_data->type_at(proxy.index));
+            } else {
+                resolving_.set_sema_type(*arm.capture, matcher_type);
+            }
+
             resolve_symbol_info(*arm.capture, SymbolKind::VALUE);
         }
 
-        if (i != match.catch_all_idx) { TRY_RESOLVE(arm.pattern); }
+        if (!arm.pattern.is<ast::Discarded>()) { TRY_RESOLVE(arm.pattern); }
         TRY_RESOLVE(arm.dispatch);
 
         // Set the arms type to the dispatch only if its not occupied by a tabled type
-        if (!arm_type) { resolving_.set_sema_type(arm.pattern, *last_type_); }
         try_set_first_type();
-        i += 1;
     }
 
     // In the rare case that a type could not be found we have to poison
@@ -1559,8 +1569,8 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         resolving_.set_sema_type(access.inner, ident_type);
         resolving_.set_sema_type(id, ident_type);
         return last_type_.emplace(ident_type);
-    } else if (outer_resolved.as_opt<types::Struct>() || outer_resolved.as_opt<types::Enum>() ||
-               outer_resolved.as_opt<types::Union>()) {
+    } else if (outer_resolved.is<types::Struct>() || outer_resolved.is<types::Enum>() ||
+               outer_resolved.is<types::Union>()) {
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
@@ -1809,12 +1819,12 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
     if (resolved_type.is_poison()) {
         symbol.set_kind(SymbolKind::POISONED);
     } else if (!symbol.has_kind()) {
-        if (type_data.as_opt<types::BuiltinFunction>() || type_data.as_opt<types::Function>()) {
+        if (type_data.is<types::BuiltinFunction>() || type_data.is<types::Function>()) {
             symbol.set_kind(SymbolKind::CALLABLE);
-        } else if (type_data.as_opt<types::Enum>() || type_data.as_opt<types::Struct>() ||
-                   type_data.as_opt<types::Union>()) {
+        } else if (type_data.is<types::Enum>() || type_data.is<types::Struct>() ||
+                   type_data.is<types::Union>()) {
             symbol.set_kind(SymbolKind::CALLABLE);
-        } else if (type_data.as_opt<types::Module>()) {
+        } else if (type_data.is<types::Module>()) {
             symbol.set_kind(SymbolKind::MODULE);
         } else if (resolved_type == ctx_.get_builtin_resolved_type(TypeKind::TYPE)) {
             symbol.set_kind(SymbolKind::TYPE);
