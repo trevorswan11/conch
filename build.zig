@@ -145,7 +145,12 @@ const TestArtifacts = struct {
     compiler_tests: *std.Build.Step.Compile = undefined,
     driver_tests: *std.Build.Step.Compile = undefined,
 
-    pub fn configure(self: *const TestArtifacts, b: *std.Build, cdb_steps: ?*std.ArrayList(*std.Build.Step), install_dir: ?[]const u8) !void {
+    pub fn configure(
+        self: *const TestArtifacts,
+        b: *std.Build,
+        cdb_steps: ?*std.ArrayList(*std.Build.Step),
+        install_dir: ?[]const u8,
+    ) !void {
         if (cdb_steps) |cdb| {
             try cdb.append(b.allocator, &self.support_tests.step);
             try cdb.append(b.allocator, &self.compiler_tests.step);
