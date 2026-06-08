@@ -3,10 +3,8 @@
 #ifdef GHOTI_PROFILE
 #    include <cassert>
 #    include <chrono>
-#    include <cstdint>
 #    include <ratio>
 #    include <string_view>
-#    include <thread>
 
 #    include <fmt/ostream.h>
 #    include <fmt/std.h>
@@ -17,8 +15,7 @@ namespace ghoti {
 
 template <typename T> using micros = std::chrono::duration<T, std::micro>;
 
-class Profiler {
-  public:
+struct Profiler {
     // The tracing json file is created next to the provided binary
     explicit Profiler(std::string_view binary_path);
     ~Profiler();
@@ -27,17 +24,17 @@ class Profiler {
     auto operator=(const Profiler&) -> Profiler&     = delete;
     Profiler(Profiler&&) noexcept                    = delete;
     auto operator=(Profiler&&) noexcept -> Profiler& = delete;
-
-    static auto write(std::string_view     name,
-                      micros<double>       start,
-                      micros<std::int64_t> elapsed,
-                      std::thread::id      tid) -> void;
 };
 
 class Timer {
   public:
     explicit Timer(std::string_view name);
     ~Timer();
+
+    Timer(const Timer&)                        = delete;
+    auto operator=(const Timer&) -> Timer&     = delete;
+    Timer(Timer&&) noexcept                    = delete;
+    auto operator=(Timer&&) noexcept -> Timer& = delete;
 
   private:
     std::string_view                                   name_;

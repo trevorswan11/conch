@@ -25,12 +25,14 @@
 #include <assert.hh>
 #include <iterator.hh>
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 #include <types.hh>
 
 namespace ghoti::sema {
 
 auto SymbolCollector::collect_symbols(mod::Module& module, Context& ctx) -> mod::ModuleState {
+    PROFILE_FUNCTION();
     if (module.is_collectable()) {
         module.root_table_idx.emplace(ctx.registry.create());
 

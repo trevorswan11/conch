@@ -22,6 +22,7 @@
 #include <enum.hh>
 #include <fixed/enum_map.hh>
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 #include <types.hh>
 
@@ -43,6 +44,7 @@ auto Parser::advance(u8 times) noexcept -> const Token& {
 }
 
 auto Parser::consume(ast::AST& ast) -> Diagnostics {
+    PROFILE_FUNCTION();
     reset(input_);
     ast.clear();
     ast_.emplace(ast);

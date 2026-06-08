@@ -9,11 +9,13 @@
 #include "sema/passes/type_resolver.hh"
 #include "syntax/error.hh"
 
+#include <profiler.hh>
 #include <result.hh>
 
 namespace ghoti::sema {
 
 auto Analyzer::analyze(const std::filesystem::path& entry_path) -> Result<void, Diagnostic> {
+    PROFILE_FUNCTION();
     auto module_result = modules_.try_get_file_module(entry_path);
     if (!module_result) {
         return make_sema_err(std::move(module_result.error()).get_message(),

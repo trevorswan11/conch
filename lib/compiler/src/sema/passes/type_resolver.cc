@@ -31,6 +31,7 @@
 #include <assert.hh>
 #include <diagnostic.hh>
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 #include <types.hh>
 #include <utility.hh>
@@ -39,6 +40,7 @@
 namespace ghoti::sema {
 
 auto TypeResolver::resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState {
+    PROFILE_FUNCTION();
     // Poisoned collection should flush the diagnostics
     const auto poisoned_collection = module.state == mod::ModuleState::POISONED_SYMBOL_COLLECTION;
     if (poisoned_collection) { module.print_diagnostics(ctx.error_stream); }
