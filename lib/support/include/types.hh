@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string_view>
 #include <type_traits>
 
 namespace ghoti {
@@ -23,7 +22,5 @@ using idiff = std::ptrdiff_t;
 
 using f32 = float;
 using f64 = double;
-
-using byte = std::string_view::value_type;
 
 } // namespace ghoti

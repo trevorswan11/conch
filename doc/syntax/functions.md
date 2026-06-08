@@ -45,7 +45,7 @@ _ = baz(&mut b);    // Illegal, cannot mutate const
 
 - Variadic function parameters are supported to allow for c-interop
     - Currently, ghoti does not expose primitives for interacting with this parameter type
-    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(^byte, ...): i32;`
+    - For example, you can declare an extern function like `printf` from libc as: `extern const printf: fn(^u8, ...): i32;`
 
 ## Semantics
 - There is no function overloading

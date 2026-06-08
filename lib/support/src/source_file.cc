@@ -29,8 +29,8 @@ auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
 
     // Count skipped on the left but not right since the caret is right-clipped
     usize skipped = 0;
-    substr        = string::trim_left(substr, [&skipped](byte b) -> bool {
-        if (std::isspace(b)) {
+    substr        = string::trim_left(substr, [&skipped](char c) -> bool {
+        if (std::isspace(c)) {
             skipped += 1;
             return true;
         }

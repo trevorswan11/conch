@@ -321,7 +321,7 @@ auto Lexer::read_number() noexcept -> Token {
     return {type, string::substr(input_, start, length), start_line, start_col};
 }
 
-auto Lexer::read_escape() noexcept -> byte {
+auto Lexer::read_escape() noexcept -> char {
     read_character();
 
     switch (current_byte_) {

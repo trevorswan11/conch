@@ -12,9 +12,9 @@
 ```ghoti
 const a := 2;           // Type deduced to be i32
 const b := "str";       // Type deduced to be a constant size array of bytes (non-null terminated)
-const c: byte = 's';    // Explicitly typed, so value must agree
+const c: u8 = 's';    // Explicitly typed, so value must agree
 const d :=;             // Illegal, walrus needs a value!
-var e: []byte;         // Allowed, e is forward declared and future assignments must be a slice of bytes
+var e: []u8;         // Allowed, e is forward declared and future assignments must be a slice of bytes
 ```
 
 ## Runtime Constants

@@ -145,28 +145,34 @@ const TestArtifacts = struct {
     compiler_tests: *std.Build.Step.Compile = undefined,
     driver_tests: *std.Build.Step.Compile = undefined,
 
-    pub fn configure(
-        self: *const TestArtifacts,
-        b: *std.Build,
-        cdb_steps: ?*std.ArrayList(*std.Build.Step),
-    ) !void {
+    pub fn configure(self: *const TestArtifacts, b: *std.Build, cdb_steps: ?*std.ArrayList(*std.Build.Step), install_dir: ?[]const u8) !void {
         if (cdb_steps) |cdb| {
             try cdb.append(b.allocator, &self.support_tests.step);
             try cdb.append(b.allocator, &self.compiler_tests.step);
             try cdb.append(b.allocator, &self.driver_tests.step);
         }
 
-        const runners = [_]*std.Build.Step.Run{
-            b.addRunArtifact(self.harness_tests),
-            b.addRunArtifact(self.support_tests),
-            b.addRunArtifact(self.compiler_tests),
-            b.addRunArtifact(self.driver_tests),
+        const artifacts = [_]*std.Build.Step.Compile{
+            self.harness_tests,
+            self.support_tests,
+            self.compiler_tests,
+            self.driver_tests,
         };
 
         const test_step = b.step("test", "Run all unit tests");
-        for (runners) |runner| {
+        for (artifacts) |artifact| {
+            const runner = b.addRunArtifact(artifact);
             runner.step.dependOn(b.getInstallStep());
             test_step.dependOn(&runner.step);
+
+            if (install_dir) |override| {
+                const install = b.addInstallArtifact(artifact, .{
+                    .dest_dir = .{
+                        .override = .{ .custom = override },
+                    },
+                });
+                test_step.dependOn(&install.step);
+            }
         }
     }
 };
@@ -465,7 +471,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .compiler_tests = compiler_tests,
             .driver_tests = driver_tests,
         };
-        try tests.?.configure(b, config.cdb_steps);
+        try tests.?.configure(b, config.cdb_steps, install_behavior);
     }
 
     const cppcheck_dep: ?Dependency = if (building_for_host) try cppcheck.build(b, .{

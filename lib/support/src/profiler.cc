@@ -12,6 +12,7 @@
 #    include <string_view>
 #    include <thread>
 
+#    include <fmt/format.h>
 #    include <fmt/ostream.h>
 #    include <fmt/std.h>
 
@@ -29,15 +30,17 @@ struct SessionDeleter {
         delete ostream;
     }
 };
-using Session = std::unique_ptr<std::ofstream, SessionDeleter>;
 
-static Session    session;
-static std::mutex mutex;
+static std::unique_ptr<std::ofstream, SessionDeleter> session;
+static std::mutex                                     mutex;
 
-Profiler::Profiler(const std::filesystem::path& path) {
+Profiler::Profiler(std::string_view path) {
+    std::filesystem::path json{path};
+    json.replace_filename(fmt::format("{}-profile.json", json.stem()));
+
     std::scoped_lock lock{mutex};
-    session.reset(new std::ofstream{path});
-    ASSERT(session, "Instrumentor could not open output path");
+    session.reset(new std::ofstream{json});
+    ASSERT(session->is_open(), "Profiler could not open output path");
     fmt::print(*session, R"({{"otherData": {{}},"traceEvents":[{{}})");
 }
 

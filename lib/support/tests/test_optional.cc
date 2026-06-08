@@ -119,7 +119,7 @@ TEST_CASE("Safe optional custom equality") {
 
     CHECK(opt::safe_eq<std::string&>(
         opt1, opt2, [](const std::string& a, const std::string& b) -> bool {
-            return std::ranges::equal(a, b, [](byte ac, byte bc) -> bool {
+            return std::ranges::equal(a, b, [](char ac, char bc) -> bool {
                 return std::tolower(ac) == std::tolower(bc);
             });
         }));

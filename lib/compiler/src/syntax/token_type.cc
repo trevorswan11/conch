@@ -23,7 +23,7 @@ auto base_idx(Base base) noexcept -> i32 {
     }
 }
 
-auto digit_in_base(byte c, Base base) noexcept -> bool {
+auto digit_in_base(char c, Base base) noexcept -> bool {
     switch (base) {
     case Base::BINARY:      return c == '0' || c == '1';
     case Base::OCTAL:       return c >= '0' && c <= '7';
@@ -65,8 +65,8 @@ auto to_base(TokenType tt) noexcept -> opt::Option<Base> {
     }
 }
 
-auto misc_from_char(byte b) noexcept -> opt::Option<TokenType> {
-    switch (b) {
+auto misc_from_char(char c) noexcept -> opt::Option<TokenType> {
+    switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
     case ';': return TokenType::SEMICOLON;

@@ -52,7 +52,7 @@ class Lexer {
       private:
         usize pos_;
         usize peek_pos_;
-        byte  current_byte_;
+        char  current_byte_;
         usize line_no_;
         usize col_no_;
 
@@ -84,7 +84,7 @@ class Lexer {
     [[nodiscard]] auto read_operator() const noexcept -> opt::Option<Token>;
     auto               read_ident(bool builtin) noexcept -> std::string_view;
     auto               read_number() noexcept -> Token;
-    auto               read_escape() noexcept -> byte;
+    auto               read_escape() noexcept -> char;
     auto               read_string() noexcept -> Token;
     auto               read_multiline_string() noexcept -> Token;
     auto               read_byte_literal() noexcept -> Token;
@@ -103,7 +103,7 @@ class Lexer {
     std::string_view input_;
     usize            pos_{0};
     usize            peek_pos_{0};
-    byte             current_byte_{0};
+    char             current_byte_{0};
 
     usize line_no_{0};
     usize col_no_{0};

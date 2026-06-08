@@ -19,14 +19,14 @@ using Parsed = Variant<Unit, cmd::Debug>;
 
 class Parser {
   public:
-    Parser(i32 argc, byte** argv, std::ostream& os = std::cerr, bool ensure_utf8 = true) noexcept;
+    Parser(i32 argc, char** argv, std::ostream& os = std::cerr, bool ensure_utf8 = true) noexcept;
 
     auto               parse() -> Result<void, i32>;
     [[nodiscard]] auto get_parsed() noexcept -> Parsed& { return parsed_; }
 
   private:
     i32           argc_;
-    byte**        argv_;
+    char**        argv_;
     std::ostream& os_;
 
     CLI::App app_;

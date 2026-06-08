@@ -22,7 +22,7 @@ namespace ghoti::ast {
 namespace {
 
 // A global buffer for storing underscore-cleaned numeric tokens for `std::from_chars`
-constinit fixed::Vector<byte, 1'024> numeric_buffer;
+constinit fixed::Vector<char, 1'024> numeric_buffer;
 
 // Parses the requested value from the string, asserting the from_chars result if requested
 template <typename ValueType>

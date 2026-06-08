@@ -20,11 +20,11 @@ class MockArgv {
     }
 
     [[nodiscard]] auto argc() const noexcept -> i32 { return static_cast<i32>(strings_.size()); }
-    [[nodiscard]] auto argv() noexcept -> byte** { return pointers_.data(); }
+    [[nodiscard]] auto argv() noexcept -> char** { return pointers_.data(); }
 
   private:
     std::vector<std::string> strings_;
-    std::vector<byte*>       pointers_;
+    std::vector<char*>       pointers_;
 };
 
 } // namespace ghoti::tests::helpers

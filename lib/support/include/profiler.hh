@@ -4,7 +4,6 @@
 #    include <cassert>
 #    include <chrono>
 #    include <cstdint>
-#    include <filesystem>
 #    include <ratio>
 #    include <string_view>
 #    include <thread>
@@ -20,7 +19,8 @@ template <typename T> using micros = std::chrono::duration<T, std::micro>;
 
 class Profiler {
   public:
-    Profiler(const std::filesystem::path& path);
+    // The tracing json file is created next to the provided binary
+    explicit Profiler(std::string_view binary_path);
     ~Profiler();
 
     Profiler(const Profiler&)                        = delete;
@@ -53,4 +53,13 @@ class Timer {
 #else
 #    define PROFILE_SCOPE(name)
 #    define PROFILE_FUNCTION()
+
+namespace ghoti {
+
+// This is compiled out with argv[0]: https://godbolt.org/z/45M5o8fj1
+struct Profiler {
+    constexpr explicit Profiler(auto) noexcept {}
+};
+
+} // namespace ghoti
 #endif
