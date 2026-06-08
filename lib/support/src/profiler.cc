@@ -34,16 +34,12 @@ struct SessionDeleter {
     }
 };
 
-class Buffer;
-
 constinit std::unique_ptr<std::ofstream, SessionDeleter> session;
 constinit std::mutex                                     mutex;
-constinit fixed::Vector<Buffer*, 1'024>                  buffers;
 
 class Buffer {
   public:
     static constexpr usize BUF_SIZE{32UZ * 1'024UZ};
-    static constexpr usize HEADROOM{512UZ};
 
   public:
     constexpr Buffer() = default;
@@ -54,15 +50,6 @@ class Buffer {
     Buffer(Buffer&&) noexcept                    = delete;
     auto operator=(Buffer&&) noexcept -> Buffer& = delete;
 
-    [[nodiscard]] auto back_inserter() noexcept -> auto { return std::back_inserter(buf_); }
-
-    auto ensure_capacity() -> void {
-        if (buf_.size() + HEADROOM >= BUF_SIZE) {
-            std::scoped_lock lock{mutex};
-            flush();
-        }
-    }
-
     // Must be called with the global mutex held
     auto flush() -> void {
         if (buf_.empty() || !session || !session->is_open()) { return; }
@@ -72,9 +59,17 @@ class Buffer {
 
   private:
     fixed::Vector<char, BUF_SIZE> buf_;
+
+    friend struct BufferManager;
 };
 
 struct BufferManager {
+  public:
+    static constexpr usize                                      HEADROOM{512UZ};
+    static constexpr usize                                      MAX_BUFFERS{1'024UZ};
+    static inline constinit fixed::Vector<Buffer*, MAX_BUFFERS> buffers;
+
+  public:
     Buffer data;
 
     BufferManager() {
@@ -89,14 +84,18 @@ struct BufferManager {
                 break;
             }
         }
-        if (!inserted) { buffers.emplace_back(&data); }
+
+        if (!inserted) {
+            ASSERT(buffers.size() < buffers.capacity(), "Too many threads spawned");
+            buffers.emplace_back(&data);
+        }
     }
 
     ~BufferManager() {
         std::scoped_lock lock{mutex};
         data.flush();
 
-        // Cannot use a std algorithm due to fixed::Vector non-conformance
+        // Setting to nullptr is more efficient than erase since it avoids shift
         for (auto*& buf : buffers) {
             if (buf == &data) {
                 buf = nullptr;
@@ -109,6 +108,17 @@ struct BufferManager {
     auto operator=(const BufferManager&) -> BufferManager&     = delete;
     BufferManager(BufferManager&&) noexcept                    = delete;
     auto operator=(BufferManager&&) noexcept -> BufferManager& = delete;
+
+    // Gets a back inserter for libfmt to write out to
+    [[nodiscard]] auto out() noexcept -> auto { return std::back_inserter(data.buf_); }
+
+    // Flushes the buffer if full, managing the global mutex accordingly
+    auto ensure_capacity() -> void {
+        if (data.buf_.size() + HEADROOM >= data.buf_.capacity()) {
+            std::scoped_lock lock{mutex};
+            data.flush();
+        }
+    }
 };
 
 auto write_scope(std::string_view     name,
@@ -118,10 +128,10 @@ auto write_scope(std::string_view     name,
     ASSERT(session && session->is_open(), "Writing cannot be done prior to initialization");
 
     thread_local BufferManager manager;
-    manager.data.ensure_capacity();
+    manager.ensure_capacity();
 
     fmt::format_to(
-        manager.data.back_inserter(),
+        manager.out(),
         R"(,{{"cat":"function","dur":{},"name":"{}","ph":"X","pid":0,"tid":"{}","ts":{:.3f}}})",
         elapsed.count(),
         name,
@@ -147,10 +157,10 @@ Profiler::Profiler(std::string_view path) {
 
 Profiler::~Profiler() {
     std::scoped_lock lock{mutex};
-    for (auto* buf : buffers) {
+    for (auto* buf : BufferManager::buffers) {
         if (buf) { buf->flush(); }
     }
-    buffers.clear();
+    BufferManager::buffers.clear();
     session.reset();
 }
 
