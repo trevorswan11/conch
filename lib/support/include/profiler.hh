@@ -4,6 +4,7 @@
 #    include <cassert>
 #    include <chrono>
 #    include <ratio>
+#    include <string>
 #    include <string_view>
 
 #    include <fmt/ostream.h>
@@ -28,7 +29,7 @@ struct Profiler {
 
 class Timer {
   public:
-    explicit Timer(std::string_view name);
+    explicit Timer(const char* name);
     ~Timer();
 
     Timer(const Timer&)                        = delete;
@@ -37,9 +38,8 @@ class Timer {
     auto operator=(Timer&&) noexcept -> Timer& = delete;
 
   private:
-    std::string_view                                   name_;
+    const char*                                        name_;
     std::chrono::time_point<std::chrono::steady_clock> start_;
-    bool                                               stopped_{false};
 };
 
 } // namespace ghoti

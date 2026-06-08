@@ -5,12 +5,8 @@
 #    include <cstdint>
 #    include <filesystem>
 #    include <fstream>
-#    include <iomanip>
-#    include <ios>
 #    include <memory>
 #    include <mutex>
-#    include <ostream>
-#    include <sstream>
 #    include <string_view>
 #    include <thread>
 
@@ -34,26 +30,23 @@ struct SessionDeleter {
 
 namespace {
 
-std::unique_ptr<std::ofstream, SessionDeleter> session;
-std::mutex                                     mutex;
+constinit std::unique_ptr<std::ofstream, SessionDeleter> session;
+constinit std::mutex                                     mutex;
 
 auto write_scope(std::string_view     name,
                  micros<double>       start,
                  micros<std::int64_t> elapsed,
                  std::thread::id      tid) -> void {
-    ASSERT(session, "Writing cannot be done prior to initialization");
-    std::stringstream json;
-    json << std::setprecision(3) << std::fixed;
-
-    fmt::print(json, ",{{");
-    fmt::print(json, R"("cat":"function",)");
-    fmt::print(json, R"("dur":{},)", elapsed.count());
-    fmt::print(json, R"("name":"{}",)", name);
-    fmt::print(json, R"("ph":"X","pid":0,"tid":"{}",)", tid);
-    fmt::print(json, R"("ts":{}}})", start.count());
+    ASSERT(session && session->is_open(), "Writing cannot be done prior to initialization");
 
     std::scoped_lock lock{mutex};
-    fmt::print(*session, "{}", json.view());
+    fmt::print(
+        *session,
+        R"(,{{"cat":"function","dur":{},"name":"{}","ph":"X","pid":0,"tid":"{}","ts":{:3f}}})",
+        elapsed.count(),
+        name,
+        tid,
+        start.count());
 }
 
 [[nodiscard]] constexpr auto to_int_micros(auto clock) -> auto {
@@ -77,17 +70,14 @@ Profiler::~Profiler() {
     session.reset();
 }
 
-Timer::Timer(std::string_view name) : name_{name}, start_{chrono::steady_clock::now()} {}
+Timer::Timer(const char* name) : name_{name}, start_{chrono::steady_clock::now()} {}
 
 Timer::~Timer() {
-    if (stopped_) { return; }
     auto           end = to_int_micros(chrono::steady_clock::now());
     micros<double> high_res_start{start_.time_since_epoch()};
     auto           start   = to_int_micros(start_);
     auto           elapsed = end - start;
-
     write_scope(name_, high_res_start, elapsed, std::this_thread::get_id());
-    stopped_ = true;
 }
 
 } // namespace ghoti
