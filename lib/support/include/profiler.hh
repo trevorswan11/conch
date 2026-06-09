@@ -3,7 +3,6 @@
 #ifdef GHOTI_PROFILE
 #    include <cassert>
 #    include <chrono>
-#    include <ratio>
 #    include <string_view>
 
 #    include <fmt/ostream.h>
@@ -12,8 +11,6 @@
 #    include "utility.hh"
 
 namespace ghoti {
-
-template <typename T> using micros = std::chrono::duration<T, std::micro>;
 
 struct Profiler {
     // The tracing json file is created next to the provided binary

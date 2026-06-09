@@ -18,6 +18,7 @@
 
 #    include "assert.hh"
 #    include "fixed/vector.hh"
+#    include "option.hh"
 #    include "types.hh"
 
 namespace ghoti {
@@ -25,6 +26,8 @@ namespace ghoti {
 namespace chrono = std::chrono;
 
 namespace {
+
+template <typename T> using micros = chrono::duration<T, std::micro>;
 
 struct SessionDeleter {
     auto operator()(std::ofstream* ostream) -> void {
@@ -65,9 +68,9 @@ class Buffer {
 
 struct BufferManager {
   public:
-    static constexpr usize                                      HEADROOM{512UZ};
-    static constexpr usize                                      MAX_BUFFERS{1'024UZ};
-    static inline constinit fixed::Vector<Buffer*, MAX_BUFFERS> buffers;
+    static constexpr usize                                                   HEADROOM{512UZ};
+    static constexpr usize                                                   MAX_BUFFERS{1'024UZ};
+    static inline constinit fixed::Vector<opt::Option<Buffer&>, MAX_BUFFERS> buffers;
 
   public:
     Buffer data;
@@ -76,19 +79,15 @@ struct BufferManager {
         std::scoped_lock lock{mutex};
 
         // Reuse empty slots to prevent buffer overflows
-        bool inserted = false;
-        for (auto*& buf : buffers) {
+        for (auto& buf : buffers) {
             if (!buf) {
-                buf      = &data;
-                inserted = true;
-                break;
+                buf.emplace(data);
+                return;
             }
         }
 
-        if (!inserted) {
-            ASSERT(buffers.size() < buffers.capacity(), "Too many threads spawned");
-            buffers.emplace_back(&data);
-        }
+        ASSERT(buffers.size() < buffers.capacity(), "Too many threads spawned");
+        buffers.emplace_back(data);
     }
 
     ~BufferManager() {
@@ -96,10 +95,10 @@ struct BufferManager {
         data.flush();
 
         // Setting to nullptr is more efficient than erase since it avoids shift
-        for (auto*& buf : buffers) {
+        for (auto& buf : buffers) {
             if (buf == &data) {
-                buf = nullptr;
-                break;
+                buf.reset();
+                return;
             }
         }
     }
@@ -157,7 +156,7 @@ Profiler::Profiler(std::string_view path) {
 
 Profiler::~Profiler() {
     std::scoped_lock lock{mutex};
-    for (auto* buf : BufferManager::buffers) {
+    for (auto& buf : BufferManager::buffers) {
         if (buf) { buf->flush(); }
     }
     BufferManager::buffers.clear();
