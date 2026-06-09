@@ -7,6 +7,7 @@ const cppcheck = @import("third-party/cppcheck.zig");
 const libarchive = @import("third-party/libarchive.zig");
 const fmt = @import("third-party/fmt.zig");
 const catch2 = @import("third-party/catch2.zig");
+const replxx = @import("third-party/replxx.zig");
 
 const KcovBuilder = @import("third-party/kcov/KcovBuilder.zig");
 
@@ -35,6 +36,7 @@ pub fn build(b: *std.Build) !void {
         "-Wno-gnu-statement-expression",
         "-Wno-gnu-statement-expression-from-macro-expansion",
         "-DMAGIC_ENUM_RANGE_MAX=255",
+        "-DREPLXX_STATIC",
     });
     const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DGHOTI_DIST" };
 
@@ -244,10 +246,13 @@ fn addArtifacts(b: *std.Build, config: struct {
         cli11_inc,
     };
 
-    const fmt_dep = fmt.build(b, .{
+    const dep_config: Dependency.Config = .{
         .target = target,
         .optimize = config.optimize,
-    });
+    };
+
+    const fmt_dep = fmt.build(b, dep_config);
+    const replxx_dep = replxx.build(b, dep_config);
 
     // Shared core functionality
     const libsupport = b.addLibrary(.{
@@ -262,7 +267,7 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .flags = config.cxx_flags,
             },
             .config_headers = &.{config_h},
-            .link_libraries = &.{fmt_dep.artifact},
+            .link_libraries = &.{ fmt_dep.artifact, replxx_dep.artifact },
         }),
     });
     if (config.auto_install) b.installArtifact(libsupport);
@@ -312,7 +317,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
             .system_include_paths = &system_includes,
             .config_headers = &.{config_h},
-            .link_libraries = &.{ libcompiler, fmt_dep.artifact },
+            .link_libraries = &.{ libcompiler, fmt_dep.artifact, replxx_dep.artifact },
             .cxx = .{
                 .files = try collectFiles(b, ProjectPaths.driver.src, .{}),
                 .flags = config.cxx_flags,
@@ -336,7 +341,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .flags = config.cxx_flags,
         },
         .system_include_paths = &system_includes,
-        .link_libraries = &.{ libdriver, fmt_dep.artifact },
+        .link_libraries = &.{ libdriver, fmt_dep.artifact, replxx_dep.artifact },
     }, .{
         .name = "ghoti",
         .behavior = config.behavior orelse .{
@@ -458,7 +463,13 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .flags = config.cxx_flags,
             },
             .config_headers = &.{config_h},
-            .link_libraries = &.{ libcompiler, libdriver, catch2_dep.artifact, fmt_dep.artifact },
+            .link_libraries = &.{
+                libcompiler,
+                libdriver,
+                catch2_dep.artifact,
+                fmt_dep.artifact,
+                replxx_dep.artifact,
+            },
         }, .{
             .name = "driver",
             .behavior = config.behavior orelse .{

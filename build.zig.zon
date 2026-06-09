@@ -32,6 +32,10 @@
             .url = "https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.6.2.tar.gz",
             .hash = "N-V-__8AAHcMLADvHaaY0S0vedJqkqRHvPgQaEZ9HEfxw4JM",
         },
+        .replxx = .{
+            .url = "https://github.com/AmokHuginnsson/replxx/archive/1f149bfe20bf6e49c1afd4154eaf0032c8c2fda2.tar.gz",
+            .hash = "N-V-__8AAMHqBwAcjPfQZtYsy4Ip3xPq3h1rg6sgiMGgBtll",
+        },
         .llvm = .{
             .url = "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-21.1.8.tar.gz",
             .hash = "N-V-__8AABpqQW-SXByMsTbdc-Sm0xuxtXzfQBvflhYdUshy",

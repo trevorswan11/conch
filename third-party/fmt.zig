@@ -5,10 +5,7 @@ const Config = Dependency.Config;
 
 /// Compiles fmt from source as a static library
 /// https://github.com/fmtlib/fmt
-pub fn build(b: *std.Build, config: struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-}) Dependency {
+pub fn build(b: *std.Build, config: Config) Dependency {
     const upstream = b.dependency("fmt", .{});
     const mod = b.createModule(.{
         .target = config.target,
