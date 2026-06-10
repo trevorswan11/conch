@@ -1,12 +1,14 @@
 #include "arena.hh"
 
 #include "assert.hh"
+#include "profiler.hh"
 #include "types.hh"
 
 namespace ghoti::mem {
 
 // https://github.com/trevorswan11/ghoti/blob/772707146faa9315c24fb079fd759f3715442db1/old/src/util/arena.c
 auto Arena::alloc(usize size, usize align) -> void* {
+    PROFILE_FUNCTION();
     if (current_) {
         auto        raw_addr    = reinterpret_cast<uptr>(current_ + 1);
         uptr        current_ptr = raw_addr + offset_;
@@ -16,7 +18,9 @@ auto Arena::alloc(usize size, usize align) -> void* {
         if (total_size <= BLOCK_SIZE) {
             offset_ = total_size;
             return reinterpret_cast<void*>(aligned_ptr);
-        } else if (current_->next) {
+        }
+
+        if (current_->next) {
             current_ = current_->next;
             offset_  = 0;
             return alloc(size, align);
@@ -28,6 +32,7 @@ auto Arena::alloc(usize size, usize align) -> void* {
 }
 
 auto Arena::clear() noexcept -> void {
+    PROFILE_FUNCTION();
     Block* block = head_;
     while (block) {
         Block* next = block->next;
@@ -38,8 +43,9 @@ auto Arena::clear() noexcept -> void {
 }
 
 auto Arena::Block::alloc(Arena& a, usize size, usize align) -> void* {
-    void*  raw   = ::operator new(sizeof(Block) + BLOCK_SIZE);
-    Block* block = new (raw) Block{};
+    PROFILE_FUNCTION();
+    void* raw   = ::operator new(sizeof(Block) + BLOCK_SIZE);
+    auto* block = new (raw) Block{};
 
     if (!a.head_) {
         a.head_ = block;

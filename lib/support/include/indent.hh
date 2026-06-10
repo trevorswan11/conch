@@ -34,8 +34,9 @@ class Indent {
     [[nodiscard]] constexpr auto current_branch() const -> std::string {
         if (levels_.empty()) { return {}; }
         auto res = levels_ | std::views::take(levels_.size() - 1) |
-                   std::views::transform(
-                       [](auto level) { return level ? symbols::EMPTY : symbols::VERT_BAR; }) |
+                   std::views::transform([](auto level) -> std::string_view {
+                       return level ? symbols::EMPTY : symbols::VERT_BAR;
+                   }) |
                    std::views::join | std::ranges::to<std::string>();
         res += levels_.back() ? symbols::L_BRANCH : symbols::T_BRANCH;
         return res;

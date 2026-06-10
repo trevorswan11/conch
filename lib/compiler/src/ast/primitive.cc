@@ -10,18 +10,20 @@
 #include "syntax/parser.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "fixed/vector.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <fixed/vector.hh>
+#include <option.hh>
+#include <profiler.hh>
+#include <result.hh>
+#include <type_traits.hh>
+#include <types.hh>
 
 namespace ghoti::ast {
 
 namespace {
 
 // A global buffer for storing underscore-cleaned numeric tokens for `std::from_chars`
-constinit fixed::Vector<byte, 1'024> numeric_buffer;
+constinit fixed::Vector<char, 1'024> numeric_buffer;
 
 // Parses the requested value from the string, asserting the from_chars result if requested
 template <typename ValueType>
@@ -47,7 +49,7 @@ template <typename ValueType>
 
     ValueType              v;
     std::from_chars_result result;
-    if constexpr (std::is_floating_point_v<ValueType>) {
+    if constexpr (traits::FloatingPoint<ValueType>) {
         result = std::from_chars(first, last, v);
     } else {
         result = std::from_chars(first, last, v, std::to_underlying(*base));
@@ -59,26 +61,30 @@ template <typename ValueType>
     return opt::none;
 }
 
-template <traits::ValuedPrimitiveNode Primitive>
+template <traits::ValuedPrimitive Primitive>
 auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     using value_type       = typename Primitive::value_type;
     const auto start_token = parser.get_current_token();
     const auto value       = parse_primitive_value<value_type>(start_token.slice, start_token.type);
     if (value) { return parser.add_expr<Primitive>(start_token, *value); }
 
-    return make_syntax_err("Overflow of literal",
-                           std::is_same_v<value_type, f64>
-                               ? syntax::Error::DOUBLE_OVERFLOW
-                               : (std::is_same_v<value_type, f32>
-                                      ? syntax::Error::FLOAT_OVERFLOW
-                                      : syntax::Error::INTEGER_OVERFLOW),
-                           start_token);
+    syntax::Error error_code;
+    if constexpr (std::is_same_v<value_type, f64>) {
+        error_code = syntax::Error::DOUBLE_OVERFLOW;
+    } else if constexpr (std::is_same_v<value_type, f32>) {
+        error_code = syntax::Error::FLOAT_OVERFLOW;
+    } else {
+        error_code = syntax::Error::INTEGER_OVERFLOW;
+    }
+    return make_syntax_err("Overflow of literal", error_code, start_token);
 }
 
 } // namespace
 
 #define MAKE_PRIMITIVE_PARSER(Type)                                                            \
     auto Type::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> { \
+        PROFILE_FUNCTION();                                                                    \
         return parse_primitive<Type>(parser);                                                  \
     }
 
@@ -90,6 +96,7 @@ MAKE_PRIMITIVE_PARSER(U64Expression)
 MAKE_PRIMITIVE_PARSER(USizeExpression)
 
 auto U8Expression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     const auto slice       = start_token.slice;
     if (slice[1] != '\\') {
@@ -115,10 +122,12 @@ MAKE_PRIMITIVE_PARSER(F32Expression)
 MAKE_PRIMITIVE_PARSER(F64Expression)
 
 auto BoolExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     return parser.add_expr<BoolExpression>(parser.get_current_token());
 }
 
 auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
     return parser.add_expr<VoidExpression>(start_token);
@@ -126,6 +135,7 @@ auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 
 auto UndefinedExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     return parser.add_expr<UndefinedExpression>(parser.get_current_token());
 }
 

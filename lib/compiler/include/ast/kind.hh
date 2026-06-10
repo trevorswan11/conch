@@ -2,8 +2,8 @@
 
 #include <concepts>
 
-#include "types.hh"
-#include "variant.hh"
+#include <types.hh>
+#include <variant.hh>
 
 namespace ghoti {
 
@@ -124,6 +124,8 @@ enum class NodeKind : u8 {
     FOREACH_AST_EXPR(X)     \
     FOREACH_AST_STMT(X)
 
+using Discarded = Unit;
+
 #define FWD_DECLARE_NODE_X(NodeType) struct NodeType;
 FOREACH_AST_NODE(FWD_DECLARE_NODE_X)
 #undef FWD_DECLARE_NODE_X
@@ -226,10 +228,7 @@ NODE_KIND_OF_TRAIT(ImportStatement, IMPORT_STATEMENT)
 NODE_KIND_OF_TRAIT(ReturnStatement, RETURN_STATEMENT)
 NODE_KIND_OF_TRAIT(TestStatement, TEST_STATEMENT)
 NODE_KIND_OF_TRAIT(UsingStatement, USING_STATEMENT)
-
-template <> struct NodeKindOf<Unit> {
-    [[nodiscard]] static constexpr auto value() noexcept { return ast::NodeKind::DISCARDED; }
-};
+NODE_KIND_OF_TRAIT(Discarded, DISCARDED)
 
 #undef KIND_OF_TRAIT
 

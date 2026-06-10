@@ -11,16 +11,16 @@
 #include "ast/type.hh"
 #include "module/module.hh"
 
-#include "arena.hh"
-#include "assert.hh"
-#include "enum.hh"
-#include "fixed/vector.hh"
-#include "hash.hh"
-#include "option.hh"
-#include "type_traits.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <arena.hh>
+#include <assert.hh>
+#include <enum.hh>
+#include <fixed/vector.hh>
+#include <hash.hh>
+#include <option.hh>
+#include <type_traits.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::sema {
 
@@ -324,7 +324,7 @@ class Type {
   private:
     // This should only be used when allocating an immediately-to-be-filled span
     Type() noexcept = default;
-    explicit Type(types::Key key) noexcept : key_{std::move(key)} {}
+    explicit Type(types::Key key) noexcept : key_{key} {}
 
   private:
     types::Key key_;
@@ -349,14 +349,13 @@ class TypePool {
     [[nodiscard]] auto operator[](const types::Key& key) -> gsl::not_null<Type*> {
         return get_or_emplace(key);
     }
-    [[nodiscard]] auto get_opt(const types::Key& key) noexcept -> opt::Option<Type&>;
 
     // Allocate a quasi-contiguous span of types with the provided keys
     template <std::same_as<types::Key>... Keys>
     [[nodiscard]] auto get_many(Keys&&... keys) noexcept -> gsl::span<Type*> {
         auto  types = arena_.make_span<Type*>(sizeof...(Keys));
         usize i     = 0;
-        (..., [&] { types[i++] = get_or_emplace(keys); }());
+        (..., (types[i++] = get_or_emplace(keys)));
         return types;
     }
 

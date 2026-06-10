@@ -10,7 +10,7 @@
 #include "sema/type.hh"
 #include "syntax/error.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -19,14 +19,15 @@ using helpers::MockFile;
 TEST_CASE("Import aliases correctly used") {
     auto [ctx, idx] = helpers::collect_and_check(
         R"(import foo as A; import "f.gh" as F; const foo := bar;)",
-        helpers::make_vector<MockFile>(MockFile{"foo.gh", "const foo := bar;", "foo"},
-                                       MockFile{"f.gh", "const foo := bar;"}));
+        helpers::make_vector<MockFile>(
+            MockFile{.path = "foo.gh", .source = "const foo := bar;", .name = "foo"},
+            MockFile{.path = "f.gh", .source = "const foo := bar;"}));
 
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 3);
     ctx->test_common_decl_collection(idx);
 
-    const auto test_import_inner = [&](std::string_view import_name, usize inner_idx) {
+    const auto test_import_inner = [&](std::string_view import_name, usize inner_idx) -> void {
         const auto [sym, sym_data, type, type_data] =
             ctx->get_full_type_sym_info<sema::symbols::Node, sema::types::Module>(import_name, idx);
         CHECK(sym.get_kind_opt() == sema::SymbolKind::MODULE);
@@ -40,9 +41,10 @@ TEST_CASE("Import aliases correctly used") {
 }
 
 TEST_CASE("Public import query") {
-    auto [ctx, idx] = helpers::collect_and_check(
-        "pub import std;",
-        helpers::make_vector<MockFile>(MockFile{"std.gh", "var a: i32;", "std"}));
+    auto [ctx, idx] =
+        helpers::collect_and_check("pub import std;",
+                                   helpers::make_vector<MockFile>(MockFile{
+                                       .path = "std.gh", .source = "var a: i32;", .name = "std"}));
 
     auto&       table      = helpers::unwrap(ctx->analyzer.get_table_opt(idx));
     const auto& std_import = helpers::unwrap(table.get_opt("std"));
@@ -57,8 +59,8 @@ constexpr std::string_view b_gh{R"(pub import "a.gh" as a;)"};
 } // namespace
 
 TEST_CASE("Circular imports") {
-    auto [ctx, _] =
-        helpers::collect_and_check(a_gh, helpers::make_vector<MockFile>(MockFile{"b.gh", b_gh}));
+    auto [ctx, _] = helpers::collect_and_check(
+        a_gh, helpers::make_vector<MockFile>(MockFile{.path = "b.gh", .source = b_gh}));
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 2);
 
@@ -81,9 +83,10 @@ constexpr std::string_view std_gh{R"(pub import "io.gh" as io;)"};
 TEST_CASE("Diamond dependencies") {
     auto [ctx, _] = helpers::collect_and_check(
         importer_gh,
-        helpers::make_vector<MockFile>(MockFile{"a.gh", diamond},
-                                       MockFile{"b.gh", diamond},
-                                       MockFile{"std.gh", std_gh, "std"}));
+        helpers::make_vector<MockFile>(
+            MockFile{.path = "a.gh", .source = diamond},
+            MockFile{.path = "b.gh", .source = diamond},
+            MockFile{.path = "std.gh", .source = std_gh, .name = "std"}));
     const auto& registry = ctx->analyzer.get_registry();
     REQUIRE(registry.size() == 4);
 

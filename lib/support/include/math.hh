@@ -10,11 +10,8 @@ namespace ghoti {
 // Returns the rounded-up power of two given the unsigned value
 template <traits::Unsigned U> [[nodiscard]] constexpr auto ceil_power_of_two(U val) noexcept -> U {
     // If it's already a power of two there's no need to round
-    if (val == 0) {
-        return 1;
-    } else if ((val & (val - 1)) == 0) {
-        return val;
-    }
+    if (val == 0) { return 1; }
+    if ((val & (val - 1)) == 0) { return val; }
 
     // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
     val |= --val >> 1;
@@ -34,7 +31,7 @@ template <traits::Unsigned U> [[nodiscard]] constexpr auto is_power_of_two(U val
 
 // The minimum number of bits required to hold the provided value
 template <auto U>
-constexpr auto min_bits = [] {
+constexpr auto min_bits = [] -> auto {
     auto  value = U;
     usize bits  = 0;
     while (value > 0) {

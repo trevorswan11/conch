@@ -33,7 +33,7 @@ const Foo := struct {           // Standard declaration with type inference
     pub boo: u32 = 4u,          // Public field with default value
 
     pub var foo := 3.4;         // Decl variables are struct globals and are not instance specific
-    const baz: []byte = "baz";  // Constant decl, must be initialized in-line
+    const baz: []u8 = "baz";  // Constant decl, must be initialized in-line
 
     const worker_one := fn(&self): void {           // Functions can have an explicit 'self' parameter
         // ...

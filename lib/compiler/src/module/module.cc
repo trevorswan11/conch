@@ -16,28 +16,29 @@
 #include "source_file.hh"
 #include "syntax/parser.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "memory.hh"
-#include "option.hh"
-#include "result.hh"
-#include "style.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <memory.hh>
+#include <option.hh>
+#include <profiler.hh>
+#include <result.hh>
+#include <style.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::mod {
 
-auto format_module_diagnostic(std::ostream&                   os,
-                              detail::FormattableDiagnostic&& diag,
-                              opt::Option<const mod::Module&> module,
-                              opt::Option<bool>               in_terminal) -> std::ostream& {
+auto format_module_diagnostic(std::ostream&                        os, // NOLINT
+                              const detail::FormattableDiagnostic& diag,
+                              opt::Option<const mod::Module&>      module,
+                              opt::Option<bool>                    in_terminal) -> std::ostream& {
     const auto tty = in_terminal.value_or(is_tty());
 
     // Without a module, there is no source path and formatting is done trivially
-    if (!module) { return format_diagnostic(os, std::move(diag), opt::none, tty); }
+    if (!module) { return format_diagnostic(os, diag, opt::none, tty); }
 
     // Without location, there's no way to point to an error
-    format_diagnostic(os, std::move(diag), module->path.string(), tty);
+    format_diagnostic(os, diag, module->path.string(), tty);
     if (!diag.location) { return os; }
 
     // Diagnostic error messages can include the location
@@ -48,21 +49,25 @@ auto format_module_diagnostic(std::ostream&                   os,
 }
 
 auto Module::print_diagnostics(std::ostream& os) const -> void {
+    PROFILE_FUNCTION();
     if (is_ok()) { return; }
     diagnostics.visit(
-        [this, &os](const auto& list) {
+        [this, &os](const auto& list) -> void {
             for (const auto& diag : list) {
                 format_module_diagnostic(
                     os, diag.to_formattable(), *this, list.get_terminal_status())
                     << "\n";
             }
         },
-        [](const Unit&) { UNREACHABLE("This function should've never been called with Unit"); });
+        [](const Unit&) -> void {
+            UNREACHABLE("This function should've never been called with Unit");
+        });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                                         const std::filesystem::path& parent_path)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
+    PROFILE_FUNCTION();
     ASSERT((parent_path.empty() || parent_path.is_absolute()) &&
            "Parent path must be absolute or empty");
     if (!path.is_relative()) {
@@ -77,6 +82,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 
 auto ModuleManager::try_get_library_module(std::string_view name)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
+    PROFILE_FUNCTION();
     auto it = module_lut_.find(name);
     if (it == module_lut_.end()) {
         return make_mod_err(fmt::format("Unknown module '{}'", name), Error::MODULE_DOES_NOT_EXIST);
@@ -86,6 +92,7 @@ auto ModuleManager::try_get_library_module(std::string_view name)
 
 auto ModuleManager::add_library_module(std::string_view name, const std::filesystem::path& path)
     -> Result<void, Diagnostic> {
+    PROFILE_FUNCTION();
     const auto normalized = loader_.normalize(path);
     if (!normalized) { return make_mod_err(normalized.error()); }
 
@@ -106,9 +113,9 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
 auto ModuleManager::try_get(const std::filesystem::path& path)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
+    PROFILE_FUNCTION();
     if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
-    auto       source       = TRY(loader_.load(path));
-    const auto abs_path_str = path.string();
+    auto source = TRY(loader_.load(path));
 
     auto mod = mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)});
     syntax::Parser p{mod->source};

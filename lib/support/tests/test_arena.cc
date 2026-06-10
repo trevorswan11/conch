@@ -13,8 +13,8 @@ namespace {
 constexpr usize MARKER{42};
 
 struct Large {
-    usize                      marker{MARKER};
-    std::array<i32, 4 * 1'024> _;
+    usize                          marker{MARKER};
+    std::array<i32, 4UZ * 1'024UZ> _;
 };
 
 } // namespace

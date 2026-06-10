@@ -2,6 +2,7 @@
 
 #include <ranges>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <ankerl/unordered_dense.h>
@@ -17,15 +18,15 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "result.hh"
-#include "type_traits.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <result.hh>
+#include <type_traits.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::sema {
 
@@ -114,7 +115,7 @@ class Symbol {
                          symbols::ForLoopCapture>;
 
   public:
-    Symbol(std::string_view name, const Data& data) noexcept : name_{name}, data_{data} {}
+    Symbol(std::string_view name, Data data) noexcept : name_{name}, data_{std::move(data)} {}
     ~Symbol() = default;
 
     MAKE_MOVE_CONSTRUCTABLE_ONLY(Symbol)

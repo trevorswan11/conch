@@ -5,7 +5,7 @@
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -14,14 +14,14 @@ TEST_CASE("Array size token requirement") {
         "[]i32{2};",
         syntax::Diagnostic{"Array literals must be initialized with an implicit or explicit size",
                            syntax::Error::MISSING_ARRAY_SIZE_TOKEN,
-                           std::pair{0uz, 0uz}});
+                           std::pair{0UZ, 0UZ}});
 }
 
 TEST_CASE("No arguments with comma") {
     helpers::test_parser_fail("func(,)",
                               syntax::Diagnostic{"A comma implies an argument but none were found",
                                                  syntax::Error::COMMA_WITH_MISSING_CALL_ARGUMENT,
-                                                 std::pair{0uz, 5uz}});
+                                                 std::pair{0UZ, 5UZ}});
 }
 
 TEST_CASE("Non-comma separated arguments") {
@@ -43,7 +43,7 @@ TEST_CASE("No index") {
         "arr[]",
         syntax::Diagnostic{"Cannot index into an array without an index expression",
                            syntax::Error::INDEX_MISSING_EXPRESSION,
-                           std::pair{0uz, 3uz}});
+                           std::pair{0UZ, 3UZ}});
 }
 
 TEST_CASE("Illegal infix node") {
@@ -51,64 +51,64 @@ TEST_CASE("Illegal infix node") {
         "a and import std;",
         syntax::Diagnostic{"No prefix parse function for IMPORT(import) found",
                            syntax::Error::MISSING_PREFIX_PARSER,
-                           std::pair{0uz, 6uz}});
+                           std::pair{0UZ, 6UZ}});
 }
 
 TEST_CASE("Non-terminated infix") {
     helpers::test_parser_fail("a and;",
                               syntax::Diagnostic{"No prefix parse function for SEMICOLON(;) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
-                                                 std::pair{0uz, 5uz}});
+                                                 std::pair{0UZ, 5UZ}});
 
     helpers::test_parser_fail("a and",
                               syntax::Diagnostic{"Infix expressions require a right-hand operand",
                                                  syntax::Error::INFIX_MISSING_RHS,
-                                                 std::pair{0uz, 2uz}});
+                                                 std::pair{0UZ, 2UZ}});
 }
 
 TEST_CASE("Unclosed implicit initializer") {
     helpers::test_parser_fail(".{",
                               syntax::Diagnostic{"Expected token RBRACE, found END",
                                                  syntax::Error::UNEXPECTED_TOKEN,
-                                                 std::pair{0uz, 2uz}});
+                                                 std::pair{0UZ, 2UZ}});
 
     helpers::test_parser_fail(".{ .a = 2",
                               syntax::Diagnostic{"Expected token COMMA, found END",
                                                  syntax::Error::UNEXPECTED_TOKEN,
-                                                 std::pair{0uz, 9uz}});
+                                                 std::pair{0UZ, 9UZ}});
 }
 
 TEST_CASE("Unclosed explicit initializer") {
     helpers::test_parser_fail("T{",
                               syntax::Diagnostic{"Expected token RBRACE, found END",
                                                  syntax::Error::UNEXPECTED_TOKEN,
-                                                 std::pair{0uz, 2uz}});
+                                                 std::pair{0UZ, 2UZ}});
 
     helpers::test_parser_fail("T{ .a = 2",
                               syntax::Diagnostic{"Expected token COMMA, found END",
                                                  syntax::Error::UNEXPECTED_TOKEN,
-                                                 std::pair{0uz, 9uz}});
+                                                 std::pair{0UZ, 9UZ}});
 }
 
 TEST_CASE("Malformed initializer key-value") {
     helpers::test_parser_fail("T{ .a = };",
                               syntax::Diagnostic{"No prefix parse function for RBRACE(}) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
-                                                 std::pair{0uz, 8uz}});
+                                                 std::pair{0UZ, 8UZ}});
 }
 
 TEST_CASE("Non-ident label") {
     helpers::test_parser_fail("2: {};",
                               syntax::Diagnostic{"Labels may only be identifiers",
                                                  syntax::Error::ILLEGAL_LABEL,
-                                                 std::pair{0uz, 1uz}});
+                                                 std::pair{0UZ, 1UZ}});
 }
 
 TEST_CASE("Illegal label expressions") {
-    const auto expected_diag = [](usize ln = 0uz, usize col = 3uz) {
-        return syntax::Diagnostic{"Labeled expressions may only be conditionals or loops",
-                                  syntax::Error::ILLEGAL_LABEL_EXPRESSION,
-                                  std::pair{ln, col}};
+    const auto expected_diag = [](usize ln = 0UZ, usize col = 3UZ) -> syntax::Diagnostic {
+        return {"Labeled expressions may only be conditionals or loops",
+                syntax::Error::ILLEGAL_LABEL_EXPRESSION,
+                std::pair{ln, col}};
     };
 
     helpers::test_parser_fail("a: 3;", expected_diag());
@@ -118,10 +118,10 @@ TEST_CASE("Illegal label expressions") {
 }
 
 TEST_CASE("Illegal label statements") {
-    const auto expected_diag = [] {
-        return syntax::Diagnostic{"Labeled statements may only be blocks",
-                                  syntax::Error::ILLEGAL_LABEL_STATEMENT,
-                                  std::pair{0uz, 3uz}};
+    const auto expected_diag = [] -> syntax::Diagnostic {
+        return {"Labeled statements may only be blocks",
+                syntax::Error::ILLEGAL_LABEL_STATEMENT,
+                std::pair{0UZ, 3UZ}};
     };
 
     helpers::test_parser_fail("a: defer 3;", expected_diag());
@@ -132,19 +132,19 @@ TEST_CASE("Illegal implicit access operand") {
     helpers::test_parser_fail(".a::b",
                               syntax::Diagnostic{"Implicitly accessed names must be identifiers",
                                                  syntax::Error::ILLEGAL_IMPLICIT_ACCESS_OPERAND,
-                                                 std::pair{0uz, 2uz}});
+                                                 std::pair{0UZ, 2UZ}});
 }
 
 TEST_CASE("Prefix without operand") {
     helpers::test_parser_fail(".",
                               syntax::Diagnostic{"Prefix expressions require an operand",
                                                  syntax::Error::PREFIX_MISSING_OPERAND,
-                                                 std::pair{0uz, 0uz}});
+                                                 std::pair{0UZ, 0UZ}});
 
     helpers::test_parser_fail("!;",
                               syntax::Diagnostic{"No prefix parse function for SEMICOLON(;) found",
                                                  syntax::Error::MISSING_PREFIX_PARSER,
-                                                 std::pair{0uz, 1uz}});
+                                                 std::pair{0UZ, 1UZ}});
 }
 
 TEST_CASE("Missing inner scope of resolution expression") {
@@ -166,7 +166,7 @@ TEST_CASE("Illegal outer scope of resolution expression") {
         "2::A;",
         syntax::Diagnostic{"Module access expressions must have outer accessors or identifiers",
                            syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
-                           std::pair{0uz, 0uz}});
+                           std::pair{0UZ, 0UZ}});
 }
 
 TEST_CASE("Missing inner member of dot expression") {
@@ -188,7 +188,7 @@ TEST_CASE("Illegal outer object of dot expression") {
         "fn():i32{}.a;",
         syntax::Diagnostic{"Dot expressions must have outer accessors or identifiers",
                            syntax::Error::ILLEGAL_OUTER_ACCESSOR_TYPE,
-                           std::pair{0uz, 0uz}});
+                           std::pair{0UZ, 0UZ}});
 }
 
 } // namespace ghoti::tests

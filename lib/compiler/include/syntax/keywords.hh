@@ -5,7 +5,7 @@
 
 #include "syntax/token_type.hh"
 
-#include "option.hh"
+#include <option.hh>
 
 namespace ghoti::syntax {
 

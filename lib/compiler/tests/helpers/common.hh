@@ -14,9 +14,9 @@
 
 #include "module/module.hh"
 
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::tests::helpers {
 
@@ -41,9 +41,9 @@ template <Unwrappable U, typename E>
 
 template <Unwrappable U> auto unwrap_err(U&& u) -> decltype(auto) {
     using T = std::remove_cvref_t<U>;
-    if constexpr (traits::is_option_v<T>) {
+    if constexpr (traits::Option<T>) {
         REQUIRE_FALSE(u);
-    } else if constexpr (traits::is_result_v<T>) {
+    } else if constexpr (traits::Result<T>) {
         REQUIRE_FALSE(u);
         return u.error();
     }

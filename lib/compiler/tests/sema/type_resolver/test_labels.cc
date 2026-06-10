@@ -10,8 +10,8 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "option.hh"
-#include "types.hh"
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -41,7 +41,7 @@ TEST_CASE("Labeled for loop resolution") {
         CHECK(ctx->root_mod.get_sema_type(node_data.name) == i32_type);
     }
 
-    const auto check_capture = [&](std::string_view name) {
+    const auto check_capture = [&](std::string_view name) -> void {
         const auto [sym, sym_data, type] = ctx->get_type_sym_info<syms::ForLoopCapture>(
             name, 4, opt::none, &syms::ForLoopCapture::payload);
         CHECK(type == i32_type);
@@ -102,13 +102,13 @@ loop {
 }
 
 TEST_CASE("Unknown labels resolved") {
-    const auto test_unknown_label = [](std::string_view name, usize col) {
+    const auto test_unknown_label = [](std::string_view name, usize col) -> void {
         helpers::test_resolver_fail(
             fmt::format("for (0..2) |_| {{ {} :blk; }}", name),
             sema::Diagnostic{
                 fmt::format("Labeled {} statements must be used with a known label", name),
                 sema::Error::ILLEGAL_CONTROL_FLOW,
-                std::pair{0uz, col}});
+                std::pair{0UZ, col}});
     };
 
     test_unknown_label("break", 24);

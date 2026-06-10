@@ -8,8 +8,8 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "option.hh"
-#include "types.hh"
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -47,7 +47,7 @@ TEST_CASE("Label redeclaration") {
         "const a := a: {};",
         sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 12uz}});
+                         std::pair{0UZ, 12UZ}});
 }
 
 TEST_CASE("Label shadowing") {
@@ -55,7 +55,7 @@ TEST_CASE("Label shadowing") {
         "const a := blk: { var blk: i32; };",
         sema::Diagnostic{"Attempt to shadow identifier 'blk'; previous declaration here: 1:15",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 18uz}});
+                         std::pair{0UZ, 18UZ}});
 }
 
 } // namespace ghoti::tests

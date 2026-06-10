@@ -8,7 +8,7 @@
 
 namespace ghoti::tests {
 
-TEMPLATE_TEST_CASE("Ceil power of two sizes", "", u8, u16, u32, u64, usize) {
+TEMPLATE_TEST_CASE("Ceil power of two sizes", "", u8, u16, u32, u64, usize) { // NOLINT
     CHECK(ceil_power_of_two<TestType>(0) == 1);
     CHECK(ceil_power_of_two<TestType>(2) == 2);
     CHECK(ceil_power_of_two<TestType>(3) == 4);

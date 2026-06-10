@@ -5,11 +5,11 @@
 
 #include "helpers/common.hh"
 #include "helpers/sema.hh"
-#include "option.hh"
 #include "sema/error.hh"
-
 #include "sema/symbol.hh"
-#include "types.hh"
+
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -67,10 +67,10 @@ TEST_CASE("Flat match collection") {
 
 namespace {
 
-[[nodiscard]] auto expected_diag(usize col) {
-    return sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                            sema::Error::SHADOWING_DECLARATION,
-                            std::pair{0uz, col}};
+[[nodiscard]] auto expected_diag(usize col) -> sema::Diagnostic {
+    return {"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
+            sema::Error::SHADOWING_DECLARATION,
+            std::pair{0UZ, col}};
 }
 
 } // namespace
@@ -94,7 +94,7 @@ TEST_CASE("Match dispatch shadowing") {
         "const a := match (c) { b => |c| { var c: i32; } };",
         sema::Diagnostic{"Attempt to shadow identifier 'c'; previous declaration here: 1:30",
                          sema::Error::SHADOWING_DECLARATION,
-                         std::pair{0uz, 34uz}});
+                         std::pair{0UZ, 34UZ}});
 }
 
 } // namespace ghoti::tests

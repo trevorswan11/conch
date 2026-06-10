@@ -34,12 +34,14 @@ concept InsertablePair = requires {
     [[nodiscard]] constexpr auto begin(this auto&& self) noexcept { return self.member.begin(); } \
     [[nodiscard]] constexpr auto end(this auto&& self) noexcept { return self.member.end(); }     \
                                                                                                   \
-    [[nodiscard]] constexpr auto size() const noexcept -> usize { return member.size(); }         \
-    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return member.empty(); }
+    [[nodiscard]] constexpr auto size() const noexcept -> usize { return (member).size(); }       \
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return (member).empty(); }
 
+// NOLINTBEGIN
 // Gives the enclosing type an iterator interface and type alias based on an iterator-capable type
 #define MAKE_ITERATOR(Alias, Container, member) \
     using Alias = Container;                    \
     MAKE_UNALIASED_ITERATOR(Alias, member)
+// NOLINTEND
 
 } // namespace ghoti

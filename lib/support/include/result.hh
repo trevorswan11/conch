@@ -83,10 +83,9 @@ namespace traits {
 template <typename T> struct is_result : std::false_type {};
 template <typename T, typename E> struct is_result<detail::ValuedResult<T, E>> : std::true_type {};
 template <typename E> struct is_result<detail::EmptyResult<E>> : std::true_type {};
-template <typename T> constexpr bool is_result_v = is_result<T>::value;
 
 template <typename T>
-concept Result = is_result_v<T>;
+concept Result = is_result<T>::value;
 
 } // namespace traits
 

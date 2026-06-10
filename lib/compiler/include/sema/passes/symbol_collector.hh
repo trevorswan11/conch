@@ -8,6 +8,7 @@
 #include "ast/expression.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
+#include "ast/kind.hh"
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "ast/traits.hh"
@@ -18,11 +19,10 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "counter.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
-#include "variant.hh"
+#include <counter.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 
@@ -32,7 +32,7 @@ class SymbolCollector {
     static auto collect_symbols(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
     template <traits::IndexableID ID> auto collect(ID id) -> void {
-        collecting_.ast[id].visit([&](const auto& data) { visit(id, data); });
+        collecting_.ast[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
   private:
@@ -78,7 +78,7 @@ class SymbolCollector {
     template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
     template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
     auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
-    auto visit(ast::NodeID, const Unit&) noexcept -> void {}
+    auto visit(ast::NodeID, ast::Discarded) noexcept -> void {}
 
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
     auto visit(ast::NodeID, const ast::BreakStatement&) -> void;
@@ -108,7 +108,7 @@ class SymbolCollector {
     [[nodiscard]] auto visit_scopes(TypeKind kind, IterPairs&&... pairs) -> usize {
         const auto  new_idx = ctx_.registry.create();
         const Scope s{table_stack_, new_idx, table_idx_};
-        (..., [&pairs] {
+        (..., [&pairs] -> void {
             for (const auto& item : pairs.iterable) { pairs.visitor(item); }
         }());
         last_type_.emplace(ctx_.pool[{kind, types::mut::CONSTANT, new_idx}]);

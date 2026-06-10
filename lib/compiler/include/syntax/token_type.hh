@@ -7,10 +7,10 @@
 
 #include <ankerl/unordered_dense.h>
 
-#include "assert.hh"
-#include "hash.hh"
-#include "option.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <hash.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -217,7 +217,7 @@ enum class Base : u8 {
 };
 
 [[nodiscard]] auto base_idx(Base base) noexcept -> int;
-[[nodiscard]] auto digit_in_base(byte c, Base base) noexcept -> bool;
+[[nodiscard]] auto digit_in_base(char c, Base base) noexcept -> bool;
 
 namespace token_type {
 
@@ -261,7 +261,7 @@ enum class IntegerCategory : u8 {
 }
 
 [[nodiscard]] auto to_base(TokenType tt) noexcept -> opt::Option<Base>;
-[[nodiscard]] auto misc_from_char(byte b) noexcept -> opt::Option<TokenType>;
+[[nodiscard]] auto misc_from_char(char c) noexcept -> opt::Option<TokenType>;
 
 [[nodiscard]] constexpr auto is_i32(TokenType tt) noexcept -> bool {
     return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;

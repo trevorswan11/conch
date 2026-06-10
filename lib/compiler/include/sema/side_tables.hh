@@ -7,8 +7,8 @@
 #include "ast/id.hh"
 #include "ast/traits.hh"
 
-#include "assert.hh"
-#include "option.hh"
+#include <assert.hh>
+#include <option.hh>
 
 namespace ghoti::sema {
 

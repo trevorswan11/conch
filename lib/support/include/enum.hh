@@ -67,6 +67,7 @@ template <BoundedEnum E> consteval auto enum_range() noexcept {
     return enum_range<enum_min_value<E>(), enum_max_value<E>()>();
 }
 
+// NOLINTBEGIN
 #define MAKE_ENUM_OPERATORS(EnumType)                                                    \
     constexpr auto operator|(EnumType lhs, EnumType rhs)->EnumType {                     \
         return static_cast<EnumType>(std::to_underlying(lhs) | std::to_underlying(rhs)); \
@@ -88,5 +89,6 @@ template <BoundedEnum E> consteval auto enum_range() noexcept {
     constexpr auto operator~(EnumType op)->EnumType {                                    \
         return static_cast<EnumType>(~std::to_underlying(op));                           \
     }
+// NOLINTEND
 
 } // namespace ghoti

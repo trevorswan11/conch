@@ -1,50 +1,60 @@
-#include <config.h>
+#include "platform/win32.hh"
 
 // "Abandon hope, all ye who enter here"
-#if PLATFORM_WINDOWS
+#if GHOTI_WINDOWS
 #    include <atomic>
-#    include <windows.h>
+#    include <handleapi.h>
 
-#    include "platform/win32.hh"
-#    include "types.hh"
+#    include <consoleapi.h>
+#    include <consoleapi2.h>
+
+#    include <minwindef.h>
+#    include <processenv.h>
+#    include <windows.h>
+#    include <winnls.h>
+
+#    include <profiler.hh>
+#    include <types.hh>
 
 namespace ghoti::win32 {
 
 namespace {
 
-std::atomic<i32> REF_COUNT{0};
-UINT             ORIGINAL_CODE_PAGE   = 0;
-DWORD            ORIGINAL_STDOUT_MODE = 0;
-DWORD            ORIGINAL_STDERR_MODE = 0;
+std::atomic<i32> ref_count{0};
+UINT             original_code_page   = 0;
+DWORD            original_stdout_mode = 0;
+DWORD            original_stderr_mode = 0;
 
 } // namespace
 
 RichConsole::RichConsole() noexcept {
-    if (REF_COUNT.fetch_add(1) > 0) { return; }
-    ORIGINAL_CODE_PAGE = GetConsoleOutputCP();
+    PROFILE_FUNCTION();
+    if (ref_count.fetch_add(1) > 0) { return; }
+    original_code_page = GetConsoleOutputCP();
     SetConsoleOutputCP(CP_UTF8);
 
-    if (auto stdout_h = GetStdHandle(STD_OUTPUT_HANDLE); stdout_h != INVALID_HANDLE_VALUE) {
-        GetConsoleMode(stdout_h, &ORIGINAL_STDOUT_MODE);
-        SetConsoleMode(stdout_h, ORIGINAL_STDOUT_MODE | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    if (auto* stdout_h = GetStdHandle(STD_OUTPUT_HANDLE); stdout_h != INVALID_HANDLE_VALUE) {
+        GetConsoleMode(stdout_h, &original_stdout_mode);
+        SetConsoleMode(stdout_h, original_stdout_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 
-    if (auto stderr_h = GetStdHandle(STD_ERROR_HANDLE); stderr_h != INVALID_HANDLE_VALUE) {
-        GetConsoleMode(stderr_h, &ORIGINAL_STDERR_MODE);
-        SetConsoleMode(stderr_h, ORIGINAL_STDERR_MODE | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    if (auto* stderr_h = GetStdHandle(STD_ERROR_HANDLE); stderr_h != INVALID_HANDLE_VALUE) {
+        GetConsoleMode(stderr_h, &original_stderr_mode);
+        SetConsoleMode(stderr_h, original_stderr_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 }
 
 RichConsole::~RichConsole() {
-    if (REF_COUNT.fetch_sub(1) != 1) { return; }
-    SetConsoleOutputCP(ORIGINAL_CODE_PAGE);
+    PROFILE_FUNCTION();
+    if (ref_count.fetch_sub(1) != 1) { return; }
+    SetConsoleOutputCP(original_code_page);
 
-    if (auto stdout_h = GetStdHandle(STD_OUTPUT_HANDLE); stdout_h != INVALID_HANDLE_VALUE) {
-        SetConsoleMode(stdout_h, ORIGINAL_STDOUT_MODE);
+    if (auto* stdout_h = GetStdHandle(STD_OUTPUT_HANDLE); stdout_h != INVALID_HANDLE_VALUE) {
+        SetConsoleMode(stdout_h, original_stdout_mode);
     }
 
-    if (auto stderr_h = GetStdHandle(STD_ERROR_HANDLE); stderr_h != INVALID_HANDLE_VALUE) {
-        SetConsoleMode(stderr_h, ORIGINAL_STDERR_MODE);
+    if (auto* stderr_h = GetStdHandle(STD_ERROR_HANDLE); stderr_h != INVALID_HANDLE_VALUE) {
+        SetConsoleMode(stderr_h, original_stderr_mode);
     }
 }
 

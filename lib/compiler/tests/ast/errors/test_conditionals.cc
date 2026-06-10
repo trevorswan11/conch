@@ -11,7 +11,7 @@ TEST_CASE("If without condition") {
     helpers::test_parser_fail("if () b;",
                               syntax::Diagnostic{"If expressions must have a condition",
                                                  syntax::Error::IF_MISSING_CONDITION,
-                                                 std::pair{0uz, 0uz}});
+                                                 std::pair{0UZ, 0UZ}});
 }
 
 TEST_CASE("If with illegal consequence") {
@@ -28,7 +28,7 @@ TEST_CASE("Match without condition") {
     helpers::test_parser_fail("match () { b => c, };",
                               syntax::Diagnostic{"Match expressions must have a condition",
                                                  syntax::Error::MATCH_EXPR_MISSING_CONDITION,
-                                                 std::pair{0uz, 0uz}});
+                                                 std::pair{0UZ, 0UZ}});
 
     helpers::test_parser_fail(
         "match { b => c, };",
@@ -40,7 +40,7 @@ TEST_CASE("Armless match expression") {
     helpers::test_parser_fail("match (a) {};",
                               syntax::Diagnostic{"Match expressions must have at least one arm",
                                                  syntax::Error::ARMLESS_MATCH_EXPR,
-                                                 std::pair{0uz, 0uz}});
+                                                 std::pair{0UZ, 0UZ}});
 }
 
 TEST_CASE("Malformed arm pattern") {
@@ -53,7 +53,7 @@ TEST_CASE("Malformed arm pattern") {
         "match (a) { for (0..3) |i| { var a: i32; } => |b| c };",
         syntax::Diagnostic{"Unmatchable expression 'for loop' used as a match arm pattern",
                            syntax::Error::ILLEGAL_MATCH_PATTERN,
-                           std::pair{0uz, 12uz}});
+                           std::pair{0UZ, 12UZ}});
 }
 
 TEST_CASE("Illegal match arm dispatch") {
@@ -85,7 +85,7 @@ TEST_CASE("Illegal match catch-all") {
         "match (a) { _ => |b| c, };",
         syntax::Diagnostic{"Catch-all match arms may not have a capture clause",
                            syntax::Error::ILLEGAL_MATCH_CATCH_ALL,
-                           std::pair{0uz, 18uz}});
+                           std::pair{0UZ, 18UZ}});
 }
 
 } // namespace ghoti::tests

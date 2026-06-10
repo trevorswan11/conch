@@ -1,3 +1,5 @@
+#include "helpers/sema.hh"
+
 #include <filesystem>
 #include <ostream>
 #include <string>
@@ -11,17 +13,16 @@
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "helpers/common.hh"
-#include "helpers/sema.hh"
 #include "module/memory_loader.hh"
 #include "module/module.hh"
 #include "sema/error.hh"
 #include "sema/symbol.hh"
-
-#include "memory.hh"
-#include "option.hh"
 #include "sema/type.hh"
 #include "syntax/error.hh"
-#include "types.hh"
+
+#include <memory.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests::helpers {
 

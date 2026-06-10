@@ -11,11 +11,11 @@
 #include "syntax/error.hh"
 #include "syntax/token_type.hh"
 
-#include "enum.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
+#include <enum.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti {
 
@@ -147,5 +147,5 @@ struct UsingStatement {
 } // namespace ghoti
 
 template <> struct magic_enum::customize::enum_range<ghoti::ast::DeclModifiers> {
-    static constexpr bool is_flags = true;
+    static constexpr bool is_flags = true; // NOLINT
 };

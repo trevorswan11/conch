@@ -9,12 +9,12 @@
 #include "ast/type.hh"
 // IWYU pragma: end_keep
 
-#include "variant.hh"
+#include <variant.hh>
 
 namespace ghoti::ast {
 
 #define X(Type) Type,
-using NodeData = Variant<FOREACH_AST_NODE(X) Unit>;
+using NodeData = Variant<FOREACH_AST_NODE(X) Discarded>;
 #undef X
 
 #define AST_NODE_VISITOR_NOOP(Class, NodeType) \

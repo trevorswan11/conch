@@ -7,9 +7,7 @@
 
 #include <fmt/ostream.h>
 
-namespace ghoti {
-
-namespace detail {
+namespace ghoti::detail {
 
 constexpr auto assert_impl(std::source_location loc,
                            bool                 condition,
@@ -41,7 +39,7 @@ constexpr auto unreachable_impl(std::source_location loc, std::string_view messa
     }
 }
 
-} // namespace detail
+} // namespace ghoti::detail
 
 #ifndef NDEBUG
 #    define ASSERT_1(expression)      \
@@ -68,5 +66,3 @@ constexpr auto unreachable_impl(std::source_location loc, std::string_view messa
 
 #define GET_ASSERT_MACRO(_1, _2, NAME, ...) NAME
 #define ASSERT(...) GET_ASSERT_MACRO(__VA_ARGS__, ASSERT_2, ASSERT_1)(__VA_ARGS__)
-
-} // namespace ghoti

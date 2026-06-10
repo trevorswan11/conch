@@ -2,9 +2,16 @@
 #include <new>
 
 #include <catch2/catch_session.hpp>
+#include <fmt/format.h>
+#include <fmt/std.h>
+
+#include <profiler.hh>
 
 extern "C" {
-auto launch(int argc, char** proc) -> int { return Catch::Session().run(argc, proc); }
+auto launch(int argc, char** argv) -> int {
+    ghoti::Profiler profiler{argv[0]};
+    return Catch::Session().run(argc, argv);
+}
 
 auto alloc(std::size_t size) -> void*;
 auto dealloc(void* ptr) -> void;

@@ -18,13 +18,13 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "diagnostic.hh"
-#include "enum.hh"
-#include "fixed/enum_map.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
-#include "variant.hh"
+#include <diagnostic.hh>
+#include <enum.hh>
+#include <fixed/enum_map.hh>
+#include <option.hh>
+#include <profiler.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -44,6 +44,7 @@ auto Parser::advance(u8 times) noexcept -> const Token& {
 }
 
 auto Parser::consume(ast::AST& ast) -> Diagnostics {
+    PROFILE_FUNCTION();
     reset(input_);
     ast.clear();
     ast_.emplace(ast);
@@ -52,8 +53,8 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
 
     while (!current_token_is(TokenType::END)) {
         // Advance through any amount of semicolons
-        const auto skip = [](TokenType tt) { return tt == TokenType::SEMICOLON; };
-        if (skip(current_token_.type)) { while (skip(advance().type)); }
+        const auto skip = [](TokenType tt) -> bool { return tt == TokenType::SEMICOLON; };
+        if (skip(current_token_.type)) { while (skip(advance().type)); } // NOLINT
         if (current_token_is(TokenType::END)) { break; }
 
         // Comments are entirely discarded from the tree
@@ -65,7 +66,7 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
                 diagnostics.emplace_back(std::move(stmt.error()));
 
                 // Errors should advance up to next logical end to prevent useless errors
-                const auto stop_condition = [](TokenType tt) {
+                const auto stop_condition = [](TokenType tt) -> bool {
                     switch (tt) {
                     case TokenType::RBRACE:
                     case TokenType::SEMICOLON:
@@ -73,7 +74,7 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
                     default:                   return false;
                     }
                 };
-                while (!stop_condition(advance().type));
+                while (!stop_condition(advance().type)); // NOLINT
             }
         }
         advance();
@@ -107,7 +108,7 @@ auto Parser::peek_error(TokenType expected) -> Diagnostic {
 auto Parser::get_current_precedence() const noexcept
     -> std::pair<Precedence, opt::Option<Binding>> {
     return Binding::try_get_from(current_token_.type)
-        .transform([](const auto& binding) {
+        .transform([](const auto& binding) -> auto {
             return std::pair{binding.precedence, opt::Option<Binding>{binding}};
         })
         .value_or(std::pair{Precedence::LOWEST, opt::none});
@@ -115,7 +116,7 @@ auto Parser::get_current_precedence() const noexcept
 
 auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, opt::Option<Binding>> {
     return Binding::try_get_from(peek_token_.type)
-        .transform([](const auto& binding) {
+        .transform([](const auto& binding) -> auto {
             return std::pair{binding.precedence, opt::Option<Binding>{binding}};
         })
         .value_or(std::pair{Precedence::LOWEST, opt::none});
@@ -124,6 +125,7 @@ auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, opt::
 auto Parser::parse_statement(SemicolonBehavior behavior)
     -> Result<ast::StatementHandle, Diagnostic> {
     // Not all decls are public so the condition needs to be rechecked
+    PROFILE_FUNCTION();
     if (current_token_.type == TokenType::PUBLIC) {
         switch (peek_token_.type) {
         case TokenType::IMPORT: return ast::ImportStatement::parse(*this);
@@ -149,6 +151,7 @@ auto Parser::parse_statement(SemicolonBehavior behavior)
 }
 
 auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHandle, Diagnostic> {
+    PROFILE_FUNCTION();
     if (current_token_is(TokenType::END)) {
         return make_syntax_err(Error::END_OF_TOKEN_STREAM, current_token_);
     }
@@ -167,7 +170,7 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
         const auto& infix = get_poll_infix_fn_opt(peek_token_.type);
         if (!infix) { break; }
         advance();
-        lhs_expression = TRY((*infix)(*this, std::move(lhs_expression)));
+        lhs_expression = TRY((*infix)(*this, lhs_expression));
     }
 
     return lhs_expression;
@@ -200,7 +203,7 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
 
 namespace {
 
-constexpr auto PREFIX_FNS = [] {
+constexpr auto PREFIX_FNS = [] -> auto {
     fixed::EnumMap<TokenType, Parser::PrefixFn> fns;
 
     fns[TokenType::IDENT]            = ast::IdentifierExpression::parse;
@@ -254,7 +257,7 @@ constexpr auto PREFIX_FNS = [] {
     return fns;
 }();
 
-constexpr auto INFIX_FNS = [] {
+constexpr auto INFIX_FNS = [] -> auto {
     fixed::EnumMap<TokenType, Parser::InfixFn> fns;
 
     fns[TokenType::PLUS]           = ast::BinaryExpression::parse;

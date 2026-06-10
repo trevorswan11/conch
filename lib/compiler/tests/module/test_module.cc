@@ -16,7 +16,7 @@ TEST_CASE("Fetching non-relative file modules") {
     mod::MemoryLoader  loader;
     mod::ModuleManager manager{loader};
 
-#if PLATFORM_WINDOWS
+#if GHOTI_WINDOWS
     const std::string_view file{"C:/fake/foo.gh"};
 #else
     const std::string_view file{"/fake/foo.gh"};

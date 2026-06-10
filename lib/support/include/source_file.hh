@@ -52,8 +52,8 @@ class SourceFile {
     [[nodiscard]] constexpr operator std::string_view() const noexcept { return source_; }
     [[nodiscard]] constexpr operator const std::string&() const noexcept { return source_; }
 
-    constexpr auto empty() const noexcept -> bool { return source_.empty(); }
-    constexpr auto size() const noexcept -> usize { return source_.size(); }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return source_.empty(); }
+    [[nodiscard]] constexpr auto size() const noexcept -> usize { return source_.size(); }
 
   private:
     [[nodiscard]] auto get_diagnostic_strings_at(const SourceLocation& loc) const

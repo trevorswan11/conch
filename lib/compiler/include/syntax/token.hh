@@ -5,8 +5,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "diagnostic.hh"
-#include "types.hh"
+#include <diagnostic.hh>
+#include <types.hh>
 
 namespace ghoti {
 
@@ -14,7 +14,7 @@ namespace syntax {
 
 struct Token {
     TokenType        type{};
-    std::string_view slice{};
+    std::string_view slice;
     usize            line{};
     usize            column{};
 
@@ -33,7 +33,9 @@ struct Token {
     [[nodiscard]] auto is_member_token() const noexcept -> bool;
 
     // Check whether the token is an ident, primitive type, or builtin function.
-    auto is_valid_ident() const noexcept -> bool { return token_type::is_valid_ident(type); }
+    [[nodiscard]] auto is_valid_ident() const noexcept -> bool {
+        return token_type::is_valid_ident(type);
+    }
 
     auto operator==(const Token& other) const noexcept -> bool {
         return type == other.type && slice == other.slice && line == other.line &&

@@ -12,7 +12,7 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "types.hh"
+#include <types.hh>
 
 namespace ghoti::tests {
 

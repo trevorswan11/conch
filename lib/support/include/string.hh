@@ -17,27 +17,23 @@ namespace traits {
 template <typename T> struct is_string_like : std::false_type {};
 template <> struct is_string_like<std::string> : std::true_type {};
 template <> struct is_string_like<std::string_view> : std::true_type {};
-template <> struct is_string_like<const byte*> : std::true_type {};
-template <> struct is_string_like<byte*> : std::true_type {};
-template <typename T> constexpr auto is_string_like_v = is_string_like<T>::value;
+template <> struct is_string_like<const char*> : std::true_type {};
+template <> struct is_string_like<char*> : std::true_type {};
 
 template <typename T>
-concept StringLike = is_string_like_v<std::remove_cvref_t<T>>;
-
-template <typename T>
-concept StdStringLike = !std::same_as<T, const byte*> && is_string_like_v<std::remove_cvref_t<T>>;
+concept StringLike = is_string_like<std::remove_cvref_t<T>>::value;
 
 } // namespace traits
 
 namespace string {
 
 template <typename Func>
-concept Predicate = std::convertible_to<std::invoke_result_t<Func, byte>, bool>;
+concept Predicate = std::convertible_to<std::invoke_result_t<Func, char>, bool>;
 
 // Trim all characters that fulfill the predicate from the left of the string
 template <Predicate Pred>
 [[nodiscard]] constexpr auto trim_left(
-    std::string_view str, Pred pred = [](byte b) { return std::isspace(b); }) noexcept
+    std::string_view str, Pred pred = [](char c) -> bool { return std::isspace(c); }) noexcept
     -> std::string_view {
     const auto first = std::ranges::find_if_not(str, pred);
     return std::string_view{first, static_cast<usize>(str.end() - first)};
@@ -45,7 +41,7 @@ template <Predicate Pred>
 
 // Trims leftmost spaces
 [[nodiscard]] constexpr auto trim_left(std::string_view str) noexcept -> std::string_view {
-    return trim_left(str, [](byte b) { return std::isspace(b); });
+    return trim_left(str, [](char c) -> bool { return std::isspace(c); });
 }
 
 // Trim all characters that fulfill the predicate from the right of the string
@@ -58,7 +54,7 @@ template <Predicate Pred>
 
 // Trims rightmost spaces
 [[nodiscard]] constexpr auto trim_right(std::string_view str) noexcept -> std::string_view {
-    return trim_right(str, [](byte b) { return std::isspace(b); });
+    return trim_right(str, [](char c) -> bool { return std::isspace(c); });
 }
 
 // Trim all characters that fulfill the predicate from both ends of the string
@@ -70,7 +66,7 @@ template <Predicate Pred>
 
 // Trims both ends' spaces
 [[nodiscard]] constexpr auto trim(std::string_view str) noexcept -> std::string_view {
-    return trim(str, [](byte b) { return std::isspace(b); });
+    return trim(str, [](char c) -> bool { return std::isspace(c); });
 }
 
 // Zero allocation substring returning empty substring for invalid input
@@ -87,7 +83,7 @@ auto substr(std::string&& str, usize pos, usize len = std::string_view::npos) no
 
 // Checks if the provided string contains entirely whitespace characters
 [[nodiscard]] constexpr auto is_blank(std::string_view text) -> bool {
-    return std::ranges::all_of(text, [](byte b) { return std::isspace(b); });
+    return std::ranges::all_of(text, [](char c) -> bool { return std::isspace(c); });
 }
 
 // Converts a string-like object to its string_view representation

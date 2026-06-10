@@ -1,8 +1,8 @@
 #pragma once
 
-#include "result.hh"
-#include "types.hh"
-#include "variant.hh"
+#include <result.hh>
+#include <types.hh>
+#include <variant.hh>
 
 namespace ghoti::cmd {
 

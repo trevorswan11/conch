@@ -4,8 +4,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "enum.hh"
-#include "option.hh"
+#include <enum.hh>
+#include <option.hh>
 
 namespace ghoti::syntax {
 
@@ -59,7 +59,7 @@ constexpr auto ALL_TOKEN_TYPES =
 
 } // namespace builtins
 
-[[nodiscard]] auto get_builtin_opt(TokenType tok) noexcept -> opt::Option<std::string_view>;
+[[nodiscard]] auto get_builtin_opt(TokenType tt) noexcept -> opt::Option<std::string_view>;
 [[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
 
 } // namespace ghoti::syntax

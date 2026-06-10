@@ -5,20 +5,18 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "string.hh"
-#include "types.hh"
 
 namespace ghoti::tests {
 
 TEST_CASE("String traits") {
     STATIC_CHECK(traits::StringLike<std::string>);
     STATIC_CHECK(traits::StringLike<std::string_view>);
-    STATIC_CHECK(traits::StringLike<const byte*>);
-    STATIC_CHECK_FALSE(traits::StdStringLike<const byte*>);
+    STATIC_CHECK(traits::StringLike<const char*>);
 }
 
 TEST_CASE("Byte type requirement") {
-    STATIC_CHECK(std::is_same_v<std::string::value_type, byte>);
-    STATIC_CHECK(std::is_same_v<char, byte>);
+    STATIC_CHECK(std::is_same_v<std::string::value_type, char>);
+    STATIC_CHECK(std::is_same_v<char, char>);
 }
 
 TEST_CASE("Left trim spaces") {
@@ -45,8 +43,8 @@ TEST_CASE("Trim spaces") {
 }
 
 TEST_CASE("Trim pred") {
-    CHECK(string::trim("theasdaefae",
-                       [](byte b) { return std::string_view{"asdaefae"}.contains(b); }) == "th");
+    constexpr std::string_view against{"asdaefae"};
+    CHECK(string::trim("theasdaefae", [&](char c) -> bool { return against.contains(c); }) == "th");
 }
 
 TEST_CASE("String view substrings") {

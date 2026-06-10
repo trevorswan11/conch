@@ -10,8 +10,9 @@
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
 
-#include "assert.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <profiler.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 
@@ -53,7 +54,8 @@ auto Context::get_slice(types::mut::MutabilityModifiers mutability,
 namespace {
 
 auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
-    const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) {
+    PROFILE_FUNCTION();
+    const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) -> void {
         auto& type = *pool[{kind, types::mut::CONSTANT}];
         ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
         type.resolve<types::BuiltinType>();
@@ -88,27 +90,29 @@ auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
 }
 
 auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
-    const auto inject_function =
-        [&](const syntax::Builtin& builtin, types::BuiltinParams&& param_types, Type& return_type) {
-            for (const auto& param_type : param_types) {
-                ASSERT(param_type->is_resolved(), "Builtins must be fully resolved");
-            }
-            ASSERT(return_type.is_resolved(), "Builtins must be fully resolved");
+    PROFILE_FUNCTION();
+    const auto inject_function = [&](const syntax::Builtin& builtin,
+                                     types::BuiltinParams&& param_types,
+                                     Type&                  return_type) -> void {
+        for (const auto& param_type : param_types) {
+            ASSERT(param_type->is_resolved(), "Builtins must be fully resolved");
+        }
+        ASSERT(return_type.is_resolved(), "Builtins must be fully resolved");
 
-            types::Key key{TypeKind::FUNCTION, types::mut::CONSTANT};
-            key.imprint(builtin);
-            auto& type = *pool[key];
-            ASSERT(!type.is_resolved(), "Builtin functions should only be resolved once");
-            type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
+        types::Key key{TypeKind::FUNCTION, types::mut::CONSTANT};
+        key.imprint(builtin);
+        auto& type = *pool[key];
+        ASSERT(!type.is_resolved(), "Builtin functions should only be resolved once");
+        type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
 
-            prelude.insert_unchecked(builtin.name, symbols::Builtin{builtin, type});
-            auto& symbol = prelude.get(builtin.name);
-            symbol.set_kind(SymbolKind::CALLABLE);
-            symbol.set_status(SymbolStatus::RESOLVED);
-        };
+        prelude.insert_unchecked(builtin.name, symbols::Builtin{builtin, type});
+        auto& symbol = prelude.get(builtin.name);
+        symbol.set_kind(SymbolKind::CALLABLE);
+        symbol.set_status(SymbolStatus::RESOLVED);
+    };
 
     namespace bis     = syntax::builtins;
-    const auto params = [&](std::same_as<Type&> auto&&... params) {
+    const auto params = [&](std::same_as<Type&> auto&&... params) -> auto {
         return types::BuiltinParams{&params...};
     };
 
@@ -169,6 +173,7 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
 } // namespace
 
 auto Context::inject_prelude() -> void {
+    PROFILE_FUNCTION();
     if (prelude_index) { return; }
     prelude_index.emplace(registry.create());
 

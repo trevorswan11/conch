@@ -2,7 +2,7 @@
 
 #include <config.h>
 
-#if PLATFORM_WINDOWS
+#if GHOTI_WINDOWS
 #    include <io.h>
 #    define ISATTY _isatty
 #    define STDOUT_FILENO 1

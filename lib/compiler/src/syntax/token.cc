@@ -5,8 +5,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 

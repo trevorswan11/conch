@@ -8,12 +8,12 @@
 #include "ast/visitor.hh"
 #include "syntax/token.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "types.hh"
-#include "utility.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <iterator.hh>
+#include <option.hh>
+#include <types.hh>
+#include <utility.hh>
 
 namespace ghoti::ast {
 
@@ -63,7 +63,7 @@ class AST {
     constexpr auto add_root(NodeID id) -> void { nodes_.roots.push_back(id); }
 
     [[nodiscard]] constexpr auto get_pool_sizes() const noexcept -> DataPoolSizes {
-        return {nodes_.pool.size(), explicit_types_.pool.size()};
+        return {.nodes_size = nodes_.pool.size(), .types_size = explicit_types_.pool.size()};
     }
 
     template <traits::ASTNode Data>

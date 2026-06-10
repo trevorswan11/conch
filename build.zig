@@ -7,6 +7,7 @@ const cppcheck = @import("third-party/cppcheck.zig");
 const libarchive = @import("third-party/libarchive.zig");
 const fmt = @import("third-party/fmt.zig");
 const catch2 = @import("third-party/catch2.zig");
+const replxx = @import("third-party/replxx.zig");
 
 const KcovBuilder = @import("third-party/kcov/KcovBuilder.zig");
 
@@ -35,23 +36,33 @@ pub fn build(b: *std.Build) !void {
         "-Wno-gnu-statement-expression",
         "-Wno-gnu-statement-expression-from-macro-expansion",
         "-DMAGIC_ENUM_RANGE_MAX=255",
+        "-DREPLXX_STATIC",
     });
+    const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DGHOTI_DIST" };
 
     var package_flags = try compiler_flags.clone(b.allocator);
-    const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DDIST" };
     try package_flags.appendSlice(b.allocator, dist_flags);
 
-    const cdb_flags = [_][]const u8{
+    if (b.option(bool, "profile", "Enable chromium tracing") orelse false) {
+        try compiler_flags.append(b.allocator, "-DGHOTI_PROFILE");
+    }
+
+    try compiler_flags.appendSlice(b.allocator, &.{
         "-gen-cdb-fragment-path",
         b.cache_root.join(b.allocator, &.{CDBGenerator.cdb_frags_dirname}) catch @panic("OOM"),
-    };
+    });
 
-    try compiler_flags.appendSlice(b.allocator, &cdb_flags);
     switch (optimize) {
-        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DDEBUG" }),
-        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DRELEASE"}),
+        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DGHOTI_DEBUG" }),
+        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DGHOTI_RELEASE"}),
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
     }
+
+    const install_tests_only = b.option(
+        bool,
+        "install-tests-only",
+        "Install tests without running them (default: false)",
+    ) orelse true;
 
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{
@@ -59,6 +70,7 @@ pub fn build(b: *std.Build) !void {
         .llvm = llvm,
         .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
+        .install_tests_only = install_tests_only,
     });
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
@@ -128,12 +140,41 @@ const ProjectPaths = struct {
 };
 
 const ExecutableBehavior = union(enum) {
-    runnable: struct {
+    // Meant for user facing potentially runnable commands
+    installable: struct {
         cmd_name: []const u8,
         cmd_desc: []const u8,
         install_dir: ?[]const u8 = null,
+        install_only: bool = false,
     },
+
+    // Meant for internal tools and intermediate artifacts
     standalone: void,
+
+    pub fn installArtifact(
+        b: *std.Build,
+        artifact: *std.Build.Step.Compile,
+        parent_step: *std.Build.Step,
+        install_dir: ?[]const u8,
+        install_only: bool,
+    ) ?*std.Build.Step.Run {
+        var runner: ?*std.Build.Step.Run = null;
+        if (!install_only) {
+            runner = b.addRunArtifact(artifact);
+            runner.?.step.dependOn(b.getInstallStep());
+            parent_step.dependOn(&runner.?.step);
+        }
+
+        if (install_dir) |override| {
+            const install = b.addInstallArtifact(artifact, .{
+                .dest_dir = .{
+                    .override = .{ .custom = override },
+                },
+            });
+            parent_step.dependOn(&install.step);
+        }
+        return runner;
+    }
 };
 
 const TestArtifacts = struct {
@@ -146,6 +187,8 @@ const TestArtifacts = struct {
         self: *const TestArtifacts,
         b: *std.Build,
         cdb_steps: ?*std.ArrayList(*std.Build.Step),
+        install_dir: ?[]const u8,
+        install_only: bool,
     ) !void {
         if (cdb_steps) |cdb| {
             try cdb.append(b.allocator, &self.support_tests.step);
@@ -153,17 +196,22 @@ const TestArtifacts = struct {
             try cdb.append(b.allocator, &self.driver_tests.step);
         }
 
-        const runners = [_]*std.Build.Step.Run{
-            b.addRunArtifact(self.harness_tests),
-            b.addRunArtifact(self.support_tests),
-            b.addRunArtifact(self.compiler_tests),
-            b.addRunArtifact(self.driver_tests),
+        const artifacts = [_]*std.Build.Step.Compile{
+            self.harness_tests,
+            self.support_tests,
+            self.compiler_tests,
+            self.driver_tests,
         };
 
         const test_step = b.step("test", "Run all unit tests");
-        for (runners) |runner| {
-            runner.step.dependOn(b.getInstallStep());
-            test_step.dependOn(&runner.step);
+        for (artifacts) |artifact| {
+            _ = ExecutableBehavior.installArtifact(
+                b,
+                artifact,
+                test_step,
+                install_dir,
+                install_only,
+            );
         }
     }
 };
@@ -178,15 +226,15 @@ fn makeConfigHeader(b: *std.Build, target: std.Build.ResolvedTarget) *std.Build.
     const git_tag = std.mem.trimEnd(u8, git_tag_raw, " \r\n");
 
     return b.addConfigHeader(.{}, .{
-        .VERSION_STR = version_str,
-        .VERSION_MAJOR = @as(i64, version.major),
-        .VERSION_MINOR = @as(i64, version.minor),
-        .VERSION_PATCH = @as(i64, version.patch),
-        .VERSION_PRE = version.pre orelse "",
-        .GIT_INFO = b.fmt("git-{s}{s}{s}", .{ git_hash, if (git_tag_raw.len == 0) "" else "-", git_tag }),
-        .PLATFORM_WINDOWS = target.result.os.tag == .windows,
-        .PLATFORM_LINUX = target.result.os.tag == .linux,
-        .PLATFORM_APPLE = target.result.os.tag == .macos,
+        .GHOTI_VERSION_STR = version_str,
+        .GHOTI_VERSION_MAJOR = @as(i64, version.major),
+        .GHOTI_VERSION_MINOR = @as(i64, version.minor),
+        .GHOTI_VERSION_PATCH = @as(i64, version.patch),
+        .GHOTI_VERSION_PRE = version.pre orelse "",
+        .GHOTI_GIT_INFO = b.fmt("git-{s}{s}{s}", .{ git_hash, if (git_tag_raw.len == 0) "" else "-", git_tag }),
+        .GHOTI_WINDOWS = target.result.os.tag == .windows,
+        .GHOTI_LINUX = target.result.os.tag == .linux,
+        .GHOTI_APPLE = target.result.os.tag == .macos,
     });
 }
 
@@ -199,6 +247,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
     packaging: bool = false,
+    install_tests_only: bool = true,
 }) !struct {
     libsupport: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -230,10 +279,13 @@ fn addArtifacts(b: *std.Build, config: struct {
         cli11_inc,
     };
 
-    const fmt_dep = fmt.build(b, .{
+    const dep_config: Dependency.Config = .{
         .target = target,
         .optimize = config.optimize,
-    });
+    };
+
+    const fmt_dep = fmt.build(b, dep_config);
+    const replxx_dep = replxx.build(b, dep_config);
 
     // Shared core functionality
     const libsupport = b.addLibrary(.{
@@ -248,7 +300,7 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .flags = config.cxx_flags,
             },
             .config_headers = &.{config_h},
-            .link_libraries = &.{fmt_dep.artifact},
+            .link_libraries = &.{ fmt_dep.artifact, replxx_dep.artifact },
         }),
     });
     if (config.auto_install) b.installArtifact(libsupport);
@@ -298,7 +350,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             },
             .system_include_paths = &system_includes,
             .config_headers = &.{config_h},
-            .link_libraries = &.{ libcompiler, fmt_dep.artifact },
+            .link_libraries = &.{ libcompiler, fmt_dep.artifact, replxx_dep.artifact },
             .cxx = .{
                 .files = try collectFiles(b, ProjectPaths.driver.src, .{}),
                 .flags = config.cxx_flags,
@@ -322,11 +374,11 @@ fn addArtifacts(b: *std.Build, config: struct {
             .flags = config.cxx_flags,
         },
         .system_include_paths = &system_includes,
-        .link_libraries = &.{ libdriver, fmt_dep.artifact },
+        .link_libraries = &.{ libdriver, fmt_dep.artifact, replxx_dep.artifact },
     }, .{
         .name = "ghoti",
         .behavior = config.behavior orelse .{
-            .runnable = .{
+            .installable = .{
                 .cmd_name = "run",
                 .cmd_desc = "Run ghoti with provided command line arguments",
             },
@@ -337,7 +389,7 @@ fn addArtifacts(b: *std.Build, config: struct {
 
     var tests: ?TestArtifacts = null;
     if (building_for_host) {
-        const install_behavior: ?[]const u8 = if (config.auto_install) "tests" else null;
+        const test_install_dir: ?[]const u8 = if (config.auto_install) "tests" else null;
         const harness_main = b.path(ProjectPaths.harness ++ "main.zig");
         const catch2_dep = catch2.build(b, .{
             .target = target,
@@ -355,18 +407,14 @@ fn addArtifacts(b: *std.Build, config: struct {
             }),
         });
 
-        const harness_cmd = b.addRunArtifact(harness);
-        const harness_step = b.step("test-harness", "Run test harness' tests");
-        harness_step.dependOn(&harness_cmd.step);
-
-        if (install_behavior) |install_dir| {
-            const install = b.addInstallArtifact(harness, .{
-                .dest_dir = .{
-                    .override = .{ .custom = install_dir },
-                },
-            });
-            harness_step.dependOn(&install.step);
-        }
+        const harness_step = b.step("test-harness", "Build/run test harness' tests");
+        _ = ExecutableBehavior.installArtifact(
+            b,
+            harness,
+            harness_step,
+            test_install_dir,
+            config.install_tests_only,
+        );
 
         // Support's tests depend on the test runner but not LLVM
         const support_tests = createExecutable(b, .{
@@ -389,10 +437,11 @@ fn addArtifacts(b: *std.Build, config: struct {
         }, .{
             .name = "support",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-support",
-                    .cmd_desc = "Run support's unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run support's unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -418,10 +467,11 @@ fn addArtifacts(b: *std.Build, config: struct {
         }, .{
             .name = "compiler",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-compiler",
-                    .cmd_desc = "Run compiler unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run compiler unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -444,14 +494,21 @@ fn addArtifacts(b: *std.Build, config: struct {
                 .flags = config.cxx_flags,
             },
             .config_headers = &.{config_h},
-            .link_libraries = &.{ libcompiler, libdriver, catch2_dep.artifact, fmt_dep.artifact },
+            .link_libraries = &.{
+                libcompiler,
+                libdriver,
+                catch2_dep.artifact,
+                fmt_dep.artifact,
+                replxx_dep.artifact,
+            },
         }, .{
             .name = "driver",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-driver",
-                    .cmd_desc = "Run the driver's unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run the driver's unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -462,7 +519,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .compiler_tests = compiler_tests,
             .driver_tests = driver_tests,
         };
-        try tests.?.configure(b, config.cdb_steps);
+        try tests.?.configure(b, config.cdb_steps, test_install_dir, config.install_tests_only);
     }
 
     const cppcheck_dep: ?Dependency = if (building_for_host) try cppcheck.build(b, .{
@@ -568,25 +625,19 @@ fn createExecutable(
     });
 
     switch (executable_config.behavior) {
-        .runnable => |run| {
-            const run_cmd = b.addRunArtifact(exe);
-            run_cmd.step.dependOn(b.getInstallStep());
-
-            if (b.args) |args| {
-                run_cmd.addArgs(args);
+        .installable => |config| {
+            const step = b.step(config.cmd_name, config.cmd_desc);
+            if (ExecutableBehavior.installArtifact(
+                b,
+                exe,
+                step,
+                config.install_dir,
+                config.install_only,
+            )) |run| {
+                if (b.args) |args| {
+                    run.addArgs(args);
+                }
             }
-
-            if (run.install_dir) |install_dir| {
-                const install = b.addInstallArtifact(exe, .{
-                    .dest_dir = .{
-                        .override = .{ .custom = install_dir },
-                    },
-                });
-                run_cmd.step.dependOn(&install.step);
-            }
-
-            const run_step = b.step(run.cmd_name, run.cmd_desc);
-            run_step.dependOn(&run_cmd.step);
         },
         .standalone => {},
     }

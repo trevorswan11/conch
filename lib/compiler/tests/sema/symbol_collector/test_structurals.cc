@@ -11,8 +11,8 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "memory.hh"
-#include "types.hh"
+#include <memory.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -50,8 +50,7 @@ TEST_CASE("Struct hollow types") {
 }
 
 TEST_CASE("Enum hollow types") {
-    auto ctx =
-        test_user_type("const a := enum {b, static const foo := bar; };", sema::TypeKind::ENUM, 2);
+    auto ctx = test_user_type("const a := enum {b, const foo := bar; };", sema::TypeKind::ENUM, 2);
     const auto& registry    = ctx->analyzer.get_registry();
     const auto& enumeration = helpers::unwrap(registry.get_from_opt(1, "b"));
     REQUIRE(enumeration.get_data().as_opt<sema::symbols::Enumeration>());
@@ -76,10 +75,10 @@ TEST_CASE("Public using query") {
 }
 
 TEST_CASE("Shadowing member/field declarations") {
-    const auto expected_diag = [](usize col) {
-        return sema::Diagnostic{"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
-                                sema::Error::SHADOWING_DECLARATION,
-                                std::pair{0uz, col}};
+    const auto expected_diag = [](usize col) -> sema::Diagnostic {
+        return {"Attempt to shadow identifier 'a'; previous declaration here: 1:1",
+                sema::Error::SHADOWING_DECLARATION,
+                std::pair{0UZ, col}};
     };
 
     helpers::test_collector_fail("const a := struct { var a := 2; };", expected_diag(20));

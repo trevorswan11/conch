@@ -54,7 +54,7 @@ namespace bis = syntax::builtins;
 TEST_CASE("Builtin 'safe' casts") {
     constexpr std::array safe_casts{bis::ALIGN_CAST, bis::PTR_CAST, bis::BIT_CAST, bis::AS};
     for (const auto& bi : safe_casts) {
-        test_builtin_resolve(bi, "i32, 23uz", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        test_builtin_resolve(bi, "i32, 23UZ", [](helpers::SemaTestContext& ctx) -> sema::Type& {
             return ctx.get_type(sema::TypeKind::I32);
         });
     }
@@ -129,7 +129,7 @@ TEST_CASE("Builtin pointer conversions") {
         });
 
     test_builtin_resolve(
-        bis::SLICE_FROM_PTR, "^1, 20uz", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        bis::SLICE_FROM_PTR, "^1, 20UZ", [](helpers::SemaTestContext& ctx) -> sema::Type& {
             return ctx.get_type(sema::TypeKind::SLICE, false, ctx.get_type(sema::TypeKind::I32));
         });
 }
@@ -183,14 +183,14 @@ TEST_CASE("Builtin function arity mismatch") {
     helpers::test_resolver_fail("const foo := @sizeOf();",
                                 sema::Diagnostic{"Builtin expects 1 arguments, found 0",
                                                  sema::Error::ARITY_MISMATCH,
-                                                 std::pair{0uz, 13uz}});
+                                                 std::pair{0UZ, 13UZ}});
 }
 
 TEST_CASE("Const cast quick type checking") {
     helpers::test_resolver_fail("const foo := @constCast(1);",
                                 sema::Diagnostic{"Expected pointer or reference type; found 'i32'",
                                                  sema::Error::TYPE_MISMATCH,
-                                                 std::pair{0uz, 24uz}});
+                                                 std::pair{0UZ, 24UZ}});
 }
 
 TEST_CASE("Other builtin quick type mismatch") {
@@ -198,18 +198,18 @@ TEST_CASE("Other builtin quick type mismatch") {
         "const foo := @ptrFromArray(1);",
         sema::Diagnostic{"Expected an array-yielding expression; found 'i32'",
                          sema::Error::TYPE_MISMATCH,
-                         std::pair{0uz, 27uz}});
+                         std::pair{0UZ, 27UZ}});
 
     helpers::test_resolver_fail("const foo := @ptrFromInt(i32, 0xdeadbeeful);",
                                 sema::Diagnostic{"Expected a pointer type; found 'i32'",
                                                  sema::Error::TYPE_MISMATCH,
-                                                 std::pair{0uz, 25uz}});
+                                                 std::pair{0UZ, 25UZ}});
 
     helpers::test_resolver_fail(
-        "const foo := @sliceFromPtr(1, 20uz);",
+        "const foo := @sliceFromPtr(1, 20UZ);",
         sema::Diagnostic{"Expected a pointer-yielding expression; found 'i32'",
                          sema::Error::TYPE_MISMATCH,
-                         std::pair{0uz, 27uz}});
+                         std::pair{0UZ, 27UZ}});
 }
 
 TEST_CASE("Illegal @this usage") {
@@ -217,7 +217,7 @@ TEST_CASE("Illegal @this usage") {
         "@this();",
         sema::Diagnostic{"@this() may only be used inside of structs, unions, and enums",
                          sema::Error::TYPE_MISMATCH,
-                         std::pair{0uz, 5uz}});
+                         std::pair{0UZ, 5UZ}});
 }
 
 } // namespace ghoti::tests

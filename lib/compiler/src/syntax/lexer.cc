@@ -11,15 +11,17 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "string.hh"
-#include "types.hh"
+#include <option.hh>
+#include <profiler.hh>
+#include <string.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
 auto Lexer::advance() noexcept -> Token {
+    PROFILE_FUNCTION();
     skip_whitespace();
 
     Token      token{{}, {}, line_no_, col_no_};
@@ -144,6 +146,8 @@ enum class NumberSuffix : u8 {
     SIZE     = 2 << 2,
 };
 
+namespace {
+
 constexpr auto operator|=(NumberSuffix& lhs, NumberSuffix rhs) noexcept -> NumberSuffix& {
     lhs = static_cast<NumberSuffix>(std::to_underlying(lhs) | std::to_underlying(rhs));
     return lhs;
@@ -156,6 +160,8 @@ constexpr auto operator&(NumberSuffix lhs, NumberSuffix rhs) noexcept -> NumberS
 constexpr auto suffix_has(NumberSuffix suffix, NumberSuffix flag) noexcept -> bool {
     return static_cast<bool>(suffix & flag);
 }
+
+} // namespace
 
 auto Lexer::read_number() noexcept -> Token {
     const auto start           = pos_;
@@ -317,7 +323,7 @@ auto Lexer::read_number() noexcept -> Token {
     return {type, string::substr(input_, start, length), start_line, start_col};
 }
 
-auto Lexer::read_escape() noexcept -> byte {
+auto Lexer::read_escape() noexcept -> char {
     read_character();
 
     switch (current_byte_) {

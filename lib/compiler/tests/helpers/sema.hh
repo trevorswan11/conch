@@ -24,13 +24,13 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include "memory.hh"
-#include "option.hh"
 #include "syntax/error.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+
+#include <memory.hh>
+#include <option.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::tests::helpers {
 
@@ -39,7 +39,7 @@ constexpr std::string_view TEST_FILENAME{"test.gh"};
 struct MockFile {
     std::string_view              path;
     std::string_view              source;
-    opt::Option<std::string_view> name{};
+    opt::Option<std::string_view> name{}; // NOLINT
 };
 
 // Tests the collected state of a minimal non-public implicit declaration

@@ -13,8 +13,8 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include "option.hh"
-#include "types.hh"
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -71,7 +71,7 @@ TEST_CASE("Array resolution with implicit type") {
 }
 
 TEST_CASE("Indexing with single accessors") {
-    const auto test_index = [](std::string_view type_mod) {
+    const auto test_index = [](std::string_view type_mod) -> void {
         auto [ctx, idx] =
             helpers::resolve_and_check(fmt::format("var a: {}u32; const b := a[0];", type_mod));
         const auto [sym, sym_data, type] = ctx->get_type_sym_info<syms::Node>("b", idx);
@@ -106,15 +106,15 @@ TEST_CASE("Illegal index target") {
         "var a: u32; const b := a[0];",
         sema::Diagnostic{"Can only index slices, arrays, and pointers; found 'u32'",
                          sema::Error::TYPE_MISMATCH,
-                         std::pair{0uz, 23uz}});
+                         std::pair{0UZ, 23UZ}});
     ctx->check_poisoned<syms::Node>("b", idx);
 }
 
 TEST_CASE("Illegal arrays dependent on incomplete types") {
-    const auto expected_diag = [](usize col) {
-        return sema::Diagnostic{"Array elements cannot have an incomplete type",
-                                sema::Error::CYCLIC_DEPENDENCY,
-                                std::pair{0uz, col}};
+    const auto expected_diag = [](usize col) -> sema::Diagnostic {
+        return {"Array elements cannot have an incomplete type",
+                sema::Error::CYCLIC_DEPENDENCY,
+                std::pair{0UZ, col}};
     };
 
     helpers::test_resolver_fail("const A := struct { a: [3]A, };", expected_diag(26));

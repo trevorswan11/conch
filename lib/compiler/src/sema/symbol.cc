@@ -11,10 +11,11 @@
 #include "sema/error.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "result.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <profiler.hh>
+#include <result.hh>
+#include <types.hh>
 
 namespace ghoti::sema {
 
@@ -28,20 +29,29 @@ namespace {
 
 [[nodiscard]] auto symbol_location_of(const mod::Module& module, const Symbol::Data& data) noexcept
     -> SourceLocation {
+    PROFILE_FUNCTION();
     return data.visit(
-        [](const symbols::Builtin&) { return SourceLocation{0, 0}; },
-        [&module](const auto& handle) { return module.ast.location_of(handle); },
-        [&module](const symbols::Label& label) {
+        [](const symbols::Builtin&) -> SourceLocation { return SourceLocation{0, 0}; },
+        [&module](const auto& handle) -> SourceLocation { return module.ast.location_of(handle); },
+        [&module](const symbols::Label& label) -> SourceLocation {
             return module.ast.location_of(label.get_definition());
         },
-        [&module](const symbols::StructField& inner) { return module.ast.location_of(inner.name); },
-        [&module](const symbols::UnionField& inner) { return module.ast.location_of(inner.name); },
-        [&module](const symbols::Enumeration& inner) { return module.ast.location_of(inner.name); },
-        [&module](const symbols::SelfParameter& inner) {
+        [&module](const symbols::StructField& inner) -> SourceLocation {
             return module.ast.location_of(inner.name);
         },
-        [&module](const symbols::Parameter& inner) { return module.ast.location_of(inner.name); },
-        [&module](const symbols::ForLoopCapture& inner) {
+        [&module](const symbols::UnionField& inner) -> SourceLocation {
+            return module.ast.location_of(inner.name);
+        },
+        [&module](const symbols::Enumeration& inner) -> SourceLocation {
+            return module.ast.location_of(inner.name);
+        },
+        [&module](const symbols::SelfParameter& inner) -> SourceLocation {
+            return module.ast.location_of(inner.name);
+        },
+        [&module](const symbols::Parameter& inner) -> SourceLocation {
+            return module.ast.location_of(inner.name);
+        },
+        [&module](const symbols::ForLoopCapture& inner) -> SourceLocation {
             return module.ast.location_of(inner.payload);
         });
 }
@@ -54,7 +64,7 @@ auto Symbol::get_symbol_location(const mod::Module& module) const noexcept -> So
 
 auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
     return data_.visit(
-        [&module](const symbols::Node& node) {
+        [&module](const symbols::Node& node) -> bool {
             switch (node->get_kind()) {
             case ast::NodeKind::DECL_STATEMENT:
                 return module.ast.get_as<ast::DeclStatement>(*node).has_modifier(
@@ -65,12 +75,13 @@ auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
             default: return false;
             }
         },
-        [](const auto&) { return false; });
+        [](const auto&) -> bool { return false; });
 }
 
 auto SymbolTable::insert(std::string_view name, const mod::Module& module, const Symbol::Data& data)
     -> Result<void, Diagnostic> {
     // Reserved identifier use is impossible due to a parser invariant
+    PROFILE_FUNCTION();
     auto [it, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
 
     // Check for redeclaration since there's no shadowing
@@ -87,6 +98,7 @@ auto SymbolTable::insert(std::string_view name, const mod::Module& module, const
 
 auto SymbolTable::insert_unchecked(std::string_view name, const Symbol::Data& data) -> void {
     // Reserved identifier use is impossible due to a parser invariant
+    PROFILE_FUNCTION();
     auto [_, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
     ASSERT(inserted, "Duplicate symbol injected");
 }
@@ -104,6 +116,7 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
                                                      std::string_view        name,
                                                      const Symbol::Data&     data) noexcept
     -> Result<void, Diagnostic> {
+    PROFILE_FUNCTION();
     for (const auto idx : stack | std::views::take(stack.size() - 1)) {
         if (const auto symbol = get(idx).get_opt(name)) {
             return make_sema_err(

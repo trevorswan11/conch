@@ -4,8 +4,8 @@
 
 #include "syntax/token_type.hh"
 
-#include "fixed/hash_map.hh"
-#include "option.hh"
+#include <fixed/hash_map.hh>
+#include <option.hh>
 
 namespace ghoti::syntax {
 

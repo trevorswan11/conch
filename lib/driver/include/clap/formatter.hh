@@ -8,7 +8,7 @@
 
 namespace ghoti::clap {
 
-class Fmt : public CLI::Formatter {
+class Fmt final : public CLI::Formatter {
   public:
     Fmt() noexcept = default;
 

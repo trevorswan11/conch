@@ -2,13 +2,13 @@
 
 #include "syntax/token_type.hh"
 
-#include "option.hh"
-#include "types.hh"
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
 enum class Precedence : u8 {
-    LOWEST,
+    LOWEST           = 0,
     ASSIGNMENT       = 10,
     BOOL_AND_OR      = 20,
     BOOL_EQUIV       = 30,

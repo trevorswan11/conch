@@ -1,6 +1,7 @@
 #include "sema/passes/type_resolver.hh"
 
 #include <ranges>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -13,6 +14,7 @@
 #include "ast/format.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
+#include "ast/kind.hh"
 #include "ast/primitive.hh"
 #include "ast/statement.hh"
 #include "ast/traits.hh"
@@ -26,17 +28,20 @@
 #include "syntax/builtins.hh"
 #include "syntax/token_type.hh"
 
-#include "assert.hh"
-#include "diagnostic.hh"
-#include "option.hh"
-#include "result.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <assert.hh>
+#include <diagnostic.hh>
+#include <option.hh>
+#include <profiler.hh>
+#include <result.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::sema {
 
 auto TypeResolver::resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState {
+    PROFILE_FUNCTION();
+
     // Poisoned collection should flush the diagnostics
     const auto poisoned_collection = module.state == mod::ModuleState::POISONED_SYMBOL_COLLECTION;
     if (poisoned_collection) { module.print_diagnostics(ctx.error_stream); }
@@ -75,6 +80,7 @@ namespace {
 } // namespace
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ArrayExpression& array) -> void {
+    PROFILE_FUNCTION();
     for (const auto& item : array.items) { resolve(item); }
     resolve(array.item_explicit_type);
     auto& item_type = *last_type_.take();
@@ -157,8 +163,7 @@ template <traits::IndexableID ID>
         ASSERT(builtin.return_type.get_kind() == TypeKind::TYPE);
         auto&       instance_type = *get_resolved_call_arg_type(call.arguments[0]);
         const auto& instance_data = instance_type.get_data();
-        if (instance_data.as_opt<types::DeferredCall>() ||
-            instance_data.as_opt<types::DeferredArray>()) {
+        if (instance_data.is<types::DeferredCall>() || instance_data.is<types::DeferredArray>()) {
             return_type = ctx_.pool[{TypeKind::TYPE, types::mut::CONSTANT, &call}];
             return_type->resolve_if<types::DeferredCall>(call);
         } else {
@@ -206,7 +211,7 @@ template <traits::IndexableID ID>
     }
     case TokenType::BUILTIN_SLICE_FROM_PTR: {
         auto& ptr_type = *get_resolved_call_arg_type(call.arguments[0]);
-        if (const auto& ptr_data = ptr_type.get_data().as_opt<types::Pointer>()) {
+        if (const auto ptr_data = ptr_type.get_data().as_opt<types::Pointer>()) {
             // The resulting slice isn't null terminated since the pointer gives no guarantee
             return_type = &ctx_.get_slice(types::mut::CONSTANT, false, ptr_data->underlying);
             break;
@@ -272,7 +277,7 @@ auto TypeResolver::resolve_call_args(gsl::span<const ast::CallExpression::Argume
     -> ResolveResult {
     bool any_poison = false;
     for (const auto& arg : args) {
-        any_poison |= arg.visit([this](auto id) {
+        any_poison |= arg.visit([this](auto id) -> bool {
             resolve(id);
             return last_type_.take()->is_poison();
         });
@@ -304,7 +309,7 @@ auto TypeResolver::get_resolved_call_arg_type(const ast::CallExpression::Argumen
 
 auto TypeResolver::get_call_arg_location(const ast::CallExpression::Argument& arg)
     -> SourceLocation {
-    return arg.visit([this](auto id) { return resolving_.ast.location_of(id); });
+    return arg.visit([this](auto id) -> SourceLocation { return resolving_.ast.location_of(id); });
 }
 
 template <traits::IndexableID ID>
@@ -342,7 +347,7 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
         for (auto [param_type, arg] :
              std::views::zip(function_type->params.subspan(param_offset), call.arguments)) {
             const StructuralGuard g{implicit_type_stack_, *param_type};
-            any_arg_poison |= arg.visit([this](auto id) {
+            any_arg_poison |= arg.visit([this](auto id) -> bool {
                 resolve(id);
                 return last_type_.take()->is_poison();
             });
@@ -384,10 +389,13 @@ auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void 
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_call, const ast::CallExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::CallExpression& call) -> void {
+    PROFILE_FUNCTION();
     resolve_call(id, call);
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do_while) -> void {
+    PROFILE_FUNCTION();
+
     // The loop itself holds the block index, not the block
     auto& loop_type = resolving_.get_sema_type(id);
     {
@@ -415,6 +423,7 @@ auto TypeResolver::resolve_members(gsl::span<Type*> buf, gsl::span<const ast::Me
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
+    PROFILE_FUNCTION();
     if (enum_expr.underlying) { resolve(*enum_expr.underlying); }
 
     auto&                 enum_type = resolving_.get_sema_type(id);
@@ -455,6 +464,7 @@ auto TypeResolver::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
 VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::EnumExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr) -> void {
+    PROFILE_FUNCTION();
     ASSERT(for_expr.iterables.size() == for_expr.captures.size());
 
     // The loop itself holds the block index which houses captures, not the block
@@ -518,6 +528,8 @@ namespace {
 } // namespace
 
 auto TypeResolver::visit(ast::NodeID id, const ast::FunctionExpression& fn) -> void {
+    PROFILE_FUNCTION();
+
     // The entire function lives inside of its preallocated scope
     auto&       fn_type = resolving_.get_sema_type(id);
     const Scope s{table_stack_, fn_type.get_symbol_table_idx(), table_idx_};
@@ -534,7 +546,9 @@ auto TypeResolver::visit(ast::NodeID id, const ast::FunctionExpression& fn) -> v
 
             if (user_type->is_poison()) {
                 return last_type_.emplace(ctx_.poison_node(resolving_, id));
-            } else if (!mutability) {
+            }
+
+            if (!mutability) {
                 last_type_.emplace(*user_type);
                 resolving_.set_sema_type(fn.self->name, *last_type_);
             } else {
@@ -636,7 +650,9 @@ namespace {
                                   decl->value->is<ast::EnumExpression>();
         if ((!mod || (!mod->is_ptr() && !mod->is_ref())) && !is_aggregate) { return opt::none; }
         return target_mod.get_sema_type_opt(*decl->value);
-    } else if (const auto alias = target_mod.ast.get_as_opt<ast::UsingStatement>(*node)) {
+    }
+
+    if (const auto alias = target_mod.ast.get_as_opt<ast::UsingStatement>(*node)) {
         return target_mod.get_sema_type_opt(alias->explicit_type);
     }
     return opt::none;
@@ -653,7 +669,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
             id,
             symbol_data.visit(
                 [](symbols::Builtin& builtin) -> Type& { return builtin.get_type(); },
-                [this](symbols::Label label) -> Type& {
+                [this](symbols::Label& label) -> Type& {
                     const auto defn = label.get_definition();
                     ASSERT(resolving_.has_sema_type(defn), "Resolved node has no type");
                     return resolving_.get_sema_type(defn);
@@ -736,10 +752,12 @@ auto TypeResolver::resolve_ident(ID id, const ast::IdentifierExpression& ident) 
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_ident, const ast::IdentifierExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::IdentifierExpression& ident) -> void {
+    PROFILE_FUNCTION();
     resolve_ident(id, ident);
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::IfExpression& if_expr) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(if_expr.condition);
     TRY_RESOLVE(if_expr.consequence);
 
@@ -751,6 +769,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IfExpression& if_expr) -> vo
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(index.array);
     auto& array_type = *last_type_.take();
     auto& array_data = array_type.get_data();
@@ -778,7 +797,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> v
     auto& access_type = *last_type_.take();
 
     // There may be a slice accessor which results in a slice type
-    if (access_type.get_data().as_opt<types::Slice>()) {
+    if (access_type.get_data().is<types::Slice>()) {
         last_type_.emplace(ctx_.get_slice(types::mut::CONSTANT, false, single_item_type));
     } else {
         last_type_.emplace(single_item_type);
@@ -790,6 +809,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::IndexExpression& index) -> v
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::InfiniteLoopExpression& loop) -> void {
+    PROFILE_FUNCTION();
     auto&       loop_type = resolving_.get_sema_type(id);
     const Scope s{table_stack_, loop_type.get_symbol_table_idx(), table_idx_};
 
@@ -800,6 +820,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InfiniteLoopExpression& loop
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::AssignmentExpression& assign) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(assign.lhs);
     auto& lhs_type = *last_type_.take();
     {
@@ -812,6 +833,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AssignmentExpression& assign
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::BinaryExpression& binary) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(binary.lhs);
     TRY_RESOLVE(binary.rhs);
     resolving_.set_sema_type(id, *last_type_);
@@ -847,7 +869,7 @@ auto TypeResolver::resolve_structural_access(Type&                         objec
     if (!symbol_proxy) {
         return make_sema_err(
             object_name
-                .transform([&](std::string_view name) {
+                .transform([&](std::string_view name) -> std::string {
                     return fmt::format(
                         "Type '{}' has no field named '{}'", name, member_ident.name);
                 })
@@ -866,16 +888,20 @@ auto TypeResolver::resolve_structural_access(Type&                         objec
     UNREACHABLE("Error handling failed to catch invalid type");
 }
 
-auto TypeResolver::get_rightmost_name(ast::OuterAccessHandle handle) noexcept -> std::string_view {
+auto TypeResolver::get_rightmost_name(ast::OuterAccessHandle handle) const noexcept
+    -> std::string_view {
     auto current = handle;
     while (true) {
         if (const auto ident = resolving_.ast.get_as_opt<ast::IdentifierExpression>(current)) {
             return ident->name;
-        } else if (const auto scope =
-                       resolving_.ast.get_as_opt<ast::ModuleAccessExpression>(current)) {
+        }
+
+        if (const auto scope = resolving_.ast.get_as_opt<ast::ModuleAccessExpression>(current)) {
             current = scope->inner;
             continue;
-        } else if (const auto dot = resolving_.ast.get_as_opt<ast::DotExpression>(current)) {
+        }
+
+        if (const auto dot = resolving_.ast.get_as_opt<ast::DotExpression>(current)) {
             current = dot->member;
             continue;
         }
@@ -907,10 +933,12 @@ auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_dot, const ast::DotExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DotExpression& dot) -> void {
+    PROFILE_FUNCTION();
     resolve_dot(id, dot);
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::RangeExpression& range) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(range.lhs);
     auto& lhs_type = *last_type_.take();
     TRY_RESOLVE(range.rhs);
@@ -937,7 +965,7 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
 
     // Check for duplicates
     for (const auto& [accessor, value] : init.initializers) {
-        const auto& accessor_node = resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
+        const auto  accessor_node = resolving_.ast.get_as<ast::ImplicitAccessExpression>(accessor);
         const auto& accessor_ident =
             resolving_.ast.get_as<ast::IdentifierExpression>(accessor_node.member);
         const auto field_name = accessor_ident.name;
@@ -990,6 +1018,8 @@ auto TypeResolver::validate_struct_initializer(ast::NodeID                      
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init) -> void {
+    PROFILE_FUNCTION();
+
     // Resolve the object first so it can be tied to the member's types
     opt::Option<Type&> object_type_opt;
     if (init.object_type) {
@@ -1018,7 +1048,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
 
     const auto  num_initializers = init.initializers.size();
     const auto& object_data      = object_type.get_data();
-    if (object_data.as_opt<types::Enum>()) {
+    if (object_data.is<types::Enum>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1026,7 +1056,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
                              "they lack member variables",
                              Error::ARITY_MISMATCH,
                              resolving_.ast.location_of(id)));
-    } else if (object_data.as_opt<types::Union>()) {
+    }
+    if (object_data.is<types::Union>()) {
         // This is a restriction naturally imposed by the definition of a union in theory
         if (num_initializers != 1) {
             return last_type_.emplace(ctx_.poison_node(
@@ -1043,7 +1074,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
         }
     }
 
-    if (!object_data.as_opt<types::Struct>() && !object_data.as_opt<types::Union>()) {
+    if (!object_data.is<types::Struct>() && !object_data.is<types::Union>()) {
         return last_type_.emplace(
             ctx_.poison_node(resolving_,
                              id,
@@ -1078,6 +1109,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> void {
+    PROFILE_FUNCTION();
     auto&       label_type = resolving_.get_sema_type(id);
     const Scope s{table_stack_, label_type.get_symbol_table_idx(), table_idx_};
 
@@ -1108,7 +1140,7 @@ auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
                            TypeResolver::StructuralValidator&         validator,
                            bool require_implicit_access) -> opt::Option<Diagnostic> {
     for (const auto& arm : arms) {
-        if (arm.pattern.is<Unit>()) { continue; }
+        if (arm.pattern.is<ast::Discarded>()) { continue; }
 
         // It's only possible to verify access expressions
         const auto pattern_node =
@@ -1181,7 +1213,7 @@ auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
 
     // Track seen and duplicate fields in the match arms
     if (auto diag = gather_arm_duplicates(match.arms, resolving_, union_validator_, true); diag) {
-        return std::move(diag).value();
+        return diag;
     }
 
     if (!union_validator_.duplicates.empty()) {
@@ -1230,13 +1262,14 @@ auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(match.matcher);
     auto&                 matcher_type = *last_type_.take();
     const StructuralGuard g{implicit_type_stack_, matcher_type};
 
     // The expression must resolve to a single type on pass 3
     opt::Option<Type&> first_type;
-    const auto         try_set_first_type = [&] {
+    const auto         try_set_first_type = [&] -> void {
         if (!first_type) {
             first_type = last_type_.take();
         } else {
@@ -1246,15 +1279,15 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
 
     // Rip through the arms once to validate structural arm rules
     const auto& matcher_data = matcher_type.get_data();
-    if (matcher_data.as_opt<types::Enum>()) {
+    if (matcher_data.is<types::Enum>()) {
         if (auto diag = validate_enum_arms(id, match, matcher_type); diag) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
-    } else if (matcher_data.as_opt<types::Union>()) {
+    } else if (matcher_data.is<types::Union>()) {
         if (auto diag = validate_union_arms(id, match, matcher_type); diag) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(diag).value()));
         }
-    } else if (matcher_data.as_opt<types::BuiltinType>()) {
+    } else if (matcher_data.is<types::BuiltinType>()) {
         // It's assumed that any sufficiently large type cannot be fully enumerated
         opt::Option<u16> required_arm_count;
         switch (matcher_type.get_kind()) {
@@ -1308,7 +1341,9 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
                                 *required_arm_count),
                     sema::Error::TYPE_MISMATCH,
                     resolving_.ast.location_of(match.matcher)));
-            } else if (!required_arm_count) {
+            }
+
+            if (!required_arm_count) {
                 // Otherwise there must always be a catch all arm
                 return last_type_.emplace(ctx_.poison_node(
                     resolving_,
@@ -1331,26 +1366,36 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
     }
 
     // Each arm was assigned a new scope index on the first pass
-    for (usize i = 0; const auto& arm : match.arms) {
+    for (const auto& arm : match.arms) {
         // Tabled types have prefilled types that should be pushed on the table stack
-        opt::Option<Scope> scope;
-        const auto         arm_type = resolving_.get_sema_type_opt(arm.pattern);
-        if (arm_type && arm_type->has_symbol_table_idx()) {
-            scope.emplace(table_stack_, arm_type->get_symbol_table_idx(), table_idx_);
-        }
+        auto&       arm_type = resolving_.get_sema_type(arm);
+        const Scope scope{table_stack_, arm_type.get_symbol_table_idx(), table_idx_};
 
         if (arm.capture && arm.capture->is<ast::IdentifierExpression>()) {
-            resolving_.set_sema_type(*arm.capture, matcher_type);
+            // Unions implicitly unpack the value since the field is guaranteed to be valid
+            if (const auto union_data = matcher_data.as_opt<types::Union>()) {
+                // At this point the pattern is guaranteed to be an implicit access
+                const auto implicit_access =
+                    resolving_.ast.get_as_opt<ast::ImplicitAccessExpression>(arm.pattern);
+                ASSERT(implicit_access, "Union validator failed to error");
+                const auto& ident =
+                    resolving_.ast.get_as<ast::IdentifierExpression>(implicit_access->member);
+
+                const auto& table = ctx_.registry.get(matcher_type.get_symbol_table_idx());
+                const auto& proxy = table.get_proxy(ident.name);
+                resolving_.set_sema_type(*arm.capture, union_data->type_at(proxy.index));
+            } else {
+                resolving_.set_sema_type(*arm.capture, matcher_type);
+            }
+
             resolve_symbol_info(*arm.capture, SymbolKind::VALUE);
         }
 
-        if (i != match.catch_all_idx) { TRY_RESOLVE(arm.pattern); }
+        if (!arm.pattern.is<ast::Discarded>()) { TRY_RESOLVE(arm.pattern); }
         TRY_RESOLVE(arm.dispatch);
 
         // Set the arms type to the dispatch only if its not occupied by a tabled type
-        if (!arm_type) { resolving_.set_sema_type(arm.pattern, *last_type_); }
         try_set_first_type();
-        i += 1;
     }
 
     // In the rare case that a type could not be found we have to poison
@@ -1379,6 +1424,7 @@ namespace {
 } // namespace
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ReferenceExpression& ref) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(ref.rhs);
     auto& rhs_type = *last_type_.take();
 
@@ -1390,6 +1436,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ReferenceExpression& ref) ->
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::AddressOfExpression& adr_of) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(adr_of.rhs);
     auto& rhs_type = *last_type_.take();
 
@@ -1401,6 +1448,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::AddressOfExpression& adr_of)
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DereferenceExpression& deref) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(deref.rhs);
     auto& rhs_type = *last_type_.take();
 
@@ -1420,12 +1468,14 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DereferenceExpression& deref
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::UnaryExpression& node) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(node.rhs);
     resolving_.set_sema_type(id, *last_type_);
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& implicit_access)
     -> void {
+    PROFILE_FUNCTION();
     const auto implicit_type = implicit_type_stack_.peek();
     if (!implicit_type) {
         return last_type_.emplace(
@@ -1450,6 +1500,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ImplicitAccessExpression& im
 
 // String literals are just constant arrays of bytes
 auto TypeResolver::visit(ast::NodeID id, const ast::StringExpression& string) -> void {
+    PROFILE_FUNCTION();
+
     // String literals are null terminated since they can be trivially shortened to non null
     auto& type = ctx_.get_array(types::mut::CONSTANT,
                                 true,
@@ -1463,6 +1515,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::StringExpression& string) ->
 
 #define MAKE_PRIMITIVE_RESOLVER(NodeType, kind)                              \
     auto TypeResolver::visit(ast::NodeID id, const ast::NodeType&) -> void { \
+        PROFILE_FUNCTION();                                                  \
         last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::kind));  \
         last_type_->resolve_if<types::BuiltinType>();                        \
         resolving_.set_sema_type(id, *last_type_);                           \
@@ -1518,10 +1571,10 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         if (!symbol_node) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
         opt::Option<ast::TypeModifier> mod;
-        if constexpr (traits::is_explicit_type_id_v<ID>) { mod = id.get_modifier(); }
+        if constexpr (traits::ExplicitTypeID<ID>) { mod = id.get_modifier(); }
         switch (symbol->get_status()) {
         case SymbolStatus::RESOLVING: {
-            const auto poison_out = [&] {
+            const auto poison_out = [&] -> void {
                 ctx_.poison_symbol(*symbol);
                 last_type_.emplace(ctx_.poison_node(
                     resolving_,
@@ -1559,8 +1612,10 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         resolving_.set_sema_type(access.inner, ident_type);
         resolving_.set_sema_type(id, ident_type);
         return last_type_.emplace(ident_type);
-    } else if (outer_resolved.as_opt<types::Struct>() || outer_resolved.as_opt<types::Enum>() ||
-               outer_resolved.as_opt<types::Union>()) {
+    }
+
+    if (outer_resolved.is<types::Struct>() || outer_resolved.is<types::Enum>() ||
+        outer_resolved.is<types::Union>()) {
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
@@ -1582,6 +1637,7 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_module_access, const ast::ModuleAccessExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ModuleAccessExpression& scope) -> void {
+    PROFILE_FUNCTION();
     resolve_module_access(id, scope);
 }
 
@@ -1599,6 +1655,7 @@ namespace {
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> void {
+    PROFILE_FUNCTION();
     auto&                 struct_type = resolving_.get_sema_type(id);
     const Scope           s{table_stack_, struct_type.get_symbol_table_idx(), table_idx_};
     const StructuralGuard g{user_type_stack_, struct_type};
@@ -1645,6 +1702,7 @@ VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::StructExpression&)
 
 template <traits::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void {
+    PROFILE_FUNCTION();
     auto&                 union_type = resolving_.get_sema_type(id);
     const Scope           s{table_stack_, union_type.get_symbol_table_idx(), table_idx_};
     const StructuralGuard g{user_type_stack_, union_type};
@@ -1685,6 +1743,7 @@ auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void 
 VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::UnionExpression&)
 
 auto TypeResolver::visit(ast::NodeID id, const ast::WhileLoopExpression& while_loop) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(while_loop.condition);
     if (while_loop.continuation) { TRY_RESOLVE(*while_loop.continuation); }
     // The loop itself holds the block index which houses captures, not the block
@@ -1701,6 +1760,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::WhileLoopExpression& while_l
 
 // DONT CALL ME FROM ANY LOOP/CONDITION/FN RESOLVER
 auto TypeResolver::visit(ast::NodeID id, const ast::BlockStatement& block) -> void {
+    PROFILE_FUNCTION();
     auto&       block_type = resolving_.get_sema_type(id);
     const Scope s{table_stack_, block_type.get_symbol_table_idx(), table_idx_};
 
@@ -1727,6 +1787,7 @@ auto TypeResolver::resolve_control_flow_label(opt::Option<ast::IdentifierHandle>
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::BreakStatement& break_stmt) -> void {
+    PROFILE_FUNCTION();
     auto result = resolve_control_flow_label(break_stmt.label, "break");
     if (!result) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
@@ -1755,6 +1816,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::BreakStatement& break_stmt) 
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ContinueStatement& continue_stmt) -> void {
+    PROFILE_FUNCTION();
     auto result = resolve_control_flow_label(continue_stmt.label, "continue");
     if (!result) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id, std::move(result).error()));
@@ -1765,6 +1827,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ContinueStatement& continue_
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void {
+    PROFILE_FUNCTION();
     const auto& ident      = resolving_.ast.get_as<ast::IdentifierExpression>(*decl.name);
     auto        symbol_opt = ctx_.registry.lookup(table_stack_, ident.name);
     ASSERT(symbol_opt, "Somehow the declaration was lost in the symbol table");
@@ -1777,7 +1840,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
     }
     symbol.set_status(SymbolStatus::RESOLVING);
 
-    const auto poison_out = [&] {
+    const auto poison_out = [&] -> void {
         resolving_.set_sema_type(decl.name, *last_type_);
         ctx_.poison_symbol(symbol);
         resolving_.set_sema_type(id, *last_type_);
@@ -1809,15 +1872,14 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
     if (resolved_type.is_poison()) {
         symbol.set_kind(SymbolKind::POISONED);
     } else if (!symbol.has_kind()) {
-        if (type_data.as_opt<types::BuiltinFunction>() || type_data.as_opt<types::Function>()) {
+        if (type_data.is<types::BuiltinFunction>() || type_data.is<types::Function>()) {
             symbol.set_kind(SymbolKind::CALLABLE);
-        } else if (type_data.as_opt<types::Enum>() || type_data.as_opt<types::Struct>() ||
-                   type_data.as_opt<types::Union>()) {
-            symbol.set_kind(SymbolKind::CALLABLE);
-        } else if (type_data.as_opt<types::Module>()) {
-            symbol.set_kind(SymbolKind::MODULE);
-        } else if (resolved_type == ctx_.get_builtin_resolved_type(TypeKind::TYPE)) {
+        } else if (type_data.is<types::Enum>() || type_data.is<types::Struct>() ||
+                   type_data.is<types::Union>() ||
+                   resolved_type == ctx_.get_builtin_resolved_type(TypeKind::TYPE)) {
             symbol.set_kind(SymbolKind::TYPE);
+        } else if (type_data.is<types::Module>()) {
+            symbol.set_kind(SymbolKind::MODULE);
         } else {
             symbol.set_kind(SymbolKind::VALUE);
         }
@@ -1829,26 +1891,30 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DeferStatement& defer) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(defer.deferred);
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::DiscardStatement& discard) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(discard.discarded);
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ExpressionStatement& expr) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(expr.expression);
     resolving_.set_sema_type(expr.expression, *last_type_.take());
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ImportStatement& import_stmt) -> void {
+    PROFILE_FUNCTION();
     const auto [ident_id, name] = import_stmt.get_name(resolving_.ast);
     auto& symbol                = ctx_.registry.get_from(table_idx_, name);
 
-    const auto poison_out = [&] {
+    const auto poison_out = [&] -> void {
         last_type_.emplace(ctx_.get_poison());
         resolving_.set_sema_type(ident_id, *last_type_);
         ctx_.poison_symbol(symbol);
@@ -1868,11 +1934,13 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ImportStatement& import_stmt
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::ReturnStatement& return_stmt) -> void {
+    PROFILE_FUNCTION();
     if (return_stmt.expression) { TRY_RESOLVE(*return_stmt.expression); }
     last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::NORETURN));
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::TestStatement& test) -> void {
+    PROFILE_FUNCTION();
     auto&       test_type = resolving_.get_sema_type(id);
     const Scope s{table_stack_, test_type.get_symbol_table_idx(), table_idx_};
 
@@ -1900,6 +1968,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::TestStatement& test) -> void
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::UsingStatement& using_stmt) -> void {
+    PROFILE_FUNCTION();
     const auto& ident  = resolving_.ast.get_as<ast::IdentifierExpression>(using_stmt.alias);
     auto        symbol = ctx_.registry.get_from_opt(table_idx_, ident.name);
     if (!symbol) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
@@ -1908,7 +1977,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::UsingStatement& using_stmt) 
         return last_type_.emplace(ctx_.get_builtin_resolved_type(TypeKind::VOID));
     }
 
-    const auto poison_out = [&] {
+    const auto poison_out = [&] -> void {
         resolving_.set_sema_type(using_stmt.alias, *last_type_);
         resolving_.set_sema_type(id, *last_type_);
         ctx_.poison_symbol(*symbol);
@@ -1945,7 +2014,9 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         auto& new_ptr_type = *ctx_.pool[new_key];
         new_ptr_type.resolve_if<types::Pointer>(inner_type);
         return new_ptr_type;
-    } else if (modifier.is_ref()) {
+    }
+
+    if (modifier.is_ref()) {
         new_key.clear_markers();
         new_key.set_kind(TypeKind::REFERENCE);
         new_key.imprint(inner_type);
@@ -1953,7 +2024,9 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
         auto& new_ref_type = *ctx_.pool[new_key];
         new_ref_type.resolve_if<types::Reference>(inner_type);
         return new_ref_type;
-    } else if (modifier.is_volatile()) {
+    }
+
+    if (modifier.is_volatile()) {
         // Volatility is baked into mutability and should not be imprinted
         auto& new_vol_type = *ctx_.pool[new_key];
         new_vol_type.resolve_if<Type::Data>(inner_type.get_data());
@@ -1963,6 +2036,7 @@ auto TypeResolver::apply_explicit_modifiers(ast::ExplicitTypeID id, Type& inner_
 }
 
 auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::IdentifierExpression& ident) -> void {
+    PROFILE_FUNCTION();
     auto symbol_opt = ctx_.registry.lookup(table_stack_, ident.name);
     if (!symbol_opt) {
         return last_type_.emplace(
@@ -1984,6 +2058,7 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::IdentifierExpression
 
 #define MAKE_MODIFIED_RESOLVER(NodeType, resolver)                                        \
     auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::NodeType& node) -> void { \
+        PROFILE_FUNCTION();                                                               \
         resolver(id, node);                                                               \
         auto& resolved = apply_explicit_modifiers(id, *last_type_.take());                \
         resolving_.set_sema_type(id, resolved);                                           \
@@ -1995,6 +2070,7 @@ MAKE_MODIFIED_RESOLVER(DotExpression, resolve_dot)
 MAKE_MODIFIED_RESOLVER(CallExpression, resolve_call)
 
 auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitFunctionType& fn) -> void {
+    PROFILE_FUNCTION();
     auto param_types = ctx_.pool.get_many_unsafe(fn.parameter_types.size());
 
     // Make a unique function type by imprinting every associated type
@@ -2019,6 +2095,7 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitFunctionType
 }
 
 auto TypeResolver::visit(ast::ExplicitTypeID id, ast::ExplicitTypeID nested) -> void {
+    PROFILE_FUNCTION();
     resolve(nested);
     auto& resolved = apply_explicit_modifiers(id, *last_type_.take());
     resolving_.set_sema_type(id, resolved);
@@ -2026,6 +2103,7 @@ auto TypeResolver::visit(ast::ExplicitTypeID id, ast::ExplicitTypeID nested) -> 
 }
 
 auto TypeResolver::visit(ast::ExplicitTypeID id, const ast::ExplicitArrayType& array) -> void {
+    PROFILE_FUNCTION();
     TRY_RESOLVE(array.inner_explicit_type);
     auto& item_type = *last_type_.take();
 

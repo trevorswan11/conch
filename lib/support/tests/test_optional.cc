@@ -27,10 +27,9 @@ TEST_CASE("Option template specialization") {
 TEST_CASE("Option traits") {
     STATIC_CHECK(traits::is_option<opt::Option<i32>>::value);
     STATIC_CHECK(traits::is_option<opt::Option<i32&>>::value);
-    STATIC_CHECK(traits::is_option_v<opt::Option<i32>>);
-    STATIC_CHECK(traits::is_option_v<opt::Option<i32&>>);
-    STATIC_CHECK_FALSE(traits::is_option_v<i32>);
+    STATIC_CHECK(traits::Option<opt::Option<i32>>);
     STATIC_CHECK(traits::Option<opt::Option<i32&>>);
+    STATIC_CHECK_FALSE(traits::Option<i32>);
 }
 
 TEST_CASE("Ref basic construction") {
@@ -118,17 +117,19 @@ TEST_CASE("Safe optional custom equality") {
     const opt::Option<std::string&> opt1{s1};
     const opt::Option<std::string&> opt2{s2};
 
-    CHECK(opt::safe_eq<std::string&>(opt1, opt2, [](const std::string& a, const std::string& b) {
-        return std::ranges::equal(
-            a, b, [](byte ac, byte bc) { return std::tolower(ac) == std::tolower(bc); });
-    }));
+    CHECK(opt::safe_eq<std::string&>(
+        opt1, opt2, [](const std::string& a, const std::string& b) -> bool {
+            return std::ranges::equal(a, b, [](char ac, char bc) -> bool {
+                return std::tolower(ac) == std::tolower(bc);
+            });
+        }));
 }
 
 TEST_CASE("Ref transform on value") {
     i32               i = 9;
     opt::Option<i32&> opt_i{i};
 
-    const auto res = opt_i.transform([](const i32& i) { return i + 2; });
+    const auto res = opt_i.transform([](const i32& i) -> i32 { return i + 2; });
     REQUIRE(res);
     CHECK(*res == 11);
 }
@@ -136,7 +137,7 @@ TEST_CASE("Ref transform on value") {
 TEST_CASE("Ref transform on none") {
     opt::Option<i32&> opt_i{};
 
-    const auto res = opt_i.transform([](const i32& i) { return i + 2; });
+    const auto res = opt_i.transform([](const i32& i) -> i32 { return i + 2; });
     CHECK_FALSE(res);
 }
 
@@ -216,14 +217,14 @@ TEST_CASE("Optional enum wrapper") {
 
 TEST_CASE("Enum transform on value") {
     opt::Option<OptionableEnum> e{OptionableEnum::A};
-    const auto res = e.transform([](const OptionableEnum&) { return OptionableEnum::B; });
+    const auto res = e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; });
     REQUIRE(res);
     CHECK(*res == OptionableEnum::B);
 }
 
 TEST_CASE("Enum transform on none") {
     opt::Option<OptionableEnum> e{};
-    const auto res = e.transform([](const OptionableEnum&) { return OptionableEnum::B; });
+    const auto res = e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; });
     CHECK_FALSE(res);
 }
 

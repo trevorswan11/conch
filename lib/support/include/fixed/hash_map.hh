@@ -194,7 +194,7 @@ class HashMap {
         return *this;
     }
 
-    constexpr HashMap(HashMap&& other) {
+    constexpr HashMap(HashMap&& other) noexcept {
         for (usize i = 0; i < Capacity; ++i) {
             metadata_[i] = other.metadata_[i];
             if (metadata_[i].is_used()) {
@@ -206,7 +206,7 @@ class HashMap {
         other.clear();
     }
 
-    constexpr auto operator=(HashMap&& other) -> HashMap& {
+    constexpr auto operator=(HashMap&& other) noexcept -> HashMap& {
         if (this != &other) {
             clear();
             HashMap temp{std::move(other)};
@@ -259,7 +259,7 @@ class HashMap {
     }
 
     constexpr auto contains(const Key& key) const noexcept -> bool {
-        return index_of(key) ? true : false;
+        return index_of(key).has_value();
     }
 
     // Returns a reference to the value at the key if present
@@ -412,15 +412,15 @@ using HashMap = detail::HashMap<Key, Value, ceil_power_of_two(Capacity), Hash, C
 // Construct a hash map from a list of pairs
 template <traits::InsertablePair... Pairs>
 [[nodiscard]] constexpr auto make_hash_map(Pairs&&... kv_pairs) noexcept {
-    constexpr usize N = sizeof...(Pairs);
-    static_assert(N > 0, "HashMap must have a non-zero size");
+    constexpr usize n = sizeof...(Pairs);
+    static_assert(n > 0, "HashMap must have a non-zero size");
 
     using Key   = std::common_type_t<std::tuple_element_t<0, std::remove_cvref_t<Pairs>>...>;
     using Value = std::common_type_t<std::tuple_element_t<1, std::remove_cvref_t<Pairs>>...>;
 
     using std::get;
-    HashMap<Key, Value, N> map;
-    (..., [&] {
+    HashMap<Key, Value, n> map;
+    (..., [&] -> auto {
         map.emplace(get<0>(std::forward<decltype(kv_pairs)>(kv_pairs)),
                     get<1>(std::forward<decltype(kv_pairs)>(kv_pairs)));
     }());

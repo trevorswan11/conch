@@ -20,14 +20,14 @@
 #include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
-#include "hash.hh"
-#include "memory.hh"
-#include "option.hh"
-#include "result.hh"
-#include "source_file.hh"
-#include "types.hh"
-#include "utility.hh"
-#include "variant.hh"
+#include <hash.hh>
+#include <memory.hh>
+#include <option.hh>
+#include <result.hh>
+#include <source_file.hh>
+#include <types.hh>
+#include <utility.hh>
+#include <variant.hh>
 
 namespace ghoti::mod {
 
@@ -51,7 +51,7 @@ struct Module {
     std::filesystem::path path;
     std::filesystem::path parent_path;
     SourceFile            source;
-    ast::AST              ast{};
+    ast::AST              ast;
     sema::SideTables      sema_side_tables;
     opt::Size             root_table_idx;
     ModuleState           state{ModuleState::PARSED};
@@ -70,7 +70,7 @@ struct Module {
     template <typename DiagList>
         requires(!std::same_as<std::remove_cvref_t<DiagList>, Unit>)
     auto error_out(DiagList&& list, ModuleState error_state) noexcept -> mod::ModuleState {
-        diagnostics.emplace<DiagList>(std::move(list));
+        diagnostics.emplace<DiagList>(std::forward<DiagList>(list));
         return state = error_state;
     }
 
@@ -78,22 +78,24 @@ struct Module {
     auto print_diagnostics(std::ostream& os) const -> void;
 
     // Errored modules cannot be used in any future compilation step
-    auto is_errored() const noexcept -> bool { return state == ModuleState::ERRORED; }
+    [[nodiscard]] auto is_errored() const noexcept -> bool { return state == ModuleState::ERRORED; }
 
     // Poisoned modules are able to be used in sematic steps but are not correct themselves
-    auto is_poisoned() const noexcept -> bool {
+    [[nodiscard]] auto is_poisoned() const noexcept -> bool {
         return state >= ModuleState::POISONED_SYMBOL_COLLECTION && !is_errored();
     }
 
     // Indicates if the module is neither errored nor poisoned
-    auto is_ok() const noexcept -> bool { return state < ModuleState::POISONED_SYMBOL_COLLECTION; }
+    [[nodiscard]] auto is_ok() const noexcept -> bool {
+        return state < ModuleState::POISONED_SYMBOL_COLLECTION;
+    }
 
-    auto is_collectable() const noexcept -> bool {
+    [[nodiscard]] auto is_collectable() const noexcept -> bool {
         return state == mod::ModuleState::PARSED && !root_table_idx;
     }
 
     // Checks if symbol collection has run, allowing poisoned states
-    auto is_resolvable() const noexcept -> bool {
+    [[nodiscard]] auto is_resolvable() const noexcept -> bool {
         return root_table_idx && (state == mod::ModuleState::SYMBOLS_COLLECTED ||
                                   state == mod::ModuleState::POISONED_SYMBOL_COLLECTION);
     }

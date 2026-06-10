@@ -5,9 +5,9 @@
 
 #include "syntax/token_type.hh"
 
-#include "fixed/hash_map.hh"
-#include "option.hh"
-#include "types.hh"
+#include <fixed/hash_map.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -58,9 +58,10 @@ constexpr auto ALL_OPERATORS = fixed::make_hash_map(operators::ASSIGN,
                                                     operators::MULTILINE_STRING,
                                                     operators::NULL_TERMINATED);
 
-constexpr auto MAX_OPERATOR_LEN = std::ranges::max_element(ALL_OPERATORS, [](auto a, auto b) {
-                                      return a.first.size() < b.first.size();
-                                  })->first.size();
+constexpr auto MAX_OPERATOR_LEN =
+    std::ranges::max_element(ALL_OPERATORS, [](auto a, auto b) -> bool {
+        return a.first.size() < b.first.size();
+    })->first.size();
 
 } // namespace
 

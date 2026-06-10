@@ -8,9 +8,9 @@
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
 
-#include "assert.hh"
-#include "option.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -23,7 +23,7 @@ auto base_idx(Base base) noexcept -> i32 {
     }
 }
 
-auto digit_in_base(byte c, Base base) noexcept -> bool {
+auto digit_in_base(char c, Base base) noexcept -> bool {
     switch (base) {
     case Base::BINARY:      return c == '0' || c == '1';
     case Base::OCTAL:       return c >= '0' && c <= '7';
@@ -65,7 +65,7 @@ auto to_base(TokenType tt) noexcept -> opt::Option<Base> {
     }
 }
 
-auto misc_from_char(byte c) noexcept -> opt::Option<TokenType> {
+auto misc_from_char(char c) noexcept -> opt::Option<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
@@ -117,7 +117,7 @@ auto suffix_length(TokenType tt) noexcept -> usize {
     // Returns the suffix (second of pair) for the first range that returns true
     return std::ranges::find_if(
                INT_SUFFIX_MAPPINGS,
-               [tt](auto* in_range) { return in_range(tt); },
+               [tt](auto* in_range) -> bool { return in_range(tt); },
                &SuffixMapping::first)
         ->second;
 }

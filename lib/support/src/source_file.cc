@@ -7,12 +7,14 @@
 
 #include "diagnostic.hh"
 #include "option.hh"
+#include "profiler.hh"
 #include "string.hh"
 #include "types.hh"
 
 namespace ghoti {
 
 LineOffsets::LineOffsets(std::string_view input) {
+    PROFILE_FUNCTION();
     offsets_.emplace_back(0);
     for (usize i = 0; i < input.size(); ++i) {
         if (input[i] == '\n') { offsets_.emplace_back(i + 1); }
@@ -21,6 +23,7 @@ LineOffsets::LineOffsets(std::string_view input) {
 
 auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
     -> std::pair<std::string_view, opt::Option<std::string>> {
+    PROFILE_FUNCTION();
     if (loc.line > offsets_.size()) { return {"<invalid line>", opt::none}; }
 
     const auto start  = offsets_[loc.line];
@@ -29,8 +32,8 @@ auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
 
     // Count skipped on the left but not right since the caret is right-clipped
     usize skipped = 0;
-    substr        = string::trim_left(substr, [&skipped](byte b) {
-        if (std::isspace(b)) {
+    substr        = string::trim_left(substr, [&skipped](char c) -> bool {
+        if (std::isspace(c)) {
             skipped += 1;
             return true;
         }

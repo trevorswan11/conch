@@ -5,9 +5,9 @@
 #include "ast/id.hh"
 #include "ast/kind.hh"
 
-#include "assert.hh"
-#include "option.hh"
-#include "types.hh"
+#include <assert.hh>
+#include <option.hh>
+#include <types.hh>
 
 namespace ghoti {
 
@@ -49,7 +49,7 @@ template <NodeKind... AllowedKinds> class Handle {
     }
 
     [[nodiscard]] constexpr auto get_index() const noexcept -> usize { return id_.get_index(); }
-    [[nodiscard]] constexpr      operator NodeID() const noexcept { return id_; }
+    [[nodiscard]] constexpr      operator NodeID() const noexcept { return id_; } // NOLINT
 
     template <traits::ASTNode N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
         return id_.is<N>();
