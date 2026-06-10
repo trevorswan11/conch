@@ -58,12 +58,19 @@ pub fn build(b: *std.Build) !void {
         .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
     }
 
+    const install_tests_only = b.option(
+        bool,
+        "install-tests-only",
+        "Install tests without running them (default: false)",
+    ) orelse true;
+
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{
         .optimize = optimize,
         .llvm = llvm,
         .cxx_flags = compiler_flags.items,
         .cdb_steps = &cdb_steps,
+        .install_tests_only = install_tests_only,
     });
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
@@ -133,12 +140,41 @@ const ProjectPaths = struct {
 };
 
 const ExecutableBehavior = union(enum) {
-    runnable: struct {
+    // Meant for user facing potentially runnable commands
+    installable: struct {
         cmd_name: []const u8,
         cmd_desc: []const u8,
         install_dir: ?[]const u8 = null,
+        install_only: bool = false,
     },
+
+    // Meant for internal tools and intermediate artifacts
     standalone: void,
+
+    pub fn installArtifact(
+        b: *std.Build,
+        artifact: *std.Build.Step.Compile,
+        parent_step: *std.Build.Step,
+        install_dir: ?[]const u8,
+        install_only: bool,
+    ) ?*std.Build.Step.Run {
+        var runner: ?*std.Build.Step.Run = null;
+        if (!install_only) {
+            runner = b.addRunArtifact(artifact);
+            runner.?.step.dependOn(b.getInstallStep());
+            parent_step.dependOn(&runner.?.step);
+        }
+
+        if (install_dir) |override| {
+            const install = b.addInstallArtifact(artifact, .{
+                .dest_dir = .{
+                    .override = .{ .custom = override },
+                },
+            });
+            parent_step.dependOn(&install.step);
+        }
+        return runner;
+    }
 };
 
 const TestArtifacts = struct {
@@ -152,6 +188,7 @@ const TestArtifacts = struct {
         b: *std.Build,
         cdb_steps: ?*std.ArrayList(*std.Build.Step),
         install_dir: ?[]const u8,
+        install_only: bool,
     ) !void {
         if (cdb_steps) |cdb| {
             try cdb.append(b.allocator, &self.support_tests.step);
@@ -168,18 +205,13 @@ const TestArtifacts = struct {
 
         const test_step = b.step("test", "Run all unit tests");
         for (artifacts) |artifact| {
-            const runner = b.addRunArtifact(artifact);
-            runner.step.dependOn(b.getInstallStep());
-            test_step.dependOn(&runner.step);
-
-            if (install_dir) |override| {
-                const install = b.addInstallArtifact(artifact, .{
-                    .dest_dir = .{
-                        .override = .{ .custom = override },
-                    },
-                });
-                test_step.dependOn(&install.step);
-            }
+            _ = ExecutableBehavior.installArtifact(
+                b,
+                artifact,
+                test_step,
+                install_dir,
+                install_only,
+            );
         }
     }
 };
@@ -215,6 +247,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     behavior: ?ExecutableBehavior = null,
     auto_install: bool = true,
     packaging: bool = false,
+    install_tests_only: bool = true,
 }) !struct {
     libsupport: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -345,7 +378,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     }, .{
         .name = "ghoti",
         .behavior = config.behavior orelse .{
-            .runnable = .{
+            .installable = .{
                 .cmd_name = "run",
                 .cmd_desc = "Run ghoti with provided command line arguments",
             },
@@ -356,7 +389,7 @@ fn addArtifacts(b: *std.Build, config: struct {
 
     var tests: ?TestArtifacts = null;
     if (building_for_host) {
-        const install_behavior: ?[]const u8 = if (config.auto_install) "tests" else null;
+        const test_install_dir: ?[]const u8 = if (config.auto_install) "tests" else null;
         const harness_main = b.path(ProjectPaths.harness ++ "main.zig");
         const catch2_dep = catch2.build(b, .{
             .target = target,
@@ -374,18 +407,14 @@ fn addArtifacts(b: *std.Build, config: struct {
             }),
         });
 
-        const harness_cmd = b.addRunArtifact(harness);
-        const harness_step = b.step("test-harness", "Run test harness' tests");
-        harness_step.dependOn(&harness_cmd.step);
-
-        if (install_behavior) |install_dir| {
-            const install = b.addInstallArtifact(harness, .{
-                .dest_dir = .{
-                    .override = .{ .custom = install_dir },
-                },
-            });
-            harness_step.dependOn(&install.step);
-        }
+        const harness_step = b.step("test-harness", "Build/run test harness' tests");
+        _ = ExecutableBehavior.installArtifact(
+            b,
+            harness,
+            harness_step,
+            test_install_dir,
+            config.install_tests_only,
+        );
 
         // Support's tests depend on the test runner but not LLVM
         const support_tests = createExecutable(b, .{
@@ -408,10 +437,11 @@ fn addArtifacts(b: *std.Build, config: struct {
         }, .{
             .name = "support",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-support",
-                    .cmd_desc = "Run support's unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run support's unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -437,10 +467,11 @@ fn addArtifacts(b: *std.Build, config: struct {
         }, .{
             .name = "compiler",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-compiler",
-                    .cmd_desc = "Run compiler unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run compiler unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -473,10 +504,11 @@ fn addArtifacts(b: *std.Build, config: struct {
         }, .{
             .name = "driver",
             .behavior = config.behavior orelse .{
-                .runnable = .{
+                .installable = .{
                     .cmd_name = "test-driver",
-                    .cmd_desc = "Run the driver's unit tests",
-                    .install_dir = install_behavior,
+                    .cmd_desc = "Build/run the driver's unit tests",
+                    .install_dir = test_install_dir,
+                    .install_only = config.install_tests_only,
                 },
             },
         });
@@ -487,7 +519,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .compiler_tests = compiler_tests,
             .driver_tests = driver_tests,
         };
-        try tests.?.configure(b, config.cdb_steps, install_behavior);
+        try tests.?.configure(b, config.cdb_steps, test_install_dir, config.install_tests_only);
     }
 
     const cppcheck_dep: ?Dependency = if (building_for_host) try cppcheck.build(b, .{
@@ -593,25 +625,19 @@ fn createExecutable(
     });
 
     switch (executable_config.behavior) {
-        .runnable => |run| {
-            const run_cmd = b.addRunArtifact(exe);
-            run_cmd.step.dependOn(b.getInstallStep());
-
-            if (b.args) |args| {
-                run_cmd.addArgs(args);
+        .installable => |config| {
+            const step = b.step(config.cmd_name, config.cmd_desc);
+            if (ExecutableBehavior.installArtifact(
+                b,
+                exe,
+                step,
+                config.install_dir,
+                config.install_only,
+            )) |run| {
+                if (b.args) |args| {
+                    run.addArgs(args);
+                }
             }
-
-            if (run.install_dir) |install_dir| {
-                const install = b.addInstallArtifact(exe, .{
-                    .dest_dir = .{
-                        .override = .{ .custom = install_dir },
-                    },
-                });
-                run_cmd.step.dependOn(&install.step);
-            }
-
-            const run_step = b.step(run.cmd_name, run.cmd_desc);
-            run_step.dependOn(&run_cmd.step);
         },
         .standalone => {},
     }

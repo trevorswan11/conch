@@ -12,6 +12,12 @@
         "args": [
             "debug"
         ],
+        "build": {
+            "command": "zig",
+            "args": [
+                "build"
+            ]
+        },
         "stopOnEntry": false,
     },
     {
@@ -20,6 +26,14 @@
         "request": "launch",
         "name": "test-compiler",
         "program": "zig-out/tests/compiler",
+        "build": {
+            "command": "zig",
+            "args": [
+                "build",
+                "test-compiler",
+                "-Dinstall-tests-only"
+            ]
+        },
         "stopOnEntry": false,
     },
     {
@@ -28,6 +42,14 @@
         "request": "launch",
         "name": "test-support",
         "program": "zig-out/tests/support",
+        "build": {
+            "command": "zig",
+            "args": [
+                "build",
+                "test-support",
+                "-Dinstall-tests-only"
+            ]
+        },
         "stopOnEntry": false,
     },
     {
@@ -36,6 +58,14 @@
         "request": "launch",
         "name": "test-driver",
         "program": "zig-out/tests/driver",
+        "build": {
+            "command": "zig",
+            "args": [
+                "build",
+                "test-driver",
+                "-Dinstall-tests-only"
+            ]
+        },
         "stopOnEntry": false,
     },
     {
@@ -44,6 +74,14 @@
         "request": "launch",
         "name": "test-harness",
         "program": "zig-out/tests/harness",
+        "build": {
+            "command": "zig",
+            "args": [
+                "build",
+                "test-harness",
+                "-Dinstall-tests-only"
+            ]
+        },
         "stopOnEntry": false,
     }
 ]
