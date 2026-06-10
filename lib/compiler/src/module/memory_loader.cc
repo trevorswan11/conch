@@ -9,17 +9,20 @@
 #include "module/error.hh"
 
 #include <assert.hh>
+#include <profiler.hh>
 #include <result.hh>
 
 namespace ghoti::mod {
 
 auto MemoryLoader::add(const std::filesystem::path& path, const std::string& content) -> void {
+    PROFILE_FUNCTION();
     const auto normalized = normalize(path);
     ASSERT(normalized);
     files_[*normalized] = content;
 }
 
 auto MemoryLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {
+    PROFILE_FUNCTION();
     auto normalized = normalize(path);
     ASSERT(normalized);
     auto it = files_.find(normalized->string());

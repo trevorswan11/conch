@@ -125,6 +125,7 @@ auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, opt::
 auto Parser::parse_statement(SemicolonBehavior behavior)
     -> Result<ast::StatementHandle, Diagnostic> {
     // Not all decls are public so the condition needs to be rechecked
+    PROFILE_FUNCTION();
     if (current_token_.type == TokenType::PUBLIC) {
         switch (peek_token_.type) {
         case TokenType::IMPORT: return ast::ImportStatement::parse(*this);
@@ -150,6 +151,7 @@ auto Parser::parse_statement(SemicolonBehavior behavior)
 }
 
 auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHandle, Diagnostic> {
+    PROFILE_FUNCTION();
     if (current_token_is(TokenType::END)) {
         return make_syntax_err(Error::END_OF_TOKEN_STREAM, current_token_);
     }

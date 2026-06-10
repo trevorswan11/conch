@@ -8,12 +8,14 @@
 #include <fmt/color.h>
 #include <fmt/ostream.h>
 
+#include <profiler.hh>
 #include <string.hh>
 #include <style.hh>
 
 namespace ghoti::clap {
 
 auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std::string {
+    PROFILE_FUNCTION();
     auto subcmds = app->get_subcommands({});
     if (subcmds.empty()) { return ""; }
 
@@ -29,6 +31,7 @@ auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std
 [[nodiscard]] auto Fmt::make_group(std::string                     group,
                                    bool                            is_positional,
                                    std::vector<const CLI::Option*> opts) const -> std::string {
+    PROFILE_FUNCTION();
     std::stringstream ss;
 
     // The group name is altered to clean up help output
@@ -44,6 +47,7 @@ auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std
 
 auto Fmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mode) const
     -> std::string {
+    PROFILE_FUNCTION();
     std::stringstream ss;
 
     // Trim the second newline (final character) to prevent weird formatting

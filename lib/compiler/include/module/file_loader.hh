@@ -10,7 +10,7 @@
 
 namespace ghoti::mod {
 
-class FileLoader : public SourceLoader {
+class FileLoader final : public SourceLoader {
   public:
     // Attempts to obtain the file's source code from disk and load it into memory
     [[nodiscard]] auto load(const std::filesystem::path& path)

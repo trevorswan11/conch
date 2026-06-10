@@ -13,6 +13,7 @@
 #include <assert.hh>
 #include <fixed/vector.hh>
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 #include <type_traits.hh>
 #include <types.hh>
@@ -62,6 +63,7 @@ template <typename ValueType>
 
 template <traits::ValuedPrimitive Primitive>
 auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     using value_type       = typename Primitive::value_type;
     const auto start_token = parser.get_current_token();
     const auto value       = parse_primitive_value<value_type>(start_token.slice, start_token.type);
@@ -82,6 +84,7 @@ auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax:
 
 #define MAKE_PRIMITIVE_PARSER(Type)                                                            \
     auto Type::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> { \
+        PROFILE_FUNCTION();                                                                    \
         return parse_primitive<Type>(parser);                                                  \
     }
 
@@ -93,6 +96,7 @@ MAKE_PRIMITIVE_PARSER(U64Expression)
 MAKE_PRIMITIVE_PARSER(USizeExpression)
 
 auto U8Expression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     const auto slice       = start_token.slice;
     if (slice[1] != '\\') {
@@ -118,10 +122,12 @@ MAKE_PRIMITIVE_PARSER(F32Expression)
 MAKE_PRIMITIVE_PARSER(F64Expression)
 
 auto BoolExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     return parser.add_expr<BoolExpression>(parser.get_current_token());
 }
 
 auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
     return parser.add_expr<VoidExpression>(start_token);
@@ -129,6 +135,7 @@ auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 
 auto UndefinedExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     return parser.add_expr<UndefinedExpression>(parser.get_current_token());
 }
 

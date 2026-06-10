@@ -7,12 +7,14 @@
 
 #include "diagnostic.hh"
 #include "option.hh"
+#include "profiler.hh"
 #include "string.hh"
 #include "types.hh"
 
 namespace ghoti {
 
 LineOffsets::LineOffsets(std::string_view input) {
+    PROFILE_FUNCTION();
     offsets_.emplace_back(0);
     for (usize i = 0; i < input.size(); ++i) {
         if (input[i] == '\n') { offsets_.emplace_back(i + 1); }
@@ -21,6 +23,7 @@ LineOffsets::LineOffsets(std::string_view input) {
 
 auto SourceFile::get_diagnostic_strings_at(const SourceLocation& loc) const
     -> std::pair<std::string_view, opt::Option<std::string>> {
+    PROFILE_FUNCTION();
     if (loc.line > offsets_.size()) { return {"<invalid line>", opt::none}; }
 
     const auto start  = offsets_[loc.line];

@@ -13,6 +13,7 @@
 #include <ast/dumper.hh>
 #include <module/memory_loader.hh>
 #include <module/module.hh>
+#include <profiler.hh>
 #include <sema/analyzer.hh>
 #include <string.hh>
 #include <types.hh>
@@ -20,6 +21,7 @@
 namespace ghoti::cmd {
 
 auto Debug::run() -> void {
+    PROFILE_FUNCTION();
     const std::filesystem::path stdin_path = "stdin.gh";
     while (true) {
         fmt::print(">>> ");

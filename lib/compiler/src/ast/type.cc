@@ -13,12 +13,14 @@
 #include "syntax/token_type.hh"
 
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 
 namespace ghoti::ast {
 
 auto ExplicitFunctionType::parse(syntax::Parser& parser)
     -> Result<ExplicitFunctionType, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
@@ -71,6 +73,7 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
 
 auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, syntax::Diagnostic> {
     // Always check for a modifier and advance past it if present
+    PROFILE_FUNCTION();
     const auto         modifier_token = parser.get_peek_token();
     const TypeModifier modifier{modifier_token};
     if (!modifier.is_value()) { parser.advance(); }
@@ -236,6 +239,7 @@ namespace {
 
 auto ExplicitType::parse_opt_init(syntax::Parser& parser)
     -> Result<std::pair<opt::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto [type, initialized] = TRY(parse_type_and_initializer(parser));
 
     // Advance again to prepare for rhs

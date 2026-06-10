@@ -13,6 +13,7 @@
 #    include <windows.h>
 #    include <winnls.h>
 
+#    include <profiler.hh>
 #    include <types.hh>
 
 namespace ghoti::win32 {
@@ -27,6 +28,7 @@ DWORD            original_stderr_mode = 0;
 } // namespace
 
 RichConsole::RichConsole() noexcept {
+    PROFILE_FUNCTION();
     if (ref_count.fetch_add(1) > 0) { return; }
     original_code_page = GetConsoleOutputCP();
     SetConsoleOutputCP(CP_UTF8);
@@ -43,6 +45,7 @@ RichConsole::RichConsole() noexcept {
 }
 
 RichConsole::~RichConsole() {
+    PROFILE_FUNCTION();
     if (ref_count.fetch_sub(1) != 1) { return; }
     SetConsoleOutputCP(original_code_page);
 

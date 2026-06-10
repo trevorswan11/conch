@@ -13,7 +13,7 @@
 namespace ghoti::mod {
 
 // A mock loader used for in-memory files that can't be referenced relatively
-class MemoryLoader : public SourceLoader {
+class MemoryLoader final : public SourceLoader {
   public:
     // Add a file to the virtual file system. Allows overwriting
     auto add(const std::filesystem::path& path, const std::string& content) -> void;

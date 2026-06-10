@@ -12,6 +12,7 @@
 #include "syntax/token_type.hh"
 
 #include <option.hh>
+#include <profiler.hh>
 #include <string.hh>
 #include <types.hh>
 
@@ -20,6 +21,7 @@ namespace ghoti::syntax {
 auto Lexer::reset(std::string_view input) noexcept -> void { *this = Lexer{input}; }
 
 auto Lexer::advance() noexcept -> Token {
+    PROFILE_FUNCTION();
     skip_whitespace();
 
     Token      token{{}, {}, line_no_, col_no_};

@@ -13,6 +13,7 @@
 
 #include <assert.hh>
 #include <diagnostic.hh>
+#include <profiler.hh>
 #include <result.hh>
 #include <types.hh>
 
@@ -28,6 +29,7 @@ namespace {
 
 [[nodiscard]] auto symbol_location_of(const mod::Module& module, const Symbol::Data& data) noexcept
     -> SourceLocation {
+    PROFILE_FUNCTION();
     return data.visit(
         [](const symbols::Builtin&) -> SourceLocation { return SourceLocation{0, 0}; },
         [&module](const auto& handle) -> SourceLocation { return module.ast.location_of(handle); },
@@ -79,6 +81,7 @@ auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
 auto SymbolTable::insert(std::string_view name, const mod::Module& module, const Symbol::Data& data)
     -> Result<void, Diagnostic> {
     // Reserved identifier use is impossible due to a parser invariant
+    PROFILE_FUNCTION();
     auto [it, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
 
     // Check for redeclaration since there's no shadowing
@@ -95,6 +98,7 @@ auto SymbolTable::insert(std::string_view name, const mod::Module& module, const
 
 auto SymbolTable::insert_unchecked(std::string_view name, const Symbol::Data& data) -> void {
     // Reserved identifier use is impossible due to a parser invariant
+    PROFILE_FUNCTION();
     auto [_, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
     ASSERT(inserted, "Duplicate symbol injected");
 }
@@ -112,6 +116,7 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
                                                      std::string_view        name,
                                                      const Symbol::Data&     data) noexcept
     -> Result<void, Diagnostic> {
+    PROFILE_FUNCTION();
     for (const auto idx : stack | std::views::take(stack.size() - 1)) {
         if (const auto symbol = get(idx).get_opt(name)) {
             return make_sema_err(

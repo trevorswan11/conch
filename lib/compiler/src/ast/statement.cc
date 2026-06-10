@@ -19,11 +19,13 @@
 
 #include <fixed/enum_map.hh>
 #include <option.hh>
+#include <profiler.hh>
 #include <result.hh>
 
 namespace ghoti::ast {
 
 auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     Statements statements;
@@ -38,6 +40,7 @@ auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 }
 
 auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     // Labels are optional
@@ -67,6 +70,7 @@ auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 
 auto ContinueStatement::parse(syntax::Parser& parser)
     -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     // Labels are optional
@@ -129,6 +133,7 @@ constexpr auto LEGAL_MODIFIERS = [] -> auto {
 } // namespace
 
 auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     auto       modifiers   = LEGAL_MODIFIERS[start_token.type].value();
 
@@ -176,6 +181,7 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
 }
 
 auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     if (parser.peek_token_is(syntax::TokenType::END) ||
         parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
@@ -197,6 +203,7 @@ auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 
 auto DiscardStatement::parse(syntax::Parser& parser)
     -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     TRY(parser.expect_peek(syntax::TokenType::ASSIGN));
@@ -216,6 +223,7 @@ auto DiscardStatement::parse(syntax::Parser& parser)
 
 auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
     -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     const auto expr        = TRY(parser.parse_expression());
 
@@ -278,6 +286,7 @@ namespace {
 
 auto ImportStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     if (parser.current_token_is(syntax::TokenType::PUBLIC)) { parser.advance(); }
     auto imported_core = TRY(parse_import_payload(parser));
@@ -312,6 +321,7 @@ auto ImportStatement::get_name(const AST& tree) const noexcept
 }
 
 auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     opt::Option<ExpressionHandle> value;
@@ -326,6 +336,7 @@ auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, s
 }
 
 auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
 
     opt::Option<StringHandle> description;
@@ -348,6 +359,7 @@ auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
 
 auto UsingStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
+    PROFILE_FUNCTION();
     const auto start_token = parser.get_current_token();
     if (parser.current_token_is(syntax::TokenType::PUBLIC)) { parser.advance(); }
 

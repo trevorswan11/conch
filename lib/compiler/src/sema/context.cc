@@ -11,6 +11,7 @@
 #include "syntax/keywords.hh"
 
 #include <assert.hh>
+#include <profiler.hh>
 #include <types.hh>
 
 namespace ghoti::sema {
@@ -53,6 +54,7 @@ auto Context::get_slice(types::mut::MutabilityModifiers mutability,
 namespace {
 
 auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
+    PROFILE_FUNCTION();
     const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) -> void {
         auto& type = *pool[{kind, types::mut::CONSTANT}];
         ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
@@ -88,6 +90,7 @@ auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
 }
 
 auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
+    PROFILE_FUNCTION();
     const auto inject_function = [&](const syntax::Builtin& builtin,
                                      types::BuiltinParams&& param_types,
                                      Type&                  return_type) -> void {
@@ -170,6 +173,7 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
 } // namespace
 
 auto Context::inject_prelude() -> void {
+    PROFILE_FUNCTION();
     if (prelude_index) { return; }
     prelude_index.emplace(registry.create());
 
