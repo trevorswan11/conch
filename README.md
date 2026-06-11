@@ -98,6 +98,7 @@ zig build --release
 - [ ] Multi-pass Semantic Analysis (to support order independent declarations)
     - [x] Symbol registration pass
     - [x] Type resolution pass
+    - [ ] GIR Emission & Constant Evaluation
     - [ ] Type checking pass
 - [ ] LLVM Integration
     - [ ] Build system integration
