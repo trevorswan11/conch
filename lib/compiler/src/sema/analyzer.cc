@@ -16,13 +16,13 @@ namespace ghoti::sema {
 
 auto Analyzer::analyze(const std::filesystem::path& entry_path) -> Result<void, Diagnostic> {
     PROFILE_FUNCTION();
-    auto module_result = modules_.try_get_file_module(entry_path);
+    auto module_result {modules_.try_get_file_module(entry_path)};
     if (!module_result) {
         return make_sema_err(std::move(module_result.error()).get_message(),
                              Error::MODULE_LOAD_ERROR);
     }
 
-    auto module = *module_result;
+    auto module {*module_result};
     if (module->diagnostics.is<syntax::Diagnostics>()) { module->print_diagnostics(error_stream_); }
 
     collect_symbols(*module);

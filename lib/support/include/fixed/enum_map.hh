@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include <gsl/span>
 #include <magic_enum/magic_enum.hpp>
 
 #include "assert.hh"
@@ -49,6 +50,17 @@ template <MappableEnum E, typename Value> class EnumMap {
         } else {
             return opt::Option<Value>{operator[](key)};
         }
+    }
+
+    // Fills the map with the provided value with the provided pairs
+    template <traits::InsertablePair... Pairs>
+    [[nodiscard]] static constexpr auto from(Value&& default_value, Pairs&&... kv_pairs) noexcept {
+        EnumMap<E, Value> map{std::forward<Value>(default_value)};
+        using std::get;
+        (...,
+         (map[get<0>(std::forward<decltype(kv_pairs)>(kv_pairs))] =
+              get<1>(std::forward<decltype(kv_pairs)>(kv_pairs))));
+        return map;
     }
 
   private:

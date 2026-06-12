@@ -29,14 +29,14 @@ constinit fixed::Vector<char, 1'024> numeric_buffer;
 template <typename ValueType>
 [[nodiscard]] auto parse_primitive_value(std::string_view slice, syntax::TokenType type) noexcept
     -> opt::Option<ValueType> {
-    const auto base = syntax::token_type::to_base(type);
+    const auto base{syntax::token_type::to_base(type)};
     {
         // This is narrowly scoped to allow the first and last pointer names to be reused
         const auto* first = slice.cbegin() + (!base || *base == syntax::Base::DECIMAL ? 0 : 2);
         const auto* last  = slice.cend() - syntax::token_type::suffix_length(type);
 
         // Strip out the underscores from the slice
-        ASSERT(static_cast<usize>(last - first) < numeric_buffer.capacity(), "Literal too long");
+        VERIFY(static_cast<usize>(last - first) < numeric_buffer.capacity(), "Literal too long");
         numeric_buffer.clear();
         for (const auto* ptr = first; ptr != last; ++ptr) {
             if (*ptr != '_') { numeric_buffer.emplace_back(*ptr); }
@@ -64,9 +64,9 @@ template <typename ValueType>
 template <traits::ValuedPrimitive Primitive>
 auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    using value_type       = typename Primitive::value_type;
-    const auto start_token = parser.get_current_token();
-    const auto value       = parse_primitive_value<value_type>(start_token.slice, start_token.type);
+    using value_type = typename Primitive::value_type;
+    const auto start_token{parser.get_current_token()};
+    const auto value{parse_primitive_value<value_type>(start_token.slice, start_token.type)};
     if (value) { return parser.add_expr<Primitive>(start_token, *value); }
 
     syntax::Error error_code;
@@ -97,13 +97,13 @@ MAKE_PRIMITIVE_PARSER(USizeExpression)
 
 auto U8Expression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
-    const auto slice       = start_token.slice;
+    const auto start_token{parser.get_current_token()};
+    const auto slice{start_token.slice};
     if (slice[1] != '\\') {
         return parser.add_expr<U8Expression>(start_token, static_cast<u8>(slice[1]));
     }
 
-    const auto escaped = slice[2];
+    const auto escaped{slice[2]};
     u8         value;
     switch (escaped) {
     case 'n':  value = '\n'; break;
@@ -128,7 +128,7 @@ auto BoolExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 
 auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
     return parser.add_expr<VoidExpression>(start_token);
 }

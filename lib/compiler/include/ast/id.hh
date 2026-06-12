@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bit>
-#include <limits>
 #include <string_view>
 
 #include <fmt/base.h>
@@ -20,7 +19,14 @@ namespace ghoti {
 
 namespace ast {
 
-namespace detail { constexpr u64 INVALID_ID = std::numeric_limits<u64>::max(); } // namespace detail
+namespace detail {
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+constexpr auto INVALID_ID{static_cast<u64>(-1)};
+#pragma clang diagnostic pop
+
+} // namespace detail
 
 // A compact id for all AST nodes
 class NodeID {
@@ -63,7 +69,7 @@ class NodeID {
     }
 
     template <traits::ASTNode... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
-        const auto kind = get_kind();
+        const auto kind{get_kind()};
         return ((kind == traits::NodeKindOf<Ns>::value()) || ...);
     }
 
@@ -73,11 +79,11 @@ class NodeID {
     constexpr explicit NodeID(u64 raw) noexcept : raw_{raw} {}
 
   private:
-    static constexpr u64 KIND_MASK         = 0xFF00000000000000ULL;
-    static constexpr u64 KIND_OFFSET       = std::countr_zero(KIND_MASK);
-    static constexpr u64 TOKEN_TYPE_MASK   = 0x00FF000000000000ULL;
-    static constexpr u64 TOKEN_TYPE_OFFSET = std::countr_zero(TOKEN_TYPE_MASK);
-    static constexpr u64 INDEX_MASK        = 0x0000FFFFFFFFFFFFULL;
+    static constexpr u64 KIND_MASK{0xFF00000000000000ULL};
+    static constexpr u64 KIND_OFFSET{std::countr_zero(KIND_MASK)};
+    static constexpr u64 TOKEN_TYPE_MASK{0x00FF000000000000ULL};
+    static constexpr u64 TOKEN_TYPE_OFFSET{std::countr_zero(TOKEN_TYPE_MASK)};
+    static constexpr u64 INDEX_MASK{0x0000FFFFFFFFFFFFULL};
 
   private:
     u64 raw_;
@@ -215,7 +221,7 @@ class ExplicitTypeID {
 
     template <traits::ASTExplicitType... Ns>
     [[nodiscard]] constexpr auto any() const noexcept -> bool {
-        const auto kind = get_kind();
+        const auto kind{get_kind()};
         return ((kind == traits::ExplicitTypeKindOf<Ns>::value()) || ...);
     }
 
@@ -223,13 +229,13 @@ class ExplicitTypeID {
     constexpr explicit ExplicitTypeID(const u64& raw) noexcept : raw_{raw} {}
 
   private:
-    static constexpr u64 KIND_MASK         = 0xF000000000000000ULL;
-    static constexpr u64 KIND_OFFSET       = std::countr_zero(KIND_MASK);
-    static constexpr u64 MODIFIER_MASK     = 0x0F00000000000000ULL;
-    static constexpr u64 MODIFIER_OFFSET   = std::countr_zero(MODIFIER_MASK);
-    static constexpr u64 TOKEN_TYPE_MASK   = 0x00FF000000000000ULL;
-    static constexpr u64 TOKEN_TYPE_OFFSET = std::countr_zero(TOKEN_TYPE_MASK);
-    static constexpr u64 INDEX_MASK        = 0x0000FFFFFFFFFFFFULL;
+    static constexpr u64 KIND_MASK{0xF000000000000000ULL};
+    static constexpr u64 KIND_OFFSET{std::countr_zero(KIND_MASK)};
+    static constexpr u64 MODIFIER_MASK{0x0F00000000000000ULL};
+    static constexpr u64 MODIFIER_OFFSET{std::countr_zero(MODIFIER_MASK)};
+    static constexpr u64 TOKEN_TYPE_MASK{0x00FF000000000000ULL};
+    static constexpr u64 TOKEN_TYPE_OFFSET{std::countr_zero(TOKEN_TYPE_MASK)};
+    static constexpr u64 INDEX_MASK{0x0000FFFFFFFFFFFFULL};
 
   private:
     u64 raw_;

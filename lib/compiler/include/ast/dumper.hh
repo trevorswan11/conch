@@ -23,12 +23,10 @@ class ASTDumper {
     explicit ASTDumper(const AST& ast, std::ostream& out) : out_{out}, ast_{ast} {}
 
     template <traits::IndexableNodeID ID> auto dump(ID id) -> void {
-        ASSERT(id.is_valid(), "Attempt to dump invalid handle");
         ast_[id].visit([&](const auto& data) -> void { this->visit(id, data); });
     }
 
     auto dump(ExplicitTypeID id) -> void {
-        ASSERT(id.is_valid(), "Attempt to dump invalid handle");
         fmt::println(out_, "ExplicitType (modifier: {})", id.get_modifier());
         const Indent::Guard g{indent_, true};
         ast_[id].visit([&](const auto& data) -> void { visit(id, data); });
@@ -99,7 +97,7 @@ class ASTDumper {
     auto visit(ExplicitTypeID, const ExplicitArrayType&) -> void;
 
     template <typename T, typename Func> void dump_container(const T& container, Func&& func) {
-        for (auto it = container.begin(); it != container.end(); ++it) {
+        for (auto it{container.begin()}; it != container.end(); ++it) {
             Indent::Guard g{indent_, std::next(it) == container.end()};
             std::forward<Func>(func)(*it);
         }

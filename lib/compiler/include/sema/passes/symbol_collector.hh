@@ -106,7 +106,7 @@ class SymbolCollector {
 
     template <typename... IterPairs>
     [[nodiscard]] auto visit_scopes(TypeKind kind, IterPairs&&... pairs) -> usize {
-        const auto  new_idx = ctx_.registry.create();
+        const auto  new_idx{ctx_.registry.create()};
         const Scope s{table_stack_, new_idx, table_idx_};
         (..., [&pairs] -> void {
             for (const auto& item : pairs.iterable) { pairs.visitor(item); }
@@ -120,18 +120,6 @@ class SymbolCollector {
         const SymbolicVariant node{std::forward<Args>(args)...};
         return ctx_.try_result(ctx_.registry.is_shadowing(table_stack_, collecting_, name, node)) &&
                ctx_.try_result(ctx_.registry.insert_into(table_idx_, collecting_, name, node));
-    }
-
-    auto fn_guard() noexcept -> std::pair<DefaultCounter::Guard, DefaultCounter::Guard> {
-        return {in_function_scope_.guard(), in_expr_scope_.guard()};
-    }
-
-    auto loop_guard() noexcept -> std::pair<DefaultCounter::Guard, DefaultCounter::Guard> {
-        return {in_loop_scope_.guard(), in_expr_scope_.guard()};
-    }
-
-    auto label_guard() noexcept -> std::pair<DefaultCounter::Guard, DefaultCounter::Guard> {
-        return {in_label_scope_.guard(), in_expr_scope_.guard()};
     }
 
     SymbolCollector(mod::Module& collecting, Context& ctx)

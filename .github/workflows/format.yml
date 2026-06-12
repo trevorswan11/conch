@@ -6,7 +6,7 @@ on:
         paths:
             - ".github/workflows/format.yml"
             - "lib/**"
-            - "ghoti/main.cpp"
+            - "ghoti/main.cc"
             - "third-party/**"
             - "tools/harness/**"
             - "build.zig"

@@ -26,7 +26,7 @@ namespace ghoti::ast {
 
 auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     Statements statements;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
@@ -41,7 +41,7 @@ auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 
 auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     // Labels are optional
     opt::Option<IdentifierHandle> label;
@@ -71,7 +71,7 @@ auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 auto ContinueStatement::parse(syntax::Parser& parser)
     -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     // Labels are optional
     opt::Option<IdentifierHandle> label;
@@ -95,24 +95,21 @@ auto ContinueStatement::parse(syntax::Parser& parser)
 
 namespace {
 
-using ModifierMapping          = std::pair<syntax::TokenType, DeclModifiers>;
-constexpr auto LEGAL_MODIFIERS = [] -> auto {
-    using TokenType = syntax::TokenType;
-    fixed::EnumMap<TokenType, opt::Option<DeclModifiers>> modifiers{opt::none};
-    modifiers[TokenType::VAR]       = DeclModifiers::VARIABLE;
-    modifiers[TokenType::CONSTANT]  = DeclModifiers::CONSTANT;
-    modifiers[TokenType::CONSTEXPR] = DeclModifiers::CONSTEXPR;
-    modifiers[TokenType::PUBLIC]    = DeclModifiers::PUBLIC;
-    modifiers[TokenType::EXTERN]    = DeclModifiers::EXTERN;
-    modifiers[TokenType::EXPORT]    = DeclModifiers::EXPORT;
-    return modifiers;
-}();
+using ModifierMapping = std::pair<syntax::TokenType, DeclModifiers>;
+constexpr auto LEGAL_MODIFIERS{fixed::EnumMap<syntax::TokenType, opt::Option<DeclModifiers>>::from(
+    opt::none,
+    ModifierMapping{syntax::TokenType::VAR, DeclModifiers::VARIABLE},
+    ModifierMapping{syntax::TokenType::CONSTANT, DeclModifiers::CONSTANT},
+    ModifierMapping{syntax::TokenType::CONSTEXPR, DeclModifiers::CONSTEXPR},
+    ModifierMapping{syntax::TokenType::PUBLIC, DeclModifiers::PUBLIC},
+    ModifierMapping{syntax::TokenType::EXTERN, DeclModifiers::EXTERN},
+    ModifierMapping{syntax::TokenType::EXPORT, DeclModifiers::EXPORT})};
 
 [[nodiscard]] constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept
     -> opt::Option<std::string> {
-    const auto mut_count = std::popcount(
+    const auto mut_count{std::popcount(
         std::to_underlying(modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT |
-                                        DeclModifiers::CONSTEXPR)));
+                                        DeclModifiers::CONSTEXPR)))};
     if (mut_count != 1) {
         return fmt::format("Exactly one mutability modifier may be used; found {}", mut_count);
     }
@@ -122,8 +119,8 @@ constexpr auto LEGAL_MODIFIERS = [] -> auto {
                                          (DeclModifiers::EXTERN | DeclModifiers::CONSTEXPR))) <= 1;
     if (!valid_constexpr) { return "Extern values cannot be known at compile time"; }
 
-    const auto abi_count = std::popcount(
-        std::to_underlying(modifiers & (DeclModifiers::EXTERN | DeclModifiers::EXPORT)));
+    const auto abi_count{std::popcount(
+        std::to_underlying(modifiers & (DeclModifiers::EXTERN | DeclModifiers::EXPORT)))};
     if (abi_count > 1) {
         return fmt::format("At most one ABI-related modifier may be used; found {}", abi_count);
     }
@@ -134,8 +131,8 @@ constexpr auto LEGAL_MODIFIERS = [] -> auto {
 
 auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
-    auto       modifiers   = LEGAL_MODIFIERS[start_token.type].value();
+    const auto start_token{parser.get_current_token()};
+    auto       modifiers{LEGAL_MODIFIERS[start_token.type].value()};
 
     opt::Option<DeclModifiers> current_modifier;
     while ((current_modifier = LEGAL_MODIFIERS[parser.get_peek_token().type])) {
@@ -154,8 +151,8 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
     }
 
     TRY(parser.expect_peek(syntax::TokenType::IDENT));
-    const IdentifierHandle decl_name          = TRY(IdentifierExpression::parse(parser));
-    const auto [decl_type, value_initialized] = TRY(ExplicitType::parse_opt_init(parser));
+    const IdentifierHandle decl_name{TRY(IdentifierExpression::parse(parser))};
+    const auto [decl_type, value_initialized]{TRY(ExplicitType::parse_opt_init(parser))};
 
     opt::Option<ExpressionHandle> decl_value;
     if (value_initialized) {
@@ -182,7 +179,7 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
 
 auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END) ||
         parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
         return make_syntax_err("Defer statements require an statement to defer",
@@ -190,7 +187,7 @@ auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
                                start_token);
     }
     parser.advance();
-    const auto stmt = TRY(parser.parse_statement());
+    const auto stmt{TRY(parser.parse_statement())};
 
     // The statement has different restrictions from expression alternates
     if (!stmt.any<ExpressionStatement, DiscardStatement, BlockStatement>()) {
@@ -204,7 +201,7 @@ auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 auto DiscardStatement::parse(syntax::Parser& parser)
     -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     TRY(parser.expect_peek(syntax::TokenType::ASSIGN));
     if (parser.peek_token_is(syntax::TokenType::END) ||
@@ -215,7 +212,7 @@ auto DiscardStatement::parse(syntax::Parser& parser)
     }
 
     parser.advance();
-    const auto expr = TRY(parser.parse_expression());
+    const auto expr{TRY(parser.parse_expression())};
 
     TRY(parser.expect_semicolon());
     return parser.add_stmt<DiscardStatement>(start_token, expr);
@@ -224,15 +221,15 @@ auto DiscardStatement::parse(syntax::Parser& parser)
 auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
     -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
-    const auto expr        = TRY(parser.parse_expression());
+    const auto start_token{parser.get_current_token()};
+    const auto expr{TRY(parser.parse_expression())};
 
-    using Behavior           = syntax::SemicolonBehavior;
-    const bool has_semicolon = parser.current_token_is(syntax::TokenType::SEMICOLON);
-    const bool at_block_end  = parser.current_token_is(syntax::TokenType::RBRACE);
+    using Behavior = syntax::SemicolonBehavior;
+    const auto has_semicolon{parser.current_token_is(syntax::TokenType::SEMICOLON)};
+    const auto at_block_end{parser.current_token_is(syntax::TokenType::RBRACE)};
 
     const auto check_illegal_semicolon = [&] -> opt::Option<Err<syntax::Diagnostic>> {
-        const auto& semicolon = parser.advance();
+        const auto semicolon{parser.advance()};
         if (behavior == Behavior::DISALLOW) {
             return syntax::make_syntax_err("Semicolon is not allowed in this context",
                                            syntax::Error::UNEXPECTED_TOKEN,
@@ -267,7 +264,7 @@ namespace {
 
     if (parser.peek_token_is(syntax::TokenType::STRING)) {
         TRY(parser.expect_peek(syntax::TokenType::STRING));
-        const StringHandle string = TRY(StringExpression::parse(parser));
+        const StringHandle string{TRY(StringExpression::parse(parser))};
 
         if (parser.get_node<StringExpression>(*string).value.empty()) {
             return make_syntax_err("File import names cannot be empty",
@@ -287,9 +284,9 @@ namespace {
 auto ImportStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (parser.current_token_is(syntax::TokenType::PUBLIC)) { parser.advance(); }
-    auto imported_core = TRY(parse_import_payload(parser));
+    auto imported_core{TRY(parse_import_payload(parser))};
 
     opt::Option<IdentifierHandle> imported_alias;
     if (parser.peek_token_is(syntax::TokenType::AS)) {
@@ -310,19 +307,19 @@ auto ImportStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, s
 auto ImportStatement::get_name(const AST& tree) const noexcept
     -> std::pair<ast::IdentifierHandle, std::string_view> {
     if (alias) {
-        const auto  handle = *alias;
-        const auto& ident  = tree.get_as<ast::IdentifierExpression>(handle);
+        const auto  handle{*alias};
+        const auto& ident{tree.get_as<ast::IdentifierExpression>(handle)};
         return {handle, ident.name};
     }
 
     // This must be an ident as all strings have an alias
-    const auto& ident = tree.get_as<ast::IdentifierExpression>(payload);
+    const auto& ident{tree.get_as<ast::IdentifierExpression>(payload)};
     return {payload, ident.name};
 }
 
 auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     opt::Option<ExpressionHandle> value;
     if (!parser.peek_token_is(syntax::TokenType::END) &&
@@ -337,7 +334,7 @@ auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, s
 
 auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     opt::Option<StringHandle> description;
     if (parser.peek_token_is(syntax::TokenType::STRING)) {
@@ -353,21 +350,21 @@ auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
     }
 
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
-    const BlockHandle block = TRY(BlockStatement::parse(parser));
+    const BlockHandle block{TRY(BlockStatement::parse(parser))};
     return parser.add_stmt<TestStatement>(start_token, description, block);
 }
 
 auto UsingStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (parser.current_token_is(syntax::TokenType::PUBLIC)) { parser.advance(); }
 
     TRY(parser.expect_peek(syntax::TokenType::IDENT));
-    const IdentifierHandle alias = TRY(IdentifierExpression::parse(parser));
+    const IdentifierHandle alias{TRY(IdentifierExpression::parse(parser))};
 
     TRY(parser.expect_peek(syntax::TokenType::ASSIGN));
-    const auto type = TRY(ExplicitType::parse(parser));
+    const auto type{TRY(ExplicitType::parse(parser))};
 
     TRY(parser.expect_peek(syntax::TokenType::SEMICOLON));
     return parser.add_stmt<UsingStatement>(start_token, alias, type);

@@ -16,16 +16,16 @@ namespace ghoti::mod {
 
 auto MemoryLoader::add(const std::filesystem::path& path, const std::string& content) -> void {
     PROFILE_FUNCTION();
-    const auto normalized = normalize(path);
+    const auto normalized{normalize(path)};
     ASSERT(normalized);
     files_[*normalized] = content;
 }
 
 auto MemoryLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {
     PROFILE_FUNCTION();
-    auto normalized = normalize(path);
+    auto normalized{normalize(path)};
     ASSERT(normalized);
-    auto it = files_.find(normalized->string());
+    auto it{files_.find(normalized->string())};
     if (it == files_.end()) {
         return make_mod_err(
             fmt::format("Could not find path '{}' in virtual file system", path.string()),

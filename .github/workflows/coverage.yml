@@ -6,6 +6,7 @@ on:
         paths:
             - ".github/workflows/coverage.yml"
             - "lib/**"
+            - "ghoti/main.cc"
             - "third-party/**"
             - "tools/harness/**"
             - "build.zig"

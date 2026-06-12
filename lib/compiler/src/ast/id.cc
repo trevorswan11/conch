@@ -14,54 +14,60 @@ namespace ghoti::ast {
 
 namespace {
 
-constexpr auto NODE_NAMES = [] -> auto {
-    fixed::EnumMap<NodeKind, std::string_view> names{"expression"};
+using NameMapping = std::pair<NodeKind, std::string_view>;
 
-    names[NodeKind::ARRAY_EXPRESSION]           = "array";
-    names[NodeKind::CALL_EXPRESSION]            = "call";
-    names[NodeKind::DO_WHILE_LOOP_EXPRESSION]   = "do-while loop";
-    names[NodeKind::ENUM_EXPRESSION]            = "enum";
-    names[NodeKind::FOR_LOOP_EXPRESSION]        = "for loop";
-    names[NodeKind::FUNCTION_EXPRESSION]        = "function";
-    names[NodeKind::IDENTIFIER_EXPRESSION]      = "identifier";
-    names[NodeKind::IF_EXPRESSION]              = "if";
-    names[NodeKind::INDEX_EXPRESSION]           = "index";
-    names[NodeKind::INFINITE_LOOP_EXPRESSION]   = "infinite loop";
-    names[NodeKind::ASSIGNMENT_EXPRESSION]      = "assignment";
-    names[NodeKind::BINARY_EXPRESSION]          = "binary";
-    names[NodeKind::DOT_EXPRESSION]             = "dot";
-    names[NodeKind::RANGE_EXPRESSION]           = "range";
-    names[NodeKind::INITIALIZER_EXPRESSION]     = "initializer";
-    names[NodeKind::LABEL_EXPRESSION]           = "label";
-    names[NodeKind::MATCH_EXPRESSION]           = "match";
-    names[NodeKind::UNARY_EXPRESSION]           = "unary";
-    names[NodeKind::REFERENCE_EXPRESSION]       = "reference-of";
-    names[NodeKind::ADDRESS_OF_EXPRESSION]      = "address-of";
-    names[NodeKind::DEREFERENCE_EXPRESSION]     = "dereference";
-    names[NodeKind::IMPLICIT_ACCESS_EXPRESSION] = "implicit access";
-    names[NodeKind::STRING_EXPRESSION]          = "string";
-    names[NodeKind::I32_EXPRESSION]             = "i32";
-    names[NodeKind::I64_EXPRESSION]             = "i64";
-    names[NodeKind::ISIZE_EXPRESSION]           = "isize";
-    names[NodeKind::U32_EXPRESSION]             = "u32";
-    names[NodeKind::U64_EXPRESSION]             = "u64";
-    names[NodeKind::USIZE_EXPRESSION]           = "usize";
-    names[NodeKind::U8_EXPRESSION]              = "u8";
-    names[NodeKind::F32_EXPRESSION]             = "f32";
-    names[NodeKind::F64_EXPRESSION]             = "f64";
-    names[NodeKind::BOOL_EXPRESSION]            = "bool";
-    names[NodeKind::VOID_EXPRESSION]            = "void";
-    names[NodeKind::UNDEFINED_EXPRESSION]       = "undefined";
-    names[NodeKind::MODULE_ACCESS_EXPRESSION]   = "module access";
-    names[NodeKind::STRUCT_EXPRESSION]          = "struct";
-    names[NodeKind::UNION_EXPRESSION]           = "union";
-    names[NodeKind::WHILE_LOOP_EXPRESSION]      = "while loop";
-
-    for (const auto kind : enum_range<NodeKind::BLOCK_STATEMENT, NodeKind::USING_STATEMENT>()) {
-        names[kind] = "statement";
-    }
-    return names;
-}();
+constexpr auto NODE_NAMES{fixed::EnumMap<NodeKind, std::string_view>::from(
+    "expression",
+    NameMapping{NodeKind::ARRAY_EXPRESSION, "array"},
+    NameMapping{NodeKind::CALL_EXPRESSION, "call"},
+    NameMapping{NodeKind::DO_WHILE_LOOP_EXPRESSION, "do-while loop"},
+    NameMapping{NodeKind::ENUM_EXPRESSION, "enum"},
+    NameMapping{NodeKind::FOR_LOOP_EXPRESSION, "for loop"},
+    NameMapping{NodeKind::FUNCTION_EXPRESSION, "function"},
+    NameMapping{NodeKind::IDENTIFIER_EXPRESSION, "identifier"},
+    NameMapping{NodeKind::IF_EXPRESSION, "if"},
+    NameMapping{NodeKind::INDEX_EXPRESSION, "index"},
+    NameMapping{NodeKind::INFINITE_LOOP_EXPRESSION, "infinite loop"},
+    NameMapping{NodeKind::ASSIGNMENT_EXPRESSION, "assignment"},
+    NameMapping{NodeKind::BINARY_EXPRESSION, "binary"},
+    NameMapping{NodeKind::DOT_EXPRESSION, "dot"},
+    NameMapping{NodeKind::RANGE_EXPRESSION, "range"},
+    NameMapping{NodeKind::INITIALIZER_EXPRESSION, "initializer"},
+    NameMapping{NodeKind::LABEL_EXPRESSION, "label"},
+    NameMapping{NodeKind::MATCH_EXPRESSION, "match"},
+    NameMapping{NodeKind::UNARY_EXPRESSION, "unary"},
+    NameMapping{NodeKind::REFERENCE_EXPRESSION, "reference-of"},
+    NameMapping{NodeKind::ADDRESS_OF_EXPRESSION, "address-of"},
+    NameMapping{NodeKind::DEREFERENCE_EXPRESSION, "dereference"},
+    NameMapping{NodeKind::IMPLICIT_ACCESS_EXPRESSION, "implicit access"},
+    NameMapping{NodeKind::STRING_EXPRESSION, "string"},
+    NameMapping{NodeKind::I32_EXPRESSION, "i32"},
+    NameMapping{NodeKind::I64_EXPRESSION, "i64"},
+    NameMapping{NodeKind::ISIZE_EXPRESSION, "isize"},
+    NameMapping{NodeKind::U32_EXPRESSION, "u32"},
+    NameMapping{NodeKind::U64_EXPRESSION, "u64"},
+    NameMapping{NodeKind::USIZE_EXPRESSION, "usize"},
+    NameMapping{NodeKind::U8_EXPRESSION, "u8"},
+    NameMapping{NodeKind::F32_EXPRESSION, "f32"},
+    NameMapping{NodeKind::F64_EXPRESSION, "f64"},
+    NameMapping{NodeKind::BOOL_EXPRESSION, "bool"},
+    NameMapping{NodeKind::VOID_EXPRESSION, "void"},
+    NameMapping{NodeKind::UNDEFINED_EXPRESSION, "undefined"},
+    NameMapping{NodeKind::MODULE_ACCESS_EXPRESSION, "module access"},
+    NameMapping{NodeKind::STRUCT_EXPRESSION, "struct"},
+    NameMapping{NodeKind::UNION_EXPRESSION, "union"},
+    NameMapping{NodeKind::WHILE_LOOP_EXPRESSION, "while loop"},
+    NameMapping{NodeKind::BLOCK_STATEMENT, "statement"},
+    NameMapping{NodeKind::BREAK_STATEMENT, "statement"},
+    NameMapping{NodeKind::CONTINUE_STATEMENT, "statement"},
+    NameMapping{NodeKind::DECL_STATEMENT, "statement"},
+    NameMapping{NodeKind::DEFER_STATEMENT, "statement"},
+    NameMapping{NodeKind::DISCARD_STATEMENT, "statement"},
+    NameMapping{NodeKind::EXPRESSION_STATEMENT, "statement"},
+    NameMapping{NodeKind::IMPORT_STATEMENT, "statement"},
+    NameMapping{NodeKind::RETURN_STATEMENT, "statement"},
+    NameMapping{NodeKind::TEST_STATEMENT, "statement"},
+    NameMapping{NodeKind::USING_STATEMENT, "statement"})};
 
 } // namespace
 
@@ -69,19 +75,18 @@ auto NodeID::display_name() const noexcept -> std::string_view { return NODE_NAM
 
 namespace {
 
-using Modifier           = TypeModifier::Modifier;
-using ModifierMapping    = std::pair<syntax::TokenType, Modifier>;
-constexpr auto MODIFIERS = [] -> auto {
-    using TokenType = syntax::TokenType;
-    fixed::EnumMap<TokenType, Modifier> modifiers{Modifier::VALUE};
-    modifiers[TokenType::BW_AND]       = Modifier::REF;
-    modifiers[TokenType::AND_MUT]      = Modifier::MUT_REF;
-    modifiers[TokenType::CARET]        = Modifier::PTR;
-    modifiers[TokenType::CARET_MUT]    = Modifier::MUT_PTR;
-    modifiers[TokenType::VOLATILE]     = Modifier::VOLATILE;
-    modifiers[TokenType::MUT_VOLATILE] = Modifier::MUT_VOLATILE;
-    return modifiers;
-}();
+using TokenType       = syntax::TokenType;
+using Modifier        = TypeModifier::Modifier;
+using ModifierMapping = std::pair<TokenType, Modifier>;
+
+constexpr auto MODIFIERS{fixed::EnumMap<TokenType, Modifier>::from(
+    Modifier::VALUE,
+    ModifierMapping{TokenType::BW_AND, Modifier::REF},
+    ModifierMapping{TokenType::AND_MUT, Modifier::MUT_REF},
+    ModifierMapping{TokenType::CARET, Modifier::PTR},
+    ModifierMapping{TokenType::CARET_MUT, Modifier::MUT_PTR},
+    ModifierMapping{TokenType::VOLATILE, Modifier::VOLATILE},
+    ModifierMapping{TokenType::MUT_VOLATILE, Modifier::MUT_VOLATILE})};
 
 } // namespace
 

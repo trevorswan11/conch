@@ -18,9 +18,7 @@ template <NodeKind... AllowedKinds> class Handle {
   public:
     constexpr explicit Handle(NodeID id) noexcept : id_{id} {
         ASSERT(id.is_valid(), "Attempt to create Handle from invalid NodeID");
-#ifndef NDEBUG
         ASSERT(any_compatible(id.get_kind()), "Assigned invalid NodeKind to Handle");
-#endif
     }
 
     template <NodeKind... OtherKinds>

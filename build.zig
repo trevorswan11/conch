@@ -62,7 +62,7 @@ pub fn build(b: *std.Build) !void {
         bool,
         "install-tests-only",
         "Install tests without running them (default: false)",
-    ) orelse true;
+    ) orelse false;
 
     var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
     const artifacts = try addArtifacts(b, .{

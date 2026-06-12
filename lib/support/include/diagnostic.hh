@@ -14,7 +14,6 @@
 #include <gsl/span>
 #include <magic_enum/magic_enum.hpp>
 
-#include "assert.hh"
 #include "iterator.hh"
 #include "option.hh"
 #include "style.hh"
@@ -180,11 +179,6 @@ template <traits::DiagnosticType D> class DiagnosticList {
 
     template <typename... Args> auto emplace_back(Args&&... args) -> void {
         diagnostics_.emplace_back(std::forward<Args>(args)...);
-    }
-
-    [[nodiscard]] auto operator[](this auto&& self, usize idx) noexcept -> auto& {
-        ASSERT(idx < self.diagnostics_.size(), "Index out of range");
-        return self.diagnostics_[idx];
     }
 
     operator gsl::span<const D>() const { return diagnostics_; }

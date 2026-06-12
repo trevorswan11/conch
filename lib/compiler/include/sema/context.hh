@@ -96,7 +96,7 @@ struct Context {
             diagnostics.emplace_back(std::forward<Args>(args)...);
         }
 
-        auto& poison = get_poison();
+        auto& poison{get_poison()};
         module.set_sema_type(id, poison);
         return poison;
     }

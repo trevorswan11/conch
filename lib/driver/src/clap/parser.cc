@@ -23,7 +23,7 @@ namespace ghoti::clap {
 Parser::Parser(i32 argc, char** argv, std::ostream& os, bool ensure_utf8) noexcept
     : argc_{argc}, os_{os} {
     PROFILE_FUNCTION();
-    ASSERT(argc > 0, "The program name must be present");
+    VERIFY(argc > 0, "The program name must be present");
     app_.formatter(mem::make_rc<Fmt>());
     argv_ = ensure_utf8 ? app_.ensure_utf8(argv) : argv;
 }
