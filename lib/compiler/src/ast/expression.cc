@@ -285,8 +285,8 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
         if (parser.current_token_is(syntax::TokenType::UNDERSCORE)) {
-            const auto discarded =
-                parser.add_node<DiscardableIdentHandle, ast::Discarded>(parser.get_current_token());
+            const auto discarded{parser.add_node<DiscardableIdentHandle, ast::Discarded>(
+                parser.get_current_token())};
             captures.emplace_back(TypeModifier{}, discarded);
         } else {
             // Always check for a modifier and advance past it if present
@@ -306,8 +306,8 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
     // Loops must have a well formed block and may have an alternate in non-break cases
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
     const BlockHandle block{TRY(BlockStatement::parse(parser))};
-    const auto        non_break =
-        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK));
+    const auto        non_break{
+        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK))};
 
     // The number of captures must align with the number of iterables
     if (captures.size() != iterables.size()) {
@@ -539,7 +539,7 @@ template <traits::ASTNode Expr>
                                op_token);
     }
 
-    auto [current_precedence, current_binding] = parser.get_current_precedence();
+    auto [current_precedence, current_binding]{parser.get_current_precedence()};
     if (current_binding && current_binding->right_assoc) {
         current_precedence =
             static_cast<syntax::Precedence>(std::to_underlying(current_precedence) - 1);
@@ -959,8 +959,8 @@ auto WhileLoopExpression::parse(syntax::Parser& parser)
     // Loops must have a well formed block and may have an alternate in non-break cases
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
     const BlockHandle block{TRY(BlockStatement::parse(parser))};
-    const auto        non_break =
-        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK));
+    const auto        non_break{
+        TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK))};
 
     // There needs to be at least a continuation or block
     if (!continuation && parser.get_node<BlockStatement>(*block).empty()) {

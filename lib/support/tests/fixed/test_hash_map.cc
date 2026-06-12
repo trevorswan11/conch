@@ -46,13 +46,13 @@ TEST_CASE("HashMap construction") {
 TEST_CASE("HashMap basic usage") {
     fixed::HashMap<u32, u32, 16> hm;
 
-    constexpr u32 insert_count = 10;
+    constexpr u32 insert_count{10};
     for (u32 i = 0; i < insert_count; ++i) { hm.emplace(i, i); }
     CHECK(hm.size() == insert_count);
 
     for (u32 i = 0; i < insert_count; ++i) {
         CHECK(hm.contains(i));
-        const auto val = hm.get_opt(i);
+        const auto val{hm.get_opt(i)};
         REQUIRE(val);
         CHECK(*val == i);
         CHECK(hm.get(i) == i);
@@ -62,12 +62,12 @@ TEST_CASE("HashMap basic usage") {
 }
 
 TEST_CASE("HashMap helper constructor & clear") {
-    auto hm = fixed::make_hash_map(std::pair{0, 0},
-                                   std::pair{3, 3},
-                                   std::pair{3, 4},
-                                   std::pair{4, 4},
-                                   std::pair{5, 5},
-                                   std::pair{6, 6});
+    auto hm{fixed::make_hash_map(std::pair{0, 0},
+                                 std::pair{3, 3},
+                                 std::pair{3, 4},
+                                 std::pair{4, 4},
+                                 std::pair{5, 5},
+                                 std::pair{6, 6})};
 
     STATIC_CHECK(hm.capacity() == 8);
     CHECK(hm.size() == 5);
@@ -87,7 +87,7 @@ TEST_CASE("HashMap helper constructor & clear") {
 }
 
 TEST_CASE("HashMap constexpr operations") {
-    constexpr auto hm = fixed::make_hash_map(std::pair{0, 0}, std::pair{3, 3}, std::pair{2, 4});
+    constexpr auto hm{fixed::make_hash_map(std::pair{0, 0}, std::pair{3, 3}, std::pair{2, 4})};
     STATIC_CHECK(hm.size() == 3);
     STATIC_CHECK(hm.contains(0));
     STATIC_CHECK(hm.get(0) == 0);
@@ -96,12 +96,12 @@ TEST_CASE("HashMap constexpr operations") {
 
 TEST_CASE("HashMap constexpr string view key") {
     using namespace std::string_view_literals;
-    constexpr auto hm = fixed::make_hash_map(std::pair{"0"sv, 0},
-                                             std::pair{"3"sv, 3},
-                                             std::pair{"3"sv, 4},
-                                             std::pair{"4"sv, 4},
-                                             std::pair{"5"sv, 5},
-                                             std::pair{"6"sv, 6});
+    constexpr auto hm{fixed::make_hash_map(std::pair{"0"sv, 0},
+                                           std::pair{"3"sv, 3},
+                                           std::pair{"3"sv, 4},
+                                           std::pair{"4"sv, 4},
+                                           std::pair{"5"sv, 5},
+                                           std::pair{"6"sv, 6})};
 
     CHECK(hm.contains("0"));
     CHECK(hm.get_opt("3"));
@@ -129,7 +129,7 @@ TEST_CASE("HashMap copy correctness") {
         original.emplace(1, 0);
 
         SECTION("Copy constructor") {
-            HM copy = original; // NOLINT
+            HM copy{original}; // NOLINT
             CHECK(copy.size() == 2);
             CHECK(Tracker::copy_count == 2);
 
@@ -157,7 +157,7 @@ TEST_CASE("HashMap move correctness") {
         original.emplace(0, 0);
         original.emplace(1, 0);
 
-        HM destination = std::move(original);
+        HM destination{std::move(original)};
         CHECK(destination.size() == 2);
         CHECK(original.empty());
         CHECK(Tracker::move_count == 2);
@@ -181,14 +181,14 @@ TEST_CASE("HashMap self assignment") {
 }
 
 TEST_CASE("HashMap non-const iterator") {
-    auto hm = fixed::make_hash_map(std::pair{0, -1},
-                                   std::pair{1, -1},
-                                   std::pair{2, -1},
-                                   std::pair{3, -1},
-                                   std::pair{4, -1},
-                                   std::pair{5, -1},
-                                   std::pair{6, -1},
-                                   std::pair{7, -1});
+    auto hm{fixed::make_hash_map(std::pair{0, -1},
+                                 std::pair{1, -1},
+                                 std::pair{2, -1},
+                                 std::pair{3, -1},
+                                 std::pair{4, -1},
+                                 std::pair{5, -1},
+                                 std::pair{6, -1},
+                                 std::pair{7, -1})};
 
     SECTION("Full map iteration and update") {
         usize iter_count{0};
@@ -210,8 +210,8 @@ TEST_CASE("HashMap non-const iterator") {
 }
 
 TEST_CASE("HashMap const iterator") {
-    constexpr auto hm = fixed::make_hash_map(
-        std::pair{0, -1}, std::pair{1, -1}, std::pair{5, -1}, std::pair{6, -1}, std::pair{7, -1});
+    constexpr auto hm{fixed::make_hash_map(
+        std::pair{0, -1}, std::pair{1, -1}, std::pair{5, -1}, std::pair{6, -1}, std::pair{7, -1})};
 
     usize iter_count{0};
     for (auto [key, value] : hm) {
@@ -225,9 +225,9 @@ TEST_CASE("HashMap ranges compatibility") {
     STATIC_REQUIRE(std::forward_iterator<fixed::HashMap<u16, u32, 4>::iterator>);
     STATIC_REQUIRE(std::forward_iterator<fixed::HashMap<u16, u32, 4>::const_iterator>);
 
-    constexpr auto hm = fixed::make_hash_map(std::pair{-2, -1}, std::pair{1, -1}, std::pair{5, -1});
-    i32            sum        = 0;
-    usize          iter_count = 0;
+    constexpr auto hm{fixed::make_hash_map(std::pair{-2, -1}, std::pair{1, -1}, std::pair{5, -1})};
+    i32            sum{0};
+    usize          iter_count{0};
     std::ranges::for_each(hm, [&sum, &iter_count](auto pair) -> void {
         sum += pair.first;
         iter_count++;

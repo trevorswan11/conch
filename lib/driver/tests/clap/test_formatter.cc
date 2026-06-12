@@ -9,7 +9,7 @@ namespace ghoti::tests {
 
 TEST_CASE("Formatter provides output") {
     CLI::App app;
-    auto     formatter = mem::make_rc<clap::Fmt>();
+    auto     formatter{mem::make_rc<clap::Fmt>()};
     app.formatter(formatter);
     REQUIRE(app.add_subcommand("nothing"));
 

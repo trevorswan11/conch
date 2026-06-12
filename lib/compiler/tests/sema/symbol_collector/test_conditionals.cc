@@ -19,7 +19,7 @@ namespace {
 
 // Checks that the scope has the foo-bar decl
 auto test_conditional_scope(helpers::SemaTestContext& ctx, usize idx) {
-    auto& registry = ctx.analyzer.get_registry();
+    auto& registry{ctx.analyzer.get_registry()};
     CHECK(registry.get_opt(idx).transform(to_table_size) == 1);
     ctx.test_common_decl_collection(idx);
 }
@@ -27,12 +27,12 @@ auto test_conditional_scope(helpers::SemaTestContext& ctx, usize idx) {
 } // namespace
 
 TEST_CASE("If expression collection") {
-    auto [ctx, idx] = helpers::collect_and_check(
-        "const a := if (b) { const foo := bar; } else { const foo := bar; };");
+    auto [ctx, idx]{helpers::collect_and_check(
+        "const a := if (b) { const foo := bar; } else { const foo := bar; };")};
 
-    auto& analyzer = ctx->analyzer;
+    auto& analyzer{ctx->analyzer};
     CHECK(analyzer.get_registry().size() == 3);
-    const auto& actual = helpers::unwrap(analyzer.get_table_opt(idx));
+    const auto& actual{helpers::unwrap(analyzer.get_table_opt(idx))};
     CHECK(actual.size() == 1);
     REQUIRE(actual.get_opt("a"));
 
@@ -43,13 +43,13 @@ TEST_CASE("If expression collection") {
 TEST_CASE("Flat if collection") { helpers::collect_and_check("const a := if (b > 4) c; else d;"); }
 
 TEST_CASE("Match expression collection") {
-    auto [ctx, idx] = helpers::collect_and_check(
+    auto [ctx, idx]{helpers::collect_and_check(
         "const a := match (b) { c => |d| { const foo := bar; }, _ => { const foo := bar; }, "
-        "e => |_| { const foo := bar; } };");
+        "e => |_| { const foo := bar; } };")};
 
-    auto& registry = ctx->analyzer.get_registry();
+    auto& registry{ctx->analyzer.get_registry()};
     CHECK(registry.size() == 7);
-    const auto& actual = helpers::unwrap(registry.get_opt(idx));
+    const auto& actual{helpers::unwrap(registry.get_opt(idx))};
     CHECK(actual.size() == 1);
     REQUIRE(actual.get_opt("a"));
 

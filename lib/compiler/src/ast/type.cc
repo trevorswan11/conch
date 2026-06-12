@@ -240,7 +240,7 @@ namespace {
 auto ExplicitType::parse_opt_init(syntax::Parser& parser)
     -> Result<std::pair<opt::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto [type, initialized] = TRY(parse_type_and_initializer(parser));
+    const auto [type, initialized]{TRY(parse_type_and_initializer(parser))};
 
     // Advance again to prepare for rhs
     if (initialized) { parser.advance(); }

@@ -24,7 +24,7 @@ TEST_CASE("Variant default construction activates first alternative") {
 }
 
 TEST_CASE("Variant implicit construction from alternative type") {
-    FBB v = Foo{42};
+    FBB v{Foo{42}};
     CHECK(v.is<Foo>());
     CHECK(v.as<Foo>().value == 42);
 }
@@ -36,7 +36,7 @@ TEST_CASE("Variant in-place construction") {
 }
 
 TEST_CASE("Variant::emplace<T> changes active alternative") {
-    FBB v = Foo{1};
+    FBB v{Foo{1}};
     v.emplace<Bar>("emplaced");
     CHECK(v.is<Bar>());
     CHECK(v.as<Bar>().value == "emplaced");
@@ -53,7 +53,7 @@ TEST_CASE("Variant::emplace<T> calls destructor on old value") {
 }
 
 TEST_CASE("Variant::is<T>") {
-    FBB v = Bar{"x"};
+    FBB v{Bar{"x"}};
     CHECK(v.is<Bar>());
     CHECK_FALSE(v.is<Foo>());
     CHECK_FALSE(v.is<Baz>());
@@ -66,60 +66,60 @@ TEST_CASE("Variant::index") {
 }
 
 TEST_CASE("Variant::as<T> returns mutable reference") {
-    FBB v             = Foo{1};
+    FBB v{Foo{1}};
     v.as<Foo>().value = 99;
     CHECK(v.as<Foo>().value == 99);
 }
 
 TEST_CASE("Variant::as<T> returns const reference on const Variant") {
-    const FBB  v = Bar{"const"};
-    const Bar& b = v.as<Bar>();
+    const FBB  v{Bar{"const"}};
+    const Bar& b{v.as<Bar>()};
     CHECK(b.value == "const");
 }
 
 TEST_CASE("Variant::as<T> moves out of rvalue Variant") {
-    FBB v = Bar{"moved"};
-    Bar b = std::move(v).as<Bar>();
+    FBB v{Bar{"moved"}};
+    Bar b{std::move(v).as<Bar>()};
     CHECK(b.value == "moved");
 }
 
 TEST_CASE("Variant::as_opt<T> returns engaged Option for active type") {
-    FBB  v   = Baz{1.5};
-    auto opt = v.as_opt<Baz>();
+    FBB  v{Baz{1.5}};
+    auto opt{v.as_opt<Baz>()};
     REQUIRE(opt.has_value());
     CHECK(opt->value == 1.5);
 }
 
 TEST_CASE("Variant::as_opt<T> returns empty Option for inactive type") {
-    FBB v = Foo{1};
+    FBB v{Foo{1}};
     CHECK_FALSE(v.as_opt<Bar>().has_value());
 }
 
 TEST_CASE("Variant::as_opt<T> const yields const ref") {
-    const FBB               v   = Bar{"ro"};
+    const FBB               v{Bar{"ro"}};
     opt::Option<const Bar&> opt = v.as_opt<Bar>();
     REQUIRE(opt.has_value());
     CHECK(opt->value == "ro");
 }
 
 TEST_CASE("Variant::as_opt<T> supports transform()") {
-    FBB  v   = Bar{"transform"};
-    auto len = v.as_opt<Bar>().transform([](const Bar& b) -> usize { return b.value.size(); });
+    FBB  v{Bar{"transform"}};
+    auto len{v.as_opt<Bar>().transform([](const Bar& b) -> usize { return b.value.size(); })};
     REQUIRE(len.has_value());
     CHECK(*len == 9UZ);
 }
 
 TEST_CASE("Variant::visit variadic lambda form with non-void return") {
-    FBB v = Foo{10};
-    i32 r = v.visit([](const Foo& f) -> i32 { return f.value; },
-                    [](const Bar&) -> i32 { return -1; },
-                    [](const Baz&) -> i32 { return -2; });
+    FBB v{Foo{10}};
+    i32 r{v.visit([](const Foo& f) -> i32 { return f.value; },
+                  [](const Bar&) -> i32 { return -1; },
+                  [](const Baz&) -> i32 { return -2; })};
     CHECK(r == 10);
 }
 
 TEST_CASE("Variant::visit variadic lambda form with void return") {
-    FBB  v      = Bar{"side effect"};
-    bool called = false;
+    FBB  v{Bar{"side effect"}};
+    auto called{false};
     v.visit([](const Foo&) -> void {},
             [&](const Bar&) -> void { called = true; },
             [](const Baz&) -> void {});
@@ -127,10 +127,10 @@ TEST_CASE("Variant::visit variadic lambda form with void return") {
 }
 
 TEST_CASE("Variant::visit on const Variant") {
-    const FBB v   = Bar{"const visit"};
-    auto      len = v.visit([](const Foo&) -> usize { return 0UZ; },
-                       [](const Bar& b) -> usize { return b.value.size(); },
-                       [](const Baz&) -> usize { return 0UZ; });
+    const FBB v{Bar{"const visit"}};
+    auto      len{v.visit([](const Foo&) -> usize { return 0UZ; },
+                     [](const Bar& b) -> usize { return b.value.size(); },
+                     [](const Baz&) -> usize { return 0UZ; })};
     CHECK(len == 11UZ);
 }
 
@@ -142,8 +142,8 @@ TEST_CASE("Variant::operator==") {
 }
 
 TEST_CASE("Variant copy construction") {
-    FBB a = Bar{"copy me"};
-    FBB b = a;
+    FBB a{Bar{"copy me"}};
+    FBB b{a};
     CHECK(b.is<Bar>());
     CHECK(b.as<Bar>().value == "copy me");
     a.as<Bar>().value = "modified";
@@ -151,24 +151,24 @@ TEST_CASE("Variant copy construction") {
 }
 
 TEST_CASE("Variant copy assignment") {
-    FBB a = Foo{1};
-    FBB b = Bar{"x"};
-    b     = a;
+    FBB a{Foo{1}};
+    FBB b{Bar{"x"}};
+    b = a;
     CHECK(b.is<Foo>());
     CHECK(b.as<Foo>().value == 1);
 }
 
 TEST_CASE("Variant move construction") {
-    FBB a = Bar{"move me"};
-    FBB b = std::move(a);
+    FBB a{Bar{"move me"}};
+    FBB b{std::move(a)};
     CHECK(b.is<Bar>());
     CHECK(b.as<Bar>().value == "move me");
 }
 
 TEST_CASE("Variant move assignment") {
-    FBB a = Baz{3.14};
-    FBB b = Foo{0};
-    b     = std::move(a);
+    FBB a{Baz{3.14}};
+    FBB b{Foo{0}};
+    b = std::move(a);
     CHECK(b.is<Baz>());
     CHECK(b.as<Baz>().value == 3.14);
 }

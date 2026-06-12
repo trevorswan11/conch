@@ -54,8 +54,8 @@ constexpr Builtin CEIL{"@ceil", TokenType::BUILTIN_CEIL};
 
 constexpr Builtin PANIC{"@panic", TokenType::BUILTIN_PANIC};
 
-constexpr auto ALL_TOKEN_TYPES =
-    enum_range<TokenType::BUILTIN_ALIGN_CAST, TokenType::BUILTIN_PANIC>();
+constexpr auto ALL_TOKEN_TYPES{
+    enum_range<TokenType::BUILTIN_ALIGN_CAST, TokenType::BUILTIN_PANIC>()};
 
 } // namespace builtins
 

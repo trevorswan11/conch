@@ -10,10 +10,8 @@
 namespace ghoti::tests {
 
 TEST_CASE("Function type restrictions") {
-    constexpr auto illegal_inputs = std::to_array<std::string_view>({
-        "var a: &fn(): void;",
-        "var a: &mut fn(): void;",
-    });
+    using namespace std::string_view_literals;
+    constexpr std::array illegal_inputs{"var a: &fn(): void;"sv, "var a: &mut fn(): void;"sv};
 
     const auto expected_diag = [] -> syntax::Diagnostic {
         return {"Functions types may only be values or pointers",

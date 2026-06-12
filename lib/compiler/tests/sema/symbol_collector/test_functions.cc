@@ -14,16 +14,16 @@ namespace ghoti::tests {
 namespace syms = sema::symbols;
 
 TEST_CASE("Function hollow types") {
-    auto [ctx, idx] =
-        helpers::collect_and_check("const a := fn(&self, c: type): void { const foo := bar; };");
-    const auto& registry = ctx->analyzer.get_registry();
+    auto [ctx, idx]{
+        helpers::collect_and_check("const a := fn(&self, c: type): void { const foo := bar; };")};
+    const auto& registry{ctx->analyzer.get_registry()};
     REQUIRE(registry.size() == 2);
 
-    const auto [sym, sym_data, node_data] =
-        ctx->get_ast_sym_info<syms::Node, ast::DeclStatement>("a", idx);
+    const auto [sym, sym_data, node_data]{
+        ctx->get_ast_sym_info<syms::Node, ast::DeclStatement>("a", idx)};
     CHECK(sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
 
-    const auto& fn_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
+    const auto& fn_type{helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value))};
     CHECK(fn_type == ctx->get_type(sema::TypeKind::FUNCTION, 1));
 
     REQUIRE(

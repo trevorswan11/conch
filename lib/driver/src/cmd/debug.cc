@@ -28,7 +28,7 @@ auto Debug::run() -> void {
         line_.clear();
 
         if (!std::getline(std::cin, line_)) { break; }
-        auto trimmed = string::trim(line_);
+        auto trimmed{string::trim(line_)};
         if (trimmed == "exit") { break; }
         if (trimmed.empty()) { continue; }
 
@@ -43,7 +43,7 @@ auto Debug::run() -> void {
         }
 
         // Print debug information from each stage
-        const auto stdin_mod = *manager.try_get_file_module(stdin_path);
+        const auto stdin_mod{*manager.try_get_file_module(stdin_path)};
         if (stdin_mod->is_errored()) { continue; }
 
         ast::ASTDumper dumper{stdin_mod->ast, std::cout};
@@ -51,19 +51,18 @@ auto Debug::run() -> void {
 
         if (stdin_mod->is_poisoned()) { continue; }
 
-        const auto& registry = analyzer.get_registry();
+        const auto& registry{analyzer.get_registry()};
         fmt::println("{} total tables, {} top-level symbols collected",
                      analyzer.get_registry().size(),
                      analyzer.get_table(*stdin_mod->root_table_idx).size());
 
-        for (usize i = 0; const auto& table : registry) {
+        for (usize i{0}; const auto& table : registry) {
             if (analyzer.get_prelude_index_opt() == i) { continue; }
             fmt::println("Symbols in table idx {}:", i);
             for (const auto& [name, proxy] : table) {
-                const auto& symbol = proxy.symbol;
                 fmt::println("  - Symbol '{}': status = {}",
                              name,
-                             magic_enum::enum_name(symbol.get_status()));
+                             magic_enum::enum_name(proxy.symbol.get_status()));
             }
             i += 1;
         }

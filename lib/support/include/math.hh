@@ -32,8 +32,8 @@ template <traits::Unsigned U> [[nodiscard]] constexpr auto is_power_of_two(U val
 // The minimum number of bits required to hold the provided value
 template <auto U>
 constexpr auto min_bits = [] -> auto {
-    auto  value = U;
-    usize bits  = 0;
+    auto  value{U};
+    usize bits{0};
     while (value > 0) {
         bits++;
         value >>= 1;

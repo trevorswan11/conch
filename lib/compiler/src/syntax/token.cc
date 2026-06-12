@@ -19,9 +19,9 @@ auto Token::materialize_string() const -> std::string {
     std::string builder{};
     builder.reserve(slice.size());
 
-    auto at_line_start = true;
-    for (usize i = 0; i < slice.size(); ++i) {
-        const auto c = slice[i];
+    auto at_line_start{true};
+    for (usize i{0}; i < slice.size(); ++i) {
+        const auto c{slice[i]};
 
         // Skip a double backslash at start of line to clean the string
         if (at_line_start) {

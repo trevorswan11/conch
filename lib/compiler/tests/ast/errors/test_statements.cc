@@ -210,7 +210,8 @@ TEST_CASE("Non-terminated imports") {
 }
 
 TEST_CASE("Incorrectly terminated jumps") {
-    const auto inputs = std::to_array<std::string_view>({"return", "continue", "break"});
+    using namespace std::string_view_literals;
+    constexpr std::array inputs{"return"sv, "continue"sv, "break"sv};
     for (const auto& input : inputs) {
         helpers::test_parser_fail(input,
                                   syntax::Diagnostic{"Expected token SEMICOLON, found END",

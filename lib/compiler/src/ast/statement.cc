@@ -114,9 +114,9 @@ constexpr auto LEGAL_MODIFIERS{fixed::EnumMap<syntax::TokenType, opt::Option<Dec
         return fmt::format("Exactly one mutability modifier may be used; found {}", mut_count);
     }
 
-    const auto valid_constexpr =
+    const auto valid_constexpr{
         std::popcount(std::to_underlying(modifiers &
-                                         (DeclModifiers::EXTERN | DeclModifiers::CONSTEXPR))) <= 1;
+                                         (DeclModifiers::EXTERN | DeclModifiers::CONSTEXPR))) <= 1};
     if (!valid_constexpr) { return "Extern values cannot be known at compile time"; }
 
     const auto abi_count{std::popcount(
@@ -145,7 +145,7 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
         modifiers |= *current_modifier;
     }
 
-    if (auto msg = validate_modifiers(modifiers)) {
+    if (auto msg{validate_modifiers(modifiers)}) {
         return make_syntax_err(
             std::move(msg).value(), syntax::Error::ILLEGAL_DECL_MODIFIERS, start_token);
     }
@@ -241,11 +241,11 @@ auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavio
     // RBRACE would mean we're at the end of a block and a semicolon is never required
     if (at_block_end) {
         if (parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
-            if (auto err = check_illegal_semicolon()) { return std::move(*err); }
+            if (auto err{check_illegal_semicolon()}) { return std::move(*err); }
         }
     } else if (!has_semicolon) {
         if (parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
-            if (auto err = check_illegal_semicolon()) { return std::move(*err); }
+            if (auto err{check_illegal_semicolon()}) { return std::move(*err); }
         } else if (behavior == Behavior::REQUIRE) {
             TRY(parser.expect_peek(syntax::TokenType::SEMICOLON));
         }

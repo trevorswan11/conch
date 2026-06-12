@@ -25,6 +25,7 @@ Upon PR creation and workflow approval, GitHub actions will run `zig build fmt-c
 - Use the `#pragma once` directive over `#ifdef` include guards
 - `#undef` macros in header files after use when possible
 - All files should include only what they use and should avoid transitive includes wherever possible
+- Almost always use brace initialization unless `=` is required
 - Include groups should be newline-separated and should be ordered as:
 1. The respective header file for the source file (if in a `.cc` file) in quotes
 2. Any standard library includes in angle brackets

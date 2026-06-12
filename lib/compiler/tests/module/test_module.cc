@@ -21,7 +21,7 @@ TEST_CASE("Fetching non-relative file modules") {
 #else
     const std::string_view file{"/fake/foo.gh"};
 #endif
-    const auto actual = helpers::unwrap_err(manager.try_get_file_module(file));
+    const auto actual{helpers::unwrap_err(manager.try_get_file_module(file))};
 
     const mod::Diagnostic expected{
         fmt::format("Requested file '{}' is absolute", file),
@@ -33,7 +33,7 @@ TEST_CASE("Fetching non-relative file modules") {
 TEST_CASE("Fetching missing library modules") {
     mod::MemoryLoader  loader;
     mod::ModuleManager manager{loader};
-    const auto         actual = helpers::unwrap_err(manager.try_get_library_module("foo"));
+    const auto         actual{helpers::unwrap_err(manager.try_get_library_module("foo"))};
 
     const mod::Diagnostic expected{
         "Unknown module 'foo'",
@@ -46,7 +46,7 @@ TEST_CASE("Adding duplicate library module") {
     mod::MemoryLoader  loader;
     mod::ModuleManager manager{loader};
     REQUIRE(manager.add_library_module("foo", "foo.gh"));
-    const auto actual = helpers::unwrap_err(manager.add_library_module("foo", "src/foo.gh"));
+    const auto actual{helpers::unwrap_err(manager.add_library_module("foo", "src/foo.gh"))};
 
     const mod::Diagnostic expected{
         "Attempt to add duplicate module 'foo' from path 'src/foo.gh' which already exists at "

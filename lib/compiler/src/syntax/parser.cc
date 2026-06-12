@@ -59,7 +59,7 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
 
         // Comments are entirely discarded from the tree
         if (!current_token_is(TokenType::COMMENT)) {
-            auto stmt = parse_statement();
+            auto stmt{parse_statement()};
             if (stmt) {
                 ast.add_root(**stmt);
             } else {
@@ -156,7 +156,7 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
         return make_syntax_err(Error::END_OF_TOKEN_STREAM, current_token_);
     }
 
-    const auto& prefix = get_prefix_fn_opt(current_token_.type);
+    const auto prefix{get_prefix_fn_opt(current_token_.type)};
     if (!prefix) {
         return make_syntax_err(fmt::format("No prefix parse function for {}({}) found",
                                            magic_enum::enum_name(current_token_.type),
@@ -164,10 +164,10 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
                                Error::MISSING_PREFIX_PARSER,
                                current_token_);
     }
-    auto lhs_expression = TRY((*prefix)(*this));
+    auto lhs_expression{TRY((*prefix)(*this))};
 
     while (!peek_token_is(TokenType::SEMICOLON) && precedence < get_peek_precedence().first) {
-        const auto& infix = get_poll_infix_fn_opt(peek_token_.type);
+        const auto infix{get_poll_infix_fn_opt(peek_token_.type)};
         if (!infix) { break; }
         advance();
         lhs_expression = TRY((*infix)(*this, lhs_expression));
@@ -178,7 +178,7 @@ auto Parser::parse_expression(Precedence precedence) -> Result<ast::ExpressionHa
 
 [[nodiscard]] auto Parser::parse_restricted_statement(Error error, SemicolonBehavior behavior)
     -> Result<ast::StatementHandle, Diagnostic> {
-    auto clause = TRY(parse_statement(behavior));
+    auto clause{TRY(parse_statement(behavior))};
 
     // The clause can only be a jump, block, or expression statement
     if (!clause.any<ast::ExpressionStatement,

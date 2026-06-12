@@ -35,7 +35,7 @@ template <Predicate Pred>
 [[nodiscard]] constexpr auto trim_left(
     std::string_view str, Pred pred = [](char c) -> bool { return std::isspace(c); }) noexcept
     -> std::string_view {
-    const auto first = std::ranges::find_if_not(str, pred);
+    const auto first{std::ranges::find_if_not(str, pred)};
     return std::string_view{first, static_cast<usize>(str.end() - first)};
 }
 
@@ -48,7 +48,7 @@ template <Predicate Pred>
 template <Predicate Pred>
 [[nodiscard]] constexpr auto trim_right(std::string_view str, Pred pred) noexcept
     -> std::string_view {
-    const auto last = std::ranges::find_if_not(str | std::views::reverse, pred).base();
+    const auto last{std::ranges::find_if_not(str | std::views::reverse, pred).base()};
     return std::string_view{str.begin(), last};
 }
 
@@ -60,7 +60,7 @@ template <Predicate Pred>
 // Trim all characters that fulfill the predicate from both ends of the string
 template <Predicate Pred>
 [[nodiscard]] constexpr auto trim(std::string_view str, Pred pred) noexcept -> std::string_view {
-    const auto ltrim = trim_left(str, pred);
+    const auto ltrim{trim_left(str, pred)};
     return trim_right(ltrim, pred);
 }
 

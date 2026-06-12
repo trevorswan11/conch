@@ -25,7 +25,7 @@ TEST_CASE("Arena pointer stability") {
 
     // First use
     {
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
+        for (usize i{0}; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 
@@ -33,7 +33,7 @@ TEST_CASE("Arena pointer stability") {
     {
         arena.reset();
         foos.clear();
-        for (usize i = 0; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
+        for (usize i{0}; i < 100; ++i) { foos.emplace_back(arena.make<Large>().get()); }
         for (const auto& foo : foos) { CHECK(foo->marker == MARKER); }
     }
 }
@@ -41,13 +41,13 @@ TEST_CASE("Arena pointer stability") {
 TEST_CASE("Arena alignment") {
     mem::Arena arena;
     CHECK(*arena.make<bool>(true));
-    const auto p = arena.make<void*>(nullptr);
+    const auto p{arena.make<void*>(nullptr)};
     CHECK(reinterpret_cast<uptr>(p.get()) % alignof(void*) == 0);
 }
 
 TEST_CASE("Arena array construction") {
     mem::Arena arena;
-    const auto array = arena.make_span<i32>(10);
+    const auto array{arena.make_span<i32>(10)};
     for (const auto& i : array) { CHECK(i == 0); }
 }
 

@@ -145,8 +145,8 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::ForLoopExpression& for_ex
 
         const DefaultCounter::Guard g_loop{in_loop_scope_};
         for (const auto& capture : for_expr.captures) {
-            if (const auto ident =
-                    collecting_.ast.get_as_opt<ast::IdentifierExpression>(capture.payload)) {
+            if (const auto ident{
+                    collecting_.ast.get_as_opt<ast::IdentifierExpression>(capture.payload)}) {
                 try_declare<symbols::ForLoopCapture>(ident->name, capture);
             }
         }
@@ -290,7 +290,7 @@ MAKE_PREFIX_COLLECTOR(UnaryExpression)
 template <traits::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::StructExpression& struct_expr) -> void {
     PROFILE_FUNCTION();
-    const auto scope_idx =
+    const auto scope_idx{
         visit_scopes(TypeKind::STRUCT,
                      IterPair{struct_expr.fields,
                               [this](const ast::StructExpression::Field& field) -> void {
@@ -304,7 +304,7 @@ auto SymbolCollector::visit(ID id, const ast::StructExpression& struct_expr) -> 
                               }},
                      IterPair{struct_expr.members, [this](const ast::MemberHandle& member) -> void {
                                   collect(*member);
-                              }});
+                              }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
@@ -314,7 +314,7 @@ VISITOR_TEMPLATE_INIT(SymbolCollector, visit, const ast::StructExpression&)
 template <traits::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> void {
     PROFILE_FUNCTION();
-    const auto scope_idx =
+    const auto scope_idx{
         visit_scopes(TypeKind::UNION,
                      IterPair{union_expr.fields,
                               [this](const ast::UnionExpression::Field& field) -> void {
@@ -327,7 +327,7 @@ auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> vo
                               }},
                      IterPair{union_expr.members, [this](const ast::MemberHandle& member) -> void {
                                   collect(*member);
-                              }});
+                              }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
@@ -457,9 +457,8 @@ auto SymbolCollector::visit(ast::NodeID, const ast::ExpressionStatement& expr) -
 
 auto SymbolCollector::collect_import_payload(const ast::ImportStatement& import_stmt)
     -> std::pair<std::string_view, Result<gsl::not_null<mod::Module*>, mod::Diagnostic>> {
-    const auto [_, name] = import_stmt.get_name(collecting_.ast);
-    if (const auto string =
-            collecting_.ast.get_as_opt<ast::StringExpression>(import_stmt.payload)) {
+    const auto [_, name]{import_stmt.get_name(collecting_.ast)};
+    if (const auto string{collecting_.ast.get_as_opt<ast::StringExpression>(import_stmt.payload)}) {
         ASSERT(import_stmt.alias, "File import without alias");
         return {name, ctx_.modules.try_get_file_module(string->value, collecting_.parent_path)};
     }
@@ -470,7 +469,7 @@ auto SymbolCollector::collect_import_payload(const ast::ImportStatement& import_
 
 auto SymbolCollector::visit(ast::NodeID id, const ast::ImportStatement& import_stmt) -> void {
     PROFILE_FUNCTION();
-    auto [alias, mod_result] = collect_import_payload(import_stmt);
+    auto [alias, mod_result]{collect_import_payload(import_stmt)};
 
     // Only set the table index if the module exists
     opt::Option<mod::Module&> imported_mod;

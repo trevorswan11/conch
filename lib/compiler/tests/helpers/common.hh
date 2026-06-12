@@ -57,7 +57,7 @@ template <typename E> auto check_errors(gsl::span<const E> errors) {
 
 // Checks if the error list is empty, dumping the list's contents otherwise.
 template <typename DiagList> auto check_errors(const mod::Module& module) {
-    if (const auto diags = module.diagnostics.as_opt<DiagList>()) {
+    if (const auto diags{module.diagnostics.as_opt<DiagList>()}) {
         check_errors<typename DiagList::value_type>(*diags);
     }
 }
@@ -66,7 +66,7 @@ template <typename DiagList> auto check_errors(const mod::Module& module) {
 template <typename E, std::same_as<E>... Es>
 auto check_errors_against(gsl::span<const E> errors, Es&&... expected_errors) {
     const std::array expected_arr{std::forward<Es>(expected_errors)...};
-    constexpr auto   expected_count = sizeof...(Es);
+    constexpr auto   expected_count{sizeof...(Es)};
 
     if constexpr (expected_count == 0) {
         check_errors<E>(errors);
@@ -76,7 +76,7 @@ auto check_errors_against(gsl::span<const E> errors, Es&&... expected_errors) {
             CHECK(errors.size() == expected_count);
         }
 
-        const auto ranges_eq = std::ranges::equal(errors, expected_arr);
+        const auto ranges_eq{std::ranges::equal(errors, expected_arr)};
         if (!ranges_eq) { fmt::println("{}", errors); }
         CHECK(ranges_eq);
     }
@@ -84,7 +84,7 @@ auto check_errors_against(gsl::span<const E> errors, Es&&... expected_errors) {
 
 template <typename DiagList, std::same_as<typename DiagList::value_type>... Es>
 auto check_errors_against(const mod::Module& module, Es&&... expected_errors) {
-    const auto& diags = unwrap(module.diagnostics.as_opt<DiagList>());
+    const auto& diags{unwrap(module.diagnostics.as_opt<DiagList>())};
     check_errors_against<typename DiagList::value_type>(diags,
                                                         std::forward<Es>(expected_errors)...);
 }
@@ -99,12 +99,12 @@ template <typename T, typename... Ts> auto make_vector(Ts&&... es) -> std::vecto
 // Calculates the array's combinations with itself, given by:
 // [A, B, C] -> [[A, B], [A, C], [B, B]]
 template <typename T, usize N> constexpr auto combinations(std::array<T, N> input) {
-    constexpr auto                    size = (N * (N - 1)) / 2;
+    constexpr auto                    size{(N * (N - 1)) / 2};
     std::array<std::pair<T, T>, size> results;
     if (input.size() < 2) { return results; }
 
-    for (usize i = 0, idx = 0; i < input.size() - 1; ++i) {
-        for (usize j = i + 1; j < input.size(); ++j) { results[idx++] = {input[i], input[j]}; }
+    for (usize i{0}, idx{0}; i < input.size() - 1; ++i) {
+        for (usize j{i + 1}; j < input.size(); ++j) { results[idx++] = {input[i], input[j]}; }
     }
     return results;
 }

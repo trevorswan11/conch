@@ -33,7 +33,7 @@ TEST_CASE("Option traits") {
 }
 
 TEST_CASE("Ref basic construction") {
-    i32                         val = 42;
+    i32                         val{42};
     const opt::detail::Ref<i32> opt{val};
 
     CHECK(opt.has_value());
@@ -53,7 +53,7 @@ TEST_CASE("Ref null use & access") {
 
 TEST_CASE("Ref conversions") {
     SECTION("Non-const -> const") {
-        i32                               val = 42;
+        i32                               val{42};
         const opt::detail::Ref<i32>       mut_opt{val};
         const opt::detail::Ref<const i32> const_opt{mut_opt};
         CHECK(const_opt.has_value());
@@ -69,15 +69,15 @@ TEST_CASE("Ref conversions") {
     }
 
     SECTION("To standard optional") {
-        i32                         val = 42;
+        i32                         val{42};
         const opt::detail::Ref<i32> ref_opt{val};
-        const auto                  std_opt = ref_opt.materialize();
+        const auto                  std_opt{ref_opt.materialize()};
         CHECK(std_opt == 42);
     }
 }
 
 TEST_CASE("Ref reassignment") {
-    i32                   a = 1, b = 2;
+    i32                   a{1}, b{2};
     opt::detail::Ref<i32> opt{a};
     CHECK(*opt == 1);
 
@@ -89,7 +89,7 @@ TEST_CASE("Ref reassignment") {
 }
 
 TEST_CASE("Ref mutability") {
-    i32                         val = 42;
+    i32                         val{42};
     const opt::detail::Ref<i32> opt{val};
     CHECK(*opt == 42);
 
@@ -100,7 +100,7 @@ TEST_CASE("Ref mutability") {
 }
 
 TEST_CASE("Safe optional default equality") {
-    i32                     x = 10, y = 10, z = 20;
+    i32                     x{10}, y{10}, z{20};
     const opt::Option<i32&> opt_x{x};
     const opt::Option<i32&> opt_y{y};
     const opt::Option<i32&> opt_z{z};
@@ -126,10 +126,10 @@ TEST_CASE("Safe optional custom equality") {
 }
 
 TEST_CASE("Ref transform on value") {
-    i32               i = 9;
+    i32               i{9};
     opt::Option<i32&> opt_i{i};
 
-    const auto res = opt_i.transform([](const i32& i) -> i32 { return i + 2; });
+    const auto res{opt_i.transform([](const i32& i) -> i32 { return i + 2; })};
     REQUIRE(res);
     CHECK(*res == 11);
 }
@@ -137,7 +137,7 @@ TEST_CASE("Ref transform on value") {
 TEST_CASE("Ref transform on none") {
     opt::Option<i32&> opt_i{};
 
-    const auto res = opt_i.transform([](const i32& i) -> i32 { return i + 2; });
+    const auto res{opt_i.transform([](const i32& i) -> i32 { return i + 2; })};
     CHECK_FALSE(res);
 }
 
@@ -217,14 +217,14 @@ TEST_CASE("Optional enum wrapper") {
 
 TEST_CASE("Enum transform on value") {
     opt::Option<OptionableEnum> e{OptionableEnum::A};
-    const auto res = e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; });
+    const auto res{e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; })};
     REQUIRE(res);
     CHECK(*res == OptionableEnum::B);
 }
 
 TEST_CASE("Enum transform on none") {
     opt::Option<OptionableEnum> e{};
-    const auto res = e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; });
+    const auto res{e.transform([](const OptionableEnum&) -> auto { return OptionableEnum::B; })};
     CHECK_FALSE(res);
 }
 

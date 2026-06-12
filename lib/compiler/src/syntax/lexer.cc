@@ -25,11 +25,11 @@ auto Lexer::advance() noexcept -> Token {
     skip_whitespace();
 
     Token      token{{}, {}, line_no_, col_no_};
-    const auto maybe_operator = read_operator();
+    const auto maybe_operator{read_operator()};
 
     if (maybe_operator) {
         if (maybe_operator->type == TokenType::END) { return *maybe_operator; }
-        for (usize i = 0; i < maybe_operator->slice.size(); ++i) { read_character(); }
+        for (usize i{0}; i < maybe_operator->slice.size(); ++i) { read_character(); }
 
         if (maybe_operator->type == TokenType::COMMENT) { return read_comment(); }
         if (maybe_operator->type == TokenType::MULTILINE_STRING) { return read_multiline_string(); }
@@ -37,7 +37,7 @@ auto Lexer::advance() noexcept -> Token {
         return *maybe_operator;
     }
 
-    const auto maybe_misc_token_type = token_type::misc_from_char(current_byte_);
+    const auto maybe_misc_token_type{token_type::misc_from_char(current_byte_)};
     if (maybe_misc_token_type) {
         token.slice = string::substr(input_, pos_, 1);
         token.type  = *maybe_misc_token_type;
@@ -106,17 +106,17 @@ auto Lexer::read_character(u8 n) noexcept -> void {
 }
 
 auto Lexer::read_operator() const noexcept -> opt::Option<Token> {
-    const auto start_line = line_no_;
-    const auto start_col  = col_no_;
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
 
     if (current_byte_ == '\0') { return Token{TokenType::END, {}, start_line, start_col}; }
 
-    usize max_len      = 0;
-    auto  matched_type = TokenType::ILLEGAL;
+    usize max_len{0};
+    auto  matched_type{TokenType::ILLEGAL};
 
     // Try extending from length 1 up to the max operator size
-    for (usize len = 1; len <= max_operator_length() && pos_ + len <= input_.size(); ++len) {
-        if (const auto op = get_operator_opt(string::substr(input_, pos_, len))) {
+    for (usize len{1}; len <= max_operator_length() && pos_ + len <= input_.size(); ++len) {
+        if (const auto op{get_operator_opt(string::substr(input_, pos_, len))}) {
             matched_type = *op;
             max_len      = len;
         }
@@ -128,9 +128,9 @@ auto Lexer::read_operator() const noexcept -> opt::Option<Token> {
 }
 
 auto Lexer::read_ident(bool builtin) noexcept -> std::string_view {
-    const auto start = pos_;
+    const auto start{pos_};
 
-    auto passed_first = false;
+    auto passed_first{false};
     while ((builtin && !passed_first && current_byte_ == '@') || std::isalpha(current_byte_) ||
            current_byte_ == '_' || (passed_first && std::isdigit(current_byte_))) {
         read_character();
@@ -164,16 +164,16 @@ constexpr auto suffix_has(NumberSuffix suffix, NumberSuffix flag) noexcept -> bo
 } // namespace
 
 auto Lexer::read_number() noexcept -> Token {
-    const auto start           = pos_;
-    const auto start_line      = line_no_;
-    const auto start_col       = col_no_;
-    auto       passed_decimal  = false;
-    auto       passed_exponent = false;
+    const auto start{pos_};
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
+    auto       passed_decimal{false};
+    auto       passed_exponent{false};
     auto       base{Base::DECIMAL};
 
     // Detect numeric prefix
     if (current_byte_ == '0' && peek_pos_ < input_.size()) {
-        const auto next = input_[peek_pos_];
+        const auto next{input_[peek_pos_]};
         if (next == 'x' || next == 'X') {
             base = Base::HEXADECIMAL;
             read_character(2);
@@ -187,16 +187,16 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     // Consume digits and handle dot/range rules
-    auto last_was_digit = false;
+    auto last_was_digit{false};
     while (true) {
-        const auto c = current_byte_;
+        const auto c{current_byte_};
 
         // Exponent handling defaults to floats for simplicity
         if (base == Base::DECIMAL && !passed_exponent && (c == 'e' || c == 'E')) {
-            auto p = peek_pos_;
+            auto p{peek_pos_};
             if (p >= input_.size()) { break; }
 
-            auto next = input_[p];
+            auto next{input_[p]};
             if (next == '+' || next == '-') {
                 p += 1;
                 if (p >= input_.size()) { break; }
@@ -255,9 +255,9 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     NumberSuffix suffix{};
-    bool         forced_float = false;
+    auto         forced_float{false};
     if (pos_ < input_.size()) {
-        auto c = current_byte_;
+        auto c{current_byte_};
         if (c == 'f' || c == 'F') {
             forced_float = true;
             read_character();
@@ -279,7 +279,7 @@ auto Lexer::read_number() noexcept -> Token {
     }
 
     // Total validation
-    const auto length = pos_ - start;
+    const auto length{pos_ - start};
     auto       type{TokenType::ILLEGAL};
     if (length == 0) { return {type, string::substr(input_, start, 1), start_line, start_col}; }
 
@@ -299,7 +299,7 @@ auto Lexer::read_number() noexcept -> Token {
         type = forced_float ? TokenType::F32 : TokenType::F64;
     } else {
         // Use an offset to increment the actual token type based on its base and width
-        auto offset = base_idx(base);
+        auto offset{base_idx(base)};
         if (std::to_underlying(suffix) == 0) {
             type = TokenType::INT_2;
         } else {
@@ -339,9 +339,9 @@ auto Lexer::read_escape() noexcept -> char {
 }
 
 auto Lexer::read_string() noexcept -> Token {
-    const auto start      = pos_;
-    const auto start_line = line_no_;
-    const auto start_col  = col_no_;
+    const auto start{pos_};
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
     read_character();
 
     while (current_byte_ != '"' && current_byte_ != '\0') {
@@ -364,10 +364,10 @@ auto Lexer::read_string() noexcept -> Token {
 
 // Reads a multiline string from the token, assuming the '\\' operator has been consumed
 auto Lexer::read_multiline_string() noexcept -> Token {
-    const auto start      = pos_;
-    const auto start_line = line_no_;
-    const auto start_col  = col_no_;
-    auto       end_pos    = start;
+    const auto start{pos_};
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
+    auto       end_pos{start};
 
     while (true) {
         // Consume characters until newline or EOF
@@ -376,12 +376,12 @@ auto Lexer::read_multiline_string() noexcept -> Token {
         }
 
         // Peek positions
-        usize peek_pos = peek_pos_;
+        usize peek_pos{peek_pos_};
         if (current_byte_ == '\r' && peek_pos < input_.size() && input_[peek_pos] == '\n') {
             peek_pos += 1;
         }
 
-        bool has_continuation = false;
+        auto has_continuation{false};
         if ((current_byte_ == '\n' || current_byte_ == '\r') && peek_pos + 1 < input_.size() &&
             input_[peek_pos] == '\\' && input_[peek_pos + 1] == '\\') {
             has_continuation = true;
@@ -415,9 +415,9 @@ auto Lexer::read_multiline_string() noexcept -> Token {
 //
 // Assumes that the surrounding single quotes have not been consumed.
 auto Lexer::read_byte_literal() noexcept -> Token {
-    const auto start      = pos_;
-    const auto start_line = line_no_;
-    const auto start_col  = col_no_;
+    const auto start{pos_};
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
     read_character();
 
     // Consume one logical character
@@ -433,7 +433,7 @@ auto Lexer::read_byte_literal() noexcept -> Token {
 
     // The next character MUST be closing ', otherwise illegally consume like a comment
     if (current_byte_ != '\'') {
-        auto illegal_end = pos_;
+        auto illegal_end{pos_};
         while (current_byte_ != '\'' && current_byte_ != '\n' && current_byte_ != '\r' &&
                current_byte_ != '\0') {
             read_character();
@@ -459,9 +459,9 @@ auto Lexer::read_byte_literal() noexcept -> Token {
 
 // Reads a comment from the token, assuming the '//' operator has been consumed
 auto Lexer::read_comment() noexcept -> Token {
-    const auto start      = pos_;
-    const auto start_line = line_no_;
-    const auto start_col  = col_no_;
+    const auto start{pos_};
+    const auto start_line{line_no_};
+    const auto start_col{col_no_};
     while (current_byte_ != '\n' && current_byte_ != '\0') { read_character(); }
 
     return {TokenType::COMMENT, string::substr(input_, start, pos_ - start), start_line, start_col};

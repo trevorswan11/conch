@@ -42,7 +42,7 @@ auto format_module_diagnostic(std::ostream&                        os, // NOLINT
     if (!diag.location) { return os; }
 
     // Diagnostic error messages can include the location
-    const auto [line, caret] = module->source.get_diagnostic_strings(*diag.location);
+    const auto [line, caret]{module->source.get_diagnostic_strings(*diag.location)};
     fmt::print(os, "\n    {}", line);
     if (caret) { os << fmt::format(tty ? style::GREEN : style::BASE, "\n    {}", *caret); }
     return os;
@@ -96,7 +96,7 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
     const auto normalized{loader_.normalize(path)};
     if (!normalized) { return make_mod_err(normalized.error()); }
 
-    if (auto it = module_lut_.find(name); it != module_lut_.end()) {
+    if (auto it{module_lut_.find(name)}; it != module_lut_.end()) {
         if (it->second == normalized) { return {}; }
         return make_mod_err(fmt::format("Attempt to add duplicate module '{}' from path '{}' "
                                         "which already exists at path '{}'",
@@ -114,7 +114,7 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     PROFILE_FUNCTION();
-    if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
+    if (auto it{modules_.find(path)}; it != modules_.end()) { return it->second.get(); }
     auto source{TRY(loader_.load(path))};
 
     auto mod{mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)})};

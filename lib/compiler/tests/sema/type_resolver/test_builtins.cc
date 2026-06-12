@@ -25,25 +25,25 @@ auto test_builtin_resolve(const syntax::Builtin& builtin,
                           std::string_view       mock_params,
                           auto&&                 expected_type_fn,
                           std::string_view       prelude = "") -> void {
-    auto [ctx, idx] = helpers::resolve_and_check(
-        fmt::format("{}const foo := {}({});", prelude, builtin.name, mock_params));
+    auto [ctx, idx]{helpers::resolve_and_check(
+        fmt::format("{}const foo := {}({});", prelude, builtin.name, mock_params))};
 
     // Quickly check to make sure the prelude table has the builtin
-    const auto [builtin_sym, builtin_sym_data] = ctx->get_symbol<syms::Builtin>(
-        builtin.name, helpers::unwrap(ctx->analyzer.get_prelude_index_opt()));
+    const auto [builtin_sym, builtin_sym_data]{ctx->get_symbol<syms::Builtin>(
+        builtin.name, helpers::unwrap(ctx->analyzer.get_prelude_index_opt()))};
     CHECK(builtin_sym.get_kind_opt() == sema::SymbolKind::CALLABLE);
-    const auto& builtin_type = builtin_sym_data.get_type();
+    const auto& builtin_type{builtin_sym_data.get_type()};
     CHECK(builtin_type.get_data().as_opt<sema::types::BuiltinFunction>());
 
     // Now validate the actual declaration and call
     const sema::Type& expected_type = expected_type_fn(*ctx);
-    const auto [decl_sym, decl_sym_data, decl_node_data, decl_type] =
-        ctx->get_ast_type_sym_info<syms::Node, ast::DeclStatement>("foo", idx);
+    const auto [decl_sym, decl_sym_data, decl_node_data, decl_type]{
+        ctx->get_ast_type_sym_info<syms::Node, ast::DeclStatement>("foo", idx)};
     CHECK(expected_type == decl_type);
 
     const auto& call =
         helpers::unwrap(ctx->root_mod.ast.get_as_opt<ast::CallExpression>(*decl_node_data.value));
-    const auto& call_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(call.function));
+    const auto& call_type{helpers::unwrap(ctx->root_mod.get_sema_type_opt(call.function))};
     CHECK(builtin_type == call_type);
 }
 
@@ -96,17 +96,17 @@ TEST_CASE("Builtin type introspection") {
 }
 
 TEST_CASE("Builtin this introspection") {
-    auto [ctx, idx]              = helpers::resolve_and_check("struct { using A = @this(); };");
-    const auto [sym, data, type] = ctx->get_type_sym_info<syms::Node>("A", idx + 1);
+    auto [ctx, idx]{helpers::resolve_and_check("struct { using A = @this(); };")};
+    const auto [sym, data, type]{ctx->get_type_sym_info<syms::Node>("A", idx + 1)};
     CHECK(type == ctx->get_type(sema::TypeKind::STRUCT, idx + 1));
 }
 
 TEST_CASE("Deferred return type from typeOf") {
-    auto [ctx, idx] =
-        helpers::resolve_and_check("const a := fn(): type {}; using B = @typeOf(a());");
+    auto [ctx,
+          idx]{helpers::resolve_and_check("const a := fn(): type {}; using B = @typeOf(a());")};
 
-    const auto [sym, sym_data, node_data, type] =
-        ctx->get_ast_type_sym_info<syms::Node, ast::UsingStatement>("B", idx);
+    const auto [sym, sym_data, node_data, type]{
+        ctx->get_ast_type_sym_info<syms::Node, ast::UsingStatement>("B", idx)};
 
     const auto& call =
         helpers::unwrap(ctx->root_mod.ast.get_as_opt<ast::CallExpression>(node_data.explicit_type));

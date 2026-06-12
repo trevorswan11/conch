@@ -44,7 +44,7 @@ class Arena {
     template <traits::TriviallyDestructible T>
     [[nodiscard]] auto make_span(usize count) -> gsl::span<T> {
         static_assert(sizeof(T) <= BLOCK_SIZE, "Block size cannot fit requested type");
-        const auto size = sizeof(T) * count;
+        const auto size{sizeof(T) * count};
         ASSERT(size <= BLOCK_SIZE, "Block size cannot fit requested type count");
         void* mem = alloc(size, alignof(T));
         return gsl::span{new (mem) T[count]{}, count};

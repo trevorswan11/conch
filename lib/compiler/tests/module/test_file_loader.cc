@@ -13,17 +13,17 @@ constexpr std::string_view expected_contents{"This is ghoti-ful\n"};
 
 TEST_CASE("Reading file off of disk correctly") {
     mod::FileLoader loader;
-    const auto normalized = helpers::unwrap(loader.normalize("lib/compiler/tests/module/mock.inc"));
+    const auto normalized{helpers::unwrap(loader.normalize("lib/compiler/tests/module/mock.inc"))};
 
-    const auto contents = helpers::unwrap(loader.load(normalized));
+    const auto contents{helpers::unwrap(loader.load(normalized))};
     CHECK(contents.size() == expected_contents.size());
     CHECK(contents == expected_contents);
 }
 
 TEST_CASE("Path load on file not on disk") {
     mod::FileLoader loader;
-    const auto normalized = helpers::unwrap(loader.normalize("lib/compiler/tests/module/mock"));
-    const auto actual     = helpers::unwrap_err(loader.load(normalized));
+    const auto      normalized{helpers::unwrap(loader.normalize("lib/compiler/tests/module/mock"))};
+    const auto      actual{helpers::unwrap_err(loader.load(normalized))};
 
     const mod::Diagnostic expected{fmt::format("Path '{}' does not exist", normalized.string()),
                                    mod::Error::PATH_DOES_NOT_EXIST};
@@ -32,8 +32,8 @@ TEST_CASE("Path load on file not on disk") {
 
 TEST_CASE("Path load on directory on disk") {
     mod::FileLoader loader;
-    const auto      normalized = helpers::unwrap(loader.normalize("lib/compiler/tests/module"));
-    const auto      actual     = helpers::unwrap_err(loader.load(normalized));
+    const auto      normalized{helpers::unwrap(loader.normalize("lib/compiler/tests/module"))};
+    const auto      actual{helpers::unwrap_err(loader.load(normalized))};
 
     const mod::Diagnostic expected{fmt::format("Path '{}' is not a file", normalized.string()),
                                    mod::Error::PATH_IS_NOT_FILE};

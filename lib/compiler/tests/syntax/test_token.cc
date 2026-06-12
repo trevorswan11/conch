@@ -15,7 +15,7 @@ namespace {
 auto test_token_promotion(std::string_view input, TokenType type, std::string_view expected)
     -> void {
     const syntax::Token tok{type, input, 0, 0};
-    const auto          promoted = tok.materialize_string();
+    const auto          promoted{tok.materialize_string()};
     CHECK(promoted == expected);
 }
 

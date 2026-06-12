@@ -53,7 +53,7 @@ auto type_kind_display_name(TypeKind kind) noexcept -> std::string_view {
 }
 
 auto TypePool::get_or_emplace(const types::Key& key) -> gsl::not_null<Type*> {
-    if (auto it = cache_.find(key); it != cache_.end()) { return it->second; }
+    if (auto it{cache_.find(key)}; it != cache_.end()) { return it->second; }
     auto* type = arena_.make<Type>(key).get();
     cache_.emplace(key, type);
     return type;
@@ -64,8 +64,8 @@ auto TypePool::get_many_unsafe(usize count) noexcept -> gsl::span<Type*> {
 }
 
 auto TypePool::get_many(usize count, Type& common_type) noexcept -> gsl::span<Type*> {
-    auto types = get_many_unsafe(count);
-    for (usize i = 0; i < count; ++i) { types[i] = &common_type; }
+    auto types{get_many_unsafe(count)};
+    for (usize i{0}; i < count; ++i) { types[i] = &common_type; }
     return types;
 }
 
@@ -73,11 +73,11 @@ namespace {
 
 auto strip_modifiers(TypePool& pool, const Type& old_type, types::MutabilityModifiers mut)
     -> gsl::not_null<Type*> {
-    auto key = old_type.get_key();
+    auto key{old_type.get_key()};
     key.set_mut(key.get_mut() & ~mut);
 
     // Resolve here since the type information doesn't contain modifier information
-    auto new_type = pool[key];
+    auto new_type{pool[key]};
     new_type->resolve_if<Type::Data>(old_type.get_data());
     return new_type;
 }

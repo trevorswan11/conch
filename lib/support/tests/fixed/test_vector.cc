@@ -31,8 +31,8 @@ TEST_CASE("StaticVector basic usage") {
 
 TEST_CASE("StaticVector iteration") {
     fixed::Vector<i32, 5> vec{1, 2, 3};
-    i32                   count = 0;
-    i32                   sum   = 0;
+    i32                   count{0};
+    i32                   sum{0};
     for (i32 val : vec) {
         sum += val;
         count++;
@@ -65,7 +65,7 @@ TEST_CASE("StaticVector with non-trivial type") {
 
     SECTION("NonNull usage") {
         fixed::Vector<gsl::not_null<i32*>, 2> ptrs;
-        i32                                   v = 22;
+        i32                                   v{22};
         ptrs.emplace_back(&v);
         CHECK(ptrs[0] == &v);
         CHECK(*ptrs[0] == v);
@@ -80,7 +80,7 @@ TEST_CASE("StaticVector span conversion") {
 }
 
 TEST_CASE("Vector constexpr operations") {
-    constexpr auto vec = fixed::Vector<i32, 4>{1, 2, 3};
+    constexpr auto vec{fixed::Vector<i32, 4>{1, 2, 3}};
     STATIC_CHECK(vec.size() == 3);
     STATIC_CHECK(vec[0] == 1);
     STATIC_CHECK(vec[1] == 2);
@@ -161,9 +161,9 @@ TEST_CASE("StaticVector ranges compatibility") {
     STATIC_REQUIRE(std::forward_iterator<fixed::Vector<gsl::not_null<i32*>, 4>::iterator>);
     STATIC_REQUIRE(std::forward_iterator<fixed::Vector<gsl::not_null<i32*>, 4>::const_iterator>);
 
-    constexpr auto vec        = fixed::Vector<i32, 4>{1, 2, 3};
-    i32            sum        = 0;
-    usize          iter_count = 0;
+    constexpr auto vec{fixed::Vector<i32, 4>{1, 2, 3}};
+    i32            sum{0};
+    usize          iter_count{0};
     std::ranges::for_each(vec, [&sum, &iter_count](i32 val) -> void {
         sum += val;
         iter_count++;

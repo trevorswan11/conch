@@ -10,10 +10,10 @@ namespace ghoti::mem {
 auto Arena::alloc(usize size, usize align) -> void* {
     PROFILE_FUNCTION();
     if (current_) {
-        auto        raw_addr    = reinterpret_cast<uptr>(current_ + 1);
-        uptr        current_ptr = raw_addr + offset_;
-        uptr        aligned_ptr = (current_ptr + (align - 1)) & ~(align - 1);
-        const usize total_size  = aligned_ptr - raw_addr + size;
+        auto        raw_addr{reinterpret_cast<uptr>(current_ + 1)};
+        uptr        current_ptr{raw_addr + offset_};
+        uptr        aligned_ptr{(current_ptr + (align - 1)) & ~(align - 1)};
+        const usize total_size{aligned_ptr - raw_addr + size};
 
         if (total_size <= BLOCK_SIZE) {
             offset_ = total_size;

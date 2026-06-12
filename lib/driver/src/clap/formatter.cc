@@ -16,7 +16,7 @@ namespace ghoti::clap {
 
 auto Fmt::make_subcommands(const CLI::App* app, CLI::AppFormatMode) const -> std::string {
     PROFILE_FUNCTION();
-    auto subcmds = app->get_subcommands({});
+    auto subcmds{app->get_subcommands({})};
     if (subcmds.empty()) { return ""; }
 
     std::stringstream ss;
@@ -51,7 +51,7 @@ auto Fmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mo
     std::stringstream ss;
 
     // Trim the second newline (final character) to prevent weird formatting
-    const auto usage = make_usage(app, name);
+    const auto usage{make_usage(app, name)};
     ss << fmt::format(style::LIGHT_GREEN_BOLD, "info");
     fmt::print(ss, ": {}", string::substr(usage, 0, usage.size() - 1));
 

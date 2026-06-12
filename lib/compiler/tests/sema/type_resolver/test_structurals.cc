@@ -58,7 +58,7 @@ auto check_access_decl(helpers::SemaTestContext& ctx,
                        usize                     idx,
                        std::string_view          symbol_name,
                        const sema::Type&         expected_type) -> void {
-    const auto [sym, data, type] = ctx.get_type_sym_info<syms::Node>(symbol_name, idx);
+    const auto [sym, data, type]{ctx.get_type_sym_info<syms::Node>(symbol_name, idx)};
     CHECK(expected_type == type);
 }
 
@@ -73,20 +73,20 @@ auto test_access_fail(std::string_view input, Ds&&... diagnostics) -> void {
 } // namespace
 
 TEST_CASE("Free function resolved access") {
-    auto [ctx, idx] = setup_access_test("const a := other::foo('a');");
+    auto [ctx, idx]{setup_access_test("const a := other::foo('a');")};
     check_access_decl(*ctx, idx, "a", u8_slice_type(*ctx));
 }
 
 TEST_CASE("Enum resolved access") {
-    auto [ctx, idx] = setup_access_test(R"(
+    auto [ctx, idx]{setup_access_test(R"(
 var e1: other::BarE = .A;
 const e2 := other::BarE.A;
 const e3 := e1.bar('a');
 
 const func := other::BarE.bar;
-)");
+)")};
 
-    const auto& enum_type = ctx->get_type(sema::TypeKind::ENUM, 3);
+    const auto& enum_type{ctx->get_type(sema::TypeKind::ENUM, 3)};
     check_access_decl(*ctx, idx, "e1", enum_type);
     check_access_decl(*ctx, idx, "e2", enum_type);
     check_access_decl(*ctx, idx, "e3", u8_slice_type(*ctx));
@@ -94,15 +94,15 @@ const func := other::BarE.bar;
 }
 
 TEST_CASE("Union resolved access") {
-    auto [ctx, idx] = setup_access_test(R"(
+    auto [ctx, idx]{setup_access_test(R"(
 var u1: other::BarU = .{ .A = 1, };
 const u2 := other::BarU{ .A = 1, };
 const u3 := u1.bar('a');
 
 const func := other::BarU.bar;
-)");
+)")};
 
-    const auto& union_type = ctx->get_type(sema::TypeKind::UNION, 5);
+    const auto& union_type{ctx->get_type(sema::TypeKind::UNION, 5)};
     check_access_decl(*ctx, idx, "u1", union_type);
     check_access_decl(*ctx, idx, "u2", union_type);
     check_access_decl(*ctx, idx, "u3", u8_slice_type(*ctx));
@@ -110,7 +110,7 @@ const func := other::BarU.bar;
 }
 
 TEST_CASE("Struct resolved access") {
-    auto [ctx, idx] = setup_access_test(R"(
+    auto [ctx, idx]{setup_access_test(R"(
 var s1: other::BarS = .{ .A = 42, };
 const s2 := other::BarS{ .A = 1, };
 const s3 := s1.baz;
@@ -118,10 +118,10 @@ const s4 := s1.bar('a');
 
 const member := other::BarS.baz;
 const func := other::BarS.bar;
-)");
+)")};
 
-    const auto& struct_type = ctx->get_type(sema::TypeKind::STRUCT, 7);
-    const auto& member_type = ctx->get_type(sema::TypeKind::I32);
+    const auto& struct_type{ctx->get_type(sema::TypeKind::STRUCT, 7)};
+    const auto& member_type{ctx->get_type(sema::TypeKind::I32)};
 
     check_access_decl(*ctx, idx, "s1", struct_type);
     check_access_decl(*ctx, idx, "s2", struct_type);
@@ -244,13 +244,13 @@ TEST_CASE("Illegal circular module-based access resolution") {
     constexpr std::string_view b_gh{
         R"(import "a.gh" as a; pub const B := struct { field: a::A, };)"};
 
-    auto [ctx, idx] =
+    auto [ctx, idx]{
         helpers::resolve(R"(import "a.gh" as a; using A = a::A;)",
                          helpers::make_vector<MockFile>(MockFile{.path = "a.gh", .source = a_gh},
-                                                        MockFile{.path = "b.gh", .source = b_gh}));
-    auto& test_module = *helpers::unwrap(ctx->manager.try_get_file_module("test.gh"));
-    auto& a_module    = *helpers::unwrap(ctx->manager.try_get_file_module("a.gh"));
-    auto& b_module    = *helpers::unwrap(ctx->manager.try_get_file_module("b.gh"));
+                                                        MockFile{.path = "b.gh", .source = b_gh}))};
+    auto& test_module{*helpers::unwrap(ctx->manager.try_get_file_module("test.gh"))};
+    auto& a_module{*helpers::unwrap(ctx->manager.try_get_file_module("a.gh"))};
+    auto& b_module{*helpers::unwrap(ctx->manager.try_get_file_module("b.gh"))};
 
     helpers::check_errors_against<sema::Diagnostics>(
         b_module,
@@ -263,7 +263,7 @@ TEST_CASE("Illegal circular module-based access resolution") {
     ctx->check_poisoned<syms::Node>("B", 2, b_module);
 
     // Errors dont get bubbled up to simplify handling, so only one module is poisoned
-    const auto [sym, _] = ctx->get_symbol<syms::Node>("b", 1);
+    const auto [sym, _]{ctx->get_symbol<syms::Node>("b", 1)};
     ctx->check_poisoned(sym);
 }
 

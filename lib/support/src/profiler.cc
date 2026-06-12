@@ -166,10 +166,10 @@ Profiler::~Profiler() {
 Timer::Timer(const char* name) : name_{name}, start_{chrono::steady_clock::now()} {}
 
 Timer::~Timer() {
-    auto           end = to_int_micros(chrono::steady_clock::now());
+    auto           end{to_int_micros(chrono::steady_clock::now())};
     micros<double> high_res_start{start_.time_since_epoch()};
-    auto           start   = to_int_micros(start_);
-    auto           elapsed = end - start;
+    auto           start{to_int_micros(start_)};
+    auto           elapsed{end - start};
     write_scope(name_, high_res_start, elapsed, std::this_thread::get_id());
 }
 

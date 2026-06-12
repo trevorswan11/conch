@@ -24,13 +24,13 @@ namespace {
 auto test_lexer(std::string_view input, std::initializer_list<ExpectedLexeme> expecteds) -> void {
     syntax::Lexer l{input};
     for (const auto& [expected_tok, expected_slice] : expecteds) {
-        const auto token = l.advance();
+        const auto token{l.advance()};
         CHECK(expected_tok == token.type);
         CHECK(expected_slice == token.slice);
     }
 
     // Should be true regardless of caller putting END in their list
-    const auto& end_tok = l.advance();
+    const auto& end_tok{l.advance()};
     CHECK(end_tok.type == TokenType::END);
     CHECK(end_tok.slice == "");
 }
@@ -39,10 +39,10 @@ auto test_lexer(std::string_view input, std::initializer_list<ExpectedLexeme> ex
 
 TEST_CASE("Lexing illegal characters") {
     syntax::Lexer l{"月😭🎶"};
-    const auto    tokens = l.consume();
+    const auto    tokens{l.consume()};
 
-    for (usize i = 0; i < tokens.size(); ++i) {
-        const auto& token = tokens[i];
+    for (usize i{0}; i < tokens.size(); ++i) {
+        const auto& token{tokens[i]};
         if (i == tokens.size() - 1) {
             CHECK(token.type == TokenType::END);
             break;
@@ -54,7 +54,7 @@ TEST_CASE("Lexing illegal characters") {
 TEST_CASE("Lexer over-consumption") {
     syntax::Lexer l{"Lexer"};
     CHECK(l.consume().size() == 2);
-    for (usize i = 0; i < 100; ++i) { CHECK(l.advance().type == TokenType::END); }
+    for (usize i{0}; i < 100; ++i) { CHECK(l.advance().type == TokenType::END); }
 }
 
 TEST_CASE("Lexing symbols") {
@@ -373,9 +373,9 @@ TEST_CASE("Lexing pointers and references") {
 }
 
 TEST_CASE("Lexing compiler builtins & Lexer resetting") {
-    constexpr auto expecteds = std::views::transform(
+    constexpr auto expecteds{std::views::transform(
         syntax::builtins::ALL_TOKEN_TYPES,
-        [](const auto& tt) -> syntax::Builtin { return {*syntax::get_builtin_opt(tt), tt}; });
+        [](const auto& tt) -> syntax::Builtin { return {*syntax::get_builtin_opt(tt), tt}; })};
 
     std::string input;
     std::ranges::for_each(expecteds, [&input](const auto& lexeme) -> void {
@@ -385,14 +385,14 @@ TEST_CASE("Lexing compiler builtins & Lexer resetting") {
     syntax::Lexer l{input};
 
     syntax::Lexer l_accumulator{input};
-    const auto    accumulated_tokens = l_accumulator.consume();
+    const auto    accumulated_tokens{l_accumulator.consume()};
     l_accumulator.reset(input);
-    const auto reset_acc = l_accumulator.consume();
+    const auto reset_acc{l_accumulator.consume()};
 
-    for (usize i = 0; const auto& [expected_slice, expected_tt] : expecteds) {
-        const auto  token             = l.advance();
-        const auto& accumulated_token = accumulated_tokens[i];
-        const auto& reset             = reset_acc[i];
+    for (usize i{0}; const auto& [expected_slice, expected_tt] : expecteds) {
+        const auto  token{l.advance()};
+        const auto& accumulated_token{accumulated_tokens[i]};
+        const auto& reset{reset_acc[i]};
 
         CHECK(expected_tt == token.type);
         CHECK(expected_tt == accumulated_token.type);
@@ -406,7 +406,7 @@ TEST_CASE("Lexing compiler builtins & Lexer resetting") {
 TEST_CASE("Lexing illegal builtin") {
     const std::string_view input{"@run"};
     syntax::Lexer          l{input};
-    const auto             illegal = l.advance();
+    const auto             illegal{l.advance()};
     CHECK(TokenType::ILLEGAL == illegal.type);
     CHECK(input == illegal.slice);
 }

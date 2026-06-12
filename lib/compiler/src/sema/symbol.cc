@@ -20,7 +20,7 @@
 namespace ghoti::sema {
 
 auto symbols::Label::from(Symbol& symbol) -> Label& {
-    auto label_data = symbol.get_data().as_opt<symbols::Label>();
+    auto label_data{symbol.get_data().as_opt<symbols::Label>()};
     ASSERT(label_data, "Label is not linked to a symbolic label");
     return *label_data;
 }
@@ -82,7 +82,7 @@ auto SymbolTable::insert(std::string_view name, const mod::Module& module, const
     -> Result<void, Diagnostic> {
     // Reserved identifier use is impossible due to a parser invariant
     PROFILE_FUNCTION();
-    auto [it, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
+    auto [it, inserted]{symbols_.try_emplace(name, Symbol{name, data}, symbols_.size())};
 
     // Check for redeclaration since there's no shadowing
     if (!inserted) {
@@ -99,7 +99,7 @@ auto SymbolTable::insert(std::string_view name, const mod::Module& module, const
 auto SymbolTable::insert_unchecked(std::string_view name, const Symbol::Data& data) -> void {
     // Reserved identifier use is impossible due to a parser invariant
     PROFILE_FUNCTION();
-    auto [_, inserted] = symbols_.try_emplace(name, Symbol{name, data}, symbols_.size());
+    auto [_, inserted]{symbols_.try_emplace(name, Symbol{name, data}, symbols_.size())};
     ASSERT(inserted, "Duplicate symbol injected");
 }
 
@@ -107,7 +107,7 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
                                       const mod::Module&  module,
                                       std::string_view    name,
                                       const Symbol::Data& data) -> Result<void, Diagnostic> {
-    if (auto table = get_opt(table_idx)) { return table->insert(name, module, data); }
+    if (auto table{get_opt(table_idx)}) { return table->insert(name, module, data); }
     return make_sema_err(Error::INVALID_TABLE_IDX);
 }
 
@@ -118,7 +118,7 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
     -> Result<void, Diagnostic> {
     PROFILE_FUNCTION();
     for (const auto idx : stack | std::views::take(stack.size() - 1)) {
-        if (const auto symbol = get(idx).get_opt(name)) {
+        if (const auto symbol{get(idx).get_opt(name)}) {
             return make_sema_err(
                 fmt::format("Attempt to shadow identifier '{}'; previous declaration here: {}",
                             name,

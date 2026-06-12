@@ -28,27 +28,27 @@ TEST_CASE("Enum min/max calculations") {
 }
 
 TEST_CASE("Monotonically increasing enum range") {
-    for (usize i = 0; const auto v : enum_range<MockEnum::A, MockEnum::D>()) {
+    for (usize i{0}; const auto v : enum_range<MockEnum::A, MockEnum::D>()) {
         CHECK(v == static_cast<MockEnum>(i++));
     }
 
-    for (usize i = 0; const auto v : enum_range<MockEnum>()) {
+    for (usize i{0}; const auto v : enum_range<MockEnum>()) {
         CHECK(v == static_cast<MockEnum>(i++));
     }
 }
 
 TEST_CASE("Non-monotonic enum range") {
-    constexpr auto expected = std::array{
+    constexpr std::array expected{
         NonMonotonicEnum::A,
         NonMonotonicEnum::B,
         NonMonotonicEnum::D,
         NonMonotonicEnum::C,
     };
 
-    for (usize i = 0; const auto v : enum_range<NonMonotonicEnum::A, NonMonotonicEnum::D>()) {
+    for (usize i{0}; const auto v : enum_range<NonMonotonicEnum::A, NonMonotonicEnum::D>()) {
         CHECK(v == expected[i++]);
     }
-    for (usize i = 0; const auto v : enum_range<NonMonotonicEnum>()) { CHECK(v == expected[i++]); }
+    for (usize i{0}; const auto v : enum_range<NonMonotonicEnum>()) { CHECK(v == expected[i++]); }
 }
 
 } // namespace ghoti::tests
