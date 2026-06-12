@@ -28,9 +28,9 @@ namespace ghoti::ast {
 auto ArrayExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
+    auto       null_terminated{false};
 
-    auto                          null_terminated = false;
     opt::Option<ExpressionHandle> size;
     if (!parser.peek_token_is(syntax::TokenType::RBRACKET)) {
         parser.advance();
@@ -52,7 +52,7 @@ auto ArrayExpression::parse(syntax::Parser& parser)
     }
 
     TRY(parser.expect_peek(syntax::TokenType::RBRACKET));
-    const auto item_type = TRY(ExplicitType::parse(parser));
+    const auto item_type{TRY(ExplicitType::parse(parser))};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
     // Current token is either the LBRACE at the start or a comma before parsing
@@ -74,14 +74,14 @@ auto ArrayExpression::parse(syntax::Parser& parser)
 auto CallExpression::parse(syntax::Parser& parser, ExpressionHandle function)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto            start_token = parser.get_current_token();
+    const auto            start_token{parser.get_current_token()};
     std::vector<Argument> arguments;
     // Guaranteed to roll back if there is an error
     const auto parse_expr_unsuccessful = [&] -> bool {
         // Try an expression first to prevent ambiguity between reference operators
         syntax::Parser::Transaction transaction{parser};
         parser.advance();
-        if (auto expr = parser.parse_expression()) {
+        if (auto expr{parser.parse_expression()}) {
             transaction.commit();
             arguments.emplace_back(*expr);
             return false;
@@ -111,10 +111,10 @@ auto CallExpression::parse(syntax::Parser& parser, ExpressionHandle function)
 auto DoWhileLoopExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
-    const BlockHandle block = TRY(BlockStatement::parse(parser));
+    const BlockHandle block{TRY(BlockStatement::parse(parser))};
     TRY(parser.expect_peek(syntax::TokenType::WHILE));
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
@@ -126,7 +126,7 @@ auto DoWhileLoopExpression::parse(syntax::Parser& parser)
     parser.advance();
 
     // There's no continuation or non break clause so this is easy :)
-    const auto condition = TRY(parser.parse_expression());
+    const auto condition{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
     if (parser.get_node<BlockStatement>(*block).empty()) {
         return make_syntax_err("Do-while loops' bodies must contain at least one statement",
@@ -172,11 +172,11 @@ namespace {
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
-        auto parsed_member = TRY(parser.parse_statement());
+        auto parsed_member{TRY(parser.parse_statement())};
 
         // Downcast the parsed member into the specific member variant and check
-        const auto member = TRY(deconstruct_member(parser, parsed_member));
-        if (const auto err_msg = validate_member_decl(parser, member)) {
+        const auto member{TRY(deconstruct_member(parser, parsed_member))};
+        if (const auto err_msg{validate_member_decl(parser, member)}) {
             return make_syntax_err(std::string{*err_msg},
                                    syntax::Error::INVALID_MEMBER,
                                    parser.get_location_of(*member));
@@ -190,7 +190,7 @@ namespace {
 
 auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     opt::Option<IdentifierHandle> underlying;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
@@ -199,7 +199,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
     }
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
-    bool                     non_exhaustive = false;
+    bool                     non_exhaustive{false};
     std::vector<Enumeration> enumerations;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
@@ -223,7 +223,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
         }
 
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
-        const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+        const IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
 
         opt::Option<ExpressionHandle> value;
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
@@ -237,7 +237,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
         parser.advance();
     }
 
-    auto members = TRY(parse_members(parser));
+    auto members{TRY(parse_members(parser))};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
 
     // Validate here so that there aren't 3 errors spawning from an empty enum with decls
@@ -253,7 +253,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 auto ForLoopExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     // Iterables have to be surrounded by parentheses
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
@@ -268,7 +268,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
 
-        const auto iterable = TRY(parser.parse_expression());
+        const auto iterable{TRY(parser.parse_expression())};
         iterables.emplace_back(iterable);
 
         if (!parser.peek_token_is(syntax::TokenType::RPAREN)) {
@@ -293,7 +293,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
             const TypeModifier modifier{parser.get_current_token()};
             if (!modifier.is_value()) { parser.advance(); }
 
-            const IdentifierHandle capture = TRY(IdentifierExpression::parse(parser));
+            const IdentifierHandle capture{TRY(IdentifierExpression::parse(parser))};
             captures.emplace_back(modifier, capture);
         }
 
@@ -305,7 +305,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
 
     // Loops must have a well formed block and may have an alternate in non-break cases
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
-    const BlockHandle block = TRY(BlockStatement::parse(parser));
+    const BlockHandle block{TRY(BlockStatement::parse(parser))};
     const auto        non_break =
         TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK));
 
@@ -328,7 +328,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
 
 // Variadic must be handled first and should break the enclosing loop
 auto try_parse_variadic_fn(syntax::Parser& parser) -> Result<bool, syntax::Diagnostic> {
-    bool is_variadic = false;
+    bool is_variadic{false};
     if (parser.peek_token_is(syntax::TokenType::ELLIPSIS)) {
         parser.advance();
         is_variadic = true;
@@ -342,13 +342,13 @@ auto try_parse_variadic_fn(syntax::Parser& parser) -> Result<bool, syntax::Diagn
 auto FunctionExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
     // Parse the definition now that we're at the fn token
     opt::Option<SelfParameter> self;
     std::vector<Parameter>     parameters;
-    bool                       variadic = false;
+    bool                       variadic{false};
     if (parser.peek_token_is(syntax::TokenType::RPAREN)) {
         parser.advance();
     } else if (TRY(try_parse_variadic_fn(parser))) {
@@ -357,7 +357,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
     } else {
         // The 'self' parameter can be a value type, ref, or mutable ref
         parser.advance();
-        const auto         modifier_start = parser.get_current_token();
+        const auto         modifier_start{parser.get_current_token()};
         const TypeModifier self_modifier{modifier_start};
         if (self_modifier.is_volatile()) {
             return make_syntax_err(
@@ -368,7 +368,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
 
         if (self_modifier.is_value() && (parser.peek_token_is(syntax::TokenType::COMMA) ||
                                          parser.peek_token_is(syntax::TokenType::RPAREN))) {
-            const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+            const IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
             self.emplace(self_modifier, ident);
 
             // Still end on a comma
@@ -378,7 +378,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
         } else if (!self_modifier.is_value() && parser.peek_token_is(syntax::TokenType::IDENT)) {
             // Move up to the ident before parsing it
             parser.advance();
-            const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+            const IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
             self.emplace(self_modifier, ident);
 
             // Move to the comma if present
@@ -388,7 +388,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
         }
 
         // The loop starts either on an LPAREN or COMMA
-        bool first = true;
+        bool first{true};
         while (!parser.peek_token_is(syntax::TokenType::RPAREN) &&
                !parser.peek_token_is(syntax::TokenType::END)) {
             if (TRY(try_parse_variadic_fn(parser))) {
@@ -398,8 +398,8 @@ auto FunctionExpression::parse(syntax::Parser& parser)
 
             // If there was no self parameter then we can't advance on the first pass
             if (!first || self) { parser.advance(); }
-            const IdentifierHandle name          = TRY(IdentifierExpression::parse(parser));
-            const auto [param_type, initialized] = TRY(ExplicitType::parse_opt_init(parser));
+            const IdentifierHandle name{TRY(IdentifierExpression::parse(parser))};
+            const auto [param_type, initialized]{TRY(ExplicitType::parse_opt_init(parser))};
 
             // There are no default values for parameters, and they must be explicitly typed
             if (initialized || !param_type) {
@@ -408,7 +408,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
                                        parser.get_location_of(*param_type));
             }
 
-            const auto explicit_type = *param_type;
+            const auto explicit_type{*param_type};
             if (explicit_type.is<IdentifierExpression>()) {
                 // noreturn is not allowed for parameters
                 if (explicit_type.get_token_type() == syntax::TokenType::NORETURN) {
@@ -428,7 +428,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
     }
 
     TRY(parser.expect_peek(syntax::TokenType::COLON));
-    const auto return_type = TRY(ExplicitType::parse(parser));
+    const auto return_type{TRY(ExplicitType::parse(parser))};
 
     // Function types are decoupled so a block is required here
     if (!parser.peek_token_is(syntax::TokenType::LBRACE)) {
@@ -438,7 +438,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
     }
 
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
-    const BlockHandle body = TRY(BlockStatement::parse(parser));
+    const BlockHandle body{TRY(BlockStatement::parse(parser))};
     return parser.add_expr<FunctionExpression>(
         start_token, self, std::move(parameters), variadic, return_type, body);
 }
@@ -447,7 +447,7 @@ auto GroupedExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     parser.advance();
-    const auto inner = TRY(parser.parse_expression());
+    const auto inner{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
     return inner;
 }
@@ -455,7 +455,7 @@ auto GroupedExpression::parse(syntax::Parser& parser)
 auto IdentifierExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (!start_token.is_valid_ident()) {
         return make_syntax_err(syntax::Error::ILLEGAL_IDENTIFIER, start_token);
     }
@@ -465,9 +465,9 @@ auto IdentifierExpression::parse(syntax::Parser& parser)
 
 auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
-    bool constexpr_condition = false;
+    bool constexpr_condition{false};
     if (parser.peek_token_is(syntax::TokenType::CONSTEXPR)) {
         constexpr_condition = true;
         parser.advance();
@@ -482,15 +482,15 @@ auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syn
                                start_token);
     }
 
-    const auto condition = TRY(parser.parse_expression());
+    const auto condition{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
 
     // The consequence and alternate are trivially handled by restricted statement parsers
     parser.advance();
-    const auto consequence = TRY(parser.parse_restricted_statement(
-        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL));
-    const auto alternate   = TRY(parser.try_parse_restricted_alternate(
-        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL));
+    const auto consequence{TRY(parser.parse_restricted_statement(
+        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL))};
+    const auto alternate{TRY(parser.try_parse_restricted_alternate(
+        syntax::Error::ILLEGAL_IF_BRANCH, syntax::SemicolonBehavior::OPTIONAL))};
 
     return parser.add_expr<IfExpression>(
         start_token, constexpr_condition, condition, consequence, alternate);
@@ -499,7 +499,7 @@ auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syn
 auto IndexExpression::parse(syntax::Parser& parser, ExpressionHandle array)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::RBRACKET)) {
         return make_syntax_err("Cannot index into an array without an index expression",
                                syntax::Error::INDEX_MISSING_EXPRESSION,
@@ -507,7 +507,7 @@ auto IndexExpression::parse(syntax::Parser& parser, ExpressionHandle array)
     }
     parser.advance();
 
-    const auto idx_expr = TRY(parser.parse_expression());
+    const auto idx_expr{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RBRACKET));
     return parser.add_expr<IndexExpression>(start_token, array, idx_expr);
 }
@@ -515,10 +515,10 @@ auto IndexExpression::parse(syntax::Parser& parser, ExpressionHandle array)
 auto InfiniteLoopExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
-    const BlockHandle block = TRY(BlockStatement::parse(parser));
+    const BlockHandle block{TRY(BlockStatement::parse(parser))};
     if (parser.get_node<BlockStatement>(*block).empty()) {
         return make_syntax_err("Infinite loops' bodies must contain at least one statement",
                                syntax::Error::EMPTY_LOOP,
@@ -532,7 +532,7 @@ namespace {
 template <traits::ASTNode Expr>
 [[nodiscard]] auto parse_infix(syntax::Parser& parser, ExpressionHandle lhs)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
-    const auto op_token = parser.get_current_token();
+    const auto op_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END)) {
         return make_syntax_err("Infix expressions require a right-hand operand",
                                syntax::Error::INFIX_MISSING_RHS,
@@ -546,7 +546,7 @@ template <traits::ASTNode Expr>
     }
 
     parser.advance();
-    const auto rhs = TRY(parser.parse_expression(current_precedence));
+    const auto rhs{TRY(parser.parse_expression(current_precedence))};
     return parser.add_expr<Expr>(op_token, lhs, rhs);
 }
 
@@ -571,9 +571,9 @@ auto DotExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
                                parser.get_location_of(*outer));
     }
 
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::IDENT));
-    const IdentifierHandle inner = TRY(IdentifierExpression::parse(parser));
+    const IdentifierHandle inner{TRY(IdentifierExpression::parse(parser))};
     return parser.add_expr<DotExpression>(start_token, outer, inner);
 }
 
@@ -582,17 +582,17 @@ MAKE_INFIX_PARSER(RangeExpression)
 auto InitializerExpression::parse(syntax::Parser& parser, opt::Option<ExpressionHandle> object)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     std::vector<Initializer> initializers;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
         TRY(parser.expect_peek(syntax::TokenType::DOT));
-        ImplicitAccessHandle member = TRY(ImplicitAccessExpression::parse(parser));
+        ImplicitAccessHandle member{TRY(ImplicitAccessExpression::parse(parser))};
 
         TRY(parser.expect_peek(syntax::TokenType::ASSIGN));
         parser.advance();
-        const auto value = TRY(parser.parse_expression());
+        const auto value{TRY(parser.parse_expression())};
         initializers.emplace_back(member, value);
 
         if (!parser.peek_token_is(syntax::TokenType::RBRACE)) {
@@ -607,7 +607,7 @@ auto InitializerExpression::parse(syntax::Parser& parser, opt::Option<Expression
 auto LabelExpression::parse(syntax::Parser& parser, ExpressionHandle name)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     if (!name.is<IdentifierExpression>()) {
         return make_syntax_err(
             "Labels may only be identifiers", syntax::Error::ILLEGAL_LABEL, start_token);
@@ -615,8 +615,8 @@ auto LabelExpression::parse(syntax::Parser& parser, ExpressionHandle name)
     parser.advance();
 
     // The body has to be constructed in place from a lambda as it cannot be default initialized
-    const auto raw_stmt = TRY(parser.parse_statement());
-    const auto body     = TRY(deconstruct_body(parser, raw_stmt));
+    const auto raw_stmt{TRY(parser.parse_statement())};
+    const auto body{TRY(deconstruct_body(parser, raw_stmt))};
 
     return parser.add_expr<LabelExpression>(start_token, name, body);
 }
@@ -625,7 +625,7 @@ auto LabelExpression::deconstruct_body(syntax::Parser& parser, StatementHandle r
     -> Result<LabeledNodeHandle, syntax::Diagnostic> {
     switch (raw_stmt->get_kind()) {
     case NodeKind::EXPRESSION_STATEMENT: {
-        const auto& expr_stmt = parser.get_node<ExpressionStatement>(*raw_stmt);
+        const auto& expr_stmt{parser.get_node<ExpressionStatement>(*raw_stmt)};
         switch (expr_stmt.expression->get_kind()) {
         case NodeKind::DO_WHILE_LOOP_EXPRESSION:
         case NodeKind::FOR_LOOP_EXPRESSION:
@@ -650,7 +650,7 @@ auto LabelExpression::deconstruct_body(syntax::Parser& parser, StatementHandle r
 auto MatchExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     // Conditions have to be surrounded by parentheses
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
@@ -661,7 +661,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
                                start_token);
     }
 
-    const auto matcher = TRY(parser.parse_expression());
+    const auto matcher{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
 
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
@@ -674,7 +674,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
     std::vector<Arm> arms;
     opt::Size        catch_all_idx;
-    usize            arm_idx = 0;
+    usize            arm_idx{0};
 
     // Current token is either the LBRACE at the start or a comma before parsing
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
@@ -693,8 +693,8 @@ auto MatchExpression::parse(syntax::Parser& parser)
                 parser.get_current_token()));
             catch_all_idx.emplace(arm_idx);
         } else {
-            const auto pattern_tok = parser.get_current_token();
-            const auto pattern_raw = TRY(parser.parse_expression());
+            const auto pattern_tok{parser.get_current_token()};
+            const auto pattern_raw{TRY(parser.parse_expression())};
             if (!MatchPatternHandle::any_compatible(pattern_raw->get_kind())) {
                 return make_syntax_err(
                     fmt::format("Unmatchable expression '{}' used as a match arm pattern",
@@ -733,8 +733,8 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
         // The resulting statement must be restricted like an if branch
         parser.advance();
-        const auto consequence = TRY(parser.parse_restricted_statement(
-            syntax::Error::ILLEGAL_MATCH_ARM, syntax::SemicolonBehavior::DISALLOW));
+        const auto consequence{TRY(parser.parse_restricted_statement(
+            syntax::Error::ILLEGAL_MATCH_ARM, syntax::SemicolonBehavior::DISALLOW))};
         arms.emplace_back(pattern, capture, consequence);
         arm_idx += 1;
 
@@ -755,7 +755,7 @@ namespace {
 template <traits::ASTNode Expr>
 [[nodiscard]] auto parse_prefix(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
-    const auto prefix_token = parser.get_current_token();
+    const auto prefix_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END)) {
         return make_syntax_err("Prefix expressions require an operand",
                                syntax::Error::PREFIX_MISSING_OPERAND,
@@ -763,7 +763,7 @@ template <traits::ASTNode Expr>
     }
     parser.advance();
 
-    const auto operand = TRY(parser.parse_expression(syntax::Precedence::PREFIX));
+    const auto operand{TRY(parser.parse_expression(syntax::Precedence::PREFIX))};
     return parser.add_expr<Expr>(prefix_token, operand);
 }
 
@@ -791,7 +791,7 @@ auto ImplicitAccessExpression::parse(syntax::Parser& parser)
     }
 
     // Otherwise it suffices to fall back to standard prefix parsing
-    const auto prefix_token = parser.get_current_token();
+    const auto prefix_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END)) {
         return make_syntax_err("Prefix expressions require an operand",
                                syntax::Error::PREFIX_MISSING_OPERAND,
@@ -799,7 +799,7 @@ auto ImplicitAccessExpression::parse(syntax::Parser& parser)
     }
 
     parser.advance();
-    const auto operand = TRY(parser.parse_expression(syntax::Precedence::PREFIX));
+    const auto operand{TRY(parser.parse_expression(syntax::Precedence::PREFIX))};
     if (!operand.is<IdentifierExpression>()) {
         return make_syntax_err("Implicitly accessed names must be identifiers",
                                syntax::Error::ILLEGAL_IMPLICIT_ACCESS_OPERAND,
@@ -812,7 +812,7 @@ auto ImplicitAccessExpression::parse(syntax::Parser& parser)
 auto StringExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     return parser.add_expr<StringExpression>(start_token, start_token.materialize_string());
 }
 
@@ -825,21 +825,21 @@ auto ModuleAccessExpression::parse(syntax::Parser& parser, ExpressionHandle oute
                                parser.get_location_of(*outer));
     }
 
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::IDENT));
-    const IdentifierHandle inner = TRY(IdentifierExpression::parse(parser));
+    const IdentifierHandle inner{TRY(IdentifierExpression::parse(parser))};
     return parser.add_expr<ModuleAccessExpression>(start_token, outer, inner);
 }
 
 auto StructExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
     std::vector<Field> fields;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
-        bool is_public = false;
+        bool is_public{false};
 
         if (parser.peek_token_is(syntax::TokenType::PUBLIC)) {
             // Use a transaction to preserve the public modifier
@@ -860,9 +860,9 @@ auto StructExpression::parse(syntax::Parser& parser)
             TRY(parser.expect_peek(syntax::TokenType::IDENT));
         }
 
-        IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+        IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
         TRY(parser.expect_peek(syntax::TokenType::COLON));
-        const auto type = TRY(ExplicitType::parse(parser));
+        const auto type{TRY(ExplicitType::parse(parser))};
 
         opt::Option<ExpressionHandle> value;
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
@@ -879,7 +879,7 @@ auto StructExpression::parse(syntax::Parser& parser)
         parser.advance();
     }
 
-    auto members = TRY(parse_members(parser));
+    auto members{TRY(parse_members(parser))};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
     return parser.add_expr<StructExpression>(start_token, std::move(fields), std::move(members));
 }
@@ -887,7 +887,7 @@ auto StructExpression::parse(syntax::Parser& parser)
 auto UnionExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
 
     std::vector<Field> fields;
@@ -896,10 +896,10 @@ auto UnionExpression::parse(syntax::Parser& parser)
         if (parser.get_peek_token().is_member_token()) { break; }
 
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
-        const IdentifierHandle ident = TRY(IdentifierExpression::parse(parser));
+        const IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
 
         TRY(parser.expect_peek(syntax::TokenType::COLON));
-        const auto type = TRY(ExplicitType::parse(parser));
+        const auto type{TRY(ExplicitType::parse(parser))};
 
         fields.emplace_back(ident, type);
 
@@ -908,7 +908,7 @@ auto UnionExpression::parse(syntax::Parser& parser)
         parser.advance();
     }
 
-    auto members = TRY(parse_members(parser));
+    auto members{TRY(parse_members(parser))};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
 
     // Validate here so that there aren't 3 errors spawning from an empty union with decls
@@ -923,7 +923,7 @@ auto UnionExpression::parse(syntax::Parser& parser)
 auto WhileLoopExpression::parse(syntax::Parser& parser)
     -> Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
 
     // Conditions have to be surrounded by parentheses
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
@@ -934,13 +934,13 @@ auto WhileLoopExpression::parse(syntax::Parser& parser)
                                start_token);
     }
 
-    const auto condition = TRY(parser.parse_expression());
+    const auto condition{TRY(parser.parse_expression())};
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
 
     // Continuation expression is optional and is handled as in zig
     opt::Option<ExpressionHandle> continuation;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
-        const auto continuation_start = parser.get_current_token();
+        const auto continuation_start{parser.get_current_token()};
         parser.advance();
         TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
@@ -958,7 +958,7 @@ auto WhileLoopExpression::parse(syntax::Parser& parser)
 
     // Loops must have a well formed block and may have an alternate in non-break cases
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
-    const BlockHandle block = TRY(BlockStatement::parse(parser));
+    const BlockHandle block{TRY(BlockStatement::parse(parser))};
     const auto        non_break =
         TRY(parser.try_parse_restricted_alternate(syntax::Error::ILLEGAL_LOOP_NON_BREAK));
 

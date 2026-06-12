@@ -70,8 +70,9 @@ struct Module {
     template <typename DiagList>
         requires(!std::same_as<std::remove_cvref_t<DiagList>, Unit>)
     auto error_out(DiagList&& list, ModuleState error_state) noexcept -> mod::ModuleState {
+        state = error_state;
         diagnostics.emplace<DiagList>(std::forward<DiagList>(list));
-        return state = error_state;
+        return state;
     }
 
     // Prints the modules diagnostics to the stream, doing nothing if an error state is not present

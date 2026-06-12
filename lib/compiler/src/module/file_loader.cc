@@ -42,7 +42,7 @@ auto FileLoader::normalize(const std::filesystem::path& path)
     -> Result<std::filesystem::path, Error> {
     PROFILE_FUNCTION();
     std::error_code ec;
-    auto            canonical_path = std::filesystem::weakly_canonical(path, ec);
+    auto            canonical_path{std::filesystem::weakly_canonical(path, ec)};
     if (ec) { return Err{Error::NORMALIZATION_FAILED}; }
     return canonical_path;
 }

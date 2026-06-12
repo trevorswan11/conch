@@ -53,7 +53,7 @@ TEST_CASE("Lexing illegal characters") {
 
 TEST_CASE("Lexer over-consumption") {
     syntax::Lexer l{"Lexer"};
-    l.consume();
+    CHECK(l.consume().size() == 2);
     for (usize i = 0; i < 100; ++i) { CHECK(l.advance().type == TokenType::END); }
 }
 

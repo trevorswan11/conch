@@ -12,41 +12,39 @@ namespace ghoti::sema {
 
 namespace {
 
-constexpr auto TYPE_KIND_NAMES = [] -> auto {
-    fixed::EnumMap<TypeKind, std::string_view> names;
+using TypeMapping = std::pair<TypeKind, std::string_view>;
 
-    names[TypeKind::POISON]    = "poison";
-    names[TypeKind::I32]       = "i32";
-    names[TypeKind::I64]       = "i64";
-    names[TypeKind::ISIZE]     = "isize";
-    names[TypeKind::U32]       = "u32";
-    names[TypeKind::U64]       = "u64";
-    names[TypeKind::USIZE]     = "usize";
-    names[TypeKind::U8]        = "u8";
-    names[TypeKind::BOOL]      = "bool";
-    names[TypeKind::F32]       = "f32";
-    names[TypeKind::F64]       = "f64";
-    names[TypeKind::VOID]      = "void";
-    names[TypeKind::UNDEFINED] = "undefined";
-    names[TypeKind::TYPE]      = "type";
-    names[TypeKind::SLICE]     = "slice";
-    names[TypeKind::ARRAY]     = "array";
-    names[TypeKind::POINTER]   = "pointer";
-    names[TypeKind::REFERENCE] = "reference";
-    names[TypeKind::ENUM]      = "enum";
-    names[TypeKind::STRUCT]    = "struct";
-    names[TypeKind::UNION]     = "union";
-    names[TypeKind::FUNCTION]  = "function";
-    names[TypeKind::LABEL]     = "label";
-    names[TypeKind::BLOCK]     = "block";
-    names[TypeKind::MATCH_ARM] = "match arm";
-    names[TypeKind::MODULE]    = "module";
-    names[TypeKind::AUTO]      = "auto";
-    names[TypeKind::OPAQUE]    = "opaque";
-    names[TypeKind::NORETURN]  = "noreturn";
-
-    return names;
-}();
+constexpr auto TYPE_KIND_NAMES{
+    fixed::EnumMap<TypeKind, std::string_view>::from({},
+                                                     TypeMapping{TypeKind::POISON, "poison"},
+                                                     TypeMapping{TypeKind::I32, "i32"},
+                                                     TypeMapping{TypeKind::I64, "i64"},
+                                                     TypeMapping{TypeKind::ISIZE, "isize"},
+                                                     TypeMapping{TypeKind::U32, "u32"},
+                                                     TypeMapping{TypeKind::U64, "u64"},
+                                                     TypeMapping{TypeKind::USIZE, "usize"},
+                                                     TypeMapping{TypeKind::U8, "u8"},
+                                                     TypeMapping{TypeKind::BOOL, "bool"},
+                                                     TypeMapping{TypeKind::F32, "f32"},
+                                                     TypeMapping{TypeKind::F64, "f64"},
+                                                     TypeMapping{TypeKind::VOID, "void"},
+                                                     TypeMapping{TypeKind::UNDEFINED, "undefined"},
+                                                     TypeMapping{TypeKind::TYPE, "type"},
+                                                     TypeMapping{TypeKind::SLICE, "slice"},
+                                                     TypeMapping{TypeKind::ARRAY, "array"},
+                                                     TypeMapping{TypeKind::POINTER, "pointer"},
+                                                     TypeMapping{TypeKind::REFERENCE, "reference"},
+                                                     TypeMapping{TypeKind::ENUM, "enum"},
+                                                     TypeMapping{TypeKind::STRUCT, "struct"},
+                                                     TypeMapping{TypeKind::UNION, "union"},
+                                                     TypeMapping{TypeKind::FUNCTION, "function"},
+                                                     TypeMapping{TypeKind::LABEL, "label"},
+                                                     TypeMapping{TypeKind::BLOCK, "block"},
+                                                     TypeMapping{TypeKind::MATCH_ARM, "match arm"},
+                                                     TypeMapping{TypeKind::MODULE, "module"},
+                                                     TypeMapping{TypeKind::AUTO, "auto"},
+                                                     TypeMapping{TypeKind::OPAQUE, "opaque"},
+                                                     TypeMapping{TypeKind::NORETURN, "noreturn"})};
 
 } // namespace
 

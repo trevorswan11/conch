@@ -17,19 +17,19 @@
 namespace ghoti::sema {
 
 auto Context::get_poison() -> Type& {
-    auto& poison = *pool[{TypeKind::POISON, types::mut::CONSTANT}];
+    auto& poison{*pool[{TypeKind::POISON, types::mut::CONSTANT}]};
     poison.resolve_if<types::Poison>();
     return poison;
 }
 
 auto Context::get_pointer(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
-    auto& type = *pool[{TypeKind::POINTER, mutability, underlying}];
+    auto& type{*pool[{TypeKind::POINTER, mutability, underlying}]};
     type.resolve_if<types::Pointer>(underlying);
     return type;
 }
 
 auto Context::get_reference(types::mut::MutabilityModifiers mutability, Type& underlying) -> Type& {
-    auto& type = *pool[{TypeKind::REFERENCE, mutability, underlying}];
+    auto& type{*pool[{TypeKind::REFERENCE, mutability, underlying}]};
     type.resolve_if<types::Reference>(underlying);
     return type;
 }
@@ -38,7 +38,7 @@ auto Context::get_array(types::mut::MutabilityModifiers mutability,
                         bool                            null_terminated,
                         usize                           size,
                         Type&                           underlying) -> Type& {
-    auto& type = *pool[{TypeKind::ARRAY, mutability, null_terminated, size, underlying}];
+    auto& type{*pool[{TypeKind::ARRAY, mutability, null_terminated, size, underlying}]};
     type.resolve_if<types::Array>(underlying, size, null_terminated);
     return type;
 }
@@ -46,7 +46,7 @@ auto Context::get_array(types::mut::MutabilityModifiers mutability,
 auto Context::get_slice(types::mut::MutabilityModifiers mutability,
                         bool                            null_terminated,
                         Type&                           underlying) -> Type& {
-    auto& type = *pool[{TypeKind::SLICE, mutability, null_terminated, underlying}];
+    auto& type{*pool[{TypeKind::SLICE, mutability, null_terminated, underlying}]};
     type.resolve_if<types::Slice>(underlying, null_terminated);
     return type;
 }
@@ -56,12 +56,12 @@ namespace {
 auto inject_types(SymbolTable& prelude, TypePool& pool) -> void {
     PROFILE_FUNCTION();
     const auto inject_type = [&](const syntax::Keyword& keyword, TypeKind kind) -> void {
-        auto& type = *pool[{kind, types::mut::CONSTANT}];
+        auto& type{*pool[{kind, types::mut::CONSTANT}]};
         ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
         type.resolve<types::BuiltinType>();
 
         prelude.insert_unchecked(keyword.name, symbols::Builtin{keyword, type});
-        auto& symbol = prelude.get(keyword.name);
+        auto& symbol{prelude.get(keyword.name)};
         symbol.set_kind(SymbolKind::TYPE);
         symbol.set_status(SymbolStatus::RESOLVED);
     };
@@ -101,12 +101,12 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
 
         types::Key key{TypeKind::FUNCTION, types::mut::CONSTANT};
         key.imprint(builtin);
-        auto& type = *pool[key];
+        auto& type{*pool[key]};
         ASSERT(!type.is_resolved(), "Builtin functions should only be resolved once");
         type.resolve<types::BuiltinFunction>(std::move(param_types), return_type);
 
         prelude.insert_unchecked(builtin.name, symbols::Builtin{builtin, type});
-        auto& symbol = prelude.get(builtin.name);
+        auto& symbol{prelude.get(builtin.name)};
         symbol.set_kind(SymbolKind::CALLABLE);
         symbol.set_status(SymbolStatus::RESOLVED);
     };
@@ -117,15 +117,15 @@ auto inject_functions(SymbolTable& prelude, TypePool& pool) -> void {
     };
 
     // Common types
-    auto& t_void     = *pool[{TypeKind::VOID, types::mut::CONSTANT}];
-    auto& t_type     = *pool[{TypeKind::TYPE, types::mut::CONSTANT}];
-    auto& t_usize    = *pool[{TypeKind::USIZE, types::mut::CONSTANT}];
-    auto& t_auto     = *pool[{TypeKind::AUTO, types::mut::CONSTANT}];
-    auto& t_noreturn = *pool[{TypeKind::NORETURN, types::mut::CONSTANT}];
+    auto& t_void{*pool[{TypeKind::VOID, types::mut::CONSTANT}]};
+    auto& t_type{*pool[{TypeKind::TYPE, types::mut::CONSTANT}]};
+    auto& t_usize{*pool[{TypeKind::USIZE, types::mut::CONSTANT}]};
+    auto& t_auto{*pool[{TypeKind::AUTO, types::mut::CONSTANT}]};
+    auto& t_noreturn{*pool[{TypeKind::NORETURN, types::mut::CONSTANT}]};
 
     // C-string
-    auto& t_u8    = *pool[{TypeKind::U8, types::mut::CONSTANT}];
-    auto& t_c_str = *pool[{TypeKind::SLICE, types::mut::CONSTANT, true, t_u8}];
+    auto& t_u8{*pool[{TypeKind::U8, types::mut::CONSTANT}]};
+    auto& t_c_str{*pool[{TypeKind::SLICE, types::mut::CONSTANT, true, t_u8}]};
     t_c_str.resolve_if<types::Slice>(*pool[{TypeKind::U8, types::mut::CONSTANT}], true);
 
     inject_function(bis::ALIGN_CAST, params(t_type, t_auto), t_auto);
@@ -177,13 +177,13 @@ auto Context::inject_prelude() -> void {
     if (prelude_index) { return; }
     prelude_index.emplace(registry.create());
 
-    auto& prelude = registry.get(*prelude_index);
+    auto& prelude{registry.get(*prelude_index)};
     inject_types(prelude, pool);
     inject_functions(prelude, pool);
 }
 
 auto Context::get_builtin_resolved_type(TypeKind kind) -> Type& {
-    auto& type = *pool[{kind, types::mut::CONSTANT}];
+    auto& type{*pool[{kind, types::mut::CONSTANT}]};
     ASSERT(type.is_resolved(), "Builtin type was not already resolved");
     return type;
 }

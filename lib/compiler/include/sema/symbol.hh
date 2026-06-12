@@ -191,7 +191,7 @@ class SymbolTable {
     // Differs from `get_proxy_opt` by asserting that the name is present.
     template <typename Self>
     [[nodiscard]] auto get_proxy(this Self&& self, std::string_view name) noexcept {
-        auto it = self.symbols_.find(name);
+        auto it{self.symbols_.find(name)};
         ASSERT(it != self.symbols_.end(), "Illegal get on missing key");
         return ReferenceProxy<Self>{it->second.symbol, it->second.idx};
     }
@@ -200,7 +200,7 @@ class SymbolTable {
     template <typename Self>
     [[nodiscard]] auto get_proxy_opt(this Self&& self, std::string_view name) noexcept
         -> opt::Option<ReferenceProxy<Self>> {
-        auto it = self.symbols_.find(name);
+        auto it{self.symbols_.find(name)};
         if (it == self.symbols_.end()) { return opt::none; }
         return ReferenceProxy<Self>{it->second.symbol, it->second.idx};
     }
@@ -214,7 +214,7 @@ class SymbolTable {
     template <typename Self>
     [[nodiscard]] auto get_opt(this Self&& self, std::string_view name) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
-        const auto proxy = self.get_proxy_opt(name);
+        const auto proxy{self.get_proxy_opt(name)};
         if (!proxy) { return opt::none; }
         return proxy->symbol;
     }
@@ -331,7 +331,7 @@ class SymbolTableRegistry {
     lookup(this Self&& self, const SymbolTableStack& stack, std::string_view name) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
         for (const auto idx : std::views::reverse(stack)) {
-            if (auto symbol = self.tables_[idx].get_opt(name)) { return symbol; }
+            if (auto symbol{self.tables_[idx].get_opt(name)}) { return symbol; }
         }
         return opt::none;
     }

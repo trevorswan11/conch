@@ -32,7 +32,7 @@ auto format_module_diagnostic(std::ostream&                        os, // NOLINT
                               const detail::FormattableDiagnostic& diag,
                               opt::Option<const mod::Module&>      module,
                               opt::Option<bool>                    in_terminal) -> std::ostream& {
-    const auto tty = in_terminal.value_or(is_tty());
+    const auto tty{in_terminal.value_or(is_tty())};
 
     // Without a module, there is no source path and formatting is done trivially
     if (!module) { return format_diagnostic(os, diag, opt::none, tty); }
@@ -75,7 +75,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                             Error::MODULE_PATH_NOT_RELATIVE);
     };
 
-    const auto normalized = loader_.normalize(parent_path.empty() ? path : parent_path / path);
+    const auto normalized{loader_.normalize(parent_path.empty() ? path : parent_path / path)};
     if (!normalized) { return make_mod_err(normalized.error()); }
     return try_get(*normalized);
 }
@@ -83,7 +83,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 auto ModuleManager::try_get_library_module(std::string_view name)
     -> Result<gsl::not_null<Module*>, Diagnostic> {
     PROFILE_FUNCTION();
-    auto it = module_lut_.find(name);
+    auto it{module_lut_.find(name)};
     if (it == module_lut_.end()) {
         return make_mod_err(fmt::format("Unknown module '{}'", name), Error::MODULE_DOES_NOT_EXIST);
     }
@@ -93,7 +93,7 @@ auto ModuleManager::try_get_library_module(std::string_view name)
 auto ModuleManager::add_library_module(std::string_view name, const std::filesystem::path& path)
     -> Result<void, Diagnostic> {
     PROFILE_FUNCTION();
-    const auto normalized = loader_.normalize(path);
+    const auto normalized{loader_.normalize(path)};
     if (!normalized) { return make_mod_err(normalized.error()); }
 
     if (auto it = module_lut_.find(name); it != module_lut_.end()) {
@@ -115,11 +115,11 @@ auto ModuleManager::try_get(const std::filesystem::path& path)
     // Prevent re-parsing by checking the map, safe as pointers are stable
     PROFILE_FUNCTION();
     if (auto it = modules_.find(path); it != modules_.end()) { return it->second.get(); }
-    auto source = TRY(loader_.load(path));
+    auto source{TRY(loader_.load(path))};
 
-    auto mod = mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)});
+    auto mod{mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)})};
     syntax::Parser p{mod->source};
-    auto           diagnostics = p.consume(mod->ast);
+    auto           diagnostics{p.consume(mod->ast)};
 
     mod->sema_side_tables.resize(mod->ast.get_pool_sizes());
     mod->state       = diagnostics.empty() ? ModuleState::PARSED : ModuleState::ERRORED;

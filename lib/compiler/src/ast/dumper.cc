@@ -59,7 +59,7 @@ auto ASTDumper::visit(NodeID, const ArrayExpression& array) -> void {
 auto ASTDumper::visit(NodeID, const CallExpression& call) -> void {
     PROFILE_FUNCTION();
     fmt::println(out_, "CallExpression");
-    const auto has_args = !call.arguments.empty();
+    const auto has_args{!call.arguments.empty()};
     {
         const Indent::Guard g{indent_, !has_args};
         fmt::print(out_, "{}Callee: ", indent_.current_branch());
@@ -122,7 +122,7 @@ auto ASTDumper::visit(NodeID, const EnumExpression& enum_expr) -> void {
                        });
     }
 
-    const auto has_members = !enum_expr.members.empty();
+    const auto has_members{!enum_expr.members.empty()};
     {
         const Indent::Guard g{indent_, !has_members};
         fmt::println(
@@ -154,13 +154,13 @@ auto ASTDumper::visit(NodeID, const ForLoopExpression& for_loop) -> void {
                 if (capture.payload.is<ast::Discarded>()) {
                     fmt::println(out_, "<discarded>");
                 } else {
-                    const auto& ident = ast_.get_as<IdentifierExpression>(*capture.payload);
+                    const auto& ident{ast_.get_as<IdentifierExpression>(*capture.payload)};
                     fmt::println(out_, "{} (modifier: {})", ident, capture.modifier);
                 }
             });
     }
 
-    const auto has_non_break = for_loop.non_break.has_value();
+    const auto has_non_break{for_loop.non_break.has_value()};
     {
         const Indent::Guard g{indent_, !has_non_break};
         fmt::print(out_, "{}Body: ", indent_.current_branch());
@@ -181,7 +181,7 @@ auto ASTDumper::visit(NodeID, const FunctionExpression& function) -> void {
     if (function.self) {
         const Indent::Guard g{indent_, false};
         fmt::print(out_, "{}", indent_.current_branch());
-        const auto& ident = ast_.get_as<IdentifierExpression>(*function.self->name);
+        const auto& ident{ast_.get_as<IdentifierExpression>(*function.self->name)};
         fmt::println(out_, "Self: {} (modifier: {})", ident, function.self->modifier);
     }
 
@@ -249,7 +249,7 @@ auto ASTDumper::visit(NodeID, const IfExpression& if_expr) -> void {
         dump(if_expr.condition);
     }
 
-    const auto has_alternate = if_expr.alternate.has_value();
+    const auto has_alternate{if_expr.alternate.has_value()};
     {
         Indent::Guard g{indent_, !has_alternate};
         fmt::print(out_, "{}Consequence: ", indent_.current_branch());
@@ -281,7 +281,7 @@ auto ASTDumper::visit(NodeID, const IndexExpression& index) -> void {
 auto ASTDumper::visit(NodeID, const InfiniteLoopExpression& loop) -> void {
     PROFILE_FUNCTION();
     fmt::println(out_, "InfiniteLoopExpression");
-    const auto& block = ast_.get_as<BlockStatement>(*loop.block);
+    const auto& block{ast_.get_as<BlockStatement>(*loop.block)};
     dump_node_list(block);
 }
 
@@ -324,7 +324,7 @@ MAKE_INFIX_DUMP(RangeExpression, Lower, Upper)
 auto ASTDumper::visit(NodeID, const InitializerExpression& init) -> void {
     PROFILE_FUNCTION();
     fmt::println(out_, "Initializer Expression:");
-    const auto has_initializers = !init.initializers.empty();
+    const auto has_initializers{!init.initializers.empty()};
     {
         const Indent::Guard g{indent_, !has_initializers};
         fmt::print(out_, "{}Object Type: ", indent_.current_branch());
@@ -383,7 +383,7 @@ auto ASTDumper::visit(NodeID, const MatchExpression& match) -> void {
 
     {
         const Indent::Guard g{indent_, true};
-        usize               idx = 0;
+        usize               idx{0};
 
         fmt::println(out_, "{}Arms:", indent_.current_branch());
         dump_container(match.arms, [&](const MatchExpression::Arm& arm) -> void {
@@ -492,7 +492,7 @@ auto ASTDumper::visit(NodeID, const StructExpression& struct_expr) -> void {
     fmt::println(out_, "StructExpression");
     if (struct_expr.fields.empty() && struct_expr.members.empty()) { return; }
 
-    const auto has_members = !struct_expr.members.empty();
+    const auto has_members{!struct_expr.members.empty()};
     if (!struct_expr.fields.empty()) {
         const Indent::Guard g{indent_, !has_members};
         fmt::println(out_, "{}Fields:", indent_.current_branch());
@@ -507,7 +507,7 @@ auto ASTDumper::visit(NodeID, const StructExpression& struct_expr) -> void {
                 fmt::println(out_, "{}Public: {}", indent_.current_branch(), field.is_public());
             }
 
-            const auto has_default = field.default_value.has_value();
+            const auto has_default{field.default_value.has_value()};
             {
                 const Indent::Guard g_type{indent_, !has_default};
                 fmt::print(out_, "{}Type: ", indent_.current_branch());
@@ -534,7 +534,7 @@ auto ASTDumper::visit(NodeID, const UnionExpression& union_expr) -> void {
     PROFILE_FUNCTION();
     fmt::println(out_, "UnionExpression");
 
-    const auto has_members = !union_expr.members.empty();
+    const auto has_members{!union_expr.members.empty()};
     {
         const Indent::Guard g{indent_, !has_members};
         fmt::println(out_, "{}Fields:", indent_.current_branch());
@@ -576,7 +576,7 @@ auto ASTDumper::visit(NodeID, const WhileLoopExpression& while_expr) -> void {
         dump(*while_expr.continuation);
     }
 
-    const auto has_non_break = while_expr.non_break.has_value();
+    const auto has_non_break{while_expr.non_break.has_value()};
     {
         const Indent::Guard g{indent_, !has_non_break};
         fmt::print(out_, "{}Body: ", indent_.current_branch());
@@ -604,7 +604,7 @@ auto ASTDumper::visit(NodeID, const BlockStatement& block) -> void {
 auto ASTDumper::visit(NodeID, const BreakStatement& break_stmt) -> void {
     PROFILE_FUNCTION();
     fmt::println(out_, "BreakStatement");
-    const auto has_expression = break_stmt.expression.has_value();
+    const auto has_expression{break_stmt.expression.has_value()};
     if (break_stmt.label) {
         const Indent ::Guard g{indent_, !has_expression};
         fmt::print(out_, "{}Label: ", indent_.current_branch());
@@ -640,11 +640,13 @@ auto ASTDumper::visit(NodeID, const DeclStatement& decl) -> void {
 
     {
         const Indent::Guard g{indent_, false};
-        const auto          flags = magic_enum::enum_flags_name(decl.modifiers);
-        fmt::println(out_, "{}Modifiers: {}", indent_.current_branch(), flags);
+        fmt::println(out_,
+                     "{}Modifiers: {}",
+                     indent_.current_branch(),
+                     magic_enum::enum_flags_name(decl.modifiers));
     }
 
-    const auto has_value = decl.value.has_value();
+    const auto has_value{decl.value.has_value()};
     {
         const Indent::Guard g{indent_, !has_value};
         fmt::print(out_, "{}Type: ", indent_.current_branch());
@@ -686,7 +688,7 @@ auto ASTDumper::visit(NodeID id, const ImportStatement& import_stmt) -> void {
             out_, "{}Public: {}", indent_.current_branch(), ImportStatement::is_public(id));
     }
 
-    const auto has_alias = import_stmt.alias.has_value();
+    const auto has_alias{import_stmt.alias.has_value()};
     {
         const Indent::Guard g{indent_, !has_alias};
         if (import_stmt.payload.is<IdentifierExpression>()) {
@@ -719,7 +721,7 @@ auto ASTDumper::visit(NodeID, const TestStatement& test) -> void {
     fmt::println(out_, "TestStatement");
     if (test.description) {
         const Indent::Guard g{indent_, false};
-        const auto&         string = ast_.get_as<StringExpression>(**test.description);
+        const auto&         string{ast_.get_as<StringExpression>(**test.description)};
         fmt::println(out_, "{}Description: {}", indent_.current_branch(), string);
     }
 

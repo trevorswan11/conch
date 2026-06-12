@@ -5,7 +5,6 @@
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -412,18 +411,17 @@ using HashMap = detail::HashMap<Key, Value, ceil_power_of_two(Capacity), Hash, C
 // Construct a hash map from a list of pairs
 template <traits::InsertablePair... Pairs>
 [[nodiscard]] constexpr auto make_hash_map(Pairs&&... kv_pairs) noexcept {
-    constexpr usize n = sizeof...(Pairs);
-    static_assert(n > 0, "HashMap must have a non-zero size");
-
-    using Key   = std::common_type_t<std::tuple_element_t<0, std::remove_cvref_t<Pairs>>...>;
-    using Value = std::common_type_t<std::tuple_element_t<1, std::remove_cvref_t<Pairs>>...>;
+    constexpr usize slots = sizeof...(Pairs);
+    static_assert(slots > 0, "HashMap must have a non-zero size");
 
     using std::get;
-    HashMap<Key, Value, n> map;
-    (..., [&] -> auto {
-        map.emplace(get<0>(std::forward<decltype(kv_pairs)>(kv_pairs)),
-                    get<1>(std::forward<decltype(kv_pairs)>(kv_pairs)));
-    }());
+    HashMap<traits::common_tuple_type_t<0, Pairs...>,
+            traits::common_tuple_type_t<1, Pairs...>,
+            slots>
+        map;
+    (...,
+     map.emplace(get<0>(std::forward<decltype(kv_pairs)>(kv_pairs)),
+                 get<1>(std::forward<decltype(kv_pairs)>(kv_pairs))));
     return map;
 }
 

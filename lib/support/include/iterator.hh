@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "type_traits.hh"
+#include "types.hh"
 
 namespace ghoti {
 
@@ -23,6 +24,9 @@ concept InsertablePair = requires {
     typename std::tuple_element_t<1, std::remove_cvref_t<T>>;
     requires std::tuple_size_v<std::remove_cvref_t<T>> >= 2;
 };
+
+template <usize I, typename... Ts>
+using common_tuple_type_t = std::common_type_t<std::tuple_element_t<I, std::remove_cvref_t<Ts>>...>;
 
 } // namespace traits
 

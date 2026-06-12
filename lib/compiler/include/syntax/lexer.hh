@@ -67,9 +67,9 @@ class Lexer {
         col_no_ = 0;
     }
 
-    auto reset(std::string_view input = {}) noexcept -> void;
-    auto advance() noexcept -> Token;
-    auto consume() -> std::vector<Token>;
+    auto               reset(std::string_view input = {}) noexcept -> void;
+    auto               advance() noexcept -> Token;
+    [[nodiscard]] auto consume() -> std::vector<Token>;
 
     auto        begin() noexcept -> Iterator { return Iterator{*this, advance()}; }
     static auto end() noexcept -> std::default_sentinel_t { return std::default_sentinel; }

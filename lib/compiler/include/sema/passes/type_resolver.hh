@@ -258,7 +258,7 @@ class TypeResolver {
 
     TypeResolver(mod::Module& resolving, Context& ctx)
         : resolving_{resolving}, table_idx_{*resolving.root_table_idx}, ctx_{ctx} {
-        ASSERT(ctx.prelude_index, "TypeResolver must be used after prelude-injection");
+        VERIFY(ctx.prelude_index, "TypeResolver must be used after prelude-injection");
         table_stack_.push(*ctx_.prelude_index);
         table_stack_.push(table_idx_);
     }

@@ -96,7 +96,7 @@ struct Enum {
 
     [[nodiscard]] auto type_at(usize idx, Type& object_type) const noexcept -> Type& {
         // The index location entirely depends on the number of variants which always come first
-        const auto enumeration_count = ast_enumerations.size();
+        const auto enumeration_count{ast_enumerations.size()};
         ASSERT(idx < enumeration_count + members.size(), "Index exceeds enum's types");
         if (idx < enumeration_count) { return object_type; }
         return *members[idx - enumeration_count];
@@ -219,10 +219,10 @@ namespace mut {
 
 using types::MutabilityModifiers;
 
-constexpr auto MUTABLE           = static_cast<types::MutabilityModifiers>(0);
-constexpr auto CONSTANT          = MutabilityModifiers::CONSTANT;
-constexpr auto VOLATILE          = MutabilityModifiers::VOLATILE;
-constexpr auto CONSTANT_VOLATILE = CONSTANT | VOLATILE;
+constexpr auto MUTABLE{static_cast<types::MutabilityModifiers>(0)};
+constexpr auto CONSTANT{MutabilityModifiers::CONSTANT};
+constexpr auto VOLATILE{MutabilityModifiers::VOLATILE};
+constexpr auto CONSTANT_VOLATILE{CONSTANT | VOLATILE};
 
 } // namespace mut
 
@@ -353,8 +353,8 @@ class TypePool {
     // Allocate a quasi-contiguous span of types with the provided keys
     template <std::same_as<types::Key>... Keys>
     [[nodiscard]] auto get_many(Keys&&... keys) noexcept -> gsl::span<Type*> {
-        auto  types = arena_.make_span<Type*>(sizeof...(Keys));
-        usize i     = 0;
+        auto  types{arena_.make_span<Type*>(sizeof...(Keys))};
+        usize i{0};
         (..., (types[i++] = get_or_emplace(keys)));
         return types;
     }

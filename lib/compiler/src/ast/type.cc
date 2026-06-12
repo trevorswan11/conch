@@ -21,12 +21,12 @@ namespace ghoti::ast {
 auto ExplicitFunctionType::parse(syntax::Parser& parser)
     -> Result<ExplicitFunctionType, syntax::Diagnostic> {
     PROFILE_FUNCTION();
-    const auto start_token = parser.get_current_token();
+    const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
     // Parse the definition now that we're at the fn token
     std::vector<ExplicitTypeID> parameter_types;
-    bool                        variadic = false;
+    bool                        variadic{false};
     if (parser.peek_token_is(syntax::TokenType::RPAREN)) {
         parser.advance();
     } else {
@@ -39,7 +39,7 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
             }
 
             // There are no default values for parameters, and they must be explicitly typed
-            auto type = TRY(ExplicitType::parse(parser));
+            auto type{TRY(ExplicitType::parse(parser))};
             if (type.is<IdentifierExpression>()) {
                 // noreturn is not allowed for parameters
                 if (type.get_token_type() == syntax::TokenType::NORETURN) {
@@ -59,7 +59,7 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
 
     // There must be a return type but there cannot be a block
     TRY(parser.expect_peek(syntax::TokenType::COLON));
-    const auto return_type = TRY(ExplicitType::parse(parser));
+    const auto return_type{TRY(ExplicitType::parse(parser))};
     if (parser.peek_token_is(syntax::TokenType::LBRACE)) {
         return make_syntax_err("Function types may not have a body",
                                syntax::Error::EXPLICIT_FN_TYPE_HAS_BODY,
@@ -74,7 +74,7 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
 auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, syntax::Diagnostic> {
     // Always check for a modifier and advance past it if present
     PROFILE_FUNCTION();
-    const auto         modifier_token = parser.get_peek_token();
+    const auto         modifier_token{parser.get_peek_token()};
     const TypeModifier modifier{modifier_token};
     if (!modifier.is_value()) { parser.advance(); }
 
@@ -82,7 +82,7 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
     if (parser.peek_token_is(syntax::TokenType::LBRACKET)) {
         parser.advance();
 
-        auto                          null_terminated = false;
+        auto                          null_terminated{false};
         opt::Option<ExpressionHandle> dimension;
         if (parser.peek_token_is(syntax::TokenType::NULL_TERMINATED)) {
             parser.advance();
@@ -100,19 +100,19 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         TRY(parser.expect_peek(syntax::TokenType::RBRACKET));
 
         // Arrays are recursively defined
-        const auto inner = TRY(ExplicitType::parse(parser));
+        const auto inner{TRY(ExplicitType::parse(parser))};
         return parser.add_type<ExplicitArrayType>(
             modifier_token, modifier, dimension, null_terminated, inner);
     }
 
     if (!TypeModifier{parser.get_peek_token()}.is_value()) {
         // Don't advance since the parser does it implicitly here (costs two modifier queries)
-        const auto inner = TRY(ExplicitType::parse(parser));
+        const auto inner{TRY(ExplicitType::parse(parser))};
         return parser.add_type<ExplicitTypeID>(modifier_token, modifier, inner);
     }
 
     // Otherwise the type has to be a 'simple' function or ident
-    const auto& peek_token = parser.get_peek_token();
+    const auto& peek_token{parser.get_peek_token()};
     if (peek_token.is_valid_ident()) {
         // It's trivial to catch these syntactic errors here
         if (!modifier.is_value()) {
@@ -137,7 +137,7 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         // Manually dispatch to prevent weird consumption
         if (parser.peek_token_is(syntax::TokenType::COLON_COLON) ||
             parser.peek_token_is(syntax::TokenType::LPAREN)) {
-            const auto parsed = TRY(parser.parse_expression(syntax::Precedence::TYPE));
+            const auto parsed{TRY(parser.parse_expression(syntax::Precedence::TYPE))};
             if (parsed.is<ModuleAccessExpression>()) {
                 return parser.add_type<ModuleAccessExpression>(
                     modifier_token, modifier, parser.get_node<ModuleAccessExpression>(*parsed));
@@ -157,16 +157,16 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
                                    parser.get_location_of(*parsed));
         }
 
-        const auto ident = TRY(IdentifierExpression::parse(parser));
+        const auto ident{TRY(IdentifierExpression::parse(parser))};
         return parser.add_type<IdentifierExpression>(
             modifier_token, modifier, parser.get_node<IdentifierExpression>(*ident));
     }
 
     // The inner type is limited to functions and user-defined types
-    const auto type_start = parser.get_current_token();
+    const auto type_start{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::FUNCTION)) {
         parser.advance();
-        const auto fn_type = TRY(ExplicitFunctionType::parse(parser));
+        const auto fn_type{TRY(ExplicitFunctionType::parse(parser))};
         if (!(modifier.is_value() || modifier.is_ptr())) {
             return make_syntax_err("Functions types may only be values or pointers",
                                    syntax::Error::ILLEGAL_FUNCTION_TYPE_MODIFIER,
@@ -184,7 +184,7 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
     }
 
     opt::Option<ExplicitTypeID> id;
-    switch (const auto user = TRY(parser.parse_expression()); user->get_kind()) {
+    switch (const auto user{TRY(parser.parse_expression())}; user->get_kind()) {
     case NodeKind::STRUCT_EXPRESSION:
         id.emplace(parser.add_type<StructExpression>(
             modifier_token, modifier, parser.get_node<StructExpression>(*user)));
@@ -224,7 +224,7 @@ namespace {
 
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
         parser.advance();
-        const auto explicit_type = TRY(ExplicitType::parse(parser));
+        const auto explicit_type{TRY(ExplicitType::parse(parser))};
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
             parser.advance();
             return std::pair{explicit_type, true};

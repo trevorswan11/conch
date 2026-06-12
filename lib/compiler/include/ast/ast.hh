@@ -27,7 +27,7 @@ template <traits::IndexableID ID, typename Data> struct DataPoolBase {
     }
 
     constexpr auto emplace_back(const syntax::Token& start_token, Data&& data) -> u64 {
-        const auto index = static_cast<u64>(pool.size());
+        const u64 index{pool.size()};
         pool.emplace_back(std::forward<Data>(data));
         locations.emplace_back(traits::SourceInfo<syntax::Token>::get(start_token));
         return index;
@@ -68,16 +68,16 @@ class AST {
 
     template <traits::ASTNode Data>
     [[nodiscard]] constexpr auto add_node(const syntax::Token& start_token, Data&& data) -> NodeID {
-        constexpr auto kind  = traits::NodeKindOf<Data>::value();
-        const auto     index = nodes_.emplace_back(start_token, std::forward<Data>(data));
+        constexpr auto kind{traits::NodeKindOf<Data>::value()};
+        const auto     index{nodes_.emplace_back(start_token, std::forward<Data>(data))};
         return NodeID{kind, start_token.type, index};
     }
 
     template <traits::ASTExplicitType Data>
     [[nodiscard]] constexpr auto
     add_type(const syntax::Token& start_token, TypeModifier mod, Data&& data) -> ExplicitTypeID {
-        constexpr auto kind  = traits::ExplicitTypeKindOf<Data>::value();
-        const auto     index = explicit_types_.emplace_back(start_token, std::forward<Data>(data));
+        constexpr auto kind{traits::ExplicitTypeKindOf<Data>::value()};
+        const auto     index{explicit_types_.emplace_back(start_token, std::forward<Data>(data))};
         return ExplicitTypeID{kind, mod, start_token.type, index};
     }
 
