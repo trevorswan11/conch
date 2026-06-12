@@ -53,23 +53,23 @@ template <typename... Ts>
     requires(sizeof...(Ts) > 0 && traits::UniqueTypes<Ts...>)
 class Variant {
   public:
-    static constexpr auto N = sizeof...(Ts);
-    using index_type        = traits::min_uint_for_bits<min_bits<N>>;
+    static constexpr auto N{sizeof...(Ts)};
+    using index_type = traits::min_uint_for_bits<min_bits<N>>;
 
   private:
     template <usize I> using nth = __type_pack_element<I, Ts...>;
     template <typename T>
     static constexpr usize index_of = [] -> usize {
-        usize i     = 0;
-        bool  found = (... || (std::is_same_v<std::remove_cvref_t<T>, Ts> ? true : (++i, false)));
+        usize i{0};
+        bool  found{(... || (std::is_same_v<std::remove_cvref_t<T>, Ts> ? true : (++i, false)))};
         return found ? i : N;
     }();
 
     template <typename T, typename... Args>
-    static constexpr auto nothrow_constructable =
-        traits::NoThrowConstructible<std::remove_cvref_t<T>, Args...>;
-    static constexpr auto nothrow_copy = (traits::NoThrowCopyConstructible<Ts> && ...);
-    static constexpr auto nothrow_move = (traits::NoThrowMoveConstructible<Ts> && ...);
+    static constexpr auto nothrow_constructable{
+        traits::NoThrowConstructible<std::remove_cvref_t<T>, Args...>};
+    static constexpr auto nothrow_copy{(traits::NoThrowCopyConstructible<Ts> && ...)};
+    static constexpr auto nothrow_move{(traits::NoThrowMoveConstructible<Ts> && ...)};
 
   public:
     // cppcheck-suppress-begin noExplicitConstructor
@@ -169,7 +169,7 @@ class Variant {
 
     [[nodiscard]] auto operator==(const Variant& other) const noexcept -> bool {
         if (index_ != other.index_) { return false; }
-        bool result = false;
+        auto result{false};
         [&]<usize... Is>(std::index_sequence<Is...>) noexcept -> void {
             (void)(... ||
                    (index_ == Is ? (result = (*as_raw<nth<Is>>() == *other.as_raw<nth<Is>>()), true)

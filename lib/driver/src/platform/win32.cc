@@ -21,9 +21,9 @@ namespace ghoti::win32 {
 namespace {
 
 std::atomic<i32> ref_count{0};
-UINT             original_code_page   = 0;
-DWORD            original_stdout_mode = 0;
-DWORD            original_stderr_mode = 0;
+UINT             original_code_page{0};
+DWORD            original_stdout_mode{0};
+DWORD            original_stderr_mode{0};
 
 } // namespace
 

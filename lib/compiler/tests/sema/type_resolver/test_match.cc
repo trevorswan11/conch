@@ -38,9 +38,9 @@ TEST_CASE("Resolving capturing match arms") {
                                      std::string_view capture_name,
                                      usize            capture_idx,
                                      auto&&           expected_type_fn) -> void {
-        auto [ctx, _] = helpers::resolve_and_check(input);
-        auto [sym, data, actual_data] =
-            ctx->get_type_sym_info<sema::symbols::MatchCapture>(capture_name, capture_idx);
+        auto [ctx, _]{helpers::resolve_and_check(input)};
+        auto [sym, data, actual_data]{
+            ctx->get_type_sym_info<sema::symbols::MatchCapture>(capture_name, capture_idx)};
         CHECK(actual_data == expected_type_fn(*ctx));
     };
 
@@ -66,8 +66,8 @@ TEST_CASE("Resolving well-formed builtin-type matching") {
 
     SECTION("Bytes") {
         std::stringstream arms;
-        for (usize i = 0; i < 256; ++i) { fmt::print(arms, "{} => 0,", i); }
-        const auto input = fmt::format("match('0') {{ {} }};", arms.view());
+        for (usize i{0}; i < 256; ++i) { fmt::print(arms, "{} => 0,", i); }
+        const auto input{fmt::format("match('0') {{ {} }};", arms.view())};
         helpers::resolve_and_check(input);
         helpers::resolve_and_check("match ('0') { 0 => {}, _ => {} };");
     }

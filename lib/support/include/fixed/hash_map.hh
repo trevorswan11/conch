@@ -75,9 +75,9 @@ class Metadata {
     [[nodiscard]] constexpr auto operator==(const Metadata&) const noexcept -> bool = default;
 
   private:
-    static constexpr u8 FINGERPRINT_MASK = 0x7F;
-    static constexpr u8 USED_MASK        = 0x80;
-    static constexpr u8 USED_OFFSET      = std::countr_zero(USED_MASK);
+    static constexpr u8 FINGERPRINT_MASK{0x7F};
+    static constexpr u8 USED_MASK{0x80};
+    static constexpr u8 USED_OFFSET{std::countr_zero(USED_MASK)};
 
   private:
     u8 raw_{0};
@@ -141,7 +141,7 @@ class HashMapIterator {
   private:
     constexpr auto next() noexcept -> void {
         if (!hm_) { return; }
-        const auto metadata = hm_->get_metadata();
+        const auto metadata{hm_->get_metadata()};
         while (index_ < Capacity && !metadata[index_].is_used()) { index_++; }
     }
 
@@ -171,7 +171,7 @@ class HashMap {
     = default;
 
     constexpr HashMap(const HashMap& other) {
-        for (usize i = 0; i < Capacity; ++i) {
+        for (usize i{0}; i < Capacity; ++i) {
             metadata_[i] = other.metadata_[i];
             if (metadata_[i].is_used()) {
                 std::construct_at(key_data() + i, *(other.key_data() + i));
@@ -194,7 +194,7 @@ class HashMap {
     }
 
     constexpr HashMap(HashMap&& other) noexcept {
-        for (usize i = 0; i < Capacity; ++i) {
+        for (usize i{0}; i < Capacity; ++i) {
             metadata_[i] = other.metadata_[i];
             if (metadata_[i].is_used()) {
                 std::construct_at(key_data() + i, std::move(*(other.key_data() + i)));
@@ -220,13 +220,14 @@ class HashMap {
 
     // Constructs a value at the key or updates it if there was already an item present
     template <typename... Args> constexpr auto emplace(const Key& key, Args&&... args) -> void {
-        const auto hashed      = Hash{}(key);
-        const auto fingerprint = Metadata::take_fingerprint(hashed);
+        const auto hashed{Hash{}(key)};
+        const auto fingerprint{Metadata::take_fingerprint(hashed)};
 
-        usize limit = Capacity, first_tombstone_idx = Capacity;
-        usize probe = hashed & HASH_MASK;
+        usize limit{Capacity};
+        usize first_tombstone_idx{Capacity};
+        usize probe{hashed & HASH_MASK};
 
-        Metadata m = metadata_[probe];
+        auto m{metadata_[probe]};
         while (!m.is_open() && limit != 0) {
             if (m.is_used() && m.get_fingerprint() == fingerprint) {
                 if (Equal{}(key, *(key_data() + probe))) {
@@ -263,7 +264,7 @@ class HashMap {
 
     // Returns a reference to the value at the key if present
     [[nodiscard]] constexpr auto get(this auto&& self, const Key& key) noexcept -> auto& {
-        const auto idx = self.index_of(key);
+        const auto idx{self.index_of(key)};
         ASSERT(idx, "Illegal get on missing key");
         return *(self.value_data() + *idx);
     }
@@ -272,13 +273,13 @@ class HashMap {
     template <typename Self>
     [[nodiscard]] constexpr auto get_opt(this Self&& self, const Key& key) noexcept
         -> opt::Option<traits::const_dispatch_t<Self, Value>&> {
-        if (const auto idx = self.index_of(key)) { return *(self.value_data() + *idx); }
+        if (const auto idx{self.index_of(key)}) { return *(self.value_data() + *idx); }
         return opt::none;
     }
 
     // Removes the key value pair from the map, NOOP if not present
     constexpr auto remove(const Key& key) noexcept -> void {
-        const auto idx = index_of(key);
+        const auto idx{index_of(key)};
         if (!idx) { return; }
 
         std::destroy_at(key_data() + *idx);
@@ -312,7 +313,7 @@ class HashMap {
     constexpr auto clear() noexcept -> void {
         if constexpr (!traits::TriviallyDestructible<Key> ||
                       !traits::TriviallyDestructible<Value>) {
-            for (usize i = 0; i < Capacity; ++i) {
+            for (usize i{0}; i < Capacity; ++i) {
                 if (metadata_[i].is_used()) {
                     if constexpr (!traits::TriviallyDestructible<Key>) {
                         std::destroy_at(key_data() + i);
@@ -329,19 +330,19 @@ class HashMap {
     }
 
   private:
-    static constexpr auto HASH_MASK = Capacity - 1;
+    static constexpr auto HASH_MASK{Capacity - 1};
 
   private:
     constexpr auto index_of(const Key& key) const noexcept -> opt::Option<usize> {
         if (size_ == 0) { return opt::none; }
 
-        const auto hashed      = Hash{}(key);
-        const auto fingerprint = Metadata::take_fingerprint(hashed);
+        const auto hashed{Hash{}(key)};
+        const auto fingerprint{Metadata::take_fingerprint(hashed)};
 
-        usize limit = Capacity;
-        usize probe = hashed & HASH_MASK;
+        usize limit{Capacity};
+        usize probe{hashed & HASH_MASK};
 
-        Metadata m = metadata_[probe];
+        auto m{metadata_[probe]};
         while (!m.is_open() && limit != 0) {
             if (m.is_used() && m.get_fingerprint() == fingerprint) {
                 if (Equal{}(key, *(key_data() + probe))) { return probe; }
@@ -357,9 +358,9 @@ class HashMap {
     // https://en.cppreference.com/cpp/algorithm/swap
     constexpr auto swap(HashMap& other) noexcept -> void {
         using std::swap;
-        for (usize i = 0; i < Capacity; ++i) {
-            const bool lhs_used = metadata_[i].is_used();
-            const bool rhs_used = other.metadata_[i].is_used();
+        for (usize i{0}; i < Capacity; ++i) {
+            const bool lhs_used{metadata_[i].is_used()};
+            const bool rhs_used{other.metadata_[i].is_used()};
 
             // Metadata swap should always be done since it governs state
             swap(metadata_[i], other.metadata_[i]);
@@ -411,7 +412,7 @@ using HashMap = detail::HashMap<Key, Value, ceil_power_of_two(Capacity), Hash, C
 // Construct a hash map from a list of pairs
 template <traits::InsertablePair... Pairs>
 [[nodiscard]] constexpr auto make_hash_map(Pairs&&... kv_pairs) noexcept {
-    constexpr usize slots = sizeof...(Pairs);
+    constexpr usize slots{sizeof...(Pairs)};
     static_assert(slots > 0, "HashMap must have a non-zero size");
 
     using std::get;

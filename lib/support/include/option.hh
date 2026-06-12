@@ -40,8 +40,8 @@ template <traits::ScopedEnum E> struct Nullable<E> {
 
 namespace opt {
 
-using None          = std::nullopt_t;
-constexpr None none = std::nullopt; // NOLINT
+using None = std::nullopt_t;
+constexpr None none{std::nullopt}; // NOLINT
 
 namespace detail {
 
@@ -153,7 +153,7 @@ template <traits::Compactable T> class CompactOpt {
 
     // Resets the optional and returns the stored value
     [[nodiscard]] constexpr auto take() noexcept -> T {
-        auto tmp = value_;
+        auto tmp{value_};
         reset();
         return tmp;
     }
@@ -203,7 +203,7 @@ template <traits::Compactable T> class CompactOpt {
     }
 
   private:
-    static constexpr T NO_VALUE = traits::Nullable<T>::invalid();
+    static constexpr auto NO_VALUE{traits::Nullable<T>::invalid()};
 
   private:
     T value_;
@@ -261,7 +261,7 @@ class Tribool {
 
     // Resets the optional and returns the stored bool
     [[nodiscard]] constexpr auto take() noexcept -> bool {
-        const auto value = value_;
+        const auto value{value_};
         reset();
         return value;
     }
@@ -287,7 +287,7 @@ class Tribool {
     }
 
   private:
-    static constexpr u8 NO_VALUE = 3;
+    static constexpr u8 NO_VALUE{3};
 
   private:
     u8 value_;
@@ -317,7 +317,7 @@ class Size {
 
     constexpr auto               reset() noexcept -> void { value_ = NO_VALUE; }
     [[nodiscard]] constexpr auto take() noexcept -> usize {
-        const usize idx = value_;
+        const usize idx{value_};
         reset();
         return idx;
     }
@@ -339,7 +339,7 @@ class Size {
     [[nodiscard]] auto hash() const noexcept -> u64 { return std::hash<usize>{}(value_); }
 
   private:
-    static constexpr usize NO_VALUE = std::numeric_limits<usize>::max();
+    static constexpr usize NO_VALUE{std::numeric_limits<usize>::max()};
 
   private:
     usize value_{NO_VALUE};

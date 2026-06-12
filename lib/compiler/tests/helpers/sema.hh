@@ -89,15 +89,15 @@ struct SemaTestContext {
                         usize                     table_idx,
                         opt::Option<mod::Module&> module = opt::none,
                         Proj                      proj   = {}) -> void {
-        const auto [sym, _, type] = get_type_sym_info<SymbolData>(name, table_idx, module, proj);
+        const auto [sym, _, type]{get_type_sym_info<SymbolData>(name, table_idx, module, proj)};
         check_poisoned(sym, type);
     }
 
     // Contains [symbol, symbol data]
     template <typename SymbolData>
     [[nodiscard]] auto get_symbol(std::string_view name, usize table_idx) {
-        const auto& symbol = helpers::unwrap(analyzer.get_registry().get_from_opt(table_idx, name));
-        const auto& symbol_data = helpers::unwrap(symbol.get_data().as_opt<SymbolData>());
+        const auto& symbol{helpers::unwrap(analyzer.get_registry().get_from_opt(table_idx, name))};
+        const auto& symbol_data{helpers::unwrap(symbol.get_data().as_opt<SymbolData>())};
         return std::tie(symbol, symbol_data);
     }
 
@@ -107,8 +107,8 @@ struct SemaTestContext {
                                          usize                     table_idx,
                                          opt::Option<mod::Module&> module = opt::none,
                                          Proj                      proj   = {}) {
-        auto        info      = get_symbol<SymbolData>(name, table_idx);
-        auto&       enclosing = module.value_or(root_mod);
+        auto        info{get_symbol<SymbolData>(name, table_idx)};
+        auto&       enclosing{module.value_or(root_mod)};
         const auto& type =
             helpers::unwrap(enclosing.get_sema_type_opt(std::invoke(proj, std::get<1>(info))));
         return std::tuple_cat(info, std::forward_as_tuple(type));
@@ -120,7 +120,7 @@ struct SemaTestContext {
                                               usize                     table_idx,
                                               opt::Option<mod::Module&> module = opt::none,
                                               Proj                      proj   = {}) {
-        auto        info = get_type_sym_info<SymbolData>(name, table_idx, module, proj);
+        auto        info{get_type_sym_info<SymbolData>(name, table_idx, module, proj)};
         const auto& type_data =
             helpers::unwrap(std::get<2>(info).get_data().template as_opt<TypeData>());
         return std::tuple_cat(info, std::forward_as_tuple(type_data));
@@ -132,10 +132,10 @@ struct SemaTestContext {
                                         usize                     table_idx,
                                         opt::Option<mod::Module&> module = opt::none,
                                         Proj                      proj   = {}) {
-        auto        info      = get_symbol<SymbolData>(name, table_idx);
-        auto&       enclosing = module.value_or(root_mod);
-        const auto& node_data = helpers::unwrap(
-            enclosing.ast.get_as_opt<TreeData>(std::invoke(proj, std::get<1>(info))));
+        auto        info{get_symbol<SymbolData>(name, table_idx)};
+        auto&       enclosing{module.value_or(root_mod)};
+        const auto& node_data{helpers::unwrap(
+            enclosing.ast.get_as_opt<TreeData>(std::invoke(proj, std::get<1>(info))))};
         return std::tuple_cat(info, std::forward_as_tuple(node_data));
     }
 
@@ -145,8 +145,8 @@ struct SemaTestContext {
                                              usize                     table_idx,
                                              opt::Option<mod::Module&> module = opt::none,
                                              Proj                      proj   = {}) {
-        auto        info = get_ast_sym_info<SymbolData, TreeData>(name, table_idx, module, proj);
-        auto&       enclosing = module.value_or(root_mod);
+        auto        info{get_ast_sym_info<SymbolData, TreeData>(name, table_idx, module, proj)};
+        auto&       enclosing{module.value_or(root_mod)};
         const auto& type =
             helpers::unwrap(enclosing.get_sema_type_opt(std::invoke(proj, std::get<1>(info))));
         return std::tuple_cat(info, std::forward_as_tuple(type));
@@ -157,7 +157,7 @@ struct SemaTestContext {
     [[nodiscard]] auto get_full_sym_info(std::string_view          name,
                                          usize                     table_idx,
                                          opt::Option<mod::Module&> module = opt::none) {
-        auto        info = get_ast_type_sym_info<SymbolData, TreeData>(name, table_idx, module);
+        auto        info{get_ast_type_sym_info<SymbolData, TreeData>(name, table_idx, module)};
         const auto& type_data =
             helpers::unwrap(std::get<3>(info).get_data().template as_opt<TypeData>());
         return std::tuple_cat(info, std::forward_as_tuple(type_data));
@@ -192,11 +192,11 @@ auto analyze(std::string_view root_path,
              std::ostream&    error_stream,
              std::string_view input,
              Mocks&&... mocks) -> mem::Box<SemaTestContext> {
-    auto ctx = mem::make_box<SemaTestContext>(
-        make_vector<MockFile>(std::forward<Mocks>(mocks)...), root_path, input, error_stream);
+    auto ctx{mem::make_box<SemaTestContext>(
+        make_vector<MockFile>(std::forward<Mocks>(mocks)...), root_path, input, error_stream)};
     check_errors<syntax::Diagnostics>(ctx->root_mod);
 
-    auto& analyzer = ctx->analyzer;
+    auto& analyzer{ctx->analyzer};
     REQUIRE(analyzer.analyze(root_path));
     return ctx;
 }
@@ -205,7 +205,7 @@ auto analyze(std::string_view root_path,
 template <std::same_as<MockFile>... Mocks>
 auto analyze_and_check(std::string_view root_path, std::string_view input, Mocks&&... mocks)
     -> mem::Box<SemaTestContext> {
-    auto ctx = analyze(root_path, std::cerr, input, std::forward<Mocks>(mocks)...);
+    auto ctx{analyze(root_path, std::cerr, input, std::forward<Mocks>(mocks)...)};
     REQUIRE_FALSE(ctx->root_mod.diagnostics.template is<Unit>());
     return ctx;
 }
@@ -215,7 +215,7 @@ template <std::same_as<sema::Diagnostic>... Ds>
 auto test_collector_fail(std::string_view             failing,
                          const std::vector<MockFile>& imports,
                          Ds&&... expected_diagnostics) -> void {
-    auto [ctx, idx] = collect(failing, imports);
+    auto [ctx, idx]{collect(failing, imports)};
     check_errors_against<sema::Diagnostics>(ctx->root_mod,
                                             std::forward<Ds>(expected_diagnostics)...);
 }
@@ -231,7 +231,7 @@ template <traits::ASTNode Node, typename NodeIterable>
 [[nodiscard]] auto lookup_expression(const NodeIterable& nodes, const mod::Module& module) noexcept
     -> const Node& {
     for (const auto& body_id : nodes) {
-        if (const auto& expr_stmt = module.ast.get_as_opt<ast::ExpressionStatement>(body_id)) {
+        if (const auto& expr_stmt{module.ast.get_as_opt<ast::ExpressionStatement>(body_id)}) {
             if (expr_stmt->expression.template is<ast::CallExpression>()) {
                 return helpers::unwrap(
                     module.ast.get_as_opt<ast::CallExpression>(expr_stmt->expression));
@@ -246,7 +246,7 @@ template <std::same_as<sema::Diagnostic>... Ds>
 auto test_resolver_fail(std::string_view             failing,
                         const std::vector<MockFile>& imports,
                         Ds&&... expected_diagnostics) -> CtxIdxPair {
-    auto [ctx, idx] = resolve(failing, imports);
+    auto [ctx, idx]{resolve(failing, imports)};
     check_errors_against<sema::Diagnostics>(ctx->root_mod,
                                             std::forward<Ds>(expected_diagnostics)...);
     return {std::move(ctx), idx};

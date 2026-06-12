@@ -76,7 +76,7 @@ constexpr std::string_view expected{
 TEST_CASE("Comprehensive dump") {
     syntax::Parser p{input};
     ast::AST       ast;
-    auto           errors = p.consume(ast);
+    auto           errors{p.consume(ast)};
     helpers::check_errors<syntax::Diagnostic>(errors);
 
     std::ostringstream oss;

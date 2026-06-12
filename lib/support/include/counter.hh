@@ -26,10 +26,10 @@ template <traits::Integral Underlying> class Counter {
     };
 
   public:
-    constexpr auto increment() noexcept -> void { count_ += ONE; }
-    constexpr auto decrement() noexcept -> void { count_ -= ONE; }
+    constexpr auto increment() noexcept -> void { count_ += static_cast<Underlying>(1); }
+    constexpr auto decrement() noexcept -> void { count_ -= static_cast<Underlying>(1); }
 
-    constexpr operator bool() noexcept { return count_ != ZERO; }
+    constexpr operator bool() noexcept { return count_ != static_cast<Underlying>(0); }
     constexpr operator Underlying() noexcept { return count_; }
 
     constexpr auto               operator<=>(const Counter&) const noexcept        = default;
@@ -51,11 +51,7 @@ template <traits::Integral Underlying> class Counter {
     [[nodiscard]] constexpr auto guard() noexcept -> Guard { return Guard{*this}; }
 
   private:
-    static constexpr auto ZERO = static_cast<Underlying>(0);
-    static constexpr auto ONE  = static_cast<Underlying>(1);
-
-  private:
-    Underlying count_{ZERO};
+    Underlying count_{static_cast<Underlying>(0)};
 };
 
 using DefaultCounter = Counter<usize>;

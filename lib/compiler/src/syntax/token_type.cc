@@ -98,15 +98,15 @@ auto is_valid_ident(TokenType type) noexcept -> bool {
 
 namespace {
 
-using SuffixMapping                = std::pair<bool (*)(TokenType), usize>;
-constexpr auto INT_SUFFIX_MAPPINGS = std::to_array<SuffixMapping>({
-    {is_i32, 0},
-    {is_i64, 1},
-    {is_isize_int, 1},
-    {is_u32, 1},
-    {is_u64, 2},
-    {is_usize_int, 2},
-});
+using SuffixMapping = std::pair<bool (*)(TokenType), usize>;
+constexpr std::array INT_SUFFIX_MAPPINGS{
+    SuffixMapping{is_i32, 0},
+    SuffixMapping{is_i64, 1},
+    SuffixMapping{is_isize_int, 1},
+    SuffixMapping{is_u32, 1},
+    SuffixMapping{is_u64, 2},
+    SuffixMapping{is_usize_int, 2},
+};
 
 } // namespace
 

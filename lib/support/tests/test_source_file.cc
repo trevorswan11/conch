@@ -25,7 +25,7 @@ auto test_diag_strings(const SourceLocation&         t,
                        std::string_view              expected_line,
                        opt::Option<std::string_view> expected_caret) {
     const SourceFile file{source};
-    const auto [ln, caret] = file.get_diagnostic_strings(t);
+    const auto [ln, caret]{file.get_diagnostic_strings(t)};
 
     CHECK(ln == expected_line);
     if (expected_caret) {
@@ -50,7 +50,7 @@ TEST_CASE("Offset generation") {
 
 TEST_CASE("First and second line diagnostics") {
     constexpr std::array lines{"This is line 1", "This is line 2"};
-    for (usize i = 0; i < lines.size(); ++i) {
+    for (usize i{0}; i < lines.size(); ++i) {
         test_diag_strings({i, 0UZ}, lines[i], "^");
         test_diag_strings({i, 1UZ}, lines[i], " ^");
         test_diag_strings({i, 5UZ}, lines[i], "     ^");

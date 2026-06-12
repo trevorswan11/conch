@@ -16,18 +16,18 @@ namespace ghoti::tests {
 namespace {
 
 auto collect_and_validate_label(std::string_view input, usize expected_size) -> void {
-    auto [ctx, idx] = helpers::collect_and_check(input);
+    auto [ctx, idx]{helpers::collect_and_check(input)};
 
-    auto&       analyzer = ctx->analyzer;
-    const auto& registry = analyzer.get_registry();
+    auto&       analyzer{ctx->analyzer};
+    const auto& registry{analyzer.get_registry()};
     REQUIRE(registry.size() == expected_size);
 
     CHECK(registry.get_from_opt(idx, "a"));
     CHECK_FALSE(registry.get_from_opt(idx, "blk"));
 
-    const auto blk_idx               = idx + 1;
-    const auto [sym, sym_data, type] = ctx->get_type_sym_info<sema::symbols::Label>(
-        "blk", blk_idx, opt::none, &sema::symbols::Label::get_definition);
+    const auto blk_idx{idx + 1};
+    const auto [sym, sym_data, type]{ctx->get_type_sym_info<sema::symbols::Label>(
+        "blk", blk_idx, opt::none, &sema::symbols::Label::get_definition)};
     CHECK(sym.get_kind_opt() == sema::SymbolKind::LABEL);
 
     CHECK(type.get_symbol_table_idx_opt() == blk_idx);

@@ -17,8 +17,8 @@ namespace syms = sema::symbols;
 
 TEST_CASE("Builtin type resolution") {
     const auto check_bi_type = [](std::string_view value, sema::TypeKind expected_kind) -> void {
-        auto [ctx, idx] = helpers::resolve_and_check(fmt::format("const a := {};", value));
-        const auto [sym, data, type] = ctx->get_type_sym_info<syms::Node>("a", idx);
+        auto [ctx, idx]{helpers::resolve_and_check(fmt::format("const a := {};", value))};
+        const auto [sym, data, type]{ctx->get_type_sym_info<syms::Node>("a", idx)};
         CHECK(type == ctx->get_type(expected_kind));
     };
 
@@ -38,28 +38,28 @@ TEST_CASE("Builtin type resolution") {
 }
 
 TEST_CASE("Nested type resolution") {
-    auto [ctx, idx] = helpers::resolve_and_check("var a: ^^i32; var b: ^^^i32;");
+    auto [ctx, idx]{helpers::resolve_and_check("var a: ^^i32; var b: ^^^i32;")};
 
     const auto& i32_ptr =
         ctx->get_type(sema::TypeKind::POINTER, ctx->get_type(sema::TypeKind::I32));
-    const auto& i32_ptr_ptr = ctx->get_type(sema::TypeKind::POINTER, i32_ptr);
+    const auto& i32_ptr_ptr{ctx->get_type(sema::TypeKind::POINTER, i32_ptr)};
 
-    const auto [a_sym, a_sym_data, a_type] = ctx->get_type_sym_info<syms::Node>("a", idx);
+    const auto [a_sym, a_sym_data, a_type]{ctx->get_type_sym_info<syms::Node>("a", idx)};
     CHECK(a_type == i32_ptr_ptr);
-    const auto [b_sym, b_sym_data, b_type] = ctx->get_type_sym_info<syms::Node>("b", idx);
+    const auto [b_sym, b_sym_data, b_type]{ctx->get_type_sym_info<syms::Node>("b", idx)};
     CHECK(b_type == ctx->get_type(sema::TypeKind::POINTER, i32_ptr_ptr));
 }
 
 TEST_CASE("Type alias resolution") {
-    auto [ctx, idx] = helpers::resolve_and_check("using a = ^bool; var b: a; var c: &a;");
+    auto [ctx, idx]{helpers::resolve_and_check("using a = ^bool; var b: a; var c: &a;")};
     const auto& bool_ref =
         ctx->get_type(sema::TypeKind::POINTER, ctx->get_type(sema::TypeKind::BOOL));
 
-    const auto [a_sym, a_sym_data, a_type] = ctx->get_type_sym_info<syms::Node>("a", idx);
+    const auto [a_sym, a_sym_data, a_type]{ctx->get_type_sym_info<syms::Node>("a", idx)};
     CHECK(a_type == bool_ref);
-    const auto [b_sym, b_sym_data, b_type] = ctx->get_type_sym_info<syms::Node>("b", idx);
+    const auto [b_sym, b_sym_data, b_type]{ctx->get_type_sym_info<syms::Node>("b", idx)};
     CHECK(b_type == bool_ref);
-    const auto [c_sym, c_sym_data, c_type] = ctx->get_type_sym_info<syms::Node>("c", idx);
+    const auto [c_sym, c_sym_data, c_type]{ctx->get_type_sym_info<syms::Node>("c", idx)};
     CHECK(c_type == ctx->get_type(sema::TypeKind::REFERENCE, bool_ref));
 }
 
@@ -90,8 +90,8 @@ TEST_CASE("Undeclared identifier usage") {
 }
 
 TEST_CASE("Defer & discard statement resolution") {
-    auto [ctx, idx]           = helpers::resolve_and_check("fn(): void { defer { var a: i32; } }");
-    const auto [sym, _, type] = ctx->get_type_sym_info<syms::Node>("a", 2);
+    auto [ctx, idx]{helpers::resolve_and_check("fn(): void { defer { var a: i32; } }")};
+    const auto [sym, _, type]{ctx->get_type_sym_info<syms::Node>("a", 2)};
     CHECK(type == ctx->get_type(sema::TypeKind::I32));
     helpers::resolve_and_check("_ = 1 + 1;");
 }

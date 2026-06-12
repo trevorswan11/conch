@@ -25,8 +25,8 @@ namespace ghoti {
 
 // Should be zero indexed and only 1-indexed at print time
 struct SourceLocation {
-    usize line   = 0;
-    usize column = 0;
+    usize line{0};
+    usize column{0};
 
     SourceLocation() noexcept = default;
     SourceLocation(usize line, usize column) noexcept : line{line}, column{column} {}

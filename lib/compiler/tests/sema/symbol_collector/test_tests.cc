@@ -11,14 +11,14 @@
 namespace ghoti::tests {
 
 TEST_CASE("Test statement symbol collection") {
-    auto [ctx, idx]      = helpers::collect_and_check(R"(test "foo" { const foo := bar; })");
-    const auto& registry = ctx->analyzer.get_registry();
+    auto [ctx, idx]{helpers::collect_and_check(R"(test "foo" { const foo := bar; })")};
+    const auto& registry{ctx->analyzer.get_registry()};
     REQUIRE(registry.size() == 2);
-    const auto& table = helpers::unwrap(registry.get_opt(idx));
+    const auto& table{helpers::unwrap(registry.get_opt(idx))};
     CHECK(table.size() == 0);
 
-    const auto  first_node = ctx->root_mod.ast | std::views::take(1);
-    const auto& test_type  = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*first_node.begin()));
+    const auto  first_node{ctx->root_mod.ast | std::views::take(1)};
+    const auto& test_type{helpers::unwrap(ctx->root_mod.get_sema_type_opt(*first_node.begin()))};
     CHECK(test_type == ctx->get_type(sema::TypeKind::BLOCK, 1));
     ctx->test_common_decl_collection(1);
 }

@@ -19,7 +19,7 @@ TEST_CASE("Result traits") {
 TEST_CASE("Try macro usage") {
     Result<i32, std::string_view> res;
     const auto                    unwrap = [&] -> opt::Option<Err<std::string_view>> {
-        const auto val = TRY(res);
+        const auto val{TRY(res)};
         CHECK(val == 2);
         return opt::none;
     };
@@ -28,8 +28,8 @@ TEST_CASE("Try macro usage") {
     CHECK_FALSE(unwrap());
 
     const std::string_view str{"Hello, World!"};
-    res            = make_err<std::string_view>(str);
-    const auto err = unwrap();
+    res = make_err<std::string_view>(str);
+    const auto err{unwrap()};
     REQUIRE(err);
     CHECK(err->error() == str);
 }

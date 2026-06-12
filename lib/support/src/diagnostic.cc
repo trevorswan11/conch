@@ -17,11 +17,11 @@ auto format_diagnostic(std::ostream&                   os,
                        const FormattableDiagnostic&    diag,
                        const opt::Option<std::string>& source_path,
                        opt::Option<bool>               in_terminal) -> std::ostream& {
-    const auto tty = in_terminal.value_or(is_tty());
+    const auto tty{in_terminal.value_or(is_tty())};
 
     // The source and location play nicely with one another
     if (source_path) {
-        const auto& local_style = tty ? style::WHITE_BOLD : style::BASE;
+        const auto& local_style{tty ? style::WHITE_BOLD : style::BASE};
         os << fmt::format(local_style, "{}:", *source_path);
         if (diag.location) {
             os << fmt::format(local_style, "{}: ", *diag.location);
@@ -32,7 +32,7 @@ auto format_diagnostic(std::ostream&                   os,
 
     // Here the buffer should be "file:loc: " to print level if present
     if (diag.level) {
-        const auto name = level_name(*diag.level);
+        const auto name{level_name(*diag.level)};
         os << fmt::format(tty ? level_style(*diag.level) : style::BASE, "{}:", name);
     }
 

@@ -33,7 +33,7 @@ template <MappableEnum E, typename Value> class EnumMap {
 
     // Asserts that the key is a valid enumeration
     [[nodiscard]] constexpr auto operator[](this auto&& self, E key) noexcept -> decltype(auto) {
-        const auto index = magic_enum::enum_index(key);
+        const auto index{magic_enum::enum_index(key)};
         ASSERT(index, "Key must be a valid enumeration");
         return *(self.map_.data() + *index);
     }
@@ -45,7 +45,7 @@ template <MappableEnum E, typename Value> class EnumMap {
         if constexpr (traits::Option<Value>) {
             return operator[](key);
         } else if constexpr (traits::Pointer<Value>) {
-            const auto value = operator[](key);
+            const auto value{operator[](key)};
             return value ? opt::Option<Value>{value} : opt::none;
         } else {
             return opt::Option<Value>{operator[](key)};

@@ -124,7 +124,7 @@ template <typename Item, usize Capacity> class Vector {
     constexpr auto clear() noexcept -> void {
         if constexpr (!traits::TriviallyDestructible<Item>) {
             // The lion is now concerned with freeing non-trivial resources
-            for (usize i = 0; i < size_; ++i) { std::destroy_at(data() + i); }
+            for (usize i{0}; i < size_; ++i) { std::destroy_at(data() + i); }
         }
         size_ = 0;
     }
@@ -133,15 +133,15 @@ template <typename Item, usize Capacity> class Vector {
     // https://en.cppreference.com/cpp/algorithm/swap
     constexpr auto swap(Vector& other) noexcept -> void {
         static_assert(!traits::TriviallyCopyable<Item>, "Trivial copies should be defaulted");
-        auto& smaller = (size_ < other.size_) ? *this : other;
-        auto& larger  = (size_ < other.size_) ? other : *this;
+        auto& smaller{(size_ < other.size_) ? *this : other};
+        auto& larger{(size_ < other.size_) ? other : *this};
 
         std::swap_ranges(smaller.begin(), smaller.end(), larger.begin());
-        const auto smaller_size = smaller.size_;
-        const auto larger_size  = larger.size_;
+        const auto smaller_size{smaller.size_};
+        const auto larger_size{larger.size_};
 
         // Manually destroy the moved-from object after moving it
-        for (usize i = smaller_size; i < larger_size; ++i) {
+        for (usize i{smaller_size}; i < larger_size; ++i) {
             smaller.emplace_back(std::move(larger[i]));
             std::destroy_at(data() + i);
         }

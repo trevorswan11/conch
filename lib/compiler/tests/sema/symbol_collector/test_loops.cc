@@ -20,15 +20,15 @@ namespace {
 
 [[nodiscard]] auto test_loop(std::string_view input, usize expected_reg_count, usize loop_block_idx)
     -> mem::Box<helpers::SemaTestContext> {
-    auto [ctx, idx] = helpers::collect_and_check(input);
+    auto [ctx, idx]{helpers::collect_and_check(input)};
 
-    const auto& registry = ctx->analyzer.get_registry();
+    const auto& registry{ctx->analyzer.get_registry()};
     REQUIRE(registry.size() == expected_reg_count);
-    const auto [sym, sym_data, node_data] =
-        ctx->get_ast_sym_info<sema::symbols::Node, ast::DeclStatement>("a", 0);
+    const auto [sym, sym_data, node_data]{
+        ctx->get_ast_sym_info<sema::symbols::Node, ast::DeclStatement>("a", 0)};
     CHECK_FALSE(sym.has_kind());
 
-    const auto& actual_type = helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value));
+    const auto& actual_type{helpers::unwrap(ctx->root_mod.get_sema_type_opt(*node_data.value))};
     CHECK(actual_type == ctx->get_type(sema::TypeKind::BLOCK, loop_block_idx));
     return std::move(ctx);
 }
@@ -36,22 +36,22 @@ namespace {
 } // namespace
 
 TEST_CASE("Do-while loop collection") {
-    auto ctx =
-        test_loop("const a := do { const foo := bar; } while (blk: { const foo := bar; });", 4, 1);
+    auto ctx{
+        test_loop("const a := do { const foo := bar; } while (blk: { const foo := bar; });", 4, 1)};
     ctx->test_common_decl_collection(1);
     ctx->test_common_decl_collection(3);
 }
 
 TEST_CASE("For loop collection") {
-    auto ctx = test_loop("const a := for (0..5, blk: { const foo := bar; }) |i, j| { const foo := "
-                         "bar; } else { const foo := bar; };",
-                         5,
-                         3);
+    auto ctx{test_loop("const a := for (0..5, blk: { const foo := bar; }) |i, j| { const foo := "
+                       "bar; } else { const foo := bar; };",
+                       5,
+                       3)};
 
-    const auto& loop_table = ctx->analyzer.get_table(3);
-    const auto& i_symbol   = helpers::unwrap(loop_table.get_opt("i"));
+    const auto& loop_table{ctx->analyzer.get_table(3)};
+    const auto& i_symbol{helpers::unwrap(loop_table.get_opt("i"))};
     CHECK(i_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
-    const auto& j_symbol = helpers::unwrap(loop_table.get_opt("i"));
+    const auto& j_symbol{helpers::unwrap(loop_table.get_opt("i"))};
     CHECK(j_symbol.get_data().as_opt<sema::symbols::ForLoopCapture>());
 
     ctx->test_common_decl_collection(2);
@@ -60,15 +60,15 @@ TEST_CASE("For loop collection") {
 }
 
 TEST_CASE("Infinite loop collection") {
-    auto ctx = test_loop("const a := loop { const foo := bar; };", 2, 1);
+    auto ctx{test_loop("const a := loop { const foo := bar; };", 2, 1)};
     ctx->test_common_decl_collection(1);
 }
 
 TEST_CASE("While loop collection") {
-    auto ctx = test_loop("const a := while (blk: { const foo := bar; }) : (i += blk: { const foo "
-                         ":= bar; }) { const foo := bar; } else { const foo := bar; };",
-                         7,
-                         5);
+    auto ctx{test_loop("const a := while (blk: { const foo := bar; }) : (i += blk: { const foo "
+                       ":= bar; }) { const foo := bar; } else { const foo := bar; };",
+                       7,
+                       5)};
     ctx->test_common_decl_collection(2);
     ctx->test_common_decl_collection(4);
     ctx->test_common_decl_collection(5);
