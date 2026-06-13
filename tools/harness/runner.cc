@@ -59,7 +59,7 @@ auto dealloc(void* ptr) -> void;
 }
 
 auto operator new(usize size) -> void* {
-    void* p = alloc(size);
+    void* p{alloc(size)};
     return p ? p : throw std::bad_alloc();
 }
 
