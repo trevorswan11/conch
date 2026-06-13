@@ -44,14 +44,21 @@ class Timer {
         ::ghoti::Timer CONCAT(timer, __LINE__) { name }
 #    define PROFILE_FUNCTION() PROFILE_SCOPE(__PRETTY_FUNCTION__)
 #else
+#    include <string_view>
+
 #    define PROFILE_SCOPE(name)
 #    define PROFILE_FUNCTION()
 
 namespace ghoti {
 
-// This is compiled out with argv[0]: https://godbolt.org/z/45M5o8fj1
+// This is compiled out with argv[0]: https://godbolt.org/z/5jdK3ssor
 struct Profiler {
-    constexpr explicit Profiler(auto) noexcept {}
+    constexpr explicit Profiler(std::string_view) noexcept {}
+};
+
+// This exists purely as a test hook
+struct Timer {
+    constexpr explicit Timer(const char*) noexcept {}
 };
 
 } // namespace ghoti
