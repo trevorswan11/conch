@@ -199,7 +199,7 @@ template <traits::DiagnosticType D> class DiagnosticList {
 template <> struct fmt::formatter<ghoti::SourceLocation> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const ghoti::SourceLocation& loc, F& ctx) {
+    static auto format(const ghoti::SourceLocation& loc, format_context& ctx) {
         return fmt::format_to(ctx.out(), "{}:{}", loc.line + 1, loc.column + 1);
     }
 };
@@ -207,7 +207,7 @@ template <> struct fmt::formatter<ghoti::SourceLocation> {
 template <typename E> struct fmt::formatter<ghoti::Diagnostic<E>> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const ghoti::Diagnostic<E>& d, F& ctx) {
+    static auto format(const ghoti::Diagnostic<E>& d, format_context& ctx) {
         return fmt::format_to(ctx.out(), "{}", d.to_string());
     }
 };

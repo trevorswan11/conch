@@ -8,6 +8,7 @@
 #    include <iterator>
 #    include <memory>
 #    include <mutex>
+#    include <ratio>
 #    include <string_view>
 #    include <thread>
 
@@ -18,6 +19,8 @@
 
 #    include "assert.hh"
 #    include "fixed/vector.hh"
+#    include "json.hh"
+#    include "memory.hh"
 #    include "option.hh"
 #    include "types.hh"
 
@@ -37,8 +40,8 @@ struct SessionDeleter {
     }
 };
 
-constinit std::unique_ptr<std::ofstream, SessionDeleter> session;
-constinit std::mutex                                     mutex;
+constinit mem::NullableBox<std::ofstream, SessionDeleter> session;
+constinit std::mutex                                      mutex;
 
 class Buffer {
   public:
@@ -133,7 +136,7 @@ auto write_scope(std::string_view     name,
         manager.out(),
         R"(,{{"cat":"function","dur":{},"name":"{}","ph":"X","pid":0,"tid":"{}","ts":{:.3f}}})",
         elapsed.count(),
-        name,
+        json::SanitizedString{name},
         tid,
         start.count());
 }

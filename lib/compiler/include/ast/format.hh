@@ -13,7 +13,7 @@
 template <> struct fmt::formatter<ghoti::ast::TypeModifier> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const ghoti::ast::TypeModifier& t, F& ctx) {
+    static auto format(const ghoti::ast::TypeModifier& t, format_context& ctx) {
         return fmt::format_to(ctx.out(), "{}", magic_enum::enum_name(t.underlying_));
     }
 };
@@ -21,7 +21,7 @@ template <> struct fmt::formatter<ghoti::ast::TypeModifier> {
 template <> struct fmt::formatter<ghoti::ast::IdentifierExpression> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const ghoti::ast::IdentifierExpression& n, F& ctx) {
+    static auto format(const ghoti::ast::IdentifierExpression& n, format_context& ctx) {
         return fmt::format_to(ctx.out(), "{}", n.name);
     }
 };
@@ -29,7 +29,7 @@ template <> struct fmt::formatter<ghoti::ast::IdentifierExpression> {
 template <ghoti::traits::ValuedPrimitive Primitive> struct fmt::formatter<Primitive> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
-    template <typename F> static auto format(const Primitive& p, F& ctx) {
+    static auto format(const Primitive& p, format_context& ctx) {
         return fmt::format_to(ctx.out(), "{}", p.value);
     }
 };
