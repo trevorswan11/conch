@@ -35,10 +35,9 @@ template <typename E> class EmptyResult {
     [[nodiscard]] constexpr auto error(this auto&& self) -> auto& { return *self.error_; }
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
-    template <typename Or = E> constexpr auto error_or(Or&& or_value) const& {
-        // This is straight from clang's stdc++ C++23 expected implementation
-        static_assert(traits::CopyConstructible<Or>, "error_type has to be copy constructible");
-        static_assert(std::is_convertible_v<Or, E>, "argument has to be convertible to error_type");
+    template <std::convertible_to<E> Or = E>
+        requires traits::CopyConstructible<Or>
+    constexpr auto error_or(Or&& or_value) const& {
         if (has_value()) { return std::forward<Or>(or_value); }
         return error();
     }

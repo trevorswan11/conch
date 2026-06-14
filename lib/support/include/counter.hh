@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "type_traits.hh"
 #include "types.hh"
 
@@ -35,16 +37,14 @@ template <traits::Integral Underlying> class Counter {
     constexpr auto               operator<=>(const Counter&) const noexcept        = default;
     [[nodiscard]] constexpr auto operator==(const Counter&) const noexcept -> bool = default;
 
-    template <typename T>
-        requires std::is_convertible_v<T, Underlying>
-    [[nodiscard]] constexpr auto operator==(const T& other) const noexcept -> bool {
-        return count_ == static_cast<Underlying>(other);
-    }
-
-    template <typename T>
-        requires std::is_convertible_v<T, Underlying>
+    template <std::convertible_to<Underlying> T>
     constexpr auto operator<=>(const T& other) const noexcept {
         return count_ <=> static_cast<Underlying>(other);
+    }
+
+    template <std::convertible_to<Underlying> T>
+    [[nodiscard]] constexpr auto operator==(const T& other) const noexcept -> bool {
+        return count_ == static_cast<Underlying>(other);
     }
 
     // Creates an RAII incrementor/decrementor object

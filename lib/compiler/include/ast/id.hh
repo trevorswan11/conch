@@ -171,6 +171,10 @@ class TypeModifier {
     friend struct fmt::formatter<ghoti::ast::TypeModifier>;
 };
 
+static_assert(magic_enum::enum_count<ExplicitTypeKind>() <= 0xF, "ExplicitTypeKind enum too large");
+static_assert(magic_enum::enum_count<TypeModifier::Modifier>() <= 0xF,
+              "TypeModifier enum too large");
+
 // A compact id for all AST explicit types
 class ExplicitTypeID {
   public:
@@ -179,11 +183,6 @@ class ExplicitTypeID {
                              syntax::TokenType token_type,
                              u64               index) noexcept
         : raw_{} {
-        static_assert(magic_enum::enum_count<ExplicitTypeKind>() <= 0xF,
-                      "ExplicitTypeKind enum too large");
-        static_assert(magic_enum::enum_count<TypeModifier::Modifier>() <= 0xF,
-                      "TypeModifier enum too large");
-
         ASSERT(index <= INDEX_MASK, "Requested type index is too large");
         raw_ |= static_cast<u64>(kind) << KIND_OFFSET;
         raw_ |= static_cast<u64>(mod) << MODIFIER_OFFSET;

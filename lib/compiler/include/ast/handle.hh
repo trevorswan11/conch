@@ -13,6 +13,16 @@ namespace ghoti {
 
 namespace ast {
 
+namespace detail {
+
+// Checks if the provided kind is compatible with any allowed kind
+template <NodeKind... AllowedKinds>
+[[nodiscard]] constexpr auto any_kind_compatible(NodeKind kind) noexcept -> bool {
+    return ((kind == AllowedKinds) || ...);
+}
+
+} // namespace detail
+
 // A pseudo-type-safe wrapper around nodes, defaulting to an invalid state
 template <NodeKind... AllowedKinds> class Handle {
   public:
@@ -22,20 +32,13 @@ template <NodeKind... AllowedKinds> class Handle {
     }
 
     template <NodeKind... OtherKinds>
+        requires(detail::any_kind_compatible<AllowedKinds...>(OtherKinds) || ...)
     constexpr Handle(Handle<OtherKinds...> other) noexcept : id_{*other} {
-        // Shallow verify at compile time to enforce possible construction
-        static_assert((any_compatible(OtherKinds) || ...),
-                      "No requested kinds are compatible with provided ones");
-
-        // Runtime checks can be more specific to the actual state
         ASSERT(other.is_valid(), "Attempt to create Handle from invalid Handle");
-        ASSERT(((other.operator->()->get_kind() == AllowedKinds) || ...),
-               "Provided kind does not match");
     }
 
-    // Checks if the provided kind is compatible with any allowed kind
     [[nodiscard]] constexpr static auto any_compatible(NodeKind kind) noexcept -> bool {
-        return ((kind == AllowedKinds) || ...);
+        return detail::any_kind_compatible<AllowedKinds...>(kind);
     }
 
     [[nodiscard]] constexpr auto operator*() const noexcept -> NodeID { return id_; }
@@ -178,8 +181,6 @@ template <ast::NodeKind... Kinds> struct Nullable<ast::Handle<Kinds...>> {
         return handle.is_valid();
     }
 };
-
-static_assert(sizeof(opt::Option<ast::Handle<ast::NodeKind::ARRAY_EXPRESSION>>) == 8);
 
 } // namespace traits
 

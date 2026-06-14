@@ -33,8 +33,9 @@ template <typename Item, usize Capacity> class Vector {
     = default;
 
     // Constructs the vector in place by emplacing each item into the buffer
-    template <typename... Is> constexpr explicit Vector(Is&&... items) {
-        static_assert(sizeof...(Is) <= Capacity, "Cannot initialize with more items than capacity");
+    template <typename... Is>
+        requires(sizeof...(Is) <= Capacity)
+    constexpr explicit Vector(Is&&... items) {
         (..., emplace_back(std::forward<Is>(items)));
     }
 
@@ -131,8 +132,9 @@ template <typename Item, usize Capacity> class Vector {
 
   private:
     // https://en.cppreference.com/cpp/algorithm/swap
-    constexpr auto swap(Vector& other) noexcept -> void {
-        static_assert(!traits::TriviallyCopyable<Item>, "Trivial copies should be defaulted");
+    constexpr auto swap(Vector& other) noexcept -> void
+        requires(!traits::TriviallyCopyable<Item>)
+    {
         auto& smaller{(size_ < other.size_) ? *this : other};
         auto& larger{(size_ < other.size_) ? other : *this};
 

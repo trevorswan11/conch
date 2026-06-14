@@ -411,14 +411,12 @@ using HashMap = detail::HashMap<Key, Value, ceil_power_of_two(Capacity), Hash, C
 
 // Construct a hash map from a list of pairs
 template <traits::InsertablePair... Pairs>
+    requires(sizeof...(Pairs) > 0)
 [[nodiscard]] constexpr auto make_hash_map(Pairs&&... kv_pairs) noexcept {
-    constexpr usize slots{sizeof...(Pairs)};
-    static_assert(slots > 0, "HashMap must have a non-zero size");
-
     using std::get;
     HashMap<traits::common_tuple_type_t<0, Pairs...>,
             traits::common_tuple_type_t<1, Pairs...>,
-            slots>
+            sizeof...(Pairs)>
         map;
     (...,
      map.emplace(get<0>(std::forward<decltype(kv_pairs)>(kv_pairs)),

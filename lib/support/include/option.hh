@@ -104,9 +104,8 @@ template <typename T> class Ref {
     }
 
     template <typename Or>
+        requires requires(T& t) { static_cast<Or&>(t); }
     [[nodiscard]] constexpr auto value_or(this auto&& self, Or& or_value) -> T& {
-        static_assert(
-            requires(T& t) { static_cast<Or&>(t); }, "value_or: Or& must be convertible to T&");
         return self.has_value() ? *self.get() : static_cast<T&>(or_value);
     }
 
@@ -189,12 +188,9 @@ template <traits::Compactable T> class CompactOpt {
         return self.has_value() ? Ret{std::forward<F>(f)(self.value())} : Ret{};
     }
 
-    template <typename Or>
+    template <traits::CopyConstructible Or>
+        requires requires(const T& t) { static_cast<Or>(t); }
     [[nodiscard]] constexpr auto value_or(this auto&& self, Or&& or_value) -> decltype(auto) {
-        // This is straight from clang's stdc++ C++23 optional implementation
-        static_assert(traits::CopyConstructible<Or>, "value_or: Or must be copy constructible");
-        static_assert(
-            requires(const T& t) { static_cast<Or>(t); }, "value_or: Or must be convertible to T");
         return self.has_value() ? *self.get() : static_cast<T>(std::forward<Or>(or_value));
     }
 
@@ -275,10 +271,9 @@ class Tribool {
 
     [[nodiscard]] constexpr auto operator*() const noexcept -> bool { return get(); }
 
-    template <typename Or> [[nodiscard]] constexpr auto value_or(Or&& or_value) -> bool {
-        // This is straight from clang's stdc++ C++23 optional implementation
-        static_assert(traits::CopyConstructible<Or>, "value_or: Or must be copy constructible");
-        static_assert(std::is_convertible_v<Or, bool>, "value_or: Or must be convertible to T");
+    template <std::convertible_to<bool> Or>
+        requires traits::CopyConstructible<Or>
+    [[nodiscard]] constexpr auto value_or(Or&& or_value) -> bool {
         return has_value() ? get() : static_cast<bool>(std::forward<Or>(or_value));
     }
 
