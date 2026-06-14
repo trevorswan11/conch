@@ -34,16 +34,16 @@ class Arena {
 
     // Asserts that the requested type is at most 64KB
     template <traits::TriviallyDestructible T, typename... Args>
+        requires(sizeof(T) <= BLOCK_SIZE)
     [[nodiscard]] auto make(Args&&... args) -> gsl::not_null<T*> {
-        static_assert(sizeof(T) <= BLOCK_SIZE, "Block size cannot fit requested type");
         void* mem = alloc(sizeof(T), alignof(T));
         return new (mem) T{std::forward<Args>(args)...};
     }
 
     // Asserts that the requested type-count product can fit in 64KB
     template <traits::TriviallyDestructible T>
+        requires(sizeof(T) <= BLOCK_SIZE)
     [[nodiscard]] auto make_span(usize count) -> gsl::span<T> {
-        static_assert(sizeof(T) <= BLOCK_SIZE, "Block size cannot fit requested type");
         const auto size{sizeof(T) * count};
         ASSERT(size <= BLOCK_SIZE, "Block size cannot fit requested type count");
         void* mem = alloc(size, alignof(T));
