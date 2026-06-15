@@ -6,10 +6,10 @@
 
 <p align="center">
 A hand-crafted systems programming language.
-<br />
+<br/>
 <a href="https://github.com/trevorswan11/ghoti/tree/main/doc"><strong>Explore the docs »</strong></a>
-<br />
-<br />
+<br/>
+<br/>
 <a href="https://github.com/trevorswan11/ghoti/issues/new?labels=bug&template=bug-report.md">Report Bug</a>
 &middot;
 <a href="https://github.com/trevorswan11/ghoti/issues/new?labels=enhancement&template=feature-request.md">Request Feature</a>
@@ -78,7 +78,7 @@ pub const main := fn(args: [][:0]u8): void {
 
 ## Getting Started
 ### For Nix Users
-This is by far the easiest way to get started with development. Just run `nix develop` to get started and automatically get the correct Zig version and some important development tools. Note that this provides optional preconfigured tools such as LLDB, Clangd, and ZLS to further enhance the developer experience.
+This is by far the easiest way to get started with development. Just run `nix develop` to get started and automatically get the correct Zig and Go versions as well as some other important development tools. Note that this provides optional preconfigured tools such as LLDB, Clangd, and ZLS to further enhance the developer experience.
 
 ### For Others
 All you need to get started with ghoti development is git and a valid 0.16.0 Zig installation, which can be found [here](https://ziglang.org/download/).
@@ -89,6 +89,9 @@ git clone https://github.com/trevorswan11/ghoti
 cd ghoti
 zig build --release
 ```
+
+## Language Website
+The language's website is written with [Go](https://go.dev/), [HTMX](https://htmx.org/), and [templ](https://github.com/a-h/templ). To build the website, you'll need [go1.26.4](https://go.dev/dl/) on top of the aforementioned Zig version. Once these dependencies are installed, you simply have to run `zig build site`, producing a binary in the `zig-out` directory.
 
 ## Roadmap
 

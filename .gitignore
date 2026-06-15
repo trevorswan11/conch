@@ -60,6 +60,14 @@ zig-out/
 .zig-cache
 zig-pkg/
 
+# Go
+*.test
+go.work
+go.work.sum
+
+# Templ
+*_templ.go
+
 # Lsp caches
 .cache
 __cmake_systeminformation/
@@ -75,3 +83,4 @@ __cmake_systeminformation/
 # MISC
 .DS_Store
 debug.gh
+.env

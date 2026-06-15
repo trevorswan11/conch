@@ -940,10 +940,9 @@ const LOCCounter = struct {
         }
     };
 
-    const counted_extensions = [_][]const u8{ ".cc", ".hh", ".inc", ".zig", ".gh" };
-    const dropped_file_config: CollectFilesConfig = .{
-        .allowed_extensions = &.{ ".zig", ".h", ".in" },
-        .return_basenames_only = true,
+    const counted_extensions = [_][]const u8{
+        ".cc", ".hh",    ".inc",  ".zig", ".gh",
+        ".go", ".templ", ".html", ".css",
     };
 
     step: std.Build.Step,
@@ -972,6 +971,7 @@ const LOCCounter = struct {
             }),
             try collectFiles(b, "ghoti", .{ .allowed_extensions = &counted_extensions }),
             try collectFiles(b, "tools", .{ .allowed_extensions = &counted_extensions }),
+            try collectFiles(b, "doc", .{ .allowed_extensions = &counted_extensions }),
         });
 
         const build_dir = b.build_root.handle;

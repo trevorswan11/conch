@@ -38,6 +38,8 @@
           buildInputs = [
             zig
             zls
+            go
+            gopls
           ]
           ++ (with llvmPackages_21; [
             clang-tools
