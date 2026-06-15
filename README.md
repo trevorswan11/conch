@@ -91,7 +91,7 @@ zig build --release
 ```
 
 ## Language Website
-The language's website is written with [Go](https://go.dev/), [HTMX](https://htmx.org/), and [templ](https://github.com/a-h/templ). To build the website, you'll need [go1.26.4](https://go.dev/dl/) on top of the aforementioned Zig version. Once these dependencies are installed, you simply have to run `zig build site`, producing a binary in the `zig-out` directory.
+The language's website is written with [Go](https://go.dev/), [HTMX](https://htmx.org/), and [templ](https://github.com/a-h/templ). To build the website, you'll need [go1.26.3](https://go.dev/dl/) on top of the aforementioned Zig version. Once these dependencies are installed, you simply have to run `zig build site`, producing a binary in the `zig-out` directory.
 
 ## Roadmap
 
