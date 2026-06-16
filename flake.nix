@@ -9,6 +9,7 @@
       url = "github:zigtools/zls?ref=0.16.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    templ-flake.url = "github:a-h/templ";
   };
 
   outputs =
@@ -24,6 +25,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
+          templ = templ-tool.packages.${system}.templ;
           overlays = [
             (final: prev: {
               zig = zig-flake.packages.${system}."0.16.0";
@@ -40,6 +42,7 @@
             zls
             go
             gopls
+            templ
           ]
           ++ (with llvmPackages_21; [
             clang-tools
