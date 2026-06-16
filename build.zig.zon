@@ -96,6 +96,11 @@
             .hash = "N-V-__8AAO9_ZADApu4jwKaHH7PBgOW7scl3NXxVkz9e0Q3V",
             .lazy = true,
         },
+        .air = .{
+            .url = "https://github.com/air-verse/air/archive/refs/tags/v1.65.3.tar.gz",
+            .hash = "N-V-__8AAFo6FADbZ1JQ7LPdl743CwRi8TYtXnj_23IuzHTs",
+            .lazy = true,
+        },
     },
     .paths = .{
         "ghoti",
