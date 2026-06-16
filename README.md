@@ -91,7 +91,10 @@ zig build --release
 ```
 
 ## Language Website
-The language's website is written with [Go](https://go.dev/), [HTMX](https://htmx.org/), and [templ](https://github.com/a-h/templ). To build the website, you'll need [go1.26.3](https://go.dev/dl/) on top of the aforementioned Zig version. Once these dependencies are installed, you simply have to run `zig build site`, producing a binary in the `zig-out` directory.
+The language's website is written with [Go](https://go.dev/), [HTMX](https://htmx.org/), and [templ](https://github.com/a-h/templ). To build the website, you'll need [go1.26.3](https://go.dev/dl/) on top of the aforementioned Zig version. Once these dependencies are installed, you simply have to run `zig build site`, producing a binary in the `zig-out` directory. 
+
+### Development
+[air](https://github.com/air-verse/air) is used for live reloading of the site during development. It and the aforementioned `templ` dependency are build from source, though they both bring in some transitive dependencies that are managed by Go. It is not expected that you have either of these tools installed to work on this project, though you may find it useful to provide `templ` to your editor in such a way that you can take advantage of its bundled LSP.
 
 ## Roadmap
 

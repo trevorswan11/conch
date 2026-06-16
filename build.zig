@@ -1367,13 +1367,12 @@ const CoverageParser = struct {
 };
 
 const SiteBuilder = struct {
-    const Templ = struct {
+    const GoDependency = struct {
         dep: *std.Build.Dependency,
         artifact_path: std.Build.LazyPath = undefined,
     };
 
     const go_work = "go.work";
-    const templ_exe = "templ";
     const server_exe = "ghoti-server";
 
     b: *std.Build,
@@ -1381,12 +1380,15 @@ const SiteBuilder = struct {
 
     go_exe_path: []const u8,
     go_fmt_path: ?[]const u8,
-    templ: Templ,
+    templ: GoDependency,
+    air: GoDependency,
     work_update_src: *std.Build.Step.UpdateSourceFiles = undefined,
 
     fn init(b: *std.Build, optimize: std.builtin.OptimizeMode) !?*SiteBuilder {
         const go_path = b.findProgram(&.{"go"}, &.{}) catch return null;
-        const templ_dep = b.lazyDependency("templ", .{}) orelse return null;
+        const templ_dep = b.lazyDependency("templ", .{});
+        const air_dep = b.lazyDependency("air", .{});
+        if (templ_dep == null or air_dep == null) return null;
 
         const self = try b.allocator.create(SiteBuilder);
         self.* = .{
@@ -1394,17 +1396,27 @@ const SiteBuilder = struct {
             .optimize = optimize,
             .go_exe_path = go_path,
             .go_fmt_path = b.findProgram(&.{"gofmt"}, &.{}) catch null,
-            .templ = .{
-                .dep = templ_dep,
-            },
+            .templ = .{ .dep = templ_dep.? },
+            .air = .{ .dep = air_dep.? },
         };
 
-        const run = self.addRunGoBuild();
-        run.setCwd(self.templ.dep.path("cmd/templ"));
-        self.templ.artifact_path = run.addOutputFileArg(templ_exe);
-        self.work_update_src = try self.addTemplWork();
+        try self.buildTempl();
+        self.buildAir();
 
         return self;
+    }
+
+    fn buildTempl(self: *SiteBuilder) !void {
+        const builder = self.addRunGoBuild(.ReleaseFast);
+        builder.setCwd(self.templ.dep.path("cmd/templ"));
+        self.templ.artifact_path = builder.addOutputFileArg("templ");
+        self.work_update_src = try self.addTemplWork();
+    }
+
+    fn buildAir(self: *SiteBuilder) void {
+        const builder = self.addRunGoBuild(.ReleaseFast);
+        builder.setCwd(self.templ.dep.path("."));
+        self.air.artifact_path = builder.addOutputFileArg("air");
     }
 
     fn build(self: *SiteBuilder) void {
@@ -1415,7 +1427,7 @@ const SiteBuilder = struct {
         generator.step.dependOn(&self.work_update_src.step);
         generator.has_side_effects = true;
 
-        const builder = self.addRunGoBuild();
+        const builder = self.addRunGoBuild(self.optimize);
         builder.setCwd(b.path(ProjectPaths.site ++ "cmd/server"));
         builder.step.dependOn(&generator.step);
         builder.has_side_effects = true;
@@ -1425,10 +1437,16 @@ const SiteBuilder = struct {
         const build_site = b.step("site", "Build and install the project's website");
         build_site.dependOn(&server_install.step);
 
-        const run_site_run: *std.Build.Step.Run = .create(self.b, "run templ");
+        const run_site_run: *std.Build.Step.Run = .create(self.b, "run site");
         run_site_run.addFileArg(server_path);
         const run_site = b.step("run-site", "Build, install, and run the project's website");
         run_site.dependOn(&run_site_run.step);
+
+        const watch_site_run: *std.Build.Step.Run = .create(self.b, "run air");
+        watch_site_run.addFileArg(self.air.artifact_path);
+        watch_site_run.setCwd(b.path(ProjectPaths.site));
+        const watch_site = b.step("watch-site", "Kick off live reloading of the project's website");
+        watch_site.dependOn(&watch_site_run.step);
     }
 
     fn addTemplWork(self: *const SiteBuilder) !*std.Build.Step.UpdateSourceFiles {
@@ -1453,10 +1471,10 @@ const SiteBuilder = struct {
         return self.b.addSystemCommand(&.{self.go_exe_path});
     }
 
-    fn addRunGoBuild(self: *const SiteBuilder) *std.Build.Step.Run {
+    fn addRunGoBuild(self: *const SiteBuilder, optimize: std.builtin.OptimizeMode) *std.Build.Step.Run {
         const run = self.addRunGo();
         run.addArg("build");
-        run.addArgs(self.getGoOptimizeFlags());
+        run.addArgs(getGoOptimizeFlags(optimize));
         run.addArg("-o");
         return run;
     }
@@ -1480,8 +1498,8 @@ const SiteBuilder = struct {
         return run;
     }
 
-    fn getGoOptimizeFlags(self: *const SiteBuilder) []const []const u8 {
-        return switch (self.optimize) {
+    fn getGoOptimizeFlags(optimize: std.builtin.OptimizeMode) []const []const u8 {
+        return switch (optimize) {
             .Debug => return &.{ "-race", "-gcflags=all=-N -l" },
             .ReleaseSmall => return &.{ "-ldflags=-s -w", "-trimpath" },
             .ReleaseFast, .ReleaseSafe => return &.{"-ldflags=-s -w"},
