@@ -1370,7 +1370,6 @@ const SiteBuilder = struct {
     const Templ = struct {
         dep: *std.Build.Dependency,
         artifact_path: std.Build.LazyPath = undefined,
-        install_file: *std.Build.Step.InstallFile = undefined,
     };
 
     const go_work = "go.work";
@@ -1403,10 +1402,7 @@ const SiteBuilder = struct {
         const run = self.addRunGoBuild();
         run.setCwd(self.templ.dep.path("cmd/templ"));
         self.templ.artifact_path = run.addOutputFileArg(templ_exe);
-        self.templ.install_file = self.addInstallFile(self.templ.artifact_path, templ_exe);
         self.work_update_src = try self.addTemplWork();
-
-        b.getInstallStep().dependOn(&self.work_update_src.step);
 
         return self;
     }
@@ -1416,6 +1412,7 @@ const SiteBuilder = struct {
         const generator = self.addRunTempl();
         generator.setCwd(b.path(ProjectPaths.site));
         generator.addArg("generate");
+        generator.step.dependOn(&self.work_update_src.step);
         generator.has_side_effects = true;
 
         const builder = self.addRunGoBuild();
