@@ -44,6 +44,7 @@
             go
             gopls
             templ
+            prettier
           ]
           ++ (with llvmPackages_21; [
             clang-tools
