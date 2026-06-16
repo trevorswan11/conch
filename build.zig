@@ -74,11 +74,15 @@ pub fn build(b: *std.Build) !void {
     });
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
+    const site_builder = try SiteBuilder.init(b, optimize);
+    if (site_builder) |site| site.build();
+
     clang.build();
     try addTooling(b, .{
         .cdb_gen = cdb_gen,
         .clang = clang,
         .cppcheck = artifacts.cppcheck.?,
+        .site_builder = site_builder,
     });
 
     try addPackageStep(b, .{
@@ -136,6 +140,7 @@ const ProjectPaths = struct {
         });
     }
 
+    const site = "site/";
     const third_party = "third-party/";
 };
 
@@ -776,6 +781,7 @@ fn addTooling(b: *std.Build, config: struct {
     cdb_gen: *CDBGenerator,
     clang: *ClangBuilder,
     cppcheck: *std.Build.Step.Compile,
+    site_builder: ?*SiteBuilder,
 }) !void {
     const tooling_sources = try ProjectPaths.collectCXXToolingFiles(b);
 
@@ -786,12 +792,14 @@ fn addTooling(b: *std.Build, config: struct {
     try addFmtStep(b, .{
         .tooling_sources = tooling_sources,
         .clang = config.clang,
+        .site_builder = config.site_builder,
     });
 
     const check_step = addStaticAnalysisStep(b, .{
         .tooling_sources = tooling_sources,
         .cppcheck = config.cppcheck,
         .cdb_gen = config.cdb_gen,
+        .site_builder = config.site_builder,
     });
     check_step.dependOn(&config.cdb_gen.step);
 
@@ -803,6 +811,7 @@ fn addTooling(b: *std.Build, config: struct {
 fn addFmtStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     clang: *ClangBuilder,
+    site_builder: ?*SiteBuilder,
 }) !void {
     const clang_format = config.clang.clang_tools.clang_format;
     const zig_paths = try collectFiles(b, "tools", .{
@@ -828,12 +837,38 @@ fn addFmtStep(b: *std.Build, config: struct {
     const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
     fmt_check_step.dependOn(&fmt_check.step);
     fmt_check_step.dependOn(&build_fmt_check.step);
+
+    if (config.site_builder) |site| if (site.go_fmt_path) |go_fmt| {
+        const go_paths = try collectFiles(b, ProjectPaths.site, .{
+            .allowed_extensions = &.{".go"},
+            .dropped_extensions = &.{"_templ.go"},
+        });
+
+        const go_formatter = b.addSystemCommand(&.{ go_fmt, "-w" });
+        go_formatter.addArgs(go_paths);
+        fmt_step.dependOn(&go_formatter.step);
+
+        const templ_formatter = site.addRunTempl();
+        templ_formatter.setCwd(b.path(ProjectPaths.site));
+        templ_formatter.addArgs(&.{ "fmt", "." });
+        fmt_step.dependOn(&templ_formatter.step);
+
+        const go_formatter_check = b.addSystemCommand(&.{ go_fmt, "-d" });
+        go_formatter_check.addArgs(go_paths);
+        fmt_check_step.dependOn(&go_formatter_check.step);
+
+        const templ_formatter_check = site.addRunTempl();
+        templ_formatter_check.setCwd(b.path(ProjectPaths.site));
+        templ_formatter_check.addArgs(&.{ "fmt", "-fail", "." });
+        fmt_check_step.dependOn(&templ_formatter_check.step);
+    };
 }
 
 fn addStaticAnalysisStep(b: *std.Build, config: struct {
     tooling_sources: []const []const u8,
     cppcheck: *std.Build.Step.Compile,
     cdb_gen: *CDBGenerator,
+    site_builder: ?*SiteBuilder,
 }) *std.Build.Step {
     const check_step = b.step("check", "Run static analysis on all project files");
     const cppcheck_run = b.addRunArtifact(config.cppcheck);
@@ -880,6 +915,13 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     cppcheck_cache_install.step.dependOn(&config.cppcheck.step);
     check_step.dependOn(&cppcheck_cache_install.step);
     check_step.dependOn(&cppcheck_run.step);
+
+    if (config.site_builder) |site| {
+        const go_vet = site.addRunGo();
+        go_vet.setCwd(b.path(ProjectPaths.site));
+        go_vet.addArgs(&.{ "vet", "./..." });
+        check_step.dependOn(&go_vet.step);
+    }
     return check_step;
 }
 
@@ -1324,11 +1366,135 @@ const CoverageParser = struct {
     }
 };
 
+const SiteBuilder = struct {
+    const Templ = struct {
+        dep: *std.Build.Dependency,
+        artifact_path: std.Build.LazyPath = undefined,
+        install_file: *std.Build.Step.InstallFile = undefined,
+    };
+
+    const go_work = "go.work";
+    const templ_exe = "templ";
+    const server_exe = "ghoti-server";
+
+    b: *std.Build,
+    optimize: std.builtin.OptimizeMode,
+
+    go_exe_path: []const u8,
+    go_fmt_path: ?[]const u8,
+    templ: Templ,
+    work_update_src: *std.Build.Step.UpdateSourceFiles = undefined,
+
+    fn init(b: *std.Build, optimize: std.builtin.OptimizeMode) !?*SiteBuilder {
+        const self = try b.allocator.create(SiteBuilder);
+        self.* = .{
+            .b = b,
+            .optimize = optimize,
+            .go_exe_path = b.findProgram(&.{"go"}, &.{}) catch return null,
+            .go_fmt_path = b.findProgram(&.{"gofmt"}, &.{}) catch null,
+            .templ = .{
+                .dep = b.dependency("templ", .{}),
+            },
+        };
+
+        const run = self.addRunGoBuild();
+        run.setCwd(self.templ.dep.path("cmd/templ"));
+        self.templ.artifact_path = run.addOutputFileArg(templ_exe);
+        self.templ.install_file = self.addInstallFile(self.templ.artifact_path, templ_exe);
+        self.work_update_src = try self.addTemplWork();
+
+        b.getInstallStep().dependOn(&self.work_update_src.step);
+
+        return self;
+    }
+
+    fn build(self: *SiteBuilder) void {
+        const b = self.b;
+        const generator = self.addRunTempl();
+        generator.setCwd(b.path(ProjectPaths.site));
+        generator.addArg("generate");
+        generator.has_side_effects = true;
+
+        const builder = self.addRunGoBuild();
+        builder.setCwd(b.path(ProjectPaths.site ++ "cmd/server"));
+        builder.step.dependOn(&generator.step);
+        builder.has_side_effects = true;
+
+        const server_path = builder.addOutputFileArg(server_exe);
+        const server_install = self.addInstallFile(server_path, server_exe);
+        const build_site = b.step("site", "Build and install the project's website");
+        build_site.dependOn(&server_install.step);
+
+        const run_site_run: *std.Build.Step.Run = .create(self.b, "run templ");
+        run_site_run.addFileArg(server_path);
+        const run_site = b.step("run-site", "Build, install, and run the project's website");
+        run_site.dependOn(&run_site_run.step);
+    }
+
+    fn addTemplWork(self: *const SiteBuilder) !*std.Build.Step.UpdateSourceFiles {
+        const b = self.b;
+        const templ_path = try self.templ.dep.path(".").getPath4(b, null);
+        const go_work_content = b.fmt(
+            \\go 1.26.3
+            \\
+            \\use (
+            \\  .
+            \\  {s}
+            \\)
+        , .{try templ_path.toString(b.allocator)});
+        const write_work = b.addWriteFile(go_work, go_work_content);
+        const gen_work = write_work.getDirectory().path(b, go_work);
+        const update = b.addUpdateSourceFiles();
+        update.addCopyFileToSource(gen_work, ProjectPaths.site ++ go_work);
+        return update;
+    }
+
+    fn addRunGo(self: *const SiteBuilder) *std.Build.Step.Run {
+        return self.b.addSystemCommand(&.{self.go_exe_path});
+    }
+
+    fn addRunGoBuild(self: *const SiteBuilder) *std.Build.Step.Run {
+        const run = self.addRunGo();
+        run.addArg("build");
+        run.addArgs(self.getGoOptimizeFlags());
+        run.addArg("-o");
+        return run;
+    }
+
+    fn addInstallFile(
+        self: *const SiteBuilder,
+        path: std.Build.LazyPath,
+        executable: []const u8,
+    ) *std.Build.Step.InstallFile {
+        const b = self.b;
+        return b.addInstallFileWithDir(
+            path,
+            .{ .custom = ProjectPaths.site },
+            tryAppendExe(b, executable),
+        );
+    }
+
+    fn addRunTempl(self: *const SiteBuilder) *std.Build.Step.Run {
+        const run: *std.Build.Step.Run = .create(self.b, "run templ");
+        run.addFileArg(self.templ.artifact_path);
+        return run;
+    }
+
+    fn getGoOptimizeFlags(self: *const SiteBuilder) []const []const u8 {
+        return switch (self.optimize) {
+            .Debug => return &.{ "-race", "-gcflags=all=-N -l" },
+            .ReleaseSmall => return &.{ "-ldflags=-s -w", "-trimpath" },
+            .ReleaseFast, .ReleaseSafe => return &.{"-ldflags=-s -w"},
+        };
+    }
+};
+
 const CollectFilesConfig = struct {
     allowed_extensions: []const []const u8 = &.{".cc"},
     dropped_files: ?[]const []const u8 = null,
     extra_files: ?[]const []const u8 = null,
     return_basenames_only: bool = false,
+    dropped_extensions: ?[]const []const u8 = null,
 };
 
 fn collectFiles(
@@ -1344,7 +1510,7 @@ fn collectFiles(
     defer walker.deinit();
 
     var paths: std.ArrayList([]const u8) = .empty;
-    while (try walker.next(io)) |entry| {
+    outer: while (try walker.next(io)) |entry| {
         if (entry.kind != .file) continue;
         for (config.allowed_extensions) |ext| {
             if (std.mem.endsWith(u8, entry.basename, ext)) break;
@@ -1352,6 +1518,10 @@ fn collectFiles(
 
         if (config.dropped_files) |drop| for (drop) |drop_file| {
             if (std.mem.eql(u8, drop_file, entry.basename)) continue;
+        };
+
+        if (config.dropped_extensions) |drop| for (drop) |drop_file| {
+            if (std.mem.endsWith(u8, entry.basename, drop_file)) continue :outer;
         };
 
         if (config.return_basenames_only) {
@@ -1366,4 +1536,11 @@ fn collectFiles(
         try paths.appendSlice(b.allocator, extra_files);
     }
     return paths.items;
+}
+
+fn tryAppendExe(b: *std.Build, raw_path: []const u8) []const u8 {
+    return b.fmt("{s}{s}", .{
+        raw_path,
+        if (b.graph.host.result.os.tag == .windows) ".exe" else "",
+    });
 }
