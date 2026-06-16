@@ -18,6 +18,7 @@
       flake-utils,
       zig-flake,
       zls-flake,
+      templ-flake,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -25,7 +26,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          templ = templ-tool.packages.${system}.templ;
+          templ = templ-flake.packages.${system}.templ;
           overlays = [
             (final: prev: {
               zig = zig-flake.packages.${system}."0.16.0";

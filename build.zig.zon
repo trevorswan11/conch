@@ -94,6 +94,7 @@
         .templ = .{
             .url = "https://github.com/a-h/templ/archive/refs/tags/v0.3.1020.tar.gz",
             .hash = "N-V-__8AAO9_ZADApu4jwKaHH7PBgOW7scl3NXxVkz9e0Q3V",
+            .lazy = true,
         },
     },
     .paths = .{

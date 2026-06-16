@@ -1386,14 +1386,17 @@ const SiteBuilder = struct {
     work_update_src: *std.Build.Step.UpdateSourceFiles = undefined,
 
     fn init(b: *std.Build, optimize: std.builtin.OptimizeMode) !?*SiteBuilder {
+        const go_path = b.findProgram(&.{"go"}, &.{}) catch return null;
+        const templ_dep = b.lazyDependency("templ", .{}) orelse return null;
+
         const self = try b.allocator.create(SiteBuilder);
         self.* = .{
             .b = b,
             .optimize = optimize,
-            .go_exe_path = b.findProgram(&.{"go"}, &.{}) catch return null,
+            .go_exe_path = go_path,
             .go_fmt_path = b.findProgram(&.{"gofmt"}, &.{}) catch null,
             .templ = .{
-                .dep = b.dependency("templ", .{}),
+                .dep = templ_dep,
             },
         };
 
