@@ -956,9 +956,9 @@ fn addStaticAnalysisStep(b: *std.Build, config: struct {
     check_step.dependOn(&cppcheck_run.step);
 
     if (config.site_builder) |site| {
-        const go_vet = b.addSystemCommand(&.{site.go_exe_path});
+        const go_vet = b.addSystemCommand(&.{ site.go_exe_path, "vet", "./..." });
         go_vet.setCwd(site.site_path);
-        go_vet.addArgs(&.{ "vet", "./..." });
+        go_vet.step.dependOn(&site.main_builder.step);
         check_step.dependOn(&go_vet.step);
     }
     return check_step;
