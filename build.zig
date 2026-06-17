@@ -537,13 +537,14 @@ fn addArtifacts(b: *std.Build, config: struct {
         if (config.site_builder) |site| {
             const ws_run = b.addSystemCommand(&.{ site.go_exe_path, "test", "./...", "-o" });
             ws_run.setCwd(site.site_path);
-            ws_run.has_side_effects = true;
             const ws_tests = ws_run.addOutputDirectoryArg("webserver");
             const ws_install = b.addInstallDirectory(.{
                 .source_dir = ws_tests,
                 .install_dir = .{ .custom = "tests" },
                 .install_subdir = "webserver",
             });
+            ws_run.has_side_effects = true;
+            ws_run.step.dependOn(&site.main_builder.step);
 
             const step = b.step("test-webserver", "Build/run the webserver's tests");
             step.dependOn(&ws_install.step);
@@ -1428,6 +1429,7 @@ const SiteBuilder = struct {
     go_fmt_path: ?[]const u8,
     templ: GoDependency,
     air: GoDependency,
+    main_builder: *std.Build.Step.Run = undefined,
     rebuild: *std.Build.Step.Compile = undefined,
     work_update_src: *std.Build.Step.UpdateSourceFiles = undefined,
 
@@ -1500,6 +1502,7 @@ const SiteBuilder = struct {
         builder.setCwd(self.site_path.path(b, "cmd/server"));
         builder.step.dependOn(&generator.step);
         builder.has_side_effects = true;
+        self.main_builder = builder;
 
         const server_path = builder.addOutputFileArg(webserver_exe);
         const server_install = self.addInstallFile(server_path, webserver_exe, output_path);
