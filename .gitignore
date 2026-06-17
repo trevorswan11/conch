@@ -63,6 +63,7 @@ zig-pkg/
 *.test
 go.work
 go.work.sum
+site/tmp
 
 # Templ
 *_templ.go

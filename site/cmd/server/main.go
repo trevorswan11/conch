@@ -1,17 +1,13 @@
-package main
+package webserver
 
 import (
 	"fmt"
 	"net/http"
 
-	"site/views"
+	"webserver/views"
 
 	"github.com/a-h/templ"
 )
-
-func aaaaa() string {
-	return "done"
-}
 
 func main() {
 	http.Handle("/", templ.Handler(views.Hello("Trevor")))
