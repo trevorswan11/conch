@@ -2,13 +2,13 @@
 
 #include <concepts>
 
-#include "type_traits.hh"
-#include "types.hh"
+#include <stdx/type_traits.hh>
+#include <stdx/types.hh>
 
 namespace ghoti {
 
 // A simple counter that with RAII-based up/down counting
-template <traits::Integral Underlying> class Counter {
+template <stdx::traits::Integral Underlying> class Counter {
   public:
     class Guard {
       public:

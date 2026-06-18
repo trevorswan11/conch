@@ -3,6 +3,8 @@
 #include <ostream>
 
 #include <fmt/ostream.h>
+#include <stdx/assert.hh>
+#include <stdx/variant.hh>
 
 #include "ast/ast.hh"
 #include "ast/format.hh"
@@ -12,9 +14,7 @@
 #include "ast/traits.hh"
 #include "ast/type.hh"
 
-#include <assert.hh>
 #include <indent.hh>
-#include <variant.hh>
 
 namespace ghoti::ast {
 
@@ -83,7 +83,7 @@ class ASTDumper {
     auto visit(NodeID, const ReturnStatement&) -> void;
     auto visit(NodeID, const TestStatement&) -> void;
     auto visit(NodeID, const UsingStatement&) -> void;
-    auto visit(NodeID, Unit) -> void { fmt::println(out_, "<discarded>"); }
+    auto visit(NodeID, stdx::Unit) -> void { fmt::println(out_, "<discarded>"); }
 
     auto visit(ExplicitTypeID, const IdentifierExpression&) -> void;
     auto visit(ExplicitTypeID, const ModuleAccessExpression&) -> void;

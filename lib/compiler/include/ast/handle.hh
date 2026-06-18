@@ -2,16 +2,14 @@
 
 #include <vector>
 
+#include <stdx/assert.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
+
 #include "ast/id.hh"
 #include "ast/kind.hh"
 
-#include <assert.hh>
-#include <option.hh>
-#include <types.hh>
-
-namespace ghoti {
-
-namespace ast {
+namespace ghoti::ast {
 
 namespace detail {
 
@@ -168,20 +166,19 @@ using LabeledNodeHandle = Handle<NodeKind::DO_WHILE_LOOP_EXPRESSION,
                                  NodeKind::WHILE_LOOP_EXPRESSION,
                                  NodeKind::BLOCK_STATEMENT>;
 
-} // namespace ast
+} // namespace ghoti::ast
 
-namespace traits {
+namespace stdx::traits {
 
-template <ast::NodeKind... Kinds> struct Nullable<ast::Handle<Kinds...>> {
-    [[nodiscard]] static constexpr auto invalid() noexcept -> ast::Handle<Kinds...> {
-        return ast::Handle<Kinds...>::make_invalid();
+template <ghoti::ast::NodeKind... Kinds> struct Nullable<ghoti::ast::Handle<Kinds...>> {
+    [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::Handle<Kinds...> {
+        return ghoti::ast::Handle<Kinds...>::make_invalid();
     }
 
-    [[nodiscard]] static constexpr auto is_valid(ast::Handle<Kinds...> handle) noexcept -> bool {
+    [[nodiscard]] static constexpr auto is_valid(ghoti::ast::Handle<Kinds...> handle) noexcept
+        -> bool {
         return handle.is_valid();
     }
 };
 
-} // namespace traits
-
-} // namespace ghoti
+} // namespace stdx::traits

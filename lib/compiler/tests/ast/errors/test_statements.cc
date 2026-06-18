@@ -6,13 +6,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
+#include <stdx/types.hh>
 
 #include "helpers/ast.hh"
 #include "helpers/common.hh"
 #include "syntax/error.hh"
 #include "syntax/keywords.hh"
-
-#include <types.hh>
 
 namespace ghoti::tests {
 

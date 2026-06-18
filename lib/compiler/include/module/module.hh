@@ -10,6 +10,13 @@
 
 #include <ankerl/unordered_dense.h>
 #include <gsl/pointers>
+#include <stdx/hash.hh>
+#include <stdx/memory.hh>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+#include <stdx/variant.hh>
 
 #include "ast/ast.hh"
 #include "ast/expression.hh"
@@ -20,14 +27,7 @@
 #include "sema/side_tables.hh"
 #include "syntax/error.hh"
 
-#include <hash.hh>
-#include <memory.hh>
-#include <option.hh>
-#include <result.hh>
 #include <source_file.hh>
-#include <types.hh>
-#include <utility.hh>
-#include <variant.hh>
 
 namespace ghoti::mod {
 
@@ -45,7 +45,7 @@ enum class ModuleState : u8 {
     ERRORED,
 };
 
-using DiagnosticListVariant = Variant<Unit, syntax::Diagnostics, sema::Diagnostics>;
+using DiagnosticListVariant = stdx::Variant<stdx::Unit, syntax::Diagnostics, sema::Diagnostics>;
 
 struct Module {
     std::filesystem::path path;
@@ -53,10 +53,10 @@ struct Module {
     SourceFile            source;
     ast::AST              ast;
     sema::SideTables      sema_side_tables;
-    opt::Size             root_table_idx;
+    stdx::OptSize         root_table_idx;
     ModuleState           state{ModuleState::PARSED};
 
-    DiagnosticListVariant diagnostics{Unit{}};
+    DiagnosticListVariant diagnostics{stdx::Unit{}};
 
     Module(std::filesystem::path path,
            std::filesystem::path parent_path,
@@ -68,7 +68,7 @@ struct Module {
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>
-        requires(!std::same_as<std::remove_cvref_t<DiagList>, Unit>)
+        requires(!std::same_as<std::remove_cvref_t<DiagList>, stdx::Unit>)
     auto error_out(DiagList&& list, ModuleState error_state) noexcept -> mod::ModuleState {
         state = error_state;
         diagnostics.emplace<DiagList>(std::forward<DiagList>(list));
@@ -177,27 +177,27 @@ class ModuleManager {
     // Asserts that the path is relative and its parent is absolute
     [[nodiscard]] auto try_get_file_module(const std::filesystem::path& path,
                                            const std::filesystem::path& parent_path = {})
-        -> Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Attempts to load the module from the loader and parse its contents
     [[nodiscard]] auto try_get_library_module(std::string_view name)
-        -> Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
 
     // Adds a library module and its underlying path to the lookup table
     [[nodiscard]] auto add_library_module(std::string_view name, const std::filesystem::path& path)
-        -> Result<void, Diagnostic>;
+        -> stdx::Result<void, Diagnostic>;
 
   private:
     [[nodiscard]] auto try_get(const std::filesystem::path& path)
-        -> Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
 
   private:
-    SourceLoader&                                                         loader_;
-    ankerl::unordered_dense::map<std::filesystem::path, mem::Box<Module>> modules_;
+    SourceLoader&                                                          loader_;
+    ankerl::unordered_dense::map<std::filesystem::path, stdx::Box<Module>> modules_;
 
     // Maps physical ghoti modules to their path on disk
     ankerl::unordered_dense::
-        map<std::string, std::filesystem::path, hash::StringTransparentHash, std::equal_to<>>
+        map<std::string, std::filesystem::path, stdx::hash::StringTransparentHash, std::equal_to<>>
             module_lut_;
 };
 

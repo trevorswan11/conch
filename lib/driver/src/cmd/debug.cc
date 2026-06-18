@@ -9,14 +9,14 @@
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
 #include <magic_enum/magic_enum.hpp>
+#include <stdx/profiler.hh>
+#include <stdx/string.hh>
+#include <stdx/types.hh>
 
 #include <ast/dumper.hh>
 #include <module/memory_loader.hh>
 #include <module/module.hh>
-#include <profiler.hh>
 #include <sema/analyzer.hh>
-#include <string.hh>
-#include <types.hh>
 
 namespace ghoti::cmd {
 
@@ -28,7 +28,7 @@ auto Debug::run() -> void {
         line_.clear();
 
         if (!std::getline(std::cin, line_)) { break; }
-        auto trimmed{string::trim(line_)};
+        auto trimmed{stdx::string::trim(line_)};
         if (trimmed == "exit") { break; }
         if (trimmed.empty()) { continue; }
 

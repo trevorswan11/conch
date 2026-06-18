@@ -2,10 +2,10 @@
 
 #include <string_view>
 
-#include "syntax/token_type.hh"
+#include <stdx/enum.hh>
+#include <stdx/option.hh>
 
-#include <enum.hh>
-#include <option.hh>
+#include "syntax/token_type.hh"
 
 namespace ghoti::syntax {
 
@@ -55,11 +55,11 @@ constexpr Builtin CEIL{"@ceil", TokenType::BUILTIN_CEIL};
 constexpr Builtin PANIC{"@panic", TokenType::BUILTIN_PANIC};
 
 constexpr auto ALL_TOKEN_TYPES{
-    enum_range<TokenType::BUILTIN_ALIGN_CAST, TokenType::BUILTIN_PANIC>()};
+    stdx::enum_range<TokenType::BUILTIN_ALIGN_CAST, TokenType::BUILTIN_PANIC>()};
 
 } // namespace builtins
 
-[[nodiscard]] auto get_builtin_opt(TokenType tt) noexcept -> opt::Option<std::string_view>;
-[[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
+[[nodiscard]] auto get_builtin_opt(TokenType tt) noexcept -> stdx::Option<std::string_view>;
+[[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
 
 } // namespace ghoti::syntax

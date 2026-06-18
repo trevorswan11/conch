@@ -6,14 +6,13 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
+#include <stdx/assert.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "ast/kind.hh"
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
-
-#include <assert.hh>
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti {
 
@@ -90,24 +89,6 @@ class NodeID {
 
     template <NodeKind... AllowedKinds> friend class Handle;
 };
-
-} // namespace ast
-
-namespace traits {
-
-template <> struct Nullable<ast::NodeID> {
-    [[nodiscard]] static constexpr auto invalid() noexcept -> ast::NodeID {
-        return ast::NodeID::make_invalid();
-    }
-
-    [[nodiscard]] static constexpr auto is_valid(ast::NodeID id) noexcept -> bool {
-        return id.is_valid();
-    }
-};
-
-} // namespace traits
-
-namespace ast {
 
 #define MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY(name, modifier)            \
     [[nodiscard]] constexpr auto is_##name() const noexcept -> bool { \
@@ -244,18 +225,28 @@ class ExplicitTypeID {
 
 } // namespace ast
 
-namespace traits {
+} // namespace ghoti
 
-template <> struct Nullable<ast::ExplicitTypeID> {
-    [[nodiscard]] static constexpr auto invalid() noexcept -> ast::ExplicitTypeID {
-        return ast::ExplicitTypeID::make_invalid();
+namespace stdx::traits {
+
+template <> struct Nullable<ghoti::ast::NodeID> {
+    [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::NodeID {
+        return ghoti::ast::NodeID::make_invalid();
     }
 
-    [[nodiscard]] static constexpr auto is_valid(ast::ExplicitTypeID id) noexcept -> bool {
+    [[nodiscard]] static constexpr auto is_valid(ghoti::ast::NodeID id) noexcept -> bool {
         return id.is_valid();
     }
 };
 
-} // namespace traits
+template <> struct Nullable<ghoti::ast::ExplicitTypeID> {
+    [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::ExplicitTypeID {
+        return ghoti::ast::ExplicitTypeID::make_invalid();
+    }
 
-} // namespace ghoti
+    [[nodiscard]] static constexpr auto is_valid(ghoti::ast::ExplicitTypeID id) noexcept -> bool {
+        return id.is_valid();
+    }
+};
+
+} // namespace stdx::traits

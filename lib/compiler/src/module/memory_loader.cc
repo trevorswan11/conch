@@ -5,12 +5,11 @@
 #include <utility>
 
 #include <fmt/format.h>
+#include <stdx/assert.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
 
 #include "module/error.hh"
-
-#include <assert.hh>
-#include <profiler.hh>
-#include <result.hh>
 
 namespace ghoti::mod {
 
@@ -21,7 +20,8 @@ auto MemoryLoader::add(const std::filesystem::path& path, const std::string& con
     files_[*normalized] = content;
 }
 
-auto MemoryLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {
+auto MemoryLoader::load(const std::filesystem::path& path)
+    -> stdx::Result<std::string, Diagnostic> {
     PROFILE_FUNCTION();
     auto normalized{normalize(path)};
     ASSERT(normalized);

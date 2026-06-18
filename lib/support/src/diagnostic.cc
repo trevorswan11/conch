@@ -6,18 +6,18 @@
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <stdx/option.hh>
+#include <stdx/utility.hh>
 
-#include "option.hh"
 #include "style.hh"
-#include "utility.hh"
 
 namespace ghoti::detail {
 
-auto format_diagnostic(std::ostream&                   os,
-                       const FormattableDiagnostic&    diag,
-                       const opt::Option<std::string>& source_path,
-                       opt::Option<bool>               in_terminal) -> std::ostream& {
-    const auto tty{in_terminal.value_or(is_tty())};
+auto format_diagnostic(std::ostream&                    os,
+                       const FormattableDiagnostic&     diag,
+                       const stdx::Option<std::string>& source_path,
+                       stdx::Option<bool>               in_terminal) -> std::ostream& {
+    const auto tty{in_terminal.value_or(stdx::is_tty())};
 
     // The source and location play nicely with one another
     if (source_path) {

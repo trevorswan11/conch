@@ -3,6 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <gsl/pointers>
+#include <stdx/memory.hh>
+#include <stdx/types.hh>
 
 #include "ast/statement.hh"
 #include "helpers/common.hh"
@@ -11,15 +13,12 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include <memory.hh>
-#include <types.hh>
-
 namespace ghoti::tests {
 
 namespace {
 
 [[nodiscard]] auto test_loop(std::string_view input, usize expected_reg_count, usize loop_block_idx)
-    -> mem::Box<helpers::SemaTestContext> {
+    -> stdx::Box<helpers::SemaTestContext> {
     auto [ctx, idx]{helpers::collect_and_check(input)};
 
     const auto& registry{ctx->analyzer.get_registry()};

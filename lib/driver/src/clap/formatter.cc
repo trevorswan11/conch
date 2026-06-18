@@ -7,9 +7,9 @@
 #include <CLI/CLI.hpp>
 #include <fmt/color.h>
 #include <fmt/ostream.h>
+#include <stdx/profiler.hh>
+#include <stdx/string.hh>
 
-#include <profiler.hh>
-#include <string.hh>
 #include <style.hh>
 
 namespace ghoti::clap {
@@ -53,7 +53,7 @@ auto Fmt::make_help(const CLI::App* app, std::string name, CLI::AppFormatMode mo
     // Trim the second newline (final character) to prevent weird formatting
     const auto usage{make_usage(app, name)};
     ss << fmt::format(style::LIGHT_GREEN_BOLD, "info");
-    fmt::print(ss, ": {}", string::substr(usage, 0, usage.size() - 1));
+    fmt::print(ss, ": {}", stdx::string::substr(usage, 0, usage.size() - 1));
 
     fmt::print(ss, "{}", make_subcommands(app, mode));
     fmt::print(ss, "{}", make_groups(app, mode));

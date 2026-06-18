@@ -3,11 +3,11 @@
 #include <string>
 #include <type_traits>
 
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+
 #include "ast/handle.hh"
 #include "syntax/error.hh"
-
-#include <result.hh>
-#include <types.hh>
 
 namespace ghoti {
 
@@ -15,12 +15,12 @@ namespace syntax { class Parser; } // namespace syntax
 
 namespace ast {
 
-#define DECLARE_PRIMITIVE_EXPRESSION(NodeType, ValueType)       \
-    struct NodeType {                                           \
-        using value_type = ValueType;                           \
-        value_type                value;                        \
-        [[nodiscard]] static auto parse(syntax::Parser& parser) \
-            -> Result<ExpressionHandle, syntax::Diagnostic>;    \
+#define DECLARE_PRIMITIVE_EXPRESSION(NodeType, ValueType)          \
+    struct NodeType {                                              \
+        using value_type = ValueType;                              \
+        value_type                value;                           \
+        [[nodiscard]] static auto parse(syntax::Parser& parser)    \
+            -> stdx::Result<ExpressionHandle, syntax::Diagnostic>; \
     };
 
 DECLARE_PRIMITIVE_EXPRESSION(StringExpression, std::string)
@@ -62,17 +62,17 @@ namespace ast {
 
 struct BoolExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct VoidExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct UndefinedExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 } // namespace ast

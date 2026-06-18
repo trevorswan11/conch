@@ -1,15 +1,14 @@
 #include <CLI/CLI.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <stdx/memory.hh>
 
 #include "clap/formatter.hh"
-
-#include <memory.hh>
 
 namespace ghoti::tests {
 
 TEST_CASE("Formatter provides output") {
     CLI::App app;
-    auto     formatter{mem::make_rc<clap::Fmt>()};
+    auto     formatter{stdx::make_rc<clap::Fmt>()};
     app.formatter(formatter);
     REQUIRE(app.add_subcommand("nothing"));
 

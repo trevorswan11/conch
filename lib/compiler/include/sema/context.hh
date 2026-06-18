@@ -4,16 +4,15 @@
 #include <utility>
 
 #include <gsl/pointers>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
 
 #include "ast/traits.hh"
 #include "module/module.hh"
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include <option.hh>
-#include <result.hh>
-#include <types.hh>
 
 namespace ghoti::sema {
 
@@ -26,7 +25,7 @@ struct Context {
     TypePool&            pool;
     Diagnostics          diagnostics;
     std::ostream&        error_stream;
-    opt::Size            prelude_index;
+    stdx::OptSize        prelude_index;
 
     Context(mod::ModuleManager&  modules,
             SymbolTableRegistry& registry,
@@ -48,7 +47,7 @@ struct Context {
     auto operator=(Context&&) -> Context&            = delete;
 
     // Returns false if the passed result was an error type, which is forwarded to the diagnostics
-    template <typename T = void> auto try_result(Result<T, Diagnostic>&& result) -> bool {
+    template <typename T = void> auto try_result(stdx::Result<T, Diagnostic>&& result) -> bool {
         if (!result) {
             diagnostics.emplace_back(result.error());
             return false;

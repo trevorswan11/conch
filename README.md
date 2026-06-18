@@ -7,9 +7,6 @@
 <p align="center">
 A hand-crafted systems programming language.
 <br/>
-<a href="https://github.com/trevorswan11/ghoti/tree/main/doc"><strong>Explore the docs »</strong></a>
-<br/>
-<br/>
 <a href="https://github.com/trevorswan11/ghoti/issues/new?labels=bug&template=bug-report.md">Report Bug</a>
 &middot;
 <a href="https://github.com/trevorswan11/ghoti/issues/new?labels=enhancement&template=feature-request.md">Request Feature</a>
@@ -34,26 +31,27 @@ Zig is used as the primary orchestrator for all things ghoti. Ghoti uses Zig's `
 <summary><b>Full dependency breakdown</b></summary>
 
 The following are "standalone" dependencies, required and manually fetched by ghoti's build system.
-1. [Catch2](https://github.com/catchorg/Catch2)'s amalgamated source code is compiled from source for test running. It is automatically configured in the project's build script and links statically to the test builds.
-2. [cppcheck](https://cppcheck.sourceforge.io/) is compiled from source for static analysis. It is licensed under the GNU GPLv3, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
-3. [magic_enum](https://github.com/Neargye/magic_enum) is used as a utility to reflect on enum values. Is is licensed under the permissive MIT License.
-4. [fmt](https://github.com/fmtlib/fmt) is used as a formatting utility in place of std::format, which is not as performant or feature-full. Is is licensed under the permissive MIT License.
-5. [unordered_dense](https://github.com/martinus/unordered_dense) provides a vastly improved hash map/set implementation that is used over the inefficient C++ standard implementation. Is is licensed under the permissive MIT License.
-6. [gsl](https://github.com/microsoft/gsl) is used for enforcing best practices and supporting the standard template library. Is is licensed under the permissive MIT License.
-7. [CLI11](https://github.com/CLIUtils/CLI11) is a command line parser for C++ that provides a rich feature set with a simple and intuitive interface. Is is licensed under the permissive 3-Clause BSD License.
-8. [replxx](https://github.com/AmokHuginnsson/replxx) is a read evaluate print loop (REPL) library that provides a cross platform interactive shell that powers terminal debugging support. Is is licensed under the permissive BSD License.
-9. [LLVM 21.1.8](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as ghoti's compilation backend. It is manually compiled and statically linked against ghoti through the build system. It is licensed under the permissive Apache License 2.0, and has the following dependencies:
+1. [stdx](https://github.com/trevorswan11/stdx.git) is a C++ standard library and zig build system extension library that drives multiple dependencies. A full breakdown of dependencies can be found at the library's github repository. In short, it drives:
+    - [Catch2](https://github.com/catchorg/Catch2)
+    - [cppcheck](https://cppcheck.sourceforge.io/)
+    - [magic_enum](https://github.com/Neargye/magic_enum)
+    - [fmt](https://github.com/fmtlib/fmt)
+    - [unordered_dense](https://github.com/martinus/unordered_dense)
+    - [gsl](https://github.com/microsoft/gsl)
+    - [kcov](https://github.com/SimonKagstrom/kcov), which has the following transitive dependencies:
+        - [curl](https://github.com/curl/curl), which has a transitive dependency to simplify builds:
+            - [mbedtls](https://github.com/Mbed-TLS/mbedtls)
+        - [binutils](https://sourceware.org/pub/binutils)
+        - [elfutils](https://github.com/Techatrix/elfutils), which has a transitive dependency to simplify builds:
+            - [argp-standalone](https://github.com/argp-standalone/argp-standalone)
+        - [libdwarf-code](https://github.com/davea42/libdwarf-code)
+    - [libarchive](https://github.com/libarchive/libarchive)
+2. [CLI11](https://github.com/CLIUtils/CLI11) is a command line parser for C++ that provides a rich feature set with a simple and intuitive interface. Is is licensed under the permissive 3-Clause BSD License.
+3. [replxx](https://github.com/AmokHuginnsson/replxx) is a read evaluate print loop (REPL) library that provides a cross platform interactive shell that powers terminal debugging support. Is is licensed under the permissive BSD License.
+4. [LLVM 21.1.8](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as ghoti's compilation backend. It is manually compiled and statically linked against ghoti through the build system. It is licensed under the permissive Apache License 2.0, and has the following dependencies:
     - [libxml2](https://gitlab.gnome.org/GNOME/libxml2), licensed under the MIT License
     - [zlib](https://github.com/madler/zlib), licensed under the MIT License
     - [zstd](https://github.com/facebook/zstd), licensed under the BSD License
-10. [libarchive](https://github.com/libarchive/libarchive) is used for packaging releases, making use of zlib and zstd to create `zip` and `zst` archives. It is license under the BSD 2-Clause License, but the associated compiled artifacts are neither linked with output artifacts nor shipped with releases.
-11. [kcov](https://github.com/SimonKagstrom/kcov) is used for test coverage reporting. The licensing of this tool and its dependencies are not explicitly listed here as they are not shipped with releases of ghoti. It has multiple dependencies, but they are all fetched lazily as kcov is only supported on Linux, MacOS, and FreeBSD:
-    - [curl](https://github.com/curl/curl) is required by all builds of kcov and is used for pulling the resulting badge. It has a single extra dependency which is chosen for cross-platform support:
-        - [mbedtls](https://github.com/Mbed-TLS/mbedtls)
-    - [binutils](https://sourceware.org/pub/binutils) is required for all kcov builds
-    - [elfutils](https://github.com/Techatrix/elfutils) is required on linux only. It has a single extra dependency:
-        - [argp-standalone](https://github.com/argp-standalone/argp-standalone)
-    - [libdwarf-code](https://github.com/davea42/libdwarf-code) is required on MacOS only.
 
 Many build functions heavily reference [allyourcodebase](https://github.com/allyourcodebase)'s implementations. Links to specific repositories can be found as a documentation comment above respective `build` functions.
 

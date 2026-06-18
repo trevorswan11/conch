@@ -5,8 +5,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-
-#include <types.hh>
+#include <stdx/types.hh>
 
 namespace ghoti::tests::helpers {
 

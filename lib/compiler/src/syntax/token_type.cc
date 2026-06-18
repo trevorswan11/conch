@@ -5,12 +5,12 @@
 #include <cctype>
 #include <utility>
 
+#include <stdx/assert.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
+
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
-
-#include <assert.hh>
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -35,7 +35,7 @@ auto digit_in_base(char c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto to_base(TokenType tt) noexcept -> opt::Option<Base> {
+auto to_base(TokenType tt) noexcept -> stdx::Option<Base> {
     switch (tt) {
     case TokenType::INT_2:
     case TokenType::LINT_2:
@@ -61,11 +61,11 @@ auto to_base(TokenType tt) noexcept -> opt::Option<Base> {
     case TokenType::UINT_16:
     case TokenType::ULINT_16:
     case TokenType::UZINT_16: return Base::HEXADECIMAL;
-    default:                  return opt::none;
+    default:                  return stdx::none;
     }
 }
 
-auto misc_from_char(char c) noexcept -> opt::Option<TokenType> {
+auto misc_from_char(char c) noexcept -> stdx::Option<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;
@@ -77,7 +77,7 @@ auto misc_from_char(char c) noexcept -> opt::Option<TokenType> {
     case '[': return TokenType::LBRACKET;
     case ']': return TokenType::RBRACKET;
     case '_': return TokenType::UNDERSCORE;
-    default:  return opt::none;
+    default:  return stdx::none;
     }
 }
 

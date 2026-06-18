@@ -6,13 +6,12 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <stdx/types.hh>
 
 #include "syntax/builtins.hh"
 #include "syntax/lexer.hh"
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
-
-#include <types.hh>
 
 namespace ghoti::tests {
 

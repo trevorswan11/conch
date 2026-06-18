@@ -3,11 +3,11 @@
 #include <string_view>
 
 #include <catch2/catch_test_macros.hpp>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "diagnostic.hh"
-#include "option.hh"
 #include "source_file.hh"
-#include "types.hh"
 
 namespace ghoti::tests {
 
@@ -21,9 +21,9 @@ This is line 2
 
 namespace {
 
-auto test_diag_strings(const SourceLocation&         t,
-                       std::string_view              expected_line,
-                       opt::Option<std::string_view> expected_caret) {
+auto test_diag_strings(const SourceLocation&          t,
+                       std::string_view               expected_line,
+                       stdx::Option<std::string_view> expected_caret) {
     const SourceFile file{source};
     const auto [ln, caret]{file.get_diagnostic_strings(t)};
 
@@ -56,20 +56,20 @@ TEST_CASE("First and second line diagnostics") {
         test_diag_strings({i, 5UZ}, lines[i], "     ^");
         test_diag_strings({i, 13UZ}, lines[i], "             ^");
         test_diag_strings({i, 14UZ}, lines[i], "              ^");
-        test_diag_strings({i, 17UZ}, lines[i], opt::none);
+        test_diag_strings({i, 17UZ}, lines[i], stdx::none);
     }
 }
 
 TEST_CASE("Third line diagnostics") {
     constexpr std::string_view line{"This is line 3 that starts with spaces"};
-    test_diag_strings({2UZ, 0UZ}, line, opt::none);
+    test_diag_strings({2UZ, 0UZ}, line, stdx::none);
     test_diag_strings({2UZ, 4UZ}, line, "^");
     test_diag_strings({2UZ, 5UZ}, line, " ^");
-    test_diag_strings({2UZ, 50UZ}, line, opt::none);
+    test_diag_strings({2UZ, 50UZ}, line, stdx::none);
 }
 
 TEST_CASE("Out of range line diagnostics") {
-    test_diag_strings({10UZ, 0UZ}, "<invalid line>", opt::none);
+    test_diag_strings({10UZ, 0UZ}, "<invalid line>", stdx::none);
 }
 
 } // namespace ghoti::tests

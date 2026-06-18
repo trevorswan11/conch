@@ -8,6 +8,11 @@
 #include <fmt/format.h>
 #include <gsl/pointers>
 #include <gsl/span>
+#include <stdx/assert.hh>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -23,12 +28,7 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 
-#include <assert.hh>
 #include <diagnostic.hh>
-#include <option.hh>
-#include <result.hh>
-#include <types.hh>
-#include <utility.hh>
 
 namespace ghoti::sema {
 
@@ -94,8 +94,8 @@ class TypeResolver {
         }
 
         // Only returns none when there are no types in the stack
-        [[nodiscard]] auto peek() const noexcept -> opt::Option<Type&> {
-            if (stack_.empty()) { return opt::none; }
+        [[nodiscard]] auto peek() const noexcept -> stdx::Option<Type&> {
+            if (stack_.empty()) { return stdx::none; }
             return *stack_.back();
         }
 
@@ -133,7 +133,7 @@ class TypeResolver {
     [[nodiscard]] auto resolve_builtin_call(ID                            id,
                                             const ast::CallExpression&    call,
                                             const types::BuiltinFunction& builtin)
-        -> Result<void, Diagnostic>;
+        -> stdx::Result<void, Diagnostic>;
 
     auto resolve_call_args(gsl::span<const ast::CallExpression::Argument> args) -> ResolveResult;
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
@@ -148,7 +148,7 @@ class TypeResolver {
     // Returns the same type buffer that it was passed when resolution was successful
     [[nodiscard]] auto resolve_members(gsl::span<Type*>                   buf,
                                        gsl::span<const ast::MemberHandle> members)
-        -> opt::Option<gsl::span<Type*>>;
+        -> stdx::Option<gsl::span<Type*>>;
     template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
@@ -167,11 +167,11 @@ class TypeResolver {
 
     // Attempts to access the given member in the provided structural type
     [[nodiscard]] auto
-    resolve_structural_access(Type&                         object_type,
-                              ast::IdentifierHandle         member,
-                              SourceLocation                object_location,
-                              opt::Option<std::string_view> object_name = opt::none)
-        -> Result<gsl::not_null<Type*>, Diagnostic>;
+    resolve_structural_access(Type&                          object_type,
+                              ast::IdentifierHandle          member,
+                              SourceLocation                 object_location,
+                              stdx::Option<std::string_view> object_name = stdx::none)
+        -> stdx::Result<gsl::not_null<Type*>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
     [[nodiscard]] auto get_rightmost_name(ast::OuterAccessHandle) const noexcept
@@ -183,16 +183,16 @@ class TypeResolver {
 
     [[nodiscard]] auto validate_struct_initializer(ast::NodeID,
                                                    const ast::InitializerExpression&,
-                                                   Type&) -> Result<void, Diagnostic>;
+                                                   Type&) -> stdx::Result<void, Diagnostic>;
 
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
 
     [[nodiscard]] auto validate_enum_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> opt::Option<Diagnostic>;
+        -> stdx::Option<Diagnostic>;
 
     [[nodiscard]] auto validate_union_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> opt::Option<Diagnostic>;
+        -> stdx::Option<Diagnostic>;
 
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;
@@ -225,9 +225,9 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
 
     // Returns `true` if the resolution was successful
-    [[nodiscard]] auto resolve_control_flow_label(opt::Option<ast::IdentifierHandle> label,
-                                                  std::string_view                   stmt_name)
-        -> Result<opt::Option<Symbol&>, Diagnostic>;
+    [[nodiscard]] auto resolve_control_flow_label(stdx::Option<ast::IdentifierHandle> label,
+                                                  std::string_view                    stmt_name)
+        -> stdx::Result<stdx::Option<Symbol&>, Diagnostic>;
 
     auto visit(ast::NodeID, const ast::BreakStatement&) -> void;
     auto visit(ast::NodeID, const ast::ContinueStatement&) -> void;
@@ -253,8 +253,8 @@ class TypeResolver {
     auto visit(ast::ExplicitTypeID, const ast::ExplicitArrayType&) -> void;
 
     // Looks up the symbol by name in the current index ONLY. Changes no state on failure
-    auto resolve_symbol_info(ast::IdentifierHandle handle, opt::Option<SymbolKind> kind)
-        -> opt::Option<Symbol&>;
+    auto resolve_symbol_info(ast::IdentifierHandle handle, stdx::Option<SymbolKind> kind)
+        -> stdx::Option<Symbol&>;
 
     TypeResolver(mod::Module& resolving, Context& ctx)
         : resolving_{resolving}, table_idx_{*resolving.root_table_idx}, ctx_{ctx} {
@@ -275,8 +275,8 @@ class TypeResolver {
     StructuralValidator enum_validator_;
     StructuralValidator union_validator_;
 
-    Context&           ctx_;
-    opt::Option<Type&> last_type_;
+    Context&            ctx_;
+    stdx::Option<Type&> last_type_;
 };
 
 } // namespace ghoti::sema

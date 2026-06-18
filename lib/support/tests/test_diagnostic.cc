@@ -1,10 +1,10 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "diagnostic.hh"
-#include "option.hh"
-#include "types.hh"
 
 namespace ghoti {
 
@@ -38,13 +38,13 @@ TEST_CASE("Diagnostic traits") {
 TEST_CASE("Location and error only") {
     SomethingLocationed  l;
     Diagnostic<TestEnum> d{TestEnum::SAD, l};
-    CHECK("error: SAD 1:43" == d.to_string(opt::none, false));
+    CHECK("error: SAD 1:43" == d.to_string(stdx::none, false));
 }
 
 TEST_CASE("Custom locateable") {
     SomethingLocationed  l;
     Diagnostic<TestEnum> d{"message", TestEnum::SAD, l};
-    CHECK("error: message 1:43" == d.to_string(opt::none, false));
+    CHECK("error: message 1:43" == d.to_string(stdx::none, false));
 }
 
 TEST_CASE("Error messages with associated files") {
@@ -62,7 +62,7 @@ TEST_CASE("Move constructor with new error") {
     SomethingLocationed  l;
     Diagnostic<TestEnum> d1{"message", TestEnum::SAD, l};
     Diagnostic<TestEnum> d2{std::move(d1), TestEnum::MAD};
-    CHECK("error: message 1:43" == d2.to_string(opt::none, false));
+    CHECK("error: message 1:43" == d2.to_string(stdx::none, false));
 }
 
 TEST_CASE("Move constructor with new location") {
@@ -71,7 +71,7 @@ TEST_CASE("Move constructor with new location") {
 
     SomethingElseLocationed e;
     Diagnostic<TestEnum>    d2{std::move(d1), e};
-    CHECK("error: message 43:1" == d2.to_string(opt::none, false));
+    CHECK("error: message 43:1" == d2.to_string(stdx::none, false));
 }
 
 } // namespace tests

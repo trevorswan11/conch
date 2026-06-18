@@ -5,17 +5,16 @@
 #include <vector>
 
 #include <magic_enum/magic_enum.hpp>
+#include <stdx/enum.hh>
+#include <stdx/iterator.hh>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
 
 #include "ast/handle.hh"
 #include "ast/id.hh"
 #include "syntax/error.hh"
 #include "syntax/token_type.hh"
-
-#include <enum.hh>
-#include <iterator.hh>
-#include <option.hh>
-#include <result.hh>
-#include <types.hh>
 
 namespace ghoti {
 
@@ -29,22 +28,22 @@ struct BlockStatement {
     Statements statements;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct BreakStatement {
-    opt::Option<IdentifierHandle> label;
-    opt::Option<ExpressionHandle> expression;
+    stdx::Option<IdentifierHandle> label;
+    stdx::Option<ExpressionHandle> expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct ContinueStatement {
-    opt::Option<IdentifierHandle> label;
+    stdx::Option<IdentifierHandle> label;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 enum class DeclModifiers : u8 {
@@ -59,13 +58,13 @@ enum class DeclModifiers : u8 {
 MAKE_ENUM_OPERATORS(DeclModifiers)
 
 struct DeclStatement {
-    IdentifierHandle              name;
-    opt::Option<ExplicitTypeID>   explicit_type;
-    opt::Option<ExpressionHandle> value;
-    DeclModifiers                 modifiers;
+    IdentifierHandle               name;
+    stdx::Option<ExplicitTypeID>   explicit_type;
+    stdx::Option<ExpressionHandle> value;
+    DeclModifiers                  modifiers;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 
     [[nodiscard]] auto has_modifier(DeclModifiers flag) const noexcept -> bool {
         return modifiers_has(modifiers, flag);
@@ -81,53 +80,53 @@ struct DeferStatement {
     StatementHandle deferred;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct DiscardStatement {
     ExpressionHandle discarded;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct ExpressionStatement {
     ExpressionHandle expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 class AST;
 
 struct ImportStatement {
-    ImportPayloadHandle           payload;
-    opt::Option<IdentifierHandle> alias;
+    ImportPayloadHandle            payload;
+    stdx::Option<IdentifierHandle> alias;
 
     [[nodiscard]] static constexpr auto is_public(ast::NodeID id) noexcept -> bool {
         return id.get_token_type() == syntax::TokenType::PUBLIC;
     }
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 
     [[nodiscard]] auto get_name(const AST& tree) const noexcept
         -> std::pair<ast::IdentifierHandle, std::string_view>;
 };
 
 struct ReturnStatement {
-    opt::Option<ExpressionHandle> expression;
+    stdx::Option<ExpressionHandle> expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct TestStatement {
-    opt::Option<StringHandle> description;
-    BlockHandle               block;
+    stdx::Option<StringHandle> description;
+    BlockHandle                block;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct UsingStatement {
@@ -139,7 +138,7 @@ struct UsingStatement {
     }
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
 };
 
 } // namespace ast

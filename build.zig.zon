@@ -4,6 +4,10 @@
     .minimum_zig_version = "0.16.0",
     .fingerprint = 0x2f146abfbb7f6400,
     .dependencies = .{
+        .stdx = .{
+            .url = "git+https://github.com/trevorswan11/stdx.git#c35ca8601fa1fc972f47d5b5e4a016081b2dd4d4",
+            .hash = "stdx-0.0.1-dNitg_JUBwC3LmXt-5H7pvcC2nGYptsvwJkB6BFK2Nbg",
+        },
         .catch2 = .{
             .url = "https://github.com/catchorg/Catch2/archive/refs/tags/v3.12.0.tar.gz",
             .hash = "N-V-__8AAA1iiAB-7p1uHA2cu3mmSN2ncyyURBkin7xOz0-V",
@@ -106,7 +110,6 @@
         "ghoti",
         "lib",
         "site",
-        "tools",
         "third-party",
         "build.zig",
         "build.zig.zon",

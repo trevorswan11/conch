@@ -5,30 +5,30 @@
 #include <system_error>
 #include <utility>
 
+#include <stdx/assert.hh>
+#include <stdx/fixed/vector.hh>
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
+#include <stdx/type_traits.hh>
+#include <stdx/types.hh>
+
 #include "ast/handle.hh"
 #include "syntax/error.hh"
 #include "syntax/parser.hh"
 #include "syntax/token_type.hh"
-
-#include <assert.hh>
-#include <fixed/vector.hh>
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
-#include <type_traits.hh>
-#include <types.hh>
 
 namespace ghoti::ast {
 
 namespace {
 
 // A global buffer for storing underscore-cleaned numeric tokens for `std::from_chars`
-constinit fixed::Vector<char, 1'024> numeric_buffer;
+constinit stdx::fixed::Vector<char, 1'024> numeric_buffer;
 
 // Parses the requested value from the string, asserting the from_chars result if requested
 template <typename ValueType>
 [[nodiscard]] auto parse_primitive_value(std::string_view slice, syntax::TokenType type) noexcept
-    -> opt::Option<ValueType> {
+    -> stdx::Option<ValueType> {
     const auto base{syntax::token_type::to_base(type)};
     {
         // This is narrowly scoped to allow the first and last pointer names to be reused
@@ -49,7 +49,7 @@ template <typename ValueType>
 
     ValueType              v;
     std::from_chars_result result;
-    if constexpr (traits::FloatingPoint<ValueType>) {
+    if constexpr (stdx::traits::FloatingPoint<ValueType>) {
         result = std::from_chars(first, last, v);
     } else {
         result = std::from_chars(first, last, v, std::to_underlying(*base));
@@ -58,11 +58,11 @@ template <typename ValueType>
     // There should only be one error case, hence the use of option vs. result
     if (result.ec == std::errc{} && result.ptr == last) { return v; }
     ASSERT(result.ec == std::errc::result_out_of_range);
-    return opt::none;
+    return stdx::none;
 }
 
 template <traits::ValuedPrimitive Primitive>
-auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto parse_primitive(syntax::Parser& parser) -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     using value_type = typename Primitive::value_type;
     const auto start_token{parser.get_current_token()};
@@ -82,10 +82,11 @@ auto parse_primitive(syntax::Parser& parser) -> Result<ExpressionHandle, syntax:
 
 } // namespace
 
-#define MAKE_PRIMITIVE_PARSER(Type)                                                            \
-    auto Type::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> { \
-        PROFILE_FUNCTION();                                                                    \
-        return parse_primitive<Type>(parser);                                                  \
+#define MAKE_PRIMITIVE_PARSER(Type)                             \
+    auto Type::parse(syntax::Parser& parser)                    \
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic> { \
+        PROFILE_FUNCTION();                                     \
+        return parse_primitive<Type>(parser);                   \
     }
 
 MAKE_PRIMITIVE_PARSER(I32Expression)
@@ -95,7 +96,8 @@ MAKE_PRIMITIVE_PARSER(U32Expression)
 MAKE_PRIMITIVE_PARSER(U64Expression)
 MAKE_PRIMITIVE_PARSER(USizeExpression)
 
-auto U8Expression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto U8Expression::parse(syntax::Parser& parser)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     const auto slice{start_token.slice};
@@ -121,12 +123,14 @@ auto U8Expression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syn
 MAKE_PRIMITIVE_PARSER(F32Expression)
 MAKE_PRIMITIVE_PARSER(F64Expression)
 
-auto BoolExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto BoolExpression::parse(syntax::Parser& parser)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     return parser.add_expr<BoolExpression>(parser.get_current_token());
 }
 
-auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto VoidExpression::parse(syntax::Parser& parser)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
@@ -134,7 +138,7 @@ auto VoidExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 }
 
 auto UndefinedExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     return parser.add_expr<UndefinedExpression>(parser.get_current_token());
 }

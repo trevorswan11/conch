@@ -4,12 +4,13 @@
 #include <string_view>
 #include <vector>
 
-#include "assert.hh"
+#include <stdx/assert.hh>
+#include <stdx/iterator.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+
 #include "diagnostic.hh"
-#include "iterator.hh"
-#include "option.hh"
-#include "types.hh"
-#include "utility.hh"
 
 namespace ghoti {
 
@@ -57,7 +58,7 @@ class SourceFile {
 
   private:
     [[nodiscard]] auto get_diagnostic_strings_at(const SourceLocation& loc) const
-        -> std::pair<std::string_view, opt::Option<std::string>>;
+        -> std::pair<std::string_view, stdx::Option<std::string>>;
 
   private:
     std::string source_;

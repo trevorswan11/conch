@@ -6,21 +6,20 @@
 #include <ankerl/unordered_dense.h>
 #include <gsl/pointers>
 #include <gsl/span>
+#include <stdx/arena.hh>
+#include <stdx/assert.hh>
+#include <stdx/enum.hh>
+#include <stdx/fixed/vector.hh>
+#include <stdx/hash.hh>
+#include <stdx/option.hh>
+#include <stdx/type_traits.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+#include <stdx/variant.hh>
 
 #include "ast/expression.hh"
 #include "ast/type.hh"
 #include "module/module.hh"
-
-#include <arena.hh>
-#include <assert.hh>
-#include <enum.hh>
-#include <fixed/vector.hh>
-#include <hash.hh>
-#include <option.hh>
-#include <type_traits.hh>
-#include <types.hh>
-#include <utility.hh>
-#include <variant.hh>
 
 namespace ghoti::sema {
 
@@ -66,7 +65,7 @@ namespace types {
 struct Unresolved {};
 struct Poison {};
 
-using BuiltinType = Unit;
+using BuiltinType = stdx::Unit;
 
 struct Slice {
     Type& underlying;
@@ -142,7 +141,7 @@ struct Module {
 };
 
 constexpr usize MAX_BUILTIN_PARAMS{4};
-using BuiltinParams = fixed::Vector<gsl::not_null<Type*>, MAX_BUILTIN_PARAMS>;
+using BuiltinParams = stdx::fixed::Vector<gsl::not_null<Type*>, MAX_BUILTIN_PARAMS>;
 
 struct BuiltinFunction {
     BuiltinParams params;
@@ -185,7 +184,7 @@ class Key {
 
     // This is a high quality hash for the purposes of `unordered_dense`
     [[nodiscard]] constexpr auto hash() const noexcept -> u64 {
-        hash::Hasher h{std::to_underlying(kind_)};
+        stdx::hash::Hasher h{std::to_underlying(kind_)};
         h.combine(mut_);
         h.combine(markers_);
         return h.finalize();
@@ -210,7 +209,7 @@ class Key {
   private:
     TypeKind            kind_;
     MutabilityModifiers mut_;
-    hash::Hasher        markers_;
+    stdx::hash::Hasher  markers_;
 
     friend class sema::Type;
 };
@@ -241,22 +240,22 @@ namespace ghoti::sema {
 // A semantic type that is entirely owned by an arena of types
 class Type {
   public:
-    using Data = Variant<types::Unresolved,
-                         types::Poison,
-                         types::BuiltinType,
-                         types::Slice,
-                         types::Array,
-                         types::Pointer,
-                         types::Reference,
-                         types::Enum,
-                         types::Union,
-                         types::Struct,
-                         types::Module,
-                         types::Function,
-                         types::BuiltinFunction,
-                         types::MetaType,
-                         types::DeferredCall,
-                         types::DeferredArray>;
+    using Data = stdx::Variant<types::Unresolved,
+                               types::Poison,
+                               types::BuiltinType,
+                               types::Slice,
+                               types::Array,
+                               types::Pointer,
+                               types::Reference,
+                               types::Enum,
+                               types::Union,
+                               types::Struct,
+                               types::Module,
+                               types::Function,
+                               types::BuiltinFunction,
+                               types::MetaType,
+                               types::DeferredCall,
+                               types::DeferredArray>;
 
   public:
     ~Type() = default;
@@ -327,15 +326,15 @@ class Type {
     explicit Type(types::Key key) noexcept : key_{key} {}
 
   private:
-    types::Key key_;
-    opt::Size  symbol_table_idx_;
-    Data       data_;
+    types::Key    key_;
+    stdx::OptSize symbol_table_idx_;
+    Data          data_;
 
     // Initialization is restricted to the pool's arena exclusively
-    friend class mem::Arena;
+    friend class stdx::Arena;
 };
 
-static_assert(traits::TriviallyDestructible<Type>);
+static_assert(stdx::traits::TriviallyDestructible<Type>);
 
 // All associated type lifetimes are tied to the pool
 class TypePool {
@@ -377,7 +376,7 @@ class TypePool {
     auto get_or_emplace(const types::Key& key) -> gsl::not_null<Type*>;
 
   private:
-    mem::Arena                                      arena_;
+    stdx::Arena                                     arena_;
     ankerl::unordered_dense::map<types::Key, Type*> cache_;
 };
 

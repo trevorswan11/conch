@@ -2,13 +2,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
+#include <stdx/config.h>
 
 #include "helpers/common.hh"
 #include "module/error.hh"
 #include "module/memory_loader.hh"
 #include "module/module.hh"
-
-#include <config.h>
 
 namespace ghoti::tests {
 
@@ -16,7 +15,7 @@ TEST_CASE("Fetching non-relative file modules") {
     mod::MemoryLoader  loader;
     mod::ModuleManager manager{loader};
 
-#if GHOTI_WINDOWS
+#if STDX_WINDOWS
     const std::string_view file{"C:/fake/foo.gh"};
 #else
     const std::string_view file{"/fake/foo.gh"};
