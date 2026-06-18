@@ -5,32 +5,8 @@
     .fingerprint = 0x2f146abfbb7f6400,
     .dependencies = .{
         .stdx = .{
-            .url = "git+https://github.com/trevorswan11/stdx.git#d932007ccd0203516ba11a811174de2740cd9918",
-            .hash = "stdx-0.0.1-dNitg81bBwBO6Pn-FVQd2t1EWHv28pW45494JrmLzYf1",
-        },
-        .catch2 = .{
-            .url = "https://github.com/catchorg/Catch2/archive/refs/tags/v3.12.0.tar.gz",
-            .hash = "N-V-__8AAA1iiAB-7p1uHA2cu3mmSN2ncyyURBkin7xOz0-V",
-        },
-        .cppcheck = .{
-            .url = "https://github.com/danmar/cppcheck/archive/refs/tags/2.19.0.tar.gz",
-            .hash = "N-V-__8AANXzZwG73ht_C8YDOphyBzqoNj12jpctC8cyIhQK",
-        },
-        .magic_enum = .{
-            .url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.9.7.tar.gz",
-            .hash = "N-V-__8AAG0CEAClLikJpJ7Cg3LFZxHR_xfy6ddADO6AKqq2",
-        },
-        .fmt = .{
-            .url = "https://github.com/fmtlib/fmt/archive/refs/tags/12.1.0.tar.gz",
-            .hash = "N-V-__8AAPE8LgDK9Qn7tjvCIu78z8Y8e6SW8WIUCAQIszuf",
-        },
-        .unordered_dense = .{
-            .url = "https://github.com/martinus/unordered_dense/archive/refs/tags/v4.8.1.tar.gz",
-            .hash = "N-V-__8AAGlLPgDtp5xVf4RWSebI05x30M4e2QYAaY26KyEc",
-        },
-        .gsl = .{
-            .url = "https://github.com/microsoft/GSL/archive/refs/tags/v4.2.2.tar.gz",
-            .hash = "N-V-__8AANxABQD9lqQDJUNMghSl4TL2JrQ-L8EgyYEchRkr",
+            .url = "git+https://github.com/trevorswan11/stdx.git#6c04bcf7aaa3fe03341a331f00867b2ff4b8173a",
+            .hash = "stdx-0.0.1-dNitg49mBwDqEXY5BuhGMlQssQU8vZDSr9qMzO3Ky4T3",
         },
         .cli11 = .{
             .url = "https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.6.2.tar.gz",
@@ -55,45 +31,6 @@
         .zstd = .{
             .url = "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz",
             .hash = "N-V-__8AAPZ7fwBg4JoCzM_0o2A8wxH2hsUUeiU1iuZv53L5",
-        },
-        .libarchive = .{
-            .url = "https://github.com/libarchive/libarchive/archive/refs/tags/v3.8.5.tar.gz",
-            .hash = "N-V-__8AABtbCwHDmVvgXlm5f-07LtFZjUQNvvJrBnG-HeqN",
-        },
-        .kcov = .{
-            .url = "https://github.com/SimonKagstrom/kcov/archive/refs/tags/v43.tar.gz",
-            .hash = "N-V-__8AACKwDgClVrsguz3LNqiw8Qg95GMitZzo8mLHTRKT",
-            .lazy = true,
-        },
-        .curl = .{
-            .url = "https://github.com/curl/curl/archive/refs/tags/curl-8_18_0.tar.gz",
-            .hash = "N-V-__8AAHcEBgHdCKCoETva5Llwxgbs_1fqyMcAIdbywrg6",
-            .lazy = true,
-        },
-        .mbedtls = .{
-            .url = "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-3.6.4.tar.gz",
-            .hash = "N-V-__8AADE9jALWhPS2ykOLbf8gUmr9r-SBwyzzpccbtBAv",
-            .lazy = true,
-        },
-        .binutils = .{
-            .url = "https://sourceware.org/pub/binutils/releases/binutils-2.45.tar.xz",
-            .hash = "N-V-__8AAA6W9hFBAXcaEDszHBBVI0IfEpYUwk8y2YtqoTBr",
-            .lazy = true,
-        },
-        .elfutils = .{
-            .url = "https://github.com/Techatrix/elfutils/archive/refs/tags/elfutils-0.192.tar.gz",
-            .hash = "N-V-__8AAIQGJAEXcr6-lFXTMBDHeC3iKepWTJ81xkih2e9T",
-            .lazy = true,
-        },
-        .argp = .{
-            .url = "https://github.com/argp-standalone/argp-standalone/archive/refs/tags/1.5.0.tar.gz",
-            .hash = "N-V-__8AABTDAwBuawEWBE-P-NIkZF5T4pwX9tRHsf0rRCkO",
-            .lazy = true,
-        },
-        .libdwarf = .{
-            .url = "https://github.com/davea42/libdwarf-code/archive/refs/tags/v2.3.1.tar.gz",
-            .hash = "N-V-__8AAESGsACJHNukVw9fMHuLowaKWinuxfGbHF4W554F",
-            .lazy = true,
         },
         .templ = .{
             .url = "https://github.com/a-h/templ/archive/refs/tags/v0.3.1020.tar.gz",

@@ -15,7 +15,7 @@ const RemoveDir = stdx.RemoveDir;
 const LLVMBuilder = @import("third-party/llvm/LLVMBuilder.zig");
 const ClangBuilder = @import("third-party/llvm/ClangBuilder.zig");
 const LLDBuilder = @import("third-party/llvm/LLDBuilder.zig");
-const SiteBuilder = @import("site/SiteBuilder.zig");
+const SiteBuilder = @import("third-party/go/SiteBuilder.zig");
 
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{
@@ -76,37 +76,40 @@ pub fn build(b: *std.Build) !void {
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
     clang.build();
-    const cppcheck = try stdx.cppcheck.build(stdx_dep.builder, .{
-        .target = b.graph.host,
-        .optimize = .ReleaseFast,
-    });
+    const cppcheck = stdx_dep.artifact("cppcheck");
     try addTooling(b, .{
         .cdb_gen = cdb_gen,
         .clang = clang,
-        .cppcheck = cppcheck.artifact,
+        .cppcheck = cppcheck,
         .site_builder = site_builder,
     });
 
     try addPackageStep(b, .{
         .llvm = llvm,
         .cxx_flags = package_flags.items,
-        .compressor = stdx.builders.compressor(stdx_dep.builder),
+        .compressor = stdx_dep.artifact("compressor"),
     });
 
-    if (artifacts.tests) |tests| try stdx.CoverageParser.addStep(b, &.{
-        .{
-            .artifact = tests.support_tests,
-            .include_patterns = &.{ ProjectPaths.support.src, ProjectPaths.support.inc },
-        },
-        .{
-            .artifact = tests.compiler_tests,
-            .include_patterns = &.{ ProjectPaths.compiler.src, ProjectPaths.compiler.inc },
-        },
-        .{
-            .artifact = tests.driver_tests,
-            .include_patterns = &.{ ProjectPaths.driver.src, ProjectPaths.driver.inc },
-        },
-    });
+    if (stdx.KcovBuilder.allowedTarget(b.graph.host)) {
+        if (artifacts.tests) |tests| try stdx.steps.addCoverage(b, .{
+            .curl = stdx_dep.artifact("curl"),
+            .kcov = stdx_dep.artifact("kcov"),
+            .run_configs = &.{
+                .{
+                    .artifact = tests.support_tests,
+                    .include_patterns = &.{ ProjectPaths.support.src, ProjectPaths.support.inc },
+                },
+                .{
+                    .artifact = tests.compiler_tests,
+                    .include_patterns = &.{ ProjectPaths.compiler.src, ProjectPaths.compiler.inc },
+                },
+                .{
+                    .artifact = tests.driver_tests,
+                    .include_patterns = &.{ ProjectPaths.driver.src, ProjectPaths.driver.inc },
+                },
+            },
+        });
+    }
 }
 
 pub const ProjectPaths = struct {
@@ -145,12 +148,19 @@ pub const ProjectPaths = struct {
 
     const stdlib = "lib/std/";
 
-    pub fn collectCXXToolingFiles(b: *std.Build) ![]const []const u8 {
-        return std.mem.concat(b.allocator, []const u8, &.{
+    pub fn collectToolingPaths(b: *std.Build) !stdx.steps.FmtPaths {
+        const cxx_paths = try std.mem.concat(b.allocator, []const u8, &.{
             try compiler.files(b),
             try driver.files(b),
             try support.files(b),
         });
+
+        return .{ .zig = &.{
+            "build.zig",
+            "build.zig.zon",
+            ProjectPaths.site ++ "rebuild.zig",
+            ProjectPaths.site ++ "SiteBuilder.zig",
+        }, .cxx = cxx_paths };
     }
 
     pub const site = "site/";
@@ -350,12 +360,14 @@ fn addArtifacts(b: *std.Build, config: struct {
     var tests: ?TestArtifacts = null;
     if (building_for_host) {
         const test_install_dir: ?[]const u8 = if (config.auto_install) "tests" else null;
+        const libcatch2 = config.stdx_dep.artifact("catch2");
 
         // Support's tests depend on the test runner but not LLVM
         const support_tests = stdx.builders.strappedTest(config.stdx_dep.builder, .{
             .target = target,
             .optimize = config.optimize,
             .libstdx = libstdx,
+            .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.support.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .include_paths = &.{
@@ -383,6 +395,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .target = target,
             .optimize = config.optimize,
             .libstdx = libstdx,
+            .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.compiler.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .include_paths = &.{
@@ -411,6 +424,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .target = target,
             .optimize = config.optimize,
             .libstdx = libstdx,
+            .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.driver.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .include_paths = &.{
@@ -491,22 +505,47 @@ fn addTooling(b: *std.Build, config: struct {
     cppcheck: *std.Build.Step.Compile,
     site_builder: ?*SiteBuilder,
 }) !void {
-    const tooling_sources = try ProjectPaths.collectCXXToolingFiles(b);
-
     const cdb_step = b.step("cdb", "Generate " ++ CDBGenerator.cdb_filename);
     cdb_step.dependOn(&config.cdb_gen.step);
     b.getInstallStep().dependOn(&config.cdb_gen.step);
 
-    try addFmtStep(b, .{
-        .tooling_sources = tooling_sources,
-        .clang = config.clang,
-        .site_builder = config.site_builder,
+    const fmt_steps = try stdx.steps.addFmt(b, .{
+        .paths = try ProjectPaths.collectToolingPaths(b),
+        .formatter = .{ .artifact = config.clang.clang_tools.clang_format },
     });
 
-    const check_step = stdx.utils.addStaticAnalysisStep(b, .{
-        .tooling_sources = tooling_sources,
+    if (config.site_builder) |site| if (site.go_fmt_path) |go_fmt| {
+        const go_paths = try stdx.utils.collectFiles(b, ProjectPaths.site, .{
+            .allowed_extensions = &.{".go"},
+            .dropped_extensions = &.{"_templ.go"},
+        });
+
+        const go_formatter = b.addSystemCommand(&.{ go_fmt, "-w" });
+        go_formatter.addArgs(go_paths);
+        fmt_steps.fmt.dependOn(&go_formatter.step);
+
+        const templ_formatter = site.addRunTempl();
+        templ_formatter.setCwd(site.site_path);
+        templ_formatter.addArgs(&.{ "fmt", "." });
+        fmt_steps.fmt.dependOn(&templ_formatter.step);
+
+        const go_formatter_check = b.addSystemCommand(&.{ go_fmt, "-d" });
+        go_formatter_check.addArgs(go_paths);
+        fmt_steps.fmt_check.dependOn(&go_formatter_check.step);
+
+        const templ_formatter_check = site.addRunTempl();
+        templ_formatter_check.setCwd(site.site_path);
+        templ_formatter_check.addArgs(&.{ "fmt", "-fail", "." });
+        fmt_steps.fmt_check.dependOn(&templ_formatter_check.step);
+    };
+
+    const check_step = stdx.steps.addCppcheck(b, .{
         .cppcheck = config.cppcheck,
         .cdb_gen = config.cdb_gen,
+        .extra_suppress_patterns = &.{
+            "--suppress=*:*llvm/*",
+            "--suppress=*:*CLI/*",
+        },
     });
 
     if (config.site_builder) |site| {
@@ -529,62 +568,6 @@ fn addTooling(b: *std.Build, config: struct {
     const cloc: *LOCCounter = .init(b, counted_files);
     const cloc_step = b.step("cloc", "Count lines of code across the project");
     cloc_step.dependOn(&cloc.step);
-}
-
-fn addFmtStep(b: *std.Build, config: struct {
-    tooling_sources: []const []const u8,
-    clang: *ClangBuilder,
-    site_builder: ?*SiteBuilder,
-}) !void {
-    const clang_format = config.clang.clang_tools.clang_format;
-    const zig_paths = [_][]const u8{
-        "build.zig",
-        "build.zig.zon",
-        ProjectPaths.site ++ "rebuild.zig",
-        ProjectPaths.site ++ "SiteBuilder.zig",
-    };
-
-    const build_fmt = b.addFmt(.{ .paths = &zig_paths });
-    const build_fmt_check = b.addFmt(.{ .paths = &zig_paths, .check = true });
-
-    const formatter = b.addRunArtifact(clang_format);
-    formatter.addArg("-i");
-    formatter.addArgs(config.tooling_sources);
-    const fmt_step = b.step("fmt", "Format all project files");
-    fmt_step.dependOn(&formatter.step);
-    fmt_step.dependOn(&build_fmt.step);
-
-    const fmt_check = b.addRunArtifact(clang_format);
-    fmt_check.addArgs(&.{ "--dry-run", "--Werror" });
-    fmt_check.addArgs(config.tooling_sources);
-    const fmt_check_step = b.step("fmt-check", "Check formatting of all project files");
-    fmt_check_step.dependOn(&fmt_check.step);
-    fmt_check_step.dependOn(&build_fmt_check.step);
-
-    if (config.site_builder) |site| if (site.go_fmt_path) |go_fmt| {
-        const go_paths = try stdx.utils.collectFiles(b, ProjectPaths.site, .{
-            .allowed_extensions = &.{".go"},
-            .dropped_extensions = &.{"_templ.go"},
-        });
-
-        const go_formatter = b.addSystemCommand(&.{ go_fmt, "-w" });
-        go_formatter.addArgs(go_paths);
-        fmt_step.dependOn(&go_formatter.step);
-
-        const templ_formatter = site.addRunTempl();
-        templ_formatter.setCwd(site.site_path);
-        templ_formatter.addArgs(&.{ "fmt", "." });
-        fmt_step.dependOn(&templ_formatter.step);
-
-        const go_formatter_check = b.addSystemCommand(&.{ go_fmt, "-d" });
-        go_formatter_check.addArgs(go_paths);
-        fmt_check_step.dependOn(&go_formatter_check.step);
-
-        const templ_formatter_check = site.addRunTempl();
-        templ_formatter_check.setCwd(site.site_path);
-        templ_formatter_check.addArgs(&.{ "fmt", "-fail", "." });
-        fmt_check_step.dependOn(&templ_formatter_check.step);
-    };
 }
 
 const target_queries = [_]std.Target.Query{
@@ -644,6 +627,7 @@ fn addPackageStep(b: *std.Build, config: struct {
             .optimize = .ReleaseFast,
             .building_for_dep = true,
             .run_cdb_gen = false,
+            .packaging = true,
         });
 
         const artifacts = try addArtifacts(b, .{
