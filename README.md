@@ -31,21 +31,7 @@ Zig is used as the primary orchestrator for all things ghoti. Ghoti uses Zig's `
 <summary><b>Full dependency breakdown</b></summary>
 
 The following are "standalone" dependencies, required and manually fetched by ghoti's build system.
-1. [stdx](https://github.com/trevorswan11/stdx.git) is a C++ standard library and zig build system extension library that drives multiple dependencies. A full breakdown of dependencies can be found at the library's github repository. In short, it drives:
-    - [Catch2](https://github.com/catchorg/Catch2)
-    - [cppcheck](https://cppcheck.sourceforge.io/)
-    - [magic_enum](https://github.com/Neargye/magic_enum)
-    - [fmt](https://github.com/fmtlib/fmt)
-    - [unordered_dense](https://github.com/martinus/unordered_dense)
-    - [gsl](https://github.com/microsoft/gsl)
-    - [kcov](https://github.com/SimonKagstrom/kcov), which has the following transitive dependencies:
-        - [curl](https://github.com/curl/curl), which has a transitive dependency to simplify builds:
-            - [mbedtls](https://github.com/Mbed-TLS/mbedtls)
-        - [binutils](https://sourceware.org/pub/binutils)
-        - [elfutils](https://github.com/Techatrix/elfutils), which has a transitive dependency to simplify builds:
-            - [argp-standalone](https://github.com/argp-standalone/argp-standalone)
-        - [libdwarf-code](https://github.com/davea42/libdwarf-code)
-    - [libarchive](https://github.com/libarchive/libarchive)
+1. [stdx](https://github.com/trevorswan11/stdx.git) is a C++ standard library and zig build system extension library that drives multiple dependencies. A full breakdown of dependencies can be found at the library's github repository. All dependencies transitively brought in by this library are open source and those and linked to `ghoti` artifacts  are permissively licensed 
 2. [CLI11](https://github.com/CLIUtils/CLI11) is a command line parser for C++ that provides a rich feature set with a simple and intuitive interface. Is is licensed under the permissive 3-Clause BSD License.
 3. [replxx](https://github.com/AmokHuginnsson/replxx) is a read evaluate print loop (REPL) library that provides a cross platform interactive shell that powers terminal debugging support. Is is licensed under the permissive BSD License.
 4. [LLVM 21.1.8](https://releases.llvm.org/21.1.0/docs/ReleaseNotes.html) is used as ghoti's compilation backend. It is manually compiled and statically linked against ghoti through the build system. It is licensed under the permissive Apache License 2.0, and has the following dependencies:

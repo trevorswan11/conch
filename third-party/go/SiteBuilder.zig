@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const parent_build = @import("../build.zig");
+const parent_build = @import("../../build.zig");
 const stdx = parent_build.stdx;
 
 const ProjectPaths = parent_build.ProjectPaths;
