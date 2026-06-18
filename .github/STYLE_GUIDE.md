@@ -11,7 +11,7 @@ Upon PR creation and workflow approval, GitHub actions will run `zig build fmt-c
 - **Files**: `snake_case.cc`, `snake_case.hh`, `snake_case.zig`
 - **Functions & Variables**: snake_case
 - **Types (Classes, Structs, Enums)**: PascalCase
-- **Type Traits**: snake_case (e.g. mem::is_box)
+- **Type Traits**: snake_case (e.g. stdx::is_box)
 - **Template Parameters**: PascalCase (e.g., template <typename TValue, bool Real>)
 - **Constants & Macros**: SCREAMING_SNAKE_CASE
 - **Private/Internal Members**: Suffix with an underscore (e.g. member_variable_)

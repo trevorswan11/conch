@@ -1,7 +1,7 @@
 #include "platform/win32.hh"
 
 // "Abandon hope, all ye who enter here"
-#if GHOTI_WINDOWS
+#if STDX_WINDOWS
 #    include <atomic>
 #    include <handleapi.h>
 
@@ -13,8 +13,8 @@
 #    include <windows.h>
 #    include <winnls.h>
 
-#    include <profiler.hh>
-#    include <types.hh>
+#    include <stdx/profiler.hh>
+#    include <stdx/types.hh>
 
 namespace ghoti::win32 {
 

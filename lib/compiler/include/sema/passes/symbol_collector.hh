@@ -4,6 +4,9 @@
 #include <utility>
 
 #include <gsl/pointers>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -20,9 +23,6 @@
 #include "sema/type.hh"
 
 #include <counter.hh>
-#include <option.hh>
-#include <result.hh>
-#include <types.hh>
 
 namespace ghoti::sema {
 
@@ -89,7 +89,7 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::ExpressionStatement&) -> void;
 
     [[nodiscard]] auto collect_import_payload(const ast::ImportStatement& import_stmt)
-        -> std::pair<std::string_view, Result<gsl::not_null<mod::Module*>, mod::Diagnostic>>;
+        -> std::pair<std::string_view, stdx::Result<gsl::not_null<mod::Module*>, mod::Diagnostic>>;
 
     auto visit(ast::NodeID, const ast::ImportStatement&) -> void;
     auto visit(ast::NodeID, const ast::ReturnStatement&) -> void;
@@ -128,11 +128,11 @@ class SymbolCollector {
     }
 
   private:
-    mod::Module&       collecting_;
-    usize              table_idx_;
-    SymbolTableStack   table_stack_;
-    Context&           ctx_;
-    opt::Option<Type&> last_type_;
+    mod::Module&        collecting_;
+    usize               table_idx_;
+    SymbolTableStack    table_stack_;
+    Context&            ctx_;
+    stdx::Option<Type&> last_type_;
 
     DefaultCounter in_expr_scope_;
     DefaultCounter in_function_scope_;

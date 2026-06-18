@@ -2,9 +2,10 @@
 
 #include <utility>
 
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+
 #include <diagnostic.hh>
-#include <result.hh>
-#include <types.hh>
 
 namespace ghoti::mod {
 
@@ -21,8 +22,8 @@ enum class Error : u8 {
 using Diagnostic = Diagnostic<Error>;
 
 template <typename... Args>
-[[nodiscard]] constexpr auto make_mod_err(Args&&... args) -> Err<Diagnostic> {
-    return make_err<Diagnostic>(std::forward<Args>(args)...);
+[[nodiscard]] constexpr auto make_mod_err(Args&&... args) -> stdx::Err<Diagnostic> {
+    return stdx::make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 
 } // namespace ghoti::mod

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "syntax/token_type.hh"
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
-#include <option.hh>
-#include <types.hh>
+#include "syntax/token_type.hh"
 
 namespace ghoti::syntax {
 
@@ -29,7 +29,7 @@ struct Binding {
     Precedence precedence;
     bool       right_assoc{false};
 
-    [[nodiscard]] static auto try_get_from(TokenType tt) noexcept -> opt::Option<Binding>;
+    [[nodiscard]] static auto try_get_from(TokenType tt) noexcept -> stdx::Option<Binding>;
 };
 
 } // namespace ghoti::syntax

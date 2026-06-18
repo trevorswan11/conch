@@ -8,6 +8,14 @@
 #include <ankerl/unordered_dense.h>
 #include <gsl/pointers>
 #include <gsl/span>
+#include <stdx/assert.hh>
+#include <stdx/iterator.hh>
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/type_traits.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+#include <stdx/variant.hh>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -18,15 +26,7 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-#include <assert.hh>
 #include <diagnostic.hh>
-#include <iterator.hh>
-#include <option.hh>
-#include <result.hh>
-#include <type_traits.hh>
-#include <types.hh>
-#include <utility.hh>
-#include <variant.hh>
 
 namespace ghoti::sema {
 
@@ -103,16 +103,16 @@ using ForLoopCapture = ast::ForLoopExpression::Capture;
 
 class Symbol {
   public:
-    using Data = Variant<symbols::Builtin,
-                         symbols::Node,
-                         symbols::Label,
-                         symbols::MatchCapture,
-                         symbols::StructField,
-                         symbols::UnionField,
-                         symbols::Enumeration,
-                         symbols::SelfParameter,
-                         symbols::Parameter,
-                         symbols::ForLoopCapture>;
+    using Data = stdx::Variant<symbols::Builtin,
+                               symbols::Node,
+                               symbols::Label,
+                               symbols::MatchCapture,
+                               symbols::StructField,
+                               symbols::UnionField,
+                               symbols::Enumeration,
+                               symbols::SelfParameter,
+                               symbols::Parameter,
+                               symbols::ForLoopCapture>;
 
   public:
     Symbol(std::string_view name, Data data) noexcept : name_{name}, data_{std::move(data)} {}
@@ -133,15 +133,15 @@ class Symbol {
     auto               set_status(SymbolStatus status) noexcept -> void { status_ = status; }
 
     [[nodiscard]] auto has_kind() const noexcept -> bool { return kind_.has_value(); }
-    [[nodiscard]] auto get_kind_opt() const noexcept -> opt::Option<SymbolKind> { return kind_; }
+    [[nodiscard]] auto get_kind_opt() const noexcept -> stdx::Option<SymbolKind> { return kind_; }
     [[nodiscard]] auto get_kind() const noexcept -> SymbolKind { return *get_kind_opt(); }
     auto               set_kind(SymbolKind kind) noexcept -> void { kind_ = kind; }
 
   private:
-    std::string_view        name_;
-    Data                    data_;
-    SymbolStatus            status_{SymbolStatus::UNRESOLVED};
-    opt::Option<SymbolKind> kind_;
+    std::string_view         name_;
+    Data                     data_;
+    SymbolStatus             status_{SymbolStatus::UNRESOLVED};
+    stdx::Option<SymbolKind> kind_;
 };
 
 class SymbolTable {
@@ -154,8 +154,8 @@ class SymbolTable {
 
     // Used for returning pseudo reference types from get operations, avoided in iterators
     template <typename Self> struct ReferenceProxy {
-        traits::const_dispatch_t<Self, Symbol>& symbol;
-        usize                                   index;
+        stdx::traits::const_dispatch_t<Self, Symbol>& symbol;
+        usize                                         index;
     };
 
     using Table = ankerl::unordered_dense::map<std::string_view, ValueProxy>;
@@ -171,13 +171,13 @@ class SymbolTable {
     // Constructs the symbolic node in place with the provided args
     template <typename T, typename... Args>
     auto insert(std::string_view name, const mod::Module& module, Args&&... args)
-        -> Result<void, Diagnostic> {
+        -> stdx::Result<void, Diagnostic> {
         return insert(name, module, Symbol::Data{T{std::forward<Args>(args)...}});
     }
 
     // Checks that the module was inserted without collision
     auto insert(std::string_view name, const mod::Module& module, const Symbol::Data& data)
-        -> Result<void, Diagnostic>;
+        -> stdx::Result<void, Diagnostic>;
 
     // For use of prelude injection only
     auto insert_unchecked(std::string_view name, const Symbol::Data& data) -> void;
@@ -199,9 +199,9 @@ class SymbolTable {
     // Returns optional referential metadata of the symbol if present
     template <typename Self>
     [[nodiscard]] auto get_proxy_opt(this Self&& self, std::string_view name) noexcept
-        -> opt::Option<ReferenceProxy<Self>> {
+        -> stdx::Option<ReferenceProxy<Self>> {
         auto it{self.symbols_.find(name)};
-        if (it == self.symbols_.end()) { return opt::none; }
+        if (it == self.symbols_.end()) { return stdx::none; }
         return ReferenceProxy<Self>{it->second.symbol, it->second.idx};
     }
 
@@ -213,9 +213,9 @@ class SymbolTable {
     // Returns an optional containing a mutable or const reference to a symbol depending on context.
     template <typename Self>
     [[nodiscard]] auto get_opt(this Self&& self, std::string_view name) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
+        -> stdx::Option<stdx::traits::const_dispatch_t<Self, Symbol>&> {
         const auto proxy{self.get_proxy_opt(name)};
-        if (!proxy) { return opt::none; }
+        if (!proxy) { return stdx::none; }
         return proxy->symbol;
     }
 
@@ -286,14 +286,14 @@ class SymbolTableRegistry {
     template <typename T, typename... Args>
     [[nodiscard]] auto
     insert_into(usize table_idx, const mod::Module& module, std::string_view name, Args&&... args)
-        -> Result<void, Diagnostic> {
+        -> stdx::Result<void, Diagnostic> {
         return insert_into(table_idx, module, name, Symbol::Data{T{std::forward<Args>(args)...}});
     }
 
     [[nodiscard]] auto insert_into(usize               table_idx,
                                    const mod::Module&  module,
                                    std::string_view    name,
-                                   const Symbol::Data& data) -> Result<void, Diagnostic>;
+                                   const Symbol::Data& data) -> stdx::Result<void, Diagnostic>;
 
     [[nodiscard]] auto get(this auto&& self, usize idx) noexcept -> auto& {
         ASSERT(idx < self.tables_.size(), "Index out of range");
@@ -302,8 +302,8 @@ class SymbolTableRegistry {
 
     template <typename Self>
     [[nodiscard]] auto get_opt(this Self&& self, usize idx) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, SymbolTable>&> {
-        if (idx >= self.tables_.size()) { return opt::none; }
+        -> stdx::Option<stdx::traits::const_dispatch_t<Self, SymbolTable>&> {
+        if (idx >= self.tables_.size()) { return stdx::none; }
         return self.get(idx);
     }
 
@@ -314,8 +314,8 @@ class SymbolTableRegistry {
 
     template <typename Self>
     [[nodiscard]] auto get_from_opt(this Self&& self, usize idx, std::string_view name) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
-        if (idx >= self.tables_.size()) { return opt::none; }
+        -> stdx::Option<stdx::traits::const_dispatch_t<Self, Symbol>&> {
+        if (idx >= self.tables_.size()) { return stdx::none; }
         return self.tables_[idx].get_opt(name);
     }
 
@@ -323,17 +323,18 @@ class SymbolTableRegistry {
     [[nodiscard]] auto is_shadowing(const SymbolTableStack& stack,
                                     const mod::Module&      module,
                                     std::string_view        name,
-                                    const Symbol::Data& data) noexcept -> Result<void, Diagnostic>;
+                                    const Symbol::Data&     data) noexcept
+        -> stdx::Result<void, Diagnostic>;
 
     // Looks up all levels of the stack for the queried name
     template <typename Self>
     [[nodiscard]] auto
     lookup(this Self&& self, const SymbolTableStack& stack, std::string_view name) noexcept
-        -> opt::Option<traits::const_dispatch_t<Self, Symbol>&> {
+        -> stdx::Option<stdx::traits::const_dispatch_t<Self, Symbol>&> {
         for (const auto idx : std::views::reverse(stack)) {
             if (auto symbol{self.tables_[idx].get_opt(name)}) { return symbol; }
         }
-        return opt::none;
+        return stdx::none;
     }
 
   private:

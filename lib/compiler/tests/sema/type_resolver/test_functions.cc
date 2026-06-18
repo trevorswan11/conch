@@ -3,6 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "ast/expression.hh"
 #include "ast/handle.hh"
@@ -13,9 +15,6 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -43,7 +42,7 @@ TEST_CASE("Function declaration and call type resolution") {
         const auto check_param_type = [&](std::string_view  name,
                                           const sema::Type& expected_type) -> void {
             const auto [sym, sym_data, type]{ctx->get_type_sym_info<syms::Parameter>(
-                name, 1, opt::none, &syms::Parameter::name)};
+                name, 1, stdx::none, &syms::Parameter::name)};
             CHECK(sym.get_kind_opt() == sema::SymbolKind::VALUE);
             CHECK(type == expected_type);
         };

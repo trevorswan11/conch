@@ -8,6 +8,9 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <stdx/memory.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "ast/handle.hh"
 #include "ast/primitive.hh"
@@ -19,10 +22,6 @@
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 #include "syntax/error.hh"
-
-#include <memory.hh>
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::tests::helpers {
 
@@ -40,7 +39,7 @@ SemaTestContext::SemaTestContext(const std::vector<MockFile>& imports,
                                  const std::filesystem::path& root_path,
                                  std::string_view             input,
                                  std::ostream&                error_stream)
-    : loader{mem::make_box<mod::MemoryLoader>()}, manager{*loader},
+    : loader{stdx::make_box<mod::MemoryLoader>()}, manager{*loader},
       analyzer{manager, error_stream, false}, root_mod{[&] -> auto& {
           loader->add(root_path, std::string{input});
           for (const auto& mock : imports) {
@@ -84,15 +83,15 @@ auto SemaTestContext::check_poisoned(const sema::Symbol& sym, const sema::Type& 
     check_poisoned(type);
 }
 
-auto SemaTestContext::get_string_literal_size(ast::ExpressionHandle     handle,
-                                              opt::Option<mod::Module&> enclosing_mod) -> usize {
+auto SemaTestContext::get_string_literal_size(ast::ExpressionHandle      handle,
+                                              stdx::Option<mod::Module&> enclosing_mod) -> usize {
     const auto& module{enclosing_mod.value_or(root_mod)};
     const auto& str_expr{helpers::unwrap(module.ast.get_as_opt<ast::StringExpression>(handle))};
     return str_expr.value.size() + 1;
 }
 
 auto collect(std::string_view input, const std::vector<MockFile>& imports) -> CtxIdxPair {
-    auto ctx{mem::make_box<SemaTestContext>(imports, TEST_FILENAME, input)};
+    auto ctx{stdx::make_box<SemaTestContext>(imports, TEST_FILENAME, input)};
     check_errors<syntax::Diagnostics>(ctx->root_mod);
     ctx->analyzer.collect_symbols(ctx->root_mod);
     usize idx{helpers::unwrap(ctx->root_mod.root_table_idx)};

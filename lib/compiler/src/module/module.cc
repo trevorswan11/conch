@@ -9,6 +9,13 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <gsl/pointers>
+#include <stdx/assert.hh>
+#include <stdx/memory.hh>
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
+#include <stdx/utility.hh>
+#include <stdx/variant.hh>
 
 #include "ast/expression.hh"
 #include "module/error.hh"
@@ -16,26 +23,19 @@
 #include "source_file.hh"
 #include "syntax/parser.hh"
 
-#include <assert.hh>
 #include <diagnostic.hh>
-#include <memory.hh>
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
 #include <style.hh>
-#include <utility.hh>
-#include <variant.hh>
 
 namespace ghoti::mod {
 
 auto format_module_diagnostic(std::ostream&                        os, // NOLINT
                               const detail::FormattableDiagnostic& diag,
-                              opt::Option<const mod::Module&>      module,
-                              opt::Option<bool>                    in_terminal) -> std::ostream& {
-    const auto tty{in_terminal.value_or(is_tty())};
+                              stdx::Option<const mod::Module&>     module,
+                              stdx::Option<bool>                   in_terminal) -> std::ostream& {
+    const auto tty{in_terminal.value_or(stdx::is_tty())};
 
     // Without a module, there is no source path and formatting is done trivially
-    if (!module) { return format_diagnostic(os, diag, opt::none, tty); }
+    if (!module) { return format_diagnostic(os, diag, stdx::none, tty); }
 
     // Without location, there's no way to point to an error
     format_diagnostic(os, diag, module->path.string(), tty);
@@ -59,14 +59,14 @@ auto Module::print_diagnostics(std::ostream& os) const -> void {
                     << "\n";
             }
         },
-        [](const Unit&) -> void {
-            UNREACHABLE("This function should've never been called with Unit");
+        [](const stdx::Unit&) -> void {
+            UNREACHABLE("This function should've never been called with stdx::Unit");
         });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                                         const std::filesystem::path& parent_path)
-    -> Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
     PROFILE_FUNCTION();
     ASSERT((parent_path.empty() || parent_path.is_absolute()) &&
            "Parent path must be absolute or empty");
@@ -81,7 +81,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 }
 
 auto ModuleManager::try_get_library_module(std::string_view name)
-    -> Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
     PROFILE_FUNCTION();
     auto it{module_lut_.find(name)};
     if (it == module_lut_.end()) {
@@ -91,7 +91,7 @@ auto ModuleManager::try_get_library_module(std::string_view name)
 }
 
 auto ModuleManager::add_library_module(std::string_view name, const std::filesystem::path& path)
-    -> Result<void, Diagnostic> {
+    -> stdx::Result<void, Diagnostic> {
     PROFILE_FUNCTION();
     const auto normalized{loader_.normalize(path)};
     if (!normalized) { return make_mod_err(normalized.error()); }
@@ -111,13 +111,13 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
 }
 
 auto ModuleManager::try_get(const std::filesystem::path& path)
-    -> Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     PROFILE_FUNCTION();
     if (auto it{modules_.find(path)}; it != modules_.end()) { return it->second.get(); }
     auto source{TRY(loader_.load(path))};
 
-    auto mod{mem::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)})};
+    auto mod{stdx::make_box<Module>(path, path.parent_path(), SourceFile{std::move(source)})};
     syntax::Parser p{mod->source};
     auto           diagnostics{p.consume(mod->ast)};
 

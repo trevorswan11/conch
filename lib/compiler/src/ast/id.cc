@@ -3,12 +3,12 @@
 #include <string_view>
 #include <utility>
 
+#include <stdx/enum.hh>
+#include <stdx/fixed/enum_map.hh>
+
 #include "ast/kind.hh"
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
-
-#include <enum.hh>
-#include <fixed/enum_map.hh>
 
 namespace ghoti::ast {
 
@@ -16,7 +16,7 @@ namespace {
 
 using NameMapping = std::pair<NodeKind, std::string_view>;
 
-constexpr auto NODE_NAMES{fixed::EnumMap<NodeKind, std::string_view>::from(
+constexpr auto NODE_NAMES{stdx::fixed::EnumMap<NodeKind, std::string_view>::from(
     "expression",
     NameMapping{NodeKind::ARRAY_EXPRESSION, "array"},
     NameMapping{NodeKind::CALL_EXPRESSION, "call"},
@@ -79,7 +79,7 @@ using TokenType       = syntax::TokenType;
 using Modifier        = TypeModifier::Modifier;
 using ModifierMapping = std::pair<TokenType, Modifier>;
 
-constexpr auto MODIFIERS{fixed::EnumMap<TokenType, Modifier>::from(
+constexpr auto MODIFIERS{stdx::fixed::EnumMap<TokenType, Modifier>::from(
     Modifier::VALUE,
     ModifierMapping{TokenType::BW_AND, Modifier::REF},
     ModifierMapping{TokenType::AND_MUT, Modifier::MUT_REF},

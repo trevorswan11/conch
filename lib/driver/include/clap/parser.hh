@@ -4,24 +4,22 @@
 #include <ostream>
 
 #include <CLI/App.hpp>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+#include <stdx/variant.hh>
 
 #include "cmd/debug.hh"
 #include "platform/win32.hh"
 
-#include <config.h>
-#include <result.hh>
-#include <types.hh>
-#include <variant.hh>
-
 namespace ghoti::clap {
 
-using Parsed = Variant<Unit, cmd::Debug>;
+using Parsed = stdx::Variant<stdx::Unit, cmd::Debug>;
 
 class Parser {
   public:
     Parser(i32 argc, char** argv, std::ostream& os = std::cerr, bool ensure_utf8 = true) noexcept;
 
-    auto               parse() -> Result<void, i32>;
+    auto               parse() -> stdx::Result<void, i32>;
     [[nodiscard]] auto get_parsed() noexcept -> Parsed& { return parsed_; }
 
   private:
@@ -32,7 +30,7 @@ class Parser {
     CLI::App app_;
     Parsed   parsed_;
 
-#if GHOTI_WINDOWS
+#if STDX_WINDOWS
     win32::RichConsole console_;
 #endif
 };

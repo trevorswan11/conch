@@ -4,9 +4,8 @@
 
 #include <gsl/pointers>
 #include <gsl/span>
-
-#include <fixed/enum_map.hh>
-#include <types.hh>
+#include <stdx/fixed/enum_map.hh>
+#include <stdx/types.hh>
 
 namespace ghoti::sema {
 
@@ -14,37 +13,37 @@ namespace {
 
 using TypeMapping = std::pair<TypeKind, std::string_view>;
 
-constexpr auto TYPE_KIND_NAMES{
-    fixed::EnumMap<TypeKind, std::string_view>::from({},
-                                                     TypeMapping{TypeKind::POISON, "poison"},
-                                                     TypeMapping{TypeKind::I32, "i32"},
-                                                     TypeMapping{TypeKind::I64, "i64"},
-                                                     TypeMapping{TypeKind::ISIZE, "isize"},
-                                                     TypeMapping{TypeKind::U32, "u32"},
-                                                     TypeMapping{TypeKind::U64, "u64"},
-                                                     TypeMapping{TypeKind::USIZE, "usize"},
-                                                     TypeMapping{TypeKind::U8, "u8"},
-                                                     TypeMapping{TypeKind::BOOL, "bool"},
-                                                     TypeMapping{TypeKind::F32, "f32"},
-                                                     TypeMapping{TypeKind::F64, "f64"},
-                                                     TypeMapping{TypeKind::VOID, "void"},
-                                                     TypeMapping{TypeKind::UNDEFINED, "undefined"},
-                                                     TypeMapping{TypeKind::TYPE, "type"},
-                                                     TypeMapping{TypeKind::SLICE, "slice"},
-                                                     TypeMapping{TypeKind::ARRAY, "array"},
-                                                     TypeMapping{TypeKind::POINTER, "pointer"},
-                                                     TypeMapping{TypeKind::REFERENCE, "reference"},
-                                                     TypeMapping{TypeKind::ENUM, "enum"},
-                                                     TypeMapping{TypeKind::STRUCT, "struct"},
-                                                     TypeMapping{TypeKind::UNION, "union"},
-                                                     TypeMapping{TypeKind::FUNCTION, "function"},
-                                                     TypeMapping{TypeKind::LABEL, "label"},
-                                                     TypeMapping{TypeKind::BLOCK, "block"},
-                                                     TypeMapping{TypeKind::MATCH_ARM, "match arm"},
-                                                     TypeMapping{TypeKind::MODULE, "module"},
-                                                     TypeMapping{TypeKind::AUTO, "auto"},
-                                                     TypeMapping{TypeKind::OPAQUE, "opaque"},
-                                                     TypeMapping{TypeKind::NORETURN, "noreturn"})};
+constexpr auto TYPE_KIND_NAMES{stdx::fixed::EnumMap<TypeKind, std::string_view>::from(
+    {},
+    TypeMapping{TypeKind::POISON, "poison"},
+    TypeMapping{TypeKind::I32, "i32"},
+    TypeMapping{TypeKind::I64, "i64"},
+    TypeMapping{TypeKind::ISIZE, "isize"},
+    TypeMapping{TypeKind::U32, "u32"},
+    TypeMapping{TypeKind::U64, "u64"},
+    TypeMapping{TypeKind::USIZE, "usize"},
+    TypeMapping{TypeKind::U8, "u8"},
+    TypeMapping{TypeKind::BOOL, "bool"},
+    TypeMapping{TypeKind::F32, "f32"},
+    TypeMapping{TypeKind::F64, "f64"},
+    TypeMapping{TypeKind::VOID, "void"},
+    TypeMapping{TypeKind::UNDEFINED, "undefined"},
+    TypeMapping{TypeKind::TYPE, "type"},
+    TypeMapping{TypeKind::SLICE, "slice"},
+    TypeMapping{TypeKind::ARRAY, "array"},
+    TypeMapping{TypeKind::POINTER, "pointer"},
+    TypeMapping{TypeKind::REFERENCE, "reference"},
+    TypeMapping{TypeKind::ENUM, "enum"},
+    TypeMapping{TypeKind::STRUCT, "struct"},
+    TypeMapping{TypeKind::UNION, "union"},
+    TypeMapping{TypeKind::FUNCTION, "function"},
+    TypeMapping{TypeKind::LABEL, "label"},
+    TypeMapping{TypeKind::BLOCK, "block"},
+    TypeMapping{TypeKind::MATCH_ARM, "match arm"},
+    TypeMapping{TypeKind::MODULE, "module"},
+    TypeMapping{TypeKind::AUTO, "auto"},
+    TypeMapping{TypeKind::OPAQUE, "opaque"},
+    TypeMapping{TypeKind::NORETURN, "noreturn"})};
 
 } // namespace
 

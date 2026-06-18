@@ -6,6 +6,10 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
 
 #include "ast/handle.hh"
 #include "ast/id.hh"
@@ -18,20 +22,15 @@
 #include "syntax/precedence.hh"
 #include "syntax/token_type.hh"
 
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
-#include <types.hh>
-
 namespace ghoti::ast {
 
 auto ArrayExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     auto       null_terminated{false};
 
-    opt::Option<ExpressionHandle> size;
+    stdx::Option<ExpressionHandle> size;
     if (!parser.peek_token_is(syntax::TokenType::RBRACKET)) {
         parser.advance();
         if (!parser.current_token_is(syntax::TokenType::UNDERSCORE)) {
@@ -72,7 +71,7 @@ auto ArrayExpression::parse(syntax::Parser& parser)
 }
 
 auto CallExpression::parse(syntax::Parser& parser, ExpressionHandle function)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto            start_token{parser.get_current_token()};
     std::vector<Argument> arguments;
@@ -109,7 +108,7 @@ auto CallExpression::parse(syntax::Parser& parser, ExpressionHandle function)
 }
 
 auto DoWhileLoopExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
@@ -140,7 +139,7 @@ auto DoWhileLoopExpression::parse(syntax::Parser& parser)
 namespace {
 
 [[nodiscard]] auto deconstruct_member(syntax::Parser& parser, StatementHandle member)
-    -> Result<MemberHandle, syntax::Diagnostic> {
+    -> stdx::Result<MemberHandle, syntax::Diagnostic> {
     switch (member->get_kind()) {
     case NodeKind::DECL_STATEMENT:
     case NodeKind::USING_STATEMENT:
@@ -154,20 +153,21 @@ namespace {
 
 // Returns an actual value only if a terminal condition was found
 [[nodiscard]] auto validate_member_decl(syntax::Parser& parser, MemberHandle member) noexcept
-    -> opt::Option<std::string_view> {
+    -> stdx::Option<std::string_view> {
     return parser.get_ast()[*member].visit(
-        [](const DeclStatement& decl) -> opt::Option<std::string_view> {
+        [](const DeclStatement& decl) -> stdx::Option<std::string_view> {
             // Members that violate this wouldn't be usable with C
             if (decl.has_modifier(DeclModifiers::EXTERN) ||
                 decl.has_modifier(DeclModifiers::EXPORT)) {
                 return "Member declarations may neither be marked extern nor export";
             }
-            return opt::none;
+            return stdx::none;
         },
-        [](const auto&) -> opt::Option<std::string_view> { return opt::none; });
+        [](const auto&) -> stdx::Option<std::string_view> { return stdx::none; });
 }
 
-[[nodiscard]] auto parse_members(syntax::Parser& parser) -> Result<Members, syntax::Diagnostic> {
+[[nodiscard]] auto parse_members(syntax::Parser& parser)
+    -> stdx::Result<Members, syntax::Diagnostic> {
     Members members;
     while (!parser.peek_token_is(syntax::TokenType::RBRACE) &&
            !parser.peek_token_is(syntax::TokenType::END)) {
@@ -188,11 +188,12 @@ namespace {
 
 } // namespace
 
-auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto EnumExpression::parse(syntax::Parser& parser)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
-    opt::Option<IdentifierHandle> underlying;
+    stdx::Option<IdentifierHandle> underlying;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
         parser.advance(2);
         underlying.emplace(TRY(IdentifierExpression::parse(parser)));
@@ -225,7 +226,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
         const IdentifierHandle ident{TRY(IdentifierExpression::parse(parser))};
 
-        opt::Option<ExpressionHandle> value;
+        stdx::Option<ExpressionHandle> value;
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
             parser.advance(2);
             value.emplace(TRY(parser.parse_expression()));
@@ -251,7 +252,7 @@ auto EnumExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, s
 }
 
 auto ForLoopExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -327,7 +328,7 @@ auto ForLoopExpression::parse(syntax::Parser& parser)
 }
 
 // Variadic must be handled first and should break the enclosing loop
-auto try_parse_variadic_fn(syntax::Parser& parser) -> Result<bool, syntax::Diagnostic> {
+auto try_parse_variadic_fn(syntax::Parser& parser) -> stdx::Result<bool, syntax::Diagnostic> {
     bool is_variadic{false};
     if (parser.peek_token_is(syntax::TokenType::ELLIPSIS)) {
         parser.advance();
@@ -340,15 +341,15 @@ auto try_parse_variadic_fn(syntax::Parser& parser) -> Result<bool, syntax::Diagn
 }
 
 auto FunctionExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
 
     // Parse the definition now that we're at the fn token
-    opt::Option<SelfParameter> self;
-    std::vector<Parameter>     parameters;
-    bool                       variadic{false};
+    stdx::Option<SelfParameter> self;
+    std::vector<Parameter>      parameters;
+    bool                        variadic{false};
     if (parser.peek_token_is(syntax::TokenType::RPAREN)) {
         parser.advance();
     } else if (TRY(try_parse_variadic_fn(parser))) {
@@ -444,7 +445,7 @@ auto FunctionExpression::parse(syntax::Parser& parser)
 }
 
 auto GroupedExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     parser.advance();
     const auto inner{TRY(parser.parse_expression())};
@@ -453,7 +454,7 @@ auto GroupedExpression::parse(syntax::Parser& parser)
 }
 
 auto IdentifierExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     if (!start_token.is_valid_ident()) {
@@ -463,7 +464,8 @@ auto IdentifierExpression::parse(syntax::Parser& parser)
     return parser.add_expr<IdentifierExpression>(start_token, start_token.slice);
 }
 
-auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto IfExpression::parse(syntax::Parser& parser)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -497,7 +499,7 @@ auto IfExpression::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syn
 }
 
 auto IndexExpression::parse(syntax::Parser& parser, ExpressionHandle array)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::RBRACKET)) {
@@ -513,7 +515,7 @@ auto IndexExpression::parse(syntax::Parser& parser, ExpressionHandle array)
 }
 
 auto InfiniteLoopExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
@@ -531,7 +533,7 @@ namespace {
 
 template <traits::ASTNode Expr>
 [[nodiscard]] auto parse_infix(syntax::Parser& parser, ExpressionHandle lhs)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     const auto op_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END)) {
         return make_syntax_err("Infix expressions require a right-hand operand",
@@ -554,7 +556,7 @@ template <traits::ASTNode Expr>
 
 #define MAKE_INFIX_PARSER(Type)                                    \
     auto Type::parse(syntax::Parser& parser, ExpressionHandle lhs) \
-        -> Result<ExpressionHandle, syntax::Diagnostic> {          \
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {    \
         PROFILE_FUNCTION();                                        \
         return parse_infix<Type>(parser, lhs);                     \
     }
@@ -563,7 +565,7 @@ MAKE_INFIX_PARSER(AssignmentExpression)
 MAKE_INFIX_PARSER(BinaryExpression)
 
 auto DotExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     if (!outer.any<IdentifierExpression, ModuleAccessExpression, DotExpression>()) {
         return make_syntax_err("Dot expressions must have outer accessors or identifiers",
@@ -579,8 +581,8 @@ auto DotExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
 
 MAKE_INFIX_PARSER(RangeExpression)
 
-auto InitializerExpression::parse(syntax::Parser& parser, opt::Option<ExpressionHandle> object)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+auto InitializerExpression::parse(syntax::Parser& parser, stdx::Option<ExpressionHandle> object)
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -605,7 +607,7 @@ auto InitializerExpression::parse(syntax::Parser& parser, opt::Option<Expression
 }
 
 auto LabelExpression::parse(syntax::Parser& parser, ExpressionHandle name)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     if (!name.is<IdentifierExpression>()) {
@@ -622,7 +624,7 @@ auto LabelExpression::parse(syntax::Parser& parser, ExpressionHandle name)
 }
 
 auto LabelExpression::deconstruct_body(syntax::Parser& parser, StatementHandle raw_stmt)
-    -> Result<LabeledNodeHandle, syntax::Diagnostic> {
+    -> stdx::Result<LabeledNodeHandle, syntax::Diagnostic> {
     switch (raw_stmt->get_kind()) {
     case NodeKind::EXPRESSION_STATEMENT: {
         const auto& expr_stmt{parser.get_node<ExpressionStatement>(*raw_stmt)};
@@ -648,7 +650,7 @@ auto LabelExpression::deconstruct_body(syntax::Parser& parser, StatementHandle r
 }
 
 auto MatchExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -673,7 +675,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
     }
 
     std::vector<Arm> arms;
-    opt::Size        catch_all_idx;
+    stdx::OptSize    catch_all_idx;
     usize            arm_idx{0};
 
     // Current token is either the LBRACE at the start or a comma before parsing
@@ -681,7 +683,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
            !parser.peek_token_is(syntax::TokenType::END)) {
         parser.advance();
 
-        opt::Option<MatchPatternHandle> pattern_opt;
+        stdx::Option<MatchPatternHandle> pattern_opt;
         if (parser.current_token_is(syntax::TokenType::UNDERSCORE)) {
             if (catch_all_idx) {
                 return make_syntax_err("Duplicate catch-all match arm",
@@ -709,7 +711,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
         TRY(parser.expect_peek(syntax::TokenType::FAT_ARROW));
 
         // There is an optional capture for every arm
-        opt::Option<DiscardableIdentHandle> capture;
+        stdx::Option<DiscardableIdentHandle> capture;
         if (parser.peek_token_is(syntax::TokenType::BW_OR)) {
             parser.advance();
 
@@ -754,7 +756,7 @@ namespace {
 
 template <traits::ASTNode Expr>
 [[nodiscard]] auto parse_prefix(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     const auto prefix_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END)) {
         return make_syntax_err("Prefix expressions require an operand",
@@ -769,10 +771,11 @@ template <traits::ASTNode Expr>
 
 } // namespace
 
-#define MAKE_PREFIX_PARSER(Type)                                                               \
-    auto Type::parse(syntax::Parser& parser) -> Result<ExpressionHandle, syntax::Diagnostic> { \
-        PROFILE_FUNCTION();                                                                    \
-        return parse_prefix<Type>(parser);                                                     \
+#define MAKE_PREFIX_PARSER(Type)                                \
+    auto Type::parse(syntax::Parser& parser)                    \
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic> { \
+        PROFILE_FUNCTION();                                     \
+        return parse_prefix<Type>(parser);                      \
     }
 
 MAKE_PREFIX_PARSER(UnaryExpression)
@@ -781,13 +784,13 @@ MAKE_PREFIX_PARSER(DereferenceExpression)
 MAKE_PREFIX_PARSER(AddressOfExpression)
 
 auto ImplicitAccessExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
 
     // We need to explicitly jump into the initializer expression here
     if (parser.peek_token_is(syntax::TokenType::LBRACE)) {
         parser.advance();
-        return InitializerExpression::parse(parser, opt::none);
+        return InitializerExpression::parse(parser, stdx::none);
     }
 
     // Otherwise it suffices to fall back to standard prefix parsing
@@ -810,14 +813,14 @@ auto ImplicitAccessExpression::parse(syntax::Parser& parser)
 }
 
 auto StringExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     return parser.add_expr<StringExpression>(start_token, start_token.materialize_string());
 }
 
 auto ModuleAccessExpression::parse(syntax::Parser& parser, ExpressionHandle outer)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     if (!outer.any<IdentifierExpression, ModuleAccessExpression, DotExpression>()) {
         return make_syntax_err("Module access expressions must have outer accessors or identifiers",
@@ -832,7 +835,7 @@ auto ModuleAccessExpression::parse(syntax::Parser& parser, ExpressionHandle oute
 }
 
 auto StructExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
@@ -864,7 +867,7 @@ auto StructExpression::parse(syntax::Parser& parser)
         TRY(parser.expect_peek(syntax::TokenType::COLON));
         const auto type{TRY(ExplicitType::parse(parser))};
 
-        opt::Option<ExpressionHandle> value;
+        stdx::Option<ExpressionHandle> value;
         if (parser.peek_token_is(syntax::TokenType::ASSIGN)) {
             parser.advance(2);
             value.emplace(TRY(parser.parse_expression()));
@@ -885,7 +888,7 @@ auto StructExpression::parse(syntax::Parser& parser)
 }
 
 auto UnionExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LBRACE));
@@ -921,7 +924,7 @@ auto UnionExpression::parse(syntax::Parser& parser)
 }
 
 auto WhileLoopExpression::parse(syntax::Parser& parser)
-    -> Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -938,7 +941,7 @@ auto WhileLoopExpression::parse(syntax::Parser& parser)
     TRY(parser.expect_peek(syntax::TokenType::RPAREN));
 
     // Continuation expression is optional and is handled as in zig
-    opt::Option<ExpressionHandle> continuation;
+    stdx::Option<ExpressionHandle> continuation;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
         const auto continuation_start{parser.get_current_token()};
         parser.advance();

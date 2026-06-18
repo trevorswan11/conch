@@ -6,11 +6,10 @@
 #include <utility>
 
 #include <ankerl/unordered_dense.h>
-
-#include <assert.hh>
-#include <hash.hh>
-#include <option.hh>
-#include <types.hh>
+#include <stdx/assert.hh>
+#include <stdx/hash.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 namespace ghoti::syntax {
 
@@ -260,8 +259,8 @@ enum class IntegerCategory : u8 {
     }
 }
 
-[[nodiscard]] auto to_base(TokenType tt) noexcept -> opt::Option<Base>;
-[[nodiscard]] auto misc_from_char(char c) noexcept -> opt::Option<TokenType>;
+[[nodiscard]] auto to_base(TokenType tt) noexcept -> stdx::Option<Base>;
+[[nodiscard]] auto misc_from_char(char c) noexcept -> stdx::Option<TokenType>;
 
 [[nodiscard]] constexpr auto is_i32(TokenType tt) noexcept -> bool {
     return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;
@@ -309,7 +308,7 @@ struct TypedIdentifier {
     TokenType        type;
 };
 
-// Helper for ADL tuple get in fixed::HashMap
+// Helper for ADL tuple get in stdx::fixed::HashMap
 template <std::size_t I>
 [[nodiscard]] constexpr auto get(const syntax::TypedIdentifier& typed) noexcept -> auto& {
     if constexpr (I == 0) {
@@ -326,7 +325,7 @@ template <> struct ankerl::unordered_dense::hash<ghoti::syntax::TypedIdentifier>
     using TypedIdentifier = ghoti::syntax::TypedIdentifier;
 
     [[nodiscard]] auto operator()(const TypedIdentifier& type) const noexcept {
-        ghoti::hash::Hasher hasher{type.type};
+        stdx::hash::Hasher hasher{type.type};
         hasher.combine(type.name);
         return hasher.finalize();
     }

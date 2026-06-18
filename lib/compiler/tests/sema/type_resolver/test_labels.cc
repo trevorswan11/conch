@@ -3,15 +3,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "ast/expression.hh"
 #include "helpers/sema.hh"
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::tests {
 
@@ -37,13 +36,13 @@ TEST_CASE("Labeled for loop resolution") {
     {
         const auto [sym, sym_data, node_data, type]{
             ctx->get_ast_type_sym_info<syms::Label, ast::LabelExpression>(
-                "outer", idx + 1, opt::none, &syms::Label::get_definition)};
+                "outer", idx + 1, stdx::none, &syms::Label::get_definition)};
         CHECK(ctx->root_mod.get_sema_type(node_data.name) == i32_type);
     }
 
     const auto check_capture = [&](std::string_view name) -> void {
         const auto [sym, sym_data, type]{ctx->get_type_sym_info<syms::ForLoopCapture>(
-            name, 4, opt::none, &syms::ForLoopCapture::payload)};
+            name, 4, stdx::none, &syms::ForLoopCapture::payload)};
         CHECK(type == i32_type);
     };
     check_capture("i");

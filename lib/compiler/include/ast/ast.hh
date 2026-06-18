@@ -2,18 +2,19 @@
 
 #include <vector>
 
+#include <stdx/assert.hh>
+#include <stdx/iterator.hh>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+
 #include "ast/id.hh"
 #include "ast/kind.hh"
 #include "ast/traits.hh"
 #include "ast/visitor.hh"
 #include "syntax/token.hh"
 
-#include <assert.hh>
 #include <diagnostic.hh>
-#include <iterator.hh>
-#include <option.hh>
-#include <types.hh>
-#include <utility.hh>
 
 namespace ghoti::ast {
 
@@ -111,7 +112,7 @@ class AST {
 
     // Returns the casted node data at the requested index if present
     template <typename Data, traits::IndexableID ID>
-    [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> opt::Option<const Data&> {
+    [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> stdx::Option<const Data&> {
         return operator[](id).template as_opt<Data>();
     }
 

@@ -5,14 +5,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <stdx/types.hh>
 
 #include "helpers/common.hh"
 #include "helpers/sema.hh"
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include <types.hh>
 
 namespace ghoti::tests {
 

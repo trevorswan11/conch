@@ -3,10 +3,11 @@
 #include <string>
 #include <string_view>
 
+#include <stdx/types.hh>
+
 #include "syntax/token_type.hh"
 
 #include <diagnostic.hh>
-#include <types.hh>
 
 namespace ghoti {
 

@@ -3,6 +3,10 @@
 #include <utility>
 #include <vector>
 
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
+
 #include "ast/expression.hh"
 #include "ast/handle.hh"
 #include "ast/id.hh"
@@ -12,14 +16,10 @@
 #include "syntax/precedence.hh"
 #include "syntax/token_type.hh"
 
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
-
 namespace ghoti::ast {
 
 auto ExplicitFunctionType::parse(syntax::Parser& parser)
-    -> Result<ExplicitFunctionType, syntax::Diagnostic> {
+    -> stdx::Result<ExplicitFunctionType, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::LPAREN));
@@ -71,7 +71,8 @@ auto ExplicitFunctionType::parse(syntax::Parser& parser)
                                 .explicit_return_type = return_type};
 }
 
-auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, syntax::Diagnostic> {
+auto ExplicitType::parse(syntax::Parser& parser)
+    -> stdx::Result<ExplicitTypeID, syntax::Diagnostic> {
     // Always check for a modifier and advance past it if present
     PROFILE_FUNCTION();
     const auto         modifier_token{parser.get_peek_token()};
@@ -82,8 +83,8 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
     if (parser.peek_token_is(syntax::TokenType::LBRACKET)) {
         parser.advance();
 
-        auto                          null_terminated{false};
-        opt::Option<ExpressionHandle> dimension;
+        auto                           null_terminated{false};
+        stdx::Option<ExpressionHandle> dimension;
         if (parser.peek_token_is(syntax::TokenType::NULL_TERMINATED)) {
             parser.advance();
             null_terminated = true;
@@ -183,7 +184,7 @@ auto ExplicitType::parse(syntax::Parser& parser) -> Result<ExplicitTypeID, synta
         return make_syntax_err(syntax::Error::MISSING_EXPLICIT_TYPE, type_start);
     }
 
-    opt::Option<ExplicitTypeID> id;
+    stdx::Option<ExplicitTypeID> id;
     switch (const auto user{TRY(parser.parse_expression())}; user->get_kind()) {
     case NodeKind::STRUCT_EXPRESSION:
         id.emplace(parser.add_type<StructExpression>(
@@ -216,10 +217,10 @@ namespace {
 
 // Parses the explicit type if present and checks for an upcoming assignment for init
 [[nodiscard]] auto parse_type_and_initializer(syntax::Parser& parser)
-    -> Result<std::pair<opt::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
+    -> stdx::Result<std::pair<stdx::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
     if (parser.peek_token_is(syntax::TokenType::WALRUS)) {
         parser.advance();
-        return std::pair{opt::none, true};
+        return std::pair{stdx::none, true};
     }
 
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
@@ -232,13 +233,13 @@ namespace {
         return std::pair{explicit_type, false};
     }
 
-    return Err{parser.peek_error(syntax::TokenType::COLON)};
+    return stdx::Err{parser.peek_error(syntax::TokenType::COLON)};
 }
 
 } // namespace
 
 auto ExplicitType::parse_opt_init(syntax::Parser& parser)
-    -> Result<std::pair<opt::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
+    -> stdx::Result<std::pair<stdx::Option<ExplicitTypeID>, bool>, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto [type, initialized]{TRY(parse_type_and_initializer(parser))};
 

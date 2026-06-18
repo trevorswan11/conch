@@ -4,6 +4,8 @@
 #include <fmt/ostream.h>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_flags.hpp>
+#include <stdx/profiler.hh>
+#include <stdx/types.hh>
 
 #include "ast/expression.hh"
 #include "ast/id.hh"
@@ -15,8 +17,6 @@
 #include "syntax/token_type.hh"
 
 #include <indent.hh>
-#include <profiler.hh>
-#include <types.hh>
 
 namespace ghoti::ast {
 

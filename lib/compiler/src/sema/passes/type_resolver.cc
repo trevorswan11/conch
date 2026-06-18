@@ -9,6 +9,13 @@
 #include <fmt/ranges.h>
 #include <gsl/pointers>
 #include <gsl/span>
+#include <stdx/assert.hh>
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
+#include <stdx/types.hh>
+#include <stdx/utility.hh>
+#include <stdx/variant.hh>
 
 #include "ast/expression.hh"
 #include "ast/format.hh"
@@ -28,14 +35,7 @@
 #include "syntax/builtins.hh"
 #include "syntax/token_type.hh"
 
-#include <assert.hh>
 #include <diagnostic.hh>
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
-#include <types.hh>
-#include <utility.hh>
-#include <variant.hh>
 
 namespace ghoti::sema {
 
@@ -101,7 +101,7 @@ template <traits::IndexableID ID>
 [[nodiscard]] auto TypeResolver::resolve_builtin_call(ID                            id,
                                                       const ast::CallExpression&    call,
                                                       const types::BuiltinFunction& builtin)
-    -> Result<void, Diagnostic> {
+    -> stdx::Result<void, Diagnostic> {
     ASSERT(call.function.is<ast::IdentifierExpression>(), "Builtin function must be a raw ident");
     const auto& params{builtin.params};
     if (call.arguments.size() != params.size()) {
@@ -267,11 +267,11 @@ template <traits::IndexableID ID>
 template auto TypeResolver::resolve_builtin_call<ast::NodeID>(ast::NodeID,
                                                               const ast::CallExpression&,
                                                               const types::BuiltinFunction&)
-    -> Result<void, Diagnostic>;
+    -> stdx::Result<void, Diagnostic>;
 template auto TypeResolver::resolve_builtin_call<ast::ExplicitTypeID>(ast::ExplicitTypeID,
                                                                       const ast::CallExpression&,
                                                                       const types::BuiltinFunction&)
-    -> Result<void, Diagnostic>;
+    -> stdx::Result<void, Diagnostic>;
 
 auto TypeResolver::resolve_call_args(gsl::span<const ast::CallExpression::Argument> args)
     -> ResolveResult {
@@ -409,13 +409,13 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do_wh
 }
 
 auto TypeResolver::resolve_members(gsl::span<Type*> buf, gsl::span<const ast::MemberHandle> members)
-    -> opt::Option<gsl::span<Type*>> {
+    -> stdx::Option<gsl::span<Type*>> {
     // Only poison the enum once all members are collected
     for (usize i{0}; const auto& member : members) {
         // The resolved statement type is in last_type_ unlike in the symbol collector
         resolve(*member);
         auto& member_type{resolving_.get_sema_type(member)};
-        if (member_type.is_poison()) { return opt::none; }
+        if (member_type.is_poison()) { return stdx::none; }
         buf[i++] = &member_type;
     }
     return buf;
@@ -512,10 +512,10 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ForLoopExpression& for_expr)
 namespace {
 
 [[nodiscard]] auto mutability_from_type_modifier(ast::TypeModifier modifier) noexcept
-    -> opt::Option<types::MutabilityModifiers> {
+    -> stdx::Option<types::MutabilityModifiers> {
     using Modifier = ast::TypeModifier::Modifier;
     switch (modifier.get_raw()) {
-    case Modifier::VALUE:        return opt::none;
+    case Modifier::VALUE:        return stdx::none;
     case Modifier::REF:          return types::mut::CONSTANT;
     case Modifier::MUT_REF:      return types::mut::MUTABLE;
     case Modifier::PTR:          return types::mut::CONSTANT;
@@ -606,8 +606,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::FunctionExpression& fn) -> v
     last_type_.emplace(fn_type);
 }
 
-auto TypeResolver::resolve_symbol_info(ast::IdentifierHandle handle, opt::Option<SymbolKind> kind)
-    -> opt::Option<Symbol&> {
+auto TypeResolver::resolve_symbol_info(ast::IdentifierHandle handle, stdx::Option<SymbolKind> kind)
+    -> stdx::Option<Symbol&> {
     const auto& ident{resolving_.ast.get_as<ast::IdentifierExpression>(handle)};
     return ctx_.registry.get_from_opt(table_idx_, ident.name)
         .transform([&](Symbol& symbol) -> auto& {
@@ -636,26 +636,26 @@ concept HasBothNameAndType = HasName<T> && HasType<T>;
 namespace {
 
 // Forwards an incomplete aggregate type to safely break cycles if possible
-[[nodiscard]] auto forward_type(const mod::Module&             target_mod,
-                                opt::Option<ast::TypeModifier> mod,
-                                Symbol& symbol) noexcept -> opt::Option<Type&> {
+[[nodiscard]] auto forward_type(const mod::Module&              target_mod,
+                                stdx::Option<ast::TypeModifier> mod,
+                                Symbol& symbol) noexcept -> stdx::Option<Type&> {
     const auto node{symbol.get_data().as_opt<symbols::Node>()};
-    if (!node) { return opt::none; }
+    if (!node) { return stdx::none; }
 
     if (const auto decl{target_mod.ast.get_as_opt<ast::DeclStatement>(*node)}) {
-        if (!decl->value) { return opt::none; }
+        if (!decl->value) { return stdx::none; }
 
         const auto is_aggregate{decl->value->is<ast::StructExpression>() ||
                                 decl->value->is<ast::UnionExpression>() ||
                                 decl->value->is<ast::EnumExpression>()};
-        if ((!mod || (!mod->is_ptr() && !mod->is_ref())) && !is_aggregate) { return opt::none; }
+        if ((!mod || (!mod->is_ptr() && !mod->is_ref())) && !is_aggregate) { return stdx::none; }
         return target_mod.get_sema_type_opt(*decl->value);
     }
 
     if (const auto alias{target_mod.ast.get_as_opt<ast::UsingStatement>(*node)}) {
         return target_mod.get_sema_type_opt(alias->explicit_type);
     }
-    return opt::none;
+    return stdx::none;
 }
 
 } // namespace
@@ -699,7 +699,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
                 }));
         break;
     case SymbolStatus::RESOLVING:
-        if (const auto forwarded_type{forward_type(resolving_, opt::none, symbol)}) {
+        if (const auto forwarded_type{forward_type(resolving_, stdx::none, symbol)}) {
             resolving_.set_sema_type_if(id, *forwarded_type);
             return last_type_.emplace(*forwarded_type);
         }
@@ -839,11 +839,11 @@ auto TypeResolver::visit(ast::NodeID id, const ast::BinaryExpression& binary) ->
     resolving_.set_sema_type(id, *last_type_);
 }
 
-auto TypeResolver::resolve_structural_access(Type&                         object_type,
-                                             ast::IdentifierHandle         member,
-                                             SourceLocation                object_location,
-                                             opt::Option<std::string_view> object_name)
-    -> Result<gsl::not_null<Type*>, Diagnostic> {
+auto TypeResolver::resolve_structural_access(Type&                          object_type,
+                                             ast::IdentifierHandle          member,
+                                             SourceLocation                 object_location,
+                                             stdx::Option<std::string_view> object_name)
+    -> stdx::Result<gsl::not_null<Type*>, Diagnostic> {
     // Early validation to simplify error handling
     auto&      object_data{object_type.get_data()};
     const auto enum_type{object_data.as_opt<types::Enum>()};
@@ -959,7 +959,8 @@ namespace {
 
 auto TypeResolver::validate_struct_initializer(ast::NodeID                       init_id,
                                                const ast::InitializerExpression& init,
-                                               Type& struct_type) -> Result<void, Diagnostic> {
+                                               Type&                             struct_type)
+    -> stdx::Result<void, Diagnostic> {
     struct_validator_.clear();
     const auto& struct_data{struct_type.get_data().as<types::Struct>()};
 
@@ -1021,7 +1022,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::InitializerExpression& init)
     PROFILE_FUNCTION();
 
     // Resolve the object first so it can be tied to the member's types
-    opt::Option<Type&> object_type_opt;
+    stdx::Option<Type&> object_type_opt;
     if (init.object_type) {
         TRY_RESOLVE(*init.object_type);
         object_type_opt.emplace(*last_type_.take());
@@ -1115,7 +1116,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::LabelExpression& label) -> v
 
     // Resolve the body but cache the label's type so the result can bind to the label
     TRY_RESOLVE(*label.body);
-    auto symbol{resolve_symbol_info(label.name, opt::none)};
+    auto symbol{resolve_symbol_info(label.name, stdx::none)};
     if (!symbol) { return; }
     auto& label_data{symbols::Label::from(*symbol)};
 
@@ -1138,7 +1139,7 @@ namespace {
 auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
                            mod::Module&                               resolving,
                            TypeResolver::StructuralValidator&         validator,
-                           bool require_implicit_access) -> opt::Option<Diagnostic> {
+                           bool require_implicit_access) -> stdx::Option<Diagnostic> {
     for (const auto& arm : arms) {
         if (arm.pattern.is<ast::Discarded>()) { continue; }
 
@@ -1161,14 +1162,14 @@ auto gather_arm_duplicates(gsl::span<const ast::MatchExpression::Arm> arms,
         }
         validator.provided.emplace_back(ident.name);
     }
-    return opt::none;
+    return stdx::none;
 }
 
 } // namespace
 
 auto TypeResolver::validate_enum_arms(ast::NodeID                 match_id,
                                       const ast::MatchExpression& match,
-                                      Type& enum_type) -> opt::Option<Diagnostic> {
+                                      Type& enum_type) -> stdx::Option<Diagnostic> {
     enum_validator_.clear();
 
     if (enum_type.get_data().as<types::Enum>().non_exhaustive && !match.catch_all_idx) {
@@ -1202,12 +1203,12 @@ auto TypeResolver::validate_enum_arms(ast::NodeID                 match_id,
                           Error::UNKNOWN_ENUMERATION,
                           resolving_.ast.location_of(match_id)};
     }
-    return opt::none;
+    return stdx::none;
 }
 
 auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
                                        const ast::MatchExpression& match,
-                                       Type& union_type) -> opt::Option<Diagnostic> {
+                                       Type& union_type) -> stdx::Option<Diagnostic> {
     union_validator_.clear();
     const auto& union_data{union_type.get_data().as<types::Union>()};
 
@@ -1258,7 +1259,7 @@ auto TypeResolver::validate_union_arms(ast::NodeID                 match_id,
                           Error::UNKNOWN_FIELD,
                           resolving_.ast.location_of(match_id)};
     }
-    return opt::none;
+    return stdx::none;
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> void {
@@ -1268,8 +1269,8 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
     const StructuralGuard g{implicit_type_stack_, matcher_type};
 
     // The expression must resolve to a single type on pass 3
-    opt::Option<Type&> first_type;
-    const auto         try_set_first_type = [&] -> void {
+    stdx::Option<Type&> first_type;
+    const auto          try_set_first_type = [&] -> void {
         if (!first_type) {
             first_type = last_type_.take();
         } else {
@@ -1289,7 +1290,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::MatchExpression& match) -> v
         }
     } else if (matcher_data.is<types::BuiltinType>()) {
         // It's assumed that any sufficiently large type cannot be fully enumerated
-        opt::Option<u16> required_arm_count;
+        stdx::Option<u16> required_arm_count;
         switch (matcher_type.get_kind()) {
         case TypeKind::I32:
         case TypeKind::I64:
@@ -1570,7 +1571,7 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         const auto symbol_node{symbol->get_data().as_opt<symbols::Node>()};
         if (!symbol_node) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
-        opt::Option<ast::TypeModifier> mod;
+        stdx::Option<ast::TypeModifier> mod;
         if constexpr (traits::ExplicitTypeID<ID>) { mod = id.get_modifier(); }
         switch (symbol->get_status()) {
         case SymbolStatus::RESOLVING: {
@@ -1769,9 +1770,9 @@ auto TypeResolver::visit(ast::NodeID id, const ast::BlockStatement& block) -> vo
     last_type_.emplace(block_type);
 }
 
-auto TypeResolver::resolve_control_flow_label(opt::Option<ast::IdentifierHandle> label,
-                                              std::string_view                   stmt_name)
-    -> Result<opt::Option<Symbol&>, Diagnostic> {
+auto TypeResolver::resolve_control_flow_label(stdx::Option<ast::IdentifierHandle> label,
+                                              std::string_view                    stmt_name)
+    -> stdx::Result<stdx::Option<Symbol&>, Diagnostic> {
     if (label) {
         const auto& ident{resolving_.ast.get_as<ast::IdentifierExpression>(*label)};
         auto        symbol{ctx_.registry.lookup(table_stack_, ident.name)};
@@ -1783,7 +1784,7 @@ auto TypeResolver::resolve_control_flow_label(opt::Option<ast::IdentifierHandle>
         }
         return symbol;
     }
-    return opt::none;
+    return stdx::none;
 }
 
 auto TypeResolver::visit(ast::NodeID id, const ast::BreakStatement& break_stmt) -> void {
@@ -1847,7 +1848,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::DeclStatement& decl) -> void
     };
 
     {
-        opt::Option<StructuralGuard> type_guard;
+        stdx::Option<StructuralGuard> type_guard;
 
         // With an explicit type, the ident should always adopt that exact type
         if (decl.explicit_type) {

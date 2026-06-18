@@ -3,10 +3,10 @@
 #include <cctype>
 #include <string>
 
-#include "syntax/token_type.hh"
+#include <stdx/assert.hh>
+#include <stdx/types.hh>
 
-#include <assert.hh>
-#include <types.hh>
+#include "syntax/token_type.hh"
 
 namespace ghoti::syntax {
 

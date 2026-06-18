@@ -2,9 +2,9 @@
 
 #include <string_view>
 
-#include "syntax/token_type.hh"
+#include <stdx/option.hh>
 
-#include <option.hh>
+#include "syntax/token_type.hh"
 
 namespace ghoti::syntax {
 
@@ -63,6 +63,6 @@ constexpr Operator NULL_TERMINATED{":0", TokenType::NULL_TERMINATED};
 } // namespace operators
 
 [[nodiscard]] auto max_operator_length() noexcept -> usize;
-[[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
+[[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
 
 } // namespace ghoti::syntax

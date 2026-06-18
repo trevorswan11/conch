@@ -4,11 +4,10 @@
 #include <string>
 
 #include <ankerl/unordered_dense.h>
+#include <stdx/result.hh>
 
 #include "module/error.hh"
 #include "module/source_loader.hh"
-
-#include <result.hh>
 
 namespace ghoti::mod {
 
@@ -19,10 +18,10 @@ class MemoryLoader final : public SourceLoader {
     auto add(const std::filesystem::path& path, const std::string& content) -> void;
 
     [[nodiscard]] auto load(const std::filesystem::path& path)
-        -> Result<std::string, Diagnostic> override;
+        -> stdx::Result<std::string, Diagnostic> override;
 
     [[nodiscard]] auto normalize(const std::filesystem::path& path)
-        -> Result<std::filesystem::path, Error> override {
+        -> stdx::Result<std::filesystem::path, Error> override {
         return path.lexically_normal();
     }
 

@@ -3,14 +3,14 @@
 #include <string_view>
 #include <vector>
 
+#include <stdx/option.hh>
+#include <stdx/result.hh>
+#include <stdx/variant.hh>
+
 #include "ast/handle.hh"
 #include "ast/id.hh"
 #include "syntax/error.hh"
 #include "syntax/token_type.hh"
-
-#include <option.hh>
-#include <result.hh>
-#include <variant.hh>
 
 namespace ghoti {
 
@@ -19,23 +19,23 @@ namespace syntax { class Parser; } // namespace syntax
 namespace ast {
 
 struct ArrayExpression {
-    opt::Option<ExpressionHandle> size;
-    bool                          null_terminated;
-    ExplicitTypeID                item_explicit_type;
-    std::vector<ExpressionHandle> items;
+    stdx::Option<ExpressionHandle> size;
+    bool                           null_terminated;
+    ExplicitTypeID                 item_explicit_type;
+    std::vector<ExpressionHandle>  items;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct CallExpression {
-    using Argument = Variant<ExpressionHandle, ExplicitTypeID>;
+    using Argument = stdx::Variant<ExpressionHandle, ExplicitTypeID>;
 
     ExpressionHandle      function;
     std::vector<Argument> arguments;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle function)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct DoWhileLoopExpression {
@@ -43,22 +43,22 @@ struct DoWhileLoopExpression {
     ExpressionHandle condition;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct EnumExpression {
     struct Enumeration {
-        IdentifierHandle              name;
-        opt::Option<ExpressionHandle> value;
+        IdentifierHandle               name;
+        stdx::Option<ExpressionHandle> value;
     };
 
-    opt::Option<IdentifierHandle> underlying;
-    std::vector<Enumeration>      enumerations;
-    bool                          non_exhaustive;
-    Members                       members;
+    stdx::Option<IdentifierHandle> underlying;
+    std::vector<Enumeration>       enumerations;
+    bool                           non_exhaustive;
+    Members                        members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct ForLoopExpression {
@@ -70,10 +70,10 @@ struct ForLoopExpression {
     std::vector<ExpressionHandle> iterables;
     std::vector<Capture>          captures;
     BlockHandle                   block;
-    opt::Option<StatementHandle>  non_break;
+    stdx::Option<StatementHandle> non_break;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct SelfParameter {
@@ -83,24 +83,27 @@ struct SelfParameter {
 
 } // namespace ast
 
-namespace traits {
+} // namespace ghoti
 
-template <> struct Nullable<ast::SelfParameter> {
-    [[nodiscard]] static constexpr auto invalid() noexcept -> ast::SelfParameter {
-        return {.modifier = {}, .name = ast::IdentifierHandle::make_invalid()};
+namespace stdx::traits {
+
+template <> struct Nullable<ghoti::ast::SelfParameter> {
+    [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::SelfParameter {
+        return {.modifier = {}, .name = ghoti::ast::IdentifierHandle::make_invalid()};
     }
 
-    [[nodiscard]] static constexpr auto is_valid(const ast::SelfParameter& self) noexcept -> bool {
+    [[nodiscard]] static constexpr auto is_valid(const ghoti::ast::SelfParameter& self) noexcept
+        -> bool {
         return self.name.is_valid();
     }
 };
 
-} // namespace traits
+} // namespace stdx::traits
 
-namespace ast {
+namespace ghoti::ast {
 
 [[nodiscard]] auto try_parse_variadic_fn(syntax::Parser& parser)
-    -> Result<bool, syntax::Diagnostic>;
+    -> stdx::Result<bool, syntax::Diagnostic>;
 
 struct FunctionExpression {
     struct Parameter {
@@ -108,37 +111,37 @@ struct FunctionExpression {
         ExplicitTypeID   explicit_type;
     };
 
-    opt::Option<SelfParameter> self;
-    std::vector<Parameter>     parameters;
-    bool                       variadic;
-    ExplicitTypeID             explicit_return_type;
-    BlockHandle                body;
+    stdx::Option<SelfParameter> self;
+    std::vector<Parameter>      parameters;
+    bool                        variadic;
+    ExplicitTypeID              explicit_return_type;
+    BlockHandle                 body;
 
     // Parse the function as a value. Meant for the parser LUT
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct GroupedExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct IdentifierExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 
     std::string_view name;
 };
 
 struct IfExpression {
-    bool                         constexpr_condition;
-    ExpressionHandle             condition;
-    StatementHandle              consequence;
-    opt::Option<StatementHandle> alternate;
+    bool                          constexpr_condition;
+    ExpressionHandle              condition;
+    StatementHandle               consequence;
+    stdx::Option<StatementHandle> alternate;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct IndexExpression {
@@ -146,14 +149,14 @@ struct IndexExpression {
     ExpressionHandle index;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle array)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct InfiniteLoopExpression {
     BlockHandle block;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 #define DECLARE_INFIX_EXPRESSION(Type)                                                \
@@ -161,7 +164,7 @@ struct InfiniteLoopExpression {
         ExpressionHandle          lhs;                                                \
         ExpressionHandle          rhs;                                                \
         [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle lhs) \
-            -> Result<ExpressionHandle, syntax::Diagnostic>;                          \
+            -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;                    \
     };
 
 // The operator is stored in the nodes id
@@ -175,7 +178,7 @@ struct DotExpression {
     IdentifierHandle  member;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle outer)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 // The operator is stored in the nodes id
@@ -189,18 +192,18 @@ struct InitializerExpression {
         ExpressionHandle     value;
     };
 
-    opt::Option<ExpressionHandle> object_type;
-    std::vector<Initializer>      initializers;
+    stdx::Option<ExpressionHandle> object_type;
+    std::vector<Initializer>       initializers;
 
     // Parse assuming an object is present. Meant for the parser LUT
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle object)
-        -> Result<ExpressionHandle, syntax::Diagnostic> {
-        return parse(parser, opt::Option<ExpressionHandle>{object});
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+        return parse(parser, stdx::Option<ExpressionHandle>{object});
     }
 
     // Parse the expression with a potentially empty object
-    [[nodiscard]] static auto parse(syntax::Parser& parser, opt::Option<ExpressionHandle> object)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+    [[nodiscard]] static auto parse(syntax::Parser& parser, stdx::Option<ExpressionHandle> object)
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct LabelExpression {
@@ -208,33 +211,33 @@ struct LabelExpression {
     LabeledNodeHandle body;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle name)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 
   private:
     [[nodiscard]] static auto deconstruct_body(syntax::Parser& parser, StatementHandle raw_stmt)
-        -> Result<LabeledNodeHandle, syntax::Diagnostic>;
+        -> stdx::Result<LabeledNodeHandle, syntax::Diagnostic>;
 };
 
 struct MatchExpression {
     struct Arm {
-        MatchPatternHandle                  pattern;
-        opt::Option<DiscardableIdentHandle> capture;
-        StatementHandle                     dispatch;
+        MatchPatternHandle                   pattern;
+        stdx::Option<DiscardableIdentHandle> capture;
+        StatementHandle                      dispatch;
     };
 
     ExpressionHandle matcher;
     std::vector<Arm> arms;
-    opt::Size        catch_all_idx;
+    stdx::OptSize    catch_all_idx;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
-#define DECLARE_PREFIX_EXPRESSION(Type)                         \
-    struct Type {                                               \
-        ExpressionHandle          rhs;                          \
-        [[nodiscard]] static auto parse(syntax::Parser& parser) \
-            -> Result<ExpressionHandle, syntax::Diagnostic>;    \
+#define DECLARE_PREFIX_EXPRESSION(Type)                            \
+    struct Type {                                                  \
+        ExpressionHandle          rhs;                             \
+        [[nodiscard]] static auto parse(syntax::Parser& parser)    \
+            -> stdx::Result<ExpressionHandle, syntax::Diagnostic>; \
     };
 
 DECLARE_PREFIX_EXPRESSION(UnaryExpression)
@@ -246,7 +249,7 @@ struct ImplicitAccessExpression {
     IdentifierHandle member;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 #undef DECLARE_PREFIX_EXPRESSION
@@ -256,15 +259,15 @@ struct ModuleAccessExpression {
     IdentifierHandle  inner;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, ExpressionHandle outer)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct StructExpression {
     // Field publicity is baked into the identifier's token type
     struct Field {
-        IdentifierHandle              name;
-        ExplicitTypeID                explicit_type;
-        opt::Option<ExpressionHandle> default_value;
+        IdentifierHandle               name;
+        ExplicitTypeID                 explicit_type;
+        stdx::Option<ExpressionHandle> default_value;
 
         [[nodiscard]] constexpr auto is_public() const noexcept -> bool {
             return name->get_token_type() == syntax::TokenType::PUBLIC;
@@ -275,7 +278,7 @@ struct StructExpression {
     Members            members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct UnionExpression {
@@ -288,19 +291,17 @@ struct UnionExpression {
     Members            members;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct WhileLoopExpression {
-    ExpressionHandle              condition;
-    opt::Option<ExpressionHandle> continuation;
-    BlockHandle                   block;
-    opt::Option<StatementHandle>  non_break;
+    ExpressionHandle               condition;
+    stdx::Option<ExpressionHandle> continuation;
+    BlockHandle                    block;
+    stdx::Option<StatementHandle>  non_break;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
 };
 
-} // namespace ast
-
-} // namespace ghoti
+} // namespace ghoti::ast

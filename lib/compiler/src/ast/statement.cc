@@ -6,6 +6,10 @@
 #include <utility>
 
 #include <fmt/format.h>
+#include <stdx/fixed/enum_map.hh>
+#include <stdx/option.hh>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
 
 #include "ast/ast.hh"
 #include "ast/expression.hh"
@@ -17,14 +21,10 @@
 #include "syntax/parser.hh"
 #include "syntax/token_type.hh"
 
-#include <fixed/enum_map.hh>
-#include <option.hh>
-#include <profiler.hh>
-#include <result.hh>
-
 namespace ghoti::ast {
 
-auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto BlockStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -39,12 +39,13 @@ auto BlockStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
     return parser.add_stmt<BlockStatement>(start_token, std::move(statements));
 }
 
-auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto BreakStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
     // Labels are optional
-    opt::Option<IdentifierHandle> label;
+    stdx::Option<IdentifierHandle> label;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
         parser.advance();
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
@@ -52,7 +53,7 @@ auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
     }
 
     // Values can be present but must be associated with a label
-    opt::Option<ExpressionHandle> value;
+    stdx::Option<ExpressionHandle> value;
     if (!parser.peek_token_is(syntax::TokenType::END) &&
         !parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
         parser.advance();
@@ -69,12 +70,12 @@ auto BreakStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 }
 
 auto ContinueStatement::parse(syntax::Parser& parser)
-    -> Result<StatementHandle, syntax::Diagnostic> {
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
     // Labels are optional
-    opt::Option<IdentifierHandle> label;
+    stdx::Option<IdentifierHandle> label;
     if (parser.peek_token_is(syntax::TokenType::COLON)) {
         parser.advance();
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
@@ -96,17 +97,18 @@ auto ContinueStatement::parse(syntax::Parser& parser)
 namespace {
 
 using ModifierMapping = std::pair<syntax::TokenType, DeclModifiers>;
-constexpr auto LEGAL_MODIFIERS{fixed::EnumMap<syntax::TokenType, opt::Option<DeclModifiers>>::from(
-    opt::none,
-    ModifierMapping{syntax::TokenType::VAR, DeclModifiers::VARIABLE},
-    ModifierMapping{syntax::TokenType::CONSTANT, DeclModifiers::CONSTANT},
-    ModifierMapping{syntax::TokenType::CONSTEXPR, DeclModifiers::CONSTEXPR},
-    ModifierMapping{syntax::TokenType::PUBLIC, DeclModifiers::PUBLIC},
-    ModifierMapping{syntax::TokenType::EXTERN, DeclModifiers::EXTERN},
-    ModifierMapping{syntax::TokenType::EXPORT, DeclModifiers::EXPORT})};
+constexpr auto LEGAL_MODIFIERS{
+    stdx::fixed::EnumMap<syntax::TokenType, stdx::Option<DeclModifiers>>::from(
+        stdx::none,
+        ModifierMapping{syntax::TokenType::VAR, DeclModifiers::VARIABLE},
+        ModifierMapping{syntax::TokenType::CONSTANT, DeclModifiers::CONSTANT},
+        ModifierMapping{syntax::TokenType::CONSTEXPR, DeclModifiers::CONSTEXPR},
+        ModifierMapping{syntax::TokenType::PUBLIC, DeclModifiers::PUBLIC},
+        ModifierMapping{syntax::TokenType::EXTERN, DeclModifiers::EXTERN},
+        ModifierMapping{syntax::TokenType::EXPORT, DeclModifiers::EXPORT})};
 
 [[nodiscard]] constexpr auto validate_modifiers(DeclModifiers modifiers) noexcept
-    -> opt::Option<std::string> {
+    -> stdx::Option<std::string> {
     const auto mut_count{std::popcount(
         std::to_underlying(modifiers & (DeclModifiers::VARIABLE | DeclModifiers::CONSTANT |
                                         DeclModifiers::CONSTEXPR)))};
@@ -124,17 +126,18 @@ constexpr auto LEGAL_MODIFIERS{fixed::EnumMap<syntax::TokenType, opt::Option<Dec
     if (abi_count > 1) {
         return fmt::format("At most one ABI-related modifier may be used; found {}", abi_count);
     }
-    return opt::none;
+    return stdx::none;
 }
 
 } // namespace
 
-auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto DeclStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     auto       modifiers{LEGAL_MODIFIERS[start_token.type].value()};
 
-    opt::Option<DeclModifiers> current_modifier;
+    stdx::Option<DeclModifiers> current_modifier;
     while ((current_modifier = LEGAL_MODIFIERS[parser.get_peek_token().type])) {
         parser.advance();
         if (modifiers_has(modifiers, *current_modifier)) {
@@ -154,7 +157,7 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
     const IdentifierHandle decl_name{TRY(IdentifierExpression::parse(parser))};
     const auto [decl_type, value_initialized]{TRY(ExplicitType::parse_opt_init(parser))};
 
-    opt::Option<ExpressionHandle> decl_value;
+    stdx::Option<ExpressionHandle> decl_value;
     if (value_initialized) {
         decl_value.emplace(TRY(parser.parse_expression()));
 
@@ -177,7 +180,8 @@ auto DeclStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
     return parser.add_stmt<DeclStatement>(start_token, decl_name, decl_type, decl_value, modifiers);
 }
 
-auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto DeferStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     if (parser.peek_token_is(syntax::TokenType::END) ||
@@ -199,7 +203,7 @@ auto DeferStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, sy
 }
 
 auto DiscardStatement::parse(syntax::Parser& parser)
-    -> Result<StatementHandle, syntax::Diagnostic> {
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
@@ -219,7 +223,7 @@ auto DiscardStatement::parse(syntax::Parser& parser)
 }
 
 auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
-    -> Result<StatementHandle, syntax::Diagnostic> {
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     const auto expr{TRY(parser.parse_expression())};
@@ -228,14 +232,14 @@ auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavio
     const auto has_semicolon{parser.current_token_is(syntax::TokenType::SEMICOLON)};
     const auto at_block_end{parser.current_token_is(syntax::TokenType::RBRACE)};
 
-    const auto check_illegal_semicolon = [&] -> opt::Option<Err<syntax::Diagnostic>> {
+    const auto check_illegal_semicolon = [&] -> stdx::Option<stdx::Err<syntax::Diagnostic>> {
         const auto semicolon{parser.advance()};
         if (behavior == Behavior::DISALLOW) {
             return syntax::make_syntax_err("Semicolon is not allowed in this context",
                                            syntax::Error::UNEXPECTED_TOKEN,
                                            semicolon);
         }
-        return opt::none;
+        return stdx::none;
     };
 
     // RBRACE would mean we're at the end of a block and a semicolon is never required
@@ -256,7 +260,7 @@ auto ExpressionStatement::parse(syntax::Parser& parser, syntax::SemicolonBehavio
 namespace {
 
 [[nodiscard]] auto parse_import_payload(syntax::Parser& parser)
-    -> Result<ImportPayloadHandle, syntax::Diagnostic> {
+    -> stdx::Result<ImportPayloadHandle, syntax::Diagnostic> {
     if (parser.peek_token_is(syntax::TokenType::IDENT)) {
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
         return TRY(IdentifierExpression::parse(parser));
@@ -281,14 +285,15 @@ namespace {
 
 } // namespace
 
-auto ImportStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto ImportStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     if (parser.current_token_is(syntax::TokenType::PUBLIC)) { parser.advance(); }
     auto imported_core{TRY(parse_import_payload(parser))};
 
-    opt::Option<IdentifierHandle> imported_alias;
+    stdx::Option<IdentifierHandle> imported_alias;
     if (parser.peek_token_is(syntax::TokenType::AS)) {
         parser.advance();
         TRY(parser.expect_peek(syntax::TokenType::IDENT));
@@ -317,11 +322,12 @@ auto ImportStatement::get_name(const AST& tree) const noexcept
     return {payload, ident.name};
 }
 
-auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto ReturnStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
-    opt::Option<ExpressionHandle> value;
+    stdx::Option<ExpressionHandle> value;
     if (!parser.peek_token_is(syntax::TokenType::END) &&
         !parser.peek_token_is(syntax::TokenType::SEMICOLON)) {
         parser.advance();
@@ -332,11 +338,12 @@ auto ReturnStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, s
     return parser.add_stmt<ReturnStatement>(start_token, value);
 }
 
-auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto TestStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
-    opt::Option<StringHandle> description;
+    stdx::Option<StringHandle> description;
     if (parser.peek_token_is(syntax::TokenType::STRING)) {
         parser.advance();
         description.emplace(TRY(StringExpression::parse(parser)));
@@ -354,7 +361,8 @@ auto TestStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syn
     return parser.add_stmt<TestStatement>(start_token, description, block);
 }
 
-auto UsingStatement::parse(syntax::Parser& parser) -> Result<StatementHandle, syntax::Diagnostic> {
+auto UsingStatement::parse(syntax::Parser& parser)
+    -> stdx::Result<StatementHandle, syntax::Diagnostic> {
     // A start token of public is guaranteed to be followed by an import
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};

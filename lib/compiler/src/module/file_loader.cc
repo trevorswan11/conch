@@ -8,15 +8,14 @@
 #include <system_error>
 
 #include <fmt/format.h>
+#include <stdx/profiler.hh>
+#include <stdx/result.hh>
 
 #include "module/error.hh"
 
-#include <profiler.hh>
-#include <result.hh>
-
 namespace ghoti::mod {
 
-auto FileLoader::load(const std::filesystem::path& path) -> Result<std::string, Diagnostic> {
+auto FileLoader::load(const std::filesystem::path& path) -> stdx::Result<std::string, Diagnostic> {
     PROFILE_FUNCTION();
     if (!std::filesystem::exists(path)) {
         return make_mod_err(fmt::format("Path '{}' does not exist", path.string()),
@@ -39,11 +38,11 @@ auto FileLoader::load(const std::filesystem::path& path) -> Result<std::string, 
 }
 
 auto FileLoader::normalize(const std::filesystem::path& path)
-    -> Result<std::filesystem::path, Error> {
+    -> stdx::Result<std::filesystem::path, Error> {
     PROFILE_FUNCTION();
     std::error_code ec;
     auto            canonical_path{std::filesystem::weakly_canonical(path, ec)};
-    if (ec) { return Err{Error::NORMALIZATION_FAILED}; }
+    if (ec) { return stdx::Err{Error::NORMALIZATION_FAILED}; }
     return canonical_path;
 }
 

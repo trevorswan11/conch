@@ -3,6 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
+#include <stdx/option.hh>
+#include <stdx/types.hh>
 
 #include "ast/expression.hh"
 #include "ast/statement.hh"
@@ -12,9 +14,6 @@
 #include "sema/error.hh"
 #include "sema/symbol.hh"
 #include "sema/type.hh"
-
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::tests {
 

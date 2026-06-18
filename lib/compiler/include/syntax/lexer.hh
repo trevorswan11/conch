@@ -4,11 +4,11 @@
 #include <string_view>
 #include <vector>
 
+#include <stdx/option.hh>
+#include <stdx/types.hh>
+
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
-
-#include <option.hh>
-#include <types.hh>
 
 namespace ghoti::syntax {
 
@@ -81,7 +81,7 @@ class Lexer {
 
     // Reads n characters from the input stream
     auto               read_character(u8 n = 1) noexcept -> void;
-    [[nodiscard]] auto read_operator() const noexcept -> opt::Option<Token>;
+    [[nodiscard]] auto read_operator() const noexcept -> stdx::Option<Token>;
     auto               read_ident(bool builtin) noexcept -> std::string_view;
     auto               read_number() noexcept -> Token;
     auto               read_escape() noexcept -> char;

@@ -1,6 +1,6 @@
 #include <string>
 
-#include "types.hh"
+#include <stdx/types.hh>
 
 namespace ghoti::tests::helpers {
 

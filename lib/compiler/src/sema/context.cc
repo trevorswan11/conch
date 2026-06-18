@@ -4,15 +4,14 @@
 #include <utility>
 
 #include <gsl/pointers>
+#include <stdx/assert.hh>
+#include <stdx/profiler.hh>
+#include <stdx/types.hh>
 
 #include "sema/symbol.hh"
 #include "sema/type.hh"
 #include "syntax/builtins.hh"
 #include "syntax/keywords.hh"
-
-#include <assert.hh>
-#include <profiler.hh>
-#include <types.hh>
 
 namespace ghoti::sema {
 

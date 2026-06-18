@@ -3,9 +3,9 @@
 #include <array>
 #include <string_view>
 
-#include "syntax/token_type.hh"
+#include <stdx/option.hh>
 
-#include <option.hh>
+#include "syntax/token_type.hh"
 
 namespace ghoti::syntax {
 
@@ -62,7 +62,7 @@ constexpr Keyword UNDEFINED{"undefined", TokenType::UNDEFINED};
 
 } // namespace keywords
 
-[[nodiscard]] auto get_keyword_opt(std::string_view sv) noexcept -> opt::Option<TokenType>;
+[[nodiscard]] auto get_keyword_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
 
 constexpr std::array ALL_PRIMITIVES{
     keywords::I32.type,

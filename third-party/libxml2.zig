@@ -1,6 +1,7 @@
 const std = @import("std");
 
-const Dependency = @import("Dependency.zig");
+const parent_build = @import("../build.zig");
+const Dependency = parent_build.Dependency;
 const Config = Dependency.Config;
 
 const libxml2 = @import("sources/libxml2.zig");
