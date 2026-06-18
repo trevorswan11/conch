@@ -26,7 +26,7 @@ const transforms = @import("sources/llvm/transforms.zig");
 const xray = @import("sources/llvm/xray.zig");
 
 const parent_build = @import("../../build.zig");
-const Dependency = parent_build.Dependency;
+const Dependency = parent_build.stdx.Dependency;
 pub const Artifact = Dependency.Artifact;
 const libxml2 = @import("../libxml2.zig");
 const zstd = parent_build.zstd;

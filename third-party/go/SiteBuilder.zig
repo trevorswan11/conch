@@ -125,7 +125,7 @@ fn buildWatch(self: *Self) void {
         self.templ.install.dest_rel_path,
     }));
     watch_site_run.setEnvironmentVariable("GHOTI_GO_PATH", self.go_exe_path);
-    const output = stdx.utils.tryAppendExe(b, b.pathJoin(&.{ abs_dev_path, devserver_exe }));
+    const output = stdx.utils.tryAppendExe(b.allocator, b.graph.host, b.pathJoin(&.{ abs_dev_path, devserver_exe }));
     watch_site_run.setEnvironmentVariable("GHOTI_SITE_OUTPUT", output);
 
     watch_site_run.addFileArg(self.air.artifact_path);
@@ -183,7 +183,7 @@ fn addInstallFile(
     return b.addInstallFileWithDir(
         path,
         .{ .custom = prefix_path },
-        stdx.utils.tryAppendExe(b, executable),
+        stdx.utils.tryAppendExe(b.allocator, b.graph.host, executable),
     );
 }
 

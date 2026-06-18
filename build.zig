@@ -7,7 +7,6 @@ pub const zlib = stdx.zlib;
 pub const zstd = stdx.zstd;
 const replxx = @import("third-party/replxx.zig");
 
-pub const Dependency = stdx.Dependency;
 const CDBGenerator = stdx.CDBGenerator;
 const LOCCounter = stdx.LOCCounter;
 const RemoveDir = stdx.RemoveDir;
@@ -72,6 +71,7 @@ pub fn build(b: *std.Build) !void {
         .install_tests_only = install_tests_only,
         .site_builder = site_builder,
         .stdx_dep = stdx_dep,
+        .profile = profile,
     });
     for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
@@ -146,8 +146,6 @@ pub const ProjectPaths = struct {
         .tests = "lib/support/tests/",
     };
 
-    const stdlib = "lib/std/";
-
     pub fn collectToolingPaths(b: *std.Build) !stdx.steps.FmtPaths {
         const cxx_paths = try std.mem.concat(b.allocator, []const u8, &.{
             try compiler.files(b),
@@ -158,11 +156,12 @@ pub const ProjectPaths = struct {
         return .{ .zig = &.{
             "build.zig",
             "build.zig.zon",
-            ProjectPaths.site ++ "rebuild.zig",
-            ProjectPaths.site ++ "SiteBuilder.zig",
+            site ++ "rebuild.zig",
+            third_party ++ "go/SiteBuilder.zig",
         }, .cxx = cxx_paths };
     }
 
+    const stdlib = "lib/std/";
     pub const site = "site/";
     const third_party = "third-party/";
 };
@@ -232,6 +231,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     install_tests_only: bool = true,
     site_builder: ?*SiteBuilder = null,
     stdx_dep: *std.Build.Dependency,
+    profile: bool = false,
 }) !struct {
     libsupport: *std.Build.Step.Compile,
     libcompiler: *std.Build.Step.Compile,
@@ -370,6 +370,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.support.tests, .{}),
             .cxx_flags = config.cxx_flags,
+            .profile = config.profile,
             .include_paths = &.{
                 b.path(ProjectPaths.support.inc),
                 b.path(ProjectPaths.support.tests),
@@ -398,6 +399,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.compiler.tests, .{}),
             .cxx_flags = config.cxx_flags,
+            .profile = config.profile,
             .include_paths = &.{
                 b.path(ProjectPaths.compiler.inc),
                 b.path(ProjectPaths.support.inc),
@@ -427,6 +429,7 @@ fn addArtifacts(b: *std.Build, config: struct {
             .libcatch2 = libcatch2,
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.driver.tests, .{}),
             .cxx_flags = config.cxx_flags,
+            .profile = config.profile,
             .include_paths = &.{
                 b.path(ProjectPaths.compiler.inc),
                 b.path(ProjectPaths.driver.inc),
@@ -604,21 +607,9 @@ fn addPackageStep(b: *std.Build, config: struct {
     cxx_flags: []const []const u8,
     compressor: *std.Build.Step.Compile,
 }) !void {
-    // Always clean up the compressed dir before packaging
-    const package_parent_dirname = "package";
-    const cleaner: *RemoveDir = .init(b, .{
-        .cwd_relative = b.pathJoin(&.{ b.install_prefix, package_parent_dirname }),
+    const packager: *stdx.Packager = .init(b, .{
+        .compressor = config.compressor,
     });
-    config.compressor.step.dependOn(&cleaner.step);
-
-    const package_step = b.step("package", "Package artifacts for a new release");
-    package_step.dependOn(&config.compressor.step);
-
-    const ArchiveBehavior = struct {
-        compressor_arg: enum { zip, zst },
-        file_extension: []const u8,
-        skip: bool = false,
-    };
 
     for (target_queries) |query| {
         const target = b.resolveTargetQuery(query);
@@ -641,69 +632,32 @@ fn addPackageStep(b: *std.Build, config: struct {
             .packaging = true,
             .stdx_dep = stdx_dep,
         });
-        std.debug.assert(artifacts.tests == null);
 
-        artifacts.ghoti.out_filename = blk: {
-            const name = artifacts.ghoti.name;
-            break :blk if (target.result.os.tag == .windows)
-                b.fmt("{s}-{s}.exe", .{ name, version_str })
-            else
-                b.fmt("{s}-{s}", .{ name, version_str });
-        };
+        artifacts.ghoti.out_filename = stdx.utils.tryAppendExe(
+            b.allocator,
+            target,
+            b.fmt("{s}-{s}", .{ artifacts.ghoti.name, version_str }),
+        );
         artifacts.ghoti.root_module.strip = true;
 
-        const package_artifact_dirname = b.fmt("ghoti-{s}-{s}", .{
-            try query.zigTriple(b.allocator),
-            version_str,
-        });
-
+        const package_artifact_dirname = b.fmt("ghoti-{s}-{s}", .{ try query.zigTriple(b.allocator), version_str });
         const staging = b.addWriteFiles();
-        const artifact_dest_path = b.fmt("{s}/{s}", .{ package_artifact_dirname, artifacts.ghoti.out_filename });
-        _ = staging.addCopyFile(artifacts.ghoti.getEmittedBin(), artifact_dest_path);
-
-        const legal_paths = [_]struct { std.Build.LazyPath, []const u8 }{
+        const copy_paths = [_]struct { std.Build.LazyPath, []const u8 }{
+            .{ artifacts.ghoti.getEmittedBin(), artifacts.ghoti.out_filename },
             .{ b.path("LICENSE"), "LICENSE" },
             .{ b.path("README.md"), "README.md" },
             .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
         };
 
-        for (legal_paths) |path| {
+        for (copy_paths) |path| {
             const src, const dst = path;
             _ = staging.addCopyFile(src, b.fmt("{s}/{s}", .{ package_artifact_dirname, dst }));
         }
 
-        // Zip is only needed on windows
-        const archives = [_]ArchiveBehavior{
-            .{
-                .compressor_arg = .zip,
-                .file_extension = "zip",
-                .skip = target.result.os.tag != .windows,
-            },
-            .{
-                .compressor_arg = .zst,
-                .file_extension = "tar.zst",
-            },
-        };
-
-        for (archives) |archive| {
-            if (archive.skip) continue;
-            const out_name = b.fmt("{s}.{s}", .{
-                package_artifact_dirname,
-                archive.file_extension,
-            });
-
-            const packer = b.addRunArtifact(config.compressor);
-            packer.addArg(@tagName(archive.compressor_arg));
-            const out_path = packer.addOutputFileArg(out_name);
-            packer.addDirectoryArg(staging.getDirectory().path(b, package_artifact_dirname));
-            package_step.dependOn(&packer.step);
-
-            const copy = b.addInstallFileWithDir(
-                out_path,
-                .{ .custom = package_parent_dirname },
-                out_name,
-            );
-            package_step.dependOn(&copy.step);
-        }
+        packager.addArchives(.{
+            .target = target,
+            .staging = staging,
+            .output_dir_basename = package_artifact_dirname,
+        });
     }
 }

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const parent_build = @import("../build.zig");
-const Dependency = parent_build.Dependency;
+const Dependency = parent_build.stdx.Dependency;
 const Config = Dependency.Config;
 
 const replxx = @import("sources/replxx.zig");
