@@ -45,7 +45,8 @@ enum class ModuleState : u8 {
     ERRORED,
 };
 
-using DiagnosticListVariant = stdx::variant<stdx::monostate, syntax::Diagnostics, sema::Diagnostics>;
+using DiagnosticListVariant =
+    stdx::variant<stdx::monostate, syntax::Diagnostics, sema::Diagnostics>;
 
 struct Module {
     std::filesystem::path path;
@@ -53,7 +54,7 @@ struct Module {
     SourceFile            source;
     ast::AST              ast;
     sema::SideTables      sema_side_tables;
-    stdx::opt_size         root_table_idx;
+    stdx::opt_size        root_table_idx;
     ModuleState           state{ModuleState::PARSED};
 
     DiagnosticListVariant diagnostics{stdx::monostate{}};
@@ -101,9 +102,9 @@ struct Module {
                                   state == mod::ModuleState::POISONED_SYMBOL_COLLECTION);
     }
 
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     [[nodiscard]] constexpr auto has_sema_type(ID id) const noexcept -> bool {
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (ast::IndexableNodeID<ID>) {
             return sema_side_tables.node_types[id].has_value();
         } else {
             return sema_side_tables.explicit_types[id].has_value();
@@ -114,16 +115,16 @@ struct Module {
         return sema_side_tables.match_arm_types[arm.pattern].has_value();
     }
 
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     [[nodiscard]] constexpr auto get_sema_type_opt(this auto&& self, ID id) noexcept {
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (ast::IndexableNodeID<ID>) {
             return self.sema_side_tables.node_types[id];
         } else {
             return self.sema_side_tables.explicit_types[id];
         }
     }
 
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     [[nodiscard]] constexpr auto get_sema_type(this auto&& self, ID id) noexcept -> auto& {
         return *self.get_sema_type_opt(id);
     }
@@ -137,9 +138,9 @@ struct Module {
         return *get_sema_type_opt(arm);
     }
 
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     constexpr auto set_sema_type(ID id, sema::Type& type) noexcept -> void {
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (ast::IndexableNodeID<ID>) {
             sema_side_tables.node_types[id].emplace(type);
         } else {
             sema_side_tables.explicit_types[id].emplace(type);
@@ -147,10 +148,10 @@ struct Module {
     }
 
     // Sets the sema type only if there wasn't one already, returns true if modified
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     constexpr auto set_sema_type_if(ID id, sema::Type& type) noexcept -> bool {
         if (has_sema_type(id)) { return false; }
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (ast::IndexableNodeID<ID>) {
             sema_side_tables.node_types[id].emplace(type);
         } else {
             sema_side_tables.explicit_types[id].emplace(type);
@@ -196,9 +197,11 @@ class ModuleManager {
     ankerl::unordered_dense::map<std::filesystem::path, stdx::box<Module>> modules_;
 
     // Maps physical ghoti modules to their path on disk
-    ankerl::unordered_dense::
-        map<std::string, std::filesystem::path, stdx::hash::string_transparent_hash, std::equal_to<>>
-            module_lut_;
+    ankerl::unordered_dense::map<std::string,
+                                 std::filesystem::path,
+                                 stdx::hash::string_transparent_hash,
+                                 std::equal_to<>>
+        module_lut_;
 };
 
 } // namespace ghoti::mod

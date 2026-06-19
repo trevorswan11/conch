@@ -5,9 +5,7 @@
 #include <stdx/types.hh>
 #include <stdx/variant.hh>
 
-namespace ghoti {
-
-namespace ast {
+namespace ghoti::ast {
 
 enum class NodeKind : u8 {
     ARRAY_EXPRESSION,
@@ -159,14 +157,10 @@ class ExplicitTypeID;
 struct ExplicitArrayType;
 struct ExplicitFunctionType;
 
-} // namespace ast
-
-namespace traits {
-
 template <typename T> struct NodeKindOf;
 
 template <typename T>
-concept ASTNode = requires {
+concept NodeData = requires {
     { NodeKindOf<T>::value() } -> std::same_as<ast::NodeKind>;
 };
 
@@ -235,7 +229,7 @@ NODE_KIND_OF_TRAIT(Discarded, DISCARDED)
 template <typename T> struct ExplicitTypeKindOf;
 
 template <typename T>
-concept ASTExplicitType = requires {
+concept ExplicitTypeData = requires {
     { ExplicitTypeKindOf<T>::value() } -> std::same_as<ast::ExplicitTypeKind>;
 };
 
@@ -259,6 +253,4 @@ KIND_OF_TRAIT(ExplicitArrayType, ARRAY)
 
 #undef KIND_OF_TRAIT
 
-} // namespace traits
-
-} // namespace ghoti
+} // namespace ghoti::ast

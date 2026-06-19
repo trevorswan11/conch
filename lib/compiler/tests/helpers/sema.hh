@@ -48,7 +48,7 @@ auto test_common_decl_collection(const sema::SymbolTableRegistry& registry,
                                  std::string_view                 name = "foo") -> void;
 
 template <typename Data>
-concept ASTData = traits::ASTNode<Data> || traits::ASTExplicitType<Data>;
+concept ASTData = ast::NodeData<Data> || ast::ExplicitTypeData<Data>;
 
 struct SemaTestContext {
     stdx::box<mod::MemoryLoader> loader;
@@ -226,7 +226,7 @@ auto test_collector_fail(std::string_view failing, Ds&&... expected_diagnostics)
 }
 
 // Walk through the iterable and find the first matching expression statement
-template <traits::ASTNode Node, typename NodeIterable>
+template <ast::NodeData Node, typename NodeIterable>
 [[nodiscard]] auto lookup_expression(const NodeIterable& nodes, const mod::Module& module) noexcept
     -> const Node& {
     for (const auto& body_id : nodes) {

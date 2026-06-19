@@ -22,7 +22,7 @@ class ASTDumper {
   public:
     explicit ASTDumper(const AST& ast, std::ostream& out) : out_{out}, ast_{ast} {}
 
-    template <traits::IndexableNodeID ID> auto dump(ID id) -> void {
+    template <IndexableNodeID ID> auto dump(ID id) -> void {
         ast_[id].visit([&](const auto& data) -> void { this->visit(id, data); });
     }
 

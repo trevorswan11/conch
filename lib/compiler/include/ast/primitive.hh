@@ -36,10 +36,6 @@ DECLARE_PRIMITIVE_EXPRESSION(F64Expression, f64)
 
 #undef DECLARE_PRIMITIVE_EXPRESSION
 
-} // namespace ast
-
-namespace traits {
-
 template <typename T> struct is_valued_primitive : std::false_type {};
 template <> struct is_valued_primitive<ast::StringExpression> : std::true_type {};
 template <> struct is_valued_primitive<ast::I32Expression> : std::true_type {};
@@ -55,10 +51,6 @@ template <> struct is_valued_primitive<ast::F64Expression> : std::true_type {};
 // A primitive node with its value embedded in the data
 template <typename T>
 concept ValuedPrimitive = is_valued_primitive<T>::value;
-
-} // namespace traits
-
-namespace ast {
 
 struct BoolExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)

@@ -46,12 +46,8 @@ struct Token {
 
 } // namespace syntax
 
-namespace traits {
-
 template <> struct SourceInfo<syntax::Token> {
     static auto get(const syntax::Token& t) -> SourceLocation { return {t.line, t.column}; }
 };
-
-} // namespace traits
 
 } // namespace ghoti

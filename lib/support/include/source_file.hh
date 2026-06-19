@@ -46,8 +46,8 @@ class SourceFile {
     MAKE_MOVE_ONLY(SourceFile)
 
     // Returns the trimmed relevant line in the source along with a caret to the column if possible
-    template <traits::Locateable T> [[nodiscard]] auto get_diagnostic_strings(const T& t) const {
-        return get_diagnostic_strings_at(traits::SourceInfo<T>::get(t));
+    template <Locateable T> [[nodiscard]] auto get_diagnostic_strings(const T& t) const {
+        return get_diagnostic_strings_at(SourceInfo<T>::get(t));
     }
 
     [[nodiscard]] constexpr operator std::string_view() const noexcept { return source_; }

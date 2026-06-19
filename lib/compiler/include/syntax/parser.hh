@@ -121,7 +121,7 @@ class Parser {
 
     [[nodiscard]] auto get_ast() noexcept -> ast ::AST& { return *ast_; }
 
-    template <traits::ASTNode N> [[nodiscard]] constexpr auto get_node(ast::NodeID id) -> const N& {
+    template <ast::NodeData N> [[nodiscard]] constexpr auto get_node(ast::NodeID id) -> const N& {
         return ast_->get_as<N>(id);
     }
 
@@ -129,25 +129,25 @@ class Parser {
     [[nodiscard]] auto get_location_of(ast::ExplicitTypeID id) -> SourceLocation;
 
     // Adds an expression to the ast and returns its handle
-    template <traits::ASTNode Data, typename... Args>
+    template <ast::NodeData Data, typename... Args>
     [[nodiscard]] constexpr auto add_expr(const syntax::Token& start_token, Args&&... args) {
         return add_node<ast::ExpressionHandle, Data>(start_token, std::forward<Args>(args)...);
     }
 
     // Adds a statement to the ast and returns its handle
-    template <traits::ASTNode Data, typename... Args>
+    template <ast::NodeData Data, typename... Args>
     [[nodiscard]] constexpr auto add_stmt(const syntax::Token& start_token, Args&&... args) {
         return add_node<ast::StatementHandle, Data>(start_token, std::forward<Args>(args)...);
     }
 
     // Adds a node to the ast and casts the result to the requested handle
-    template <typename Handle, traits::ASTNode Data, typename... Args>
+    template <typename Handle, ast::NodeData Data, typename... Args>
     [[nodiscard]] constexpr auto add_node(const syntax::Token& start_token, Args&&... args) {
         return Handle{ast_->add_node(start_token, Data{std::forward<Args>(args)...})};
     }
 
     // Helper for type-ast insertion, reducing a layer of call-site indirection
-    template <traits::ASTExplicitType Data, typename... Args>
+    template <ast::ExplicitTypeData Data, typename... Args>
     [[nodiscard]] constexpr auto
     add_type(const syntax::Token& start_token, ast::TypeModifier mod, Args&&... args) {
         return ast_->add_type(start_token, mod, Data{std::forward<Args>(args)...});

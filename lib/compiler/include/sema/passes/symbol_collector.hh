@@ -31,7 +31,7 @@ class SymbolCollector {
   public:
     static auto collect_symbols(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
-    template <traits::IndexableID ID> auto collect(ID id) -> void {
+    template <ast::IndexableID ID> auto collect(ID id) -> void {
         collecting_.ast[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
@@ -42,9 +42,9 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::ArrayExpression&) -> void;
     auto visit(ast::NodeID, const ast::CallExpression&) -> void;
     auto visit(ast::NodeID, const ast::DoWhileLoopExpression&) -> void;
-    template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
-    auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
-    auto visit(ast::NodeID, const ast::FunctionExpression&) -> void;
+    template <ast::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
+    auto                                visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
+    auto                                visit(ast::NodeID, const ast::FunctionExpression&) -> void;
     auto visit(ast::NodeID, const ast::IdentifierExpression&) -> void;
     auto visit(ast::NodeID, const ast::IfExpression&) -> void;
     auto visit(ast::NodeID, const ast::IndexExpression&) -> void;
@@ -75,10 +75,10 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::VoidExpression&) -> void;
     auto visit(ast::NodeID, const ast::UndefinedExpression&) -> void;
     auto visit(ast::NodeID, const ast::ModuleAccessExpression&) -> void;
-    template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
-    template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
-    auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
-    auto visit(ast::NodeID, ast::Discarded) noexcept -> void {}
+    template <ast::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
+    template <ast::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
+    auto                                visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
+    auto                                visit(ast::NodeID, ast::Discarded) noexcept -> void {}
 
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
     auto visit(ast::NodeID, const ast::BreakStatement&) -> void;

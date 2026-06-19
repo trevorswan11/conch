@@ -61,7 +61,7 @@ template <typename ValueType>
     return stdx::none;
 }
 
-template <traits::ValuedPrimitive Primitive>
+template <ValuedPrimitive Primitive>
 auto parse_primitive(syntax::Parser& parser) -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     using value_type = typename Primitive::value_type;

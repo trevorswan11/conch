@@ -26,7 +26,7 @@ template <> struct fmt::formatter<ghoti::ast::IdentifierExpression> {
     }
 };
 
-template <ghoti::traits::ValuedPrimitive Primitive> struct fmt::formatter<Primitive> {
+template <ghoti::ast::ValuedPrimitive Primitive> struct fmt::formatter<Primitive> {
     static constexpr auto parse(format_parse_context& ctx) noexcept { return ctx.begin(); }
 
     static auto format(const Primitive& p, format_context& ctx) {

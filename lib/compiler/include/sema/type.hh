@@ -326,9 +326,9 @@ class Type {
     explicit Type(types::Key key) noexcept : key_{key} {}
 
   private:
-    types::Key    key_;
+    types::Key     key_;
     stdx::opt_size symbol_table_idx_;
-    Data          data_;
+    Data           data_;
 
     // Initialization is restricted to the pool's arena exclusively
     friend class stdx::arena;

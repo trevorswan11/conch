@@ -14,22 +14,22 @@
 namespace ghoti::ast {
 
 #define X(Type) Type,
-using NodeData = stdx::variant<FOREACH_AST_NODE(X) Discarded>;
+using NodeVariant = stdx::variant<FOREACH_AST_NODE(X) Discarded>;
 #undef X
 
 #define AST_NODE_VISITOR_NOOP(Class, NodeType) \
     auto Class::visit(ghoti::ast::NodeID, const ghoti::ast::NodeType&) -> void {}
 
-using TypeData = stdx::variant<IdentifierExpression,
-                               ModuleAccessExpression,
-                               DotExpression,
-                               CallExpression,
-                               ExplicitFunctionType,
-                               ExplicitTypeID,
-                               StructExpression,
-                               EnumExpression,
-                               UnionExpression,
-                               ExplicitArrayType>;
+using TypeVariant = stdx::variant<IdentifierExpression,
+                                  ModuleAccessExpression,
+                                  DotExpression,
+                                  CallExpression,
+                                  ExplicitFunctionType,
+                                  ExplicitTypeID,
+                                  StructExpression,
+                                  EnumExpression,
+                                  UnionExpression,
+                                  ExplicitArrayType>;
 
 #define AST_TYPE_VISITOR_NOOP(Class, NodeType) \
     auto Class::visit(ghoti::ast::ExplicitTypeID, const ghoti::ast::NodeType&) -> void {}
