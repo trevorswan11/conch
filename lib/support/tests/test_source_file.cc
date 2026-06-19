@@ -23,7 +23,7 @@ namespace {
 
 auto test_diag_strings(const SourceLocation&          t,
                        std::string_view               expected_line,
-                       stdx::Option<std::string_view> expected_caret) {
+                       stdx::option<std::string_view> expected_caret) {
     const SourceFile file{source};
     const auto [ln, caret]{file.get_diagnostic_strings(t)};
 

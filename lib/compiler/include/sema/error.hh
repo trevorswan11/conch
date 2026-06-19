@@ -42,7 +42,7 @@ using Diagnostic  = Diagnostic<Error>;
 using Diagnostics = DiagnosticList<Diagnostic>;
 
 template <typename... Args>
-[[nodiscard]] constexpr auto make_sema_err(Args&&... args) -> stdx::Err<Diagnostic> {
+[[nodiscard]] constexpr auto make_sema_err(Args&&... args) -> stdx::err<Diagnostic> {
     return stdx::make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 

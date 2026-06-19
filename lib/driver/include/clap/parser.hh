@@ -13,13 +13,13 @@
 
 namespace ghoti::clap {
 
-using Parsed = stdx::Variant<stdx::Unit, cmd::Debug>;
+using Parsed = stdx::variant<stdx::monostate, cmd::Debug>;
 
 class Parser {
   public:
     Parser(i32 argc, char** argv, std::ostream& os = std::cerr, bool ensure_utf8 = true) noexcept;
 
-    auto               parse() -> stdx::Result<void, i32>;
+    auto               parse() -> stdx::result<void, i32>;
     [[nodiscard]] auto get_parsed() noexcept -> Parsed& { return parsed_; }
 
   private:

@@ -38,7 +38,7 @@ constexpr std::string_view TEST_FILENAME{"test.gh"};
 struct MockFile {
     std::string_view               path;
     std::string_view               source;
-    stdx::Option<std::string_view> name{}; // NOLINT
+    stdx::option<std::string_view> name{}; // NOLINT
 };
 
 // Tests the collected state of a minimal non-public implicit declaration
@@ -51,7 +51,7 @@ template <typename Data>
 concept ASTData = traits::ASTNode<Data> || traits::ASTExplicitType<Data>;
 
 struct SemaTestContext {
-    stdx::Box<mod::MemoryLoader> loader;
+    stdx::box<mod::MemoryLoader> loader;
     mod::ModuleManager           manager;
     sema::Analyzer               analyzer;
     mod::Module&                 root_mod;
@@ -86,7 +86,7 @@ struct SemaTestContext {
     template <typename SymbolData, typename Proj = std::identity>
     auto check_poisoned(std::string_view           name,
                         usize                      table_idx,
-                        stdx::Option<mod::Module&> module = stdx::none,
+                        stdx::option<mod::Module&> module = stdx::none,
                         Proj                       proj   = {}) -> void {
         const auto [sym, _, type]{get_type_sym_info<SymbolData>(name, table_idx, module, proj)};
         check_poisoned(sym, type);
@@ -104,7 +104,7 @@ struct SemaTestContext {
     template <typename SymbolData, typename Proj = std::identity>
     [[nodiscard]] auto get_type_sym_info(std::string_view           name,
                                          usize                      table_idx,
-                                         stdx::Option<mod::Module&> module = stdx::none,
+                                         stdx::option<mod::Module&> module = stdx::none,
                                          Proj                       proj   = {}) {
         auto        info{get_symbol<SymbolData>(name, table_idx)};
         auto&       enclosing{module.value_or(root_mod)};
@@ -117,7 +117,7 @@ struct SemaTestContext {
     template <typename SymbolData, typename TypeData, typename Proj = std::identity>
     [[nodiscard]] auto get_full_type_sym_info(std::string_view           name,
                                               usize                      table_idx,
-                                              stdx::Option<mod::Module&> module = stdx::none,
+                                              stdx::option<mod::Module&> module = stdx::none,
                                               Proj                       proj   = {}) {
         auto        info{get_type_sym_info<SymbolData>(name, table_idx, module, proj)};
         const auto& type_data =
@@ -129,7 +129,7 @@ struct SemaTestContext {
     template <typename SymbolData, ASTData TreeData, typename Proj = std::identity>
     [[nodiscard]] auto get_ast_sym_info(std::string_view           name,
                                         usize                      table_idx,
-                                        stdx::Option<mod::Module&> module = stdx::none,
+                                        stdx::option<mod::Module&> module = stdx::none,
                                         Proj                       proj   = {}) {
         auto        info{get_symbol<SymbolData>(name, table_idx)};
         auto&       enclosing{module.value_or(root_mod)};
@@ -142,7 +142,7 @@ struct SemaTestContext {
     template <typename SymbolData, ASTData TreeData, typename Proj = std::identity>
     [[nodiscard]] auto get_ast_type_sym_info(std::string_view           name,
                                              usize                      table_idx,
-                                             stdx::Option<mod::Module&> module = stdx::none,
+                                             stdx::option<mod::Module&> module = stdx::none,
                                              Proj                       proj   = {}) {
         auto        info{get_ast_sym_info<SymbolData, TreeData>(name, table_idx, module, proj)};
         auto&       enclosing{module.value_or(root_mod)};
@@ -155,7 +155,7 @@ struct SemaTestContext {
     template <typename SymbolData, ASTData TreeData, typename TypeData>
     [[nodiscard]] auto get_full_sym_info(std::string_view           name,
                                          usize                      table_idx,
-                                         stdx::Option<mod::Module&> module = stdx::none) {
+                                         stdx::option<mod::Module&> module = stdx::none) {
         auto        info{get_ast_type_sym_info<SymbolData, TreeData>(name, table_idx, module)};
         const auto& type_data =
             helpers::unwrap(std::get<3>(info).get_data().template as_opt<TypeData>());
@@ -164,10 +164,10 @@ struct SemaTestContext {
 
     // Returns the correct null terminated size for a string literal, defaulting to the root module
     auto get_string_literal_size(ast::ExpressionHandle      handle,
-                                 stdx::Option<mod::Module&> enclosing_mod = stdx::none) -> usize;
+                                 stdx::option<mod::Module&> enclosing_mod = stdx::none) -> usize;
 };
 
-using CtxIdxPair = std::pair<stdx::Box<SemaTestContext>, usize>;
+using CtxIdxPair = std::pair<stdx::box<SemaTestContext>, usize>;
 
 // Collects the assumed-syntactically-valid input and returns the analyzer and parent table index
 [[nodiscard]] auto collect(std::string_view input, const std::vector<MockFile>& imports = {})
@@ -190,7 +190,7 @@ template <std::same_as<MockFile>... Mocks>
 auto analyze(std::string_view root_path,
              std::ostream&    error_stream,
              std::string_view input,
-             Mocks&&... mocks) -> stdx::Box<SemaTestContext> {
+             Mocks&&... mocks) -> stdx::box<SemaTestContext> {
     auto ctx{stdx::make_box<SemaTestContext>(
         make_vector<MockFile>(std::forward<Mocks>(mocks)...), root_path, input, error_stream)};
     check_errors<syntax::Diagnostics>(ctx->root_mod);
@@ -203,9 +203,9 @@ auto analyze(std::string_view root_path,
 // Runs the entire Analyzer on the provided input and checks for errors
 template <std::same_as<MockFile>... Mocks>
 auto analyze_and_check(std::string_view root_path, std::string_view input, Mocks&&... mocks)
-    -> stdx::Box<SemaTestContext> {
+    -> stdx::box<SemaTestContext> {
     auto ctx{analyze(root_path, std::cerr, input, std::forward<Mocks>(mocks)...)};
-    REQUIRE_FALSE(ctx->root_mod.diagnostics.template is<stdx::Unit>());
+    REQUIRE_FALSE(ctx->root_mod.diagnostics.template is<stdx::monostate>());
     return ctx;
 }
 

@@ -63,6 +63,6 @@ constexpr Operator NULL_TERMINATED{":0", TokenType::NULL_TERMINATED};
 } // namespace operators
 
 [[nodiscard]] auto max_operator_length() noexcept -> usize;
-[[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
+[[nodiscard]] auto get_operator_opt(std::string_view sv) noexcept -> stdx::option<TokenType>;
 
 } // namespace ghoti::syntax

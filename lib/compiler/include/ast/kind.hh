@@ -62,7 +62,7 @@ enum class NodeKind : u8 {
     TEST_STATEMENT,
     USING_STATEMENT,
 
-    DISCARDED, // Represented by stdx::Unit
+    DISCARDED, // Represented by stdx::monostate
 };
 
 #define FOREACH_AST_EXPR(X)     \
@@ -124,7 +124,7 @@ enum class NodeKind : u8 {
     FOREACH_AST_EXPR(X)     \
     FOREACH_AST_STMT(X)
 
-using Discarded = stdx::Unit;
+using Discarded = stdx::monostate;
 
 #define FWD_DECLARE_NODE_X(NodeType) struct NodeType;
 FOREACH_AST_NODE(FWD_DECLARE_NODE_X)

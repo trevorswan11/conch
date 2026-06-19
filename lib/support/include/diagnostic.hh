@@ -86,30 +86,30 @@ namespace detail {
 
 // A decomposed diagnostic that contains all information for base formatting
 struct FormattableDiagnostic {
-    const stdx::Option<std::string>&     message;
-    const stdx::Option<SourceLocation>&  location;
+    const stdx::option<std::string>&     message;
+    const stdx::option<SourceLocation>&  location;
     std::string_view                     error_name;
-    const stdx::Option<DiagnosticLevel>& level;
+    const stdx::option<DiagnosticLevel>& level;
 };
 
 auto format_diagnostic(std::ostream&                    os,
                        const FormattableDiagnostic&     diag,
-                       const stdx::Option<std::string>& source_path,
-                       stdx::Option<bool>               in_terminal) -> std::ostream&;
+                       const stdx::option<std::string>& source_path,
+                       stdx::option<bool>               in_terminal) -> std::ostream&;
 
 } // namespace detail
 
-template <stdx::traits::ScopedEnum E> class Diagnostic {
+template <stdx::ScopedEnum E> class Diagnostic {
   public:
     explicit Diagnostic(E err) noexcept : error_{err} {}
     Diagnostic(E err, usize line, usize column) noexcept : loc_{{line, column}}, error_{err} {}
-    Diagnostic(stdx::Option<std::string> msg, E err, usize line, usize column) noexcept
+    Diagnostic(stdx::option<std::string> msg, E err, usize line, usize column) noexcept
         : message_{std::move(msg)}, loc_{{line, column}}, error_{err} {}
-    Diagnostic(stdx::Option<std::string> msg, E err) noexcept
+    Diagnostic(stdx::option<std::string> msg, E err) noexcept
         : message_{std::move(msg)}, error_{err} {}
 
     template <traits::Locateable T>
-    Diagnostic(stdx::Option<std::string> msg, E err, const T& t) noexcept
+    Diagnostic(stdx::option<std::string> msg, E err, const T& t) noexcept
         : message_{std::move(msg)}, loc_{traits::SourceInfo<T>::get(t)}, error_{err} {}
 
     template <traits::Locateable T>
@@ -125,8 +125,8 @@ template <stdx::traits::ScopedEnum E> class Diagnostic {
         : message_{std::move(other.message_)}, loc_{traits::SourceInfo<T>::get(t)},
           error_{other.error_} {}
 
-    [[nodiscard]] auto to_string(const stdx::Option<std::string>& source_path = stdx::none,
-                                 stdx::Option<bool> in_terminal = stdx::none) const -> std::string {
+    [[nodiscard]] auto to_string(const stdx::option<std::string>& source_path = stdx::none,
+                                 stdx::option<bool> in_terminal = stdx::none) const -> std::string {
         std::stringstream ss;
         detail::format_diagnostic(ss, to_formattable(), source_path, in_terminal);
         return ss.str();
@@ -137,7 +137,7 @@ template <stdx::traits::ScopedEnum E> class Diagnostic {
                level_ == other.level_;
     }
 
-    MAKE_GETTER(message, const stdx::Option<std::string>&)
+    MAKE_GETTER(message, const stdx::option<std::string>&)
     [[nodiscard]] auto to_formattable() const noexcept -> detail::FormattableDiagnostic {
         return {message_, loc_, magic_enum::enum_name(error_), level_};
     }
@@ -147,10 +147,10 @@ template <stdx::traits::ScopedEnum E> class Diagnostic {
     auto unset_level() noexcept -> void { level_.reset(); }
 
   private:
-    stdx::Option<std::string>     message_;
-    stdx::Option<SourceLocation>  loc_;
+    stdx::option<std::string>     message_;
+    stdx::option<SourceLocation>  loc_;
     E                             error_;
-    stdx::Option<DiagnosticLevel> level_{DiagnosticLevel::ERROR};
+    stdx::option<DiagnosticLevel> level_{DiagnosticLevel::ERROR};
 };
 
 namespace traits {
@@ -169,7 +169,7 @@ template <traits::DiagnosticType D> class DiagnosticList {
     MAKE_ITERATOR(Diagnostics, std::vector<D>, diagnostics_) // cppcheck-suppress syntaxError
 
   public:
-    explicit DiagnosticList(stdx::Option<bool> in_terminal = stdx::none) noexcept
+    explicit DiagnosticList(stdx::option<bool> in_terminal = stdx::none) noexcept
         : in_terminal_{in_terminal} {}
     ~DiagnosticList() = default;
 
@@ -185,13 +185,13 @@ template <traits::DiagnosticType D> class DiagnosticList {
 
     // Creates a new list with the same terminal behavior
     [[nodiscard]] auto create_new() const -> DiagnosticList { return DiagnosticList{in_terminal_}; }
-    [[nodiscard]] auto get_terminal_status() const noexcept -> stdx::Option<bool> {
+    [[nodiscard]] auto get_terminal_status() const noexcept -> stdx::option<bool> {
         return in_terminal_;
     }
 
   private:
     Diagnostics        diagnostics_;
-    stdx::Option<bool> in_terminal_;
+    stdx::option<bool> in_terminal_;
 };
 
 } // namespace ghoti

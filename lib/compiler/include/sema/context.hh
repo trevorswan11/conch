@@ -25,7 +25,7 @@ struct Context {
     TypePool&            pool;
     Diagnostics          diagnostics;
     std::ostream&        error_stream;
-    stdx::OptSize        prelude_index;
+    stdx::opt_size        prelude_index;
 
     Context(mod::ModuleManager&  modules,
             SymbolTableRegistry& registry,
@@ -47,7 +47,7 @@ struct Context {
     auto operator=(Context&&) -> Context&            = delete;
 
     // Returns false if the passed result was an error type, which is forwarded to the diagnostics
-    template <typename T = void> auto try_result(stdx::Result<T, Diagnostic>&& result) -> bool {
+    template <typename T = void> auto try_result(stdx::result<T, Diagnostic>&& result) -> bool {
         if (!result) {
             diagnostics.emplace_back(result.error());
             return false;

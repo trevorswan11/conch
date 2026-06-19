@@ -15,8 +15,8 @@ namespace ghoti::detail {
 
 auto format_diagnostic(std::ostream&                    os,
                        const FormattableDiagnostic&     diag,
-                       const stdx::Option<std::string>& source_path,
-                       stdx::Option<bool>               in_terminal) -> std::ostream& {
+                       const stdx::option<std::string>& source_path,
+                       stdx::option<bool>               in_terminal) -> std::ostream& {
     const auto tty{in_terminal.value_or(stdx::is_tty())};
 
     // The source and location play nicely with one another

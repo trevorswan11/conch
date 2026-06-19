@@ -79,7 +79,7 @@ auto Symbol::is_public(const mod::Module& module) const noexcept -> bool {
 }
 
 auto SymbolTable::insert(std::string_view name, const mod::Module& module, const Symbol::Data& data)
-    -> stdx::Result<void, Diagnostic> {
+    -> stdx::result<void, Diagnostic> {
     // Reserved identifier use is impossible due to a parser invariant
     PROFILE_FUNCTION();
     auto [it, inserted]{symbols_.try_emplace(name, Symbol{name, data}, symbols_.size())};
@@ -106,7 +106,7 @@ auto SymbolTable::insert_unchecked(std::string_view name, const Symbol::Data& da
 auto SymbolTableRegistry::insert_into(usize               table_idx,
                                       const mod::Module&  module,
                                       std::string_view    name,
-                                      const Symbol::Data& data) -> stdx::Result<void, Diagnostic> {
+                                      const Symbol::Data& data) -> stdx::result<void, Diagnostic> {
     if (auto table{get_opt(table_idx)}) { return table->insert(name, module, data); }
     return make_sema_err(Error::INVALID_TABLE_IDX);
 }
@@ -115,7 +115,7 @@ auto SymbolTableRegistry::insert_into(usize               table_idx,
                                                      const mod::Module&      module,
                                                      std::string_view        name,
                                                      const Symbol::Data&     data) noexcept
-    -> stdx::Result<void, Diagnostic> {
+    -> stdx::result<void, Diagnostic> {
     PROFILE_FUNCTION();
     for (const auto idx : stack | std::views::take(stack.size() - 1)) {
         if (const auto symbol{get(idx).get_opt(name)}) {

@@ -35,7 +35,7 @@ auto digit_in_base(char c, Base base) noexcept -> bool {
 
 namespace token_type {
 
-auto to_base(TokenType tt) noexcept -> stdx::Option<Base> {
+auto to_base(TokenType tt) noexcept -> stdx::option<Base> {
     switch (tt) {
     case TokenType::INT_2:
     case TokenType::LINT_2:
@@ -65,7 +65,7 @@ auto to_base(TokenType tt) noexcept -> stdx::Option<Base> {
     }
 }
 
-auto misc_from_char(char c) noexcept -> stdx::Option<TokenType> {
+auto misc_from_char(char c) noexcept -> stdx::option<TokenType> {
     switch (c) {
     case ',': return TokenType::COMMA;
     case ':': return TokenType::COLON;

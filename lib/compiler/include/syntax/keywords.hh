@@ -62,7 +62,7 @@ constexpr Keyword UNDEFINED{"undefined", TokenType::UNDEFINED};
 
 } // namespace keywords
 
-[[nodiscard]] auto get_keyword_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
+[[nodiscard]] auto get_keyword_opt(std::string_view sv) noexcept -> stdx::option<TokenType>;
 
 constexpr std::array ALL_PRIMITIVES{
     keywords::I32.type,

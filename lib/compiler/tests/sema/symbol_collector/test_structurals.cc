@@ -18,7 +18,7 @@ namespace ghoti::tests {
 namespace {
 
 auto test_user_type(std::string_view input, sema::TypeKind kind, usize expected_reg_count)
-    -> stdx::Box<helpers::SemaTestContext> {
+    -> stdx::box<helpers::SemaTestContext> {
     auto [ctx, idx]{helpers::collect_and_check(input)};
     const auto& registry{ctx->analyzer.get_registry()};
     REQUIRE(registry.size() == expected_reg_count);

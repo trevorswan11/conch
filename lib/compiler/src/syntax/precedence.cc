@@ -12,11 +12,11 @@ namespace ghoti::syntax {
 namespace {
 
 // NOLINTBEGIN
-using MapPair = std::pair<TokenType, stdx::Option<Binding>>;
+using MapPair = std::pair<TokenType, stdx::option<Binding>>;
 constexpr Binding assignment_binding{Precedence::ASSIGNMENT, true};
 
-constexpr auto ALL_BINDINGS{stdx::fixed::EnumMap<TokenType, stdx::Option<Binding>>::from(
-    stdx::Option<Binding>{stdx::none},
+constexpr auto ALL_BINDINGS{stdx::fixed::enum_map<TokenType, stdx::option<Binding>>::from(
+    stdx::option<Binding>{stdx::none},
     MapPair{TokenType::PLUS, Precedence::ADD_SUB},
     MapPair{TokenType::MINUS, Precedence::ADD_SUB},
     MapPair{TokenType::STAR, Precedence::MUL_DIV},
@@ -59,7 +59,7 @@ constexpr auto ALL_BINDINGS{stdx::fixed::EnumMap<TokenType, stdx::Option<Binding
 
 } // namespace
 
-auto Binding::try_get_from(TokenType tt) noexcept -> stdx::Option<Binding> {
+auto Binding::try_get_from(TokenType tt) noexcept -> stdx::option<Binding> {
     return ALL_BINDINGS[tt];
 }
 

@@ -58,7 +58,7 @@ class SourceFile {
 
   private:
     [[nodiscard]] auto get_diagnostic_strings_at(const SourceLocation& loc) const
-        -> std::pair<std::string_view, stdx::Option<std::string>>;
+        -> std::pair<std::string_view, stdx::option<std::string>>;
 
   private:
     std::string source_;

@@ -9,8 +9,8 @@
 
 namespace ghoti::driver {
 
-auto launch(i32 argc, char** argv) -> stdx::Result<void, i32> {
-    stdx::Profiler profiler{argv[0]};
+auto launch(i32 argc, char** argv) -> stdx::result<void, i32> {
+    stdx::profiler profiler{argv[0]};
     clap::Parser   parser{argc, argv};
     TRY(parser.parse());
 

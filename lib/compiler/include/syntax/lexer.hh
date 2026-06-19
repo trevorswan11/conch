@@ -81,7 +81,7 @@ class Lexer {
 
     // Reads n characters from the input stream
     auto               read_character(u8 n = 1) noexcept -> void;
-    [[nodiscard]] auto read_operator() const noexcept -> stdx::Option<Token>;
+    [[nodiscard]] auto read_operator() const noexcept -> stdx::option<Token>;
     auto               read_ident(bool builtin) noexcept -> std::string_view;
     auto               read_number() noexcept -> Token;
     auto               read_escape() noexcept -> char;

@@ -21,7 +21,7 @@ auto MemoryLoader::add(const std::filesystem::path& path, const std::string& con
 }
 
 auto MemoryLoader::load(const std::filesystem::path& path)
-    -> stdx::Result<std::string, Diagnostic> {
+    -> stdx::result<std::string, Diagnostic> {
     PROFILE_FUNCTION();
     auto normalized{normalize(path)};
     ASSERT(normalized);

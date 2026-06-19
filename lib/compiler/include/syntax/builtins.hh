@@ -59,7 +59,7 @@ constexpr auto ALL_TOKEN_TYPES{
 
 } // namespace builtins
 
-[[nodiscard]] auto get_builtin_opt(TokenType tt) noexcept -> stdx::Option<std::string_view>;
-[[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> stdx::Option<TokenType>;
+[[nodiscard]] auto get_builtin_opt(TokenType tt) noexcept -> stdx::option<std::string_view>;
+[[nodiscard]] auto get_builtin_opt(std::string_view sv) noexcept -> stdx::option<TokenType>;
 
 } // namespace ghoti::syntax

@@ -29,7 +29,7 @@ struct Binding {
     Precedence precedence;
     bool       right_assoc{false};
 
-    [[nodiscard]] static auto try_get_from(TokenType tt) noexcept -> stdx::Option<Binding>;
+    [[nodiscard]] static auto try_get_from(TokenType tt) noexcept -> stdx::option<Binding>;
 };
 
 } // namespace ghoti::syntax

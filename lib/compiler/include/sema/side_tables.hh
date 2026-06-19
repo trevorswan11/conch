@@ -15,7 +15,7 @@ namespace ghoti::sema {
 namespace detail {
 
 // An ID-indexable side table containing attached data
-template <traits::IndexableID ID, stdx::traits::Option T> struct SideTable {
+template <traits::IndexableID ID, stdx::Option T> struct SideTable {
     std::vector<T> values;
 
     // Allows a handle wrapper of a node to be used for raw ID-based tables
@@ -32,11 +32,11 @@ template <traits::IndexableID ID, stdx::traits::Option T> struct SideTable {
 class Type;
 
 struct SideTables {
-    detail::SideTable<ast::NodeID, stdx::Option<sema::Type&>>         node_types;
-    detail::SideTable<ast::ExplicitTypeID, stdx::Option<sema::Type&>> explicit_types;
+    detail::SideTable<ast::NodeID, stdx::option<sema::Type&>>         node_types;
+    detail::SideTable<ast::ExplicitTypeID, stdx::option<sema::Type&>> explicit_types;
 
     // Indexed by the match arms' pattern
-    detail::SideTable<ast::NodeID, stdx::Option<sema::Type&>> match_arm_types;
+    detail::SideTable<ast::NodeID, stdx::option<sema::Type&>> match_arm_types;
 
     // Allocates `size` slots in all backing vectors
     constexpr auto resize(const ast::AST::DataPoolSizes& sizes) -> void {

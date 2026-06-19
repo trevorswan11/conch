@@ -45,7 +45,7 @@ enum class ModuleState : u8 {
     ERRORED,
 };
 
-using DiagnosticListVariant = stdx::Variant<stdx::Unit, syntax::Diagnostics, sema::Diagnostics>;
+using DiagnosticListVariant = stdx::variant<stdx::monostate, syntax::Diagnostics, sema::Diagnostics>;
 
 struct Module {
     std::filesystem::path path;
@@ -53,10 +53,10 @@ struct Module {
     SourceFile            source;
     ast::AST              ast;
     sema::SideTables      sema_side_tables;
-    stdx::OptSize         root_table_idx;
+    stdx::opt_size         root_table_idx;
     ModuleState           state{ModuleState::PARSED};
 
-    DiagnosticListVariant diagnostics{stdx::Unit{}};
+    DiagnosticListVariant diagnostics{stdx::monostate{}};
 
     Module(std::filesystem::path path,
            std::filesystem::path parent_path,
@@ -68,7 +68,7 @@ struct Module {
 
     // Errors out the module regardless of previous state and emplaces the diagnostics
     template <typename DiagList>
-        requires(!std::same_as<std::remove_cvref_t<DiagList>, stdx::Unit>)
+        requires(!std::same_as<std::remove_cvref_t<DiagList>, stdx::monostate>)
     auto error_out(DiagList&& list, ModuleState error_state) noexcept -> mod::ModuleState {
         state = error_state;
         diagnostics.emplace<DiagList>(std::forward<DiagList>(list));
@@ -177,27 +177,27 @@ class ModuleManager {
     // Asserts that the path is relative and its parent is absolute
     [[nodiscard]] auto try_get_file_module(const std::filesystem::path& path,
                                            const std::filesystem::path& parent_path = {})
-        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::result<gsl::not_null<Module*>, Diagnostic>;
 
     // Attempts to load the module from the loader and parse its contents
     [[nodiscard]] auto try_get_library_module(std::string_view name)
-        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::result<gsl::not_null<Module*>, Diagnostic>;
 
     // Adds a library module and its underlying path to the lookup table
     [[nodiscard]] auto add_library_module(std::string_view name, const std::filesystem::path& path)
-        -> stdx::Result<void, Diagnostic>;
+        -> stdx::result<void, Diagnostic>;
 
   private:
     [[nodiscard]] auto try_get(const std::filesystem::path& path)
-        -> stdx::Result<gsl::not_null<Module*>, Diagnostic>;
+        -> stdx::result<gsl::not_null<Module*>, Diagnostic>;
 
   private:
     SourceLoader&                                                          loader_;
-    ankerl::unordered_dense::map<std::filesystem::path, stdx::Box<Module>> modules_;
+    ankerl::unordered_dense::map<std::filesystem::path, stdx::box<Module>> modules_;
 
     // Maps physical ghoti modules to their path on disk
     ankerl::unordered_dense::
-        map<std::string, std::filesystem::path, stdx::hash::StringTransparentHash, std::equal_to<>>
+        map<std::string, std::filesystem::path, stdx::hash::string_transparent_hash, std::equal_to<>>
             module_lut_;
 };
 

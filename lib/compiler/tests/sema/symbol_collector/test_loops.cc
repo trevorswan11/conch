@@ -18,7 +18,7 @@ namespace ghoti::tests {
 namespace {
 
 [[nodiscard]] auto test_loop(std::string_view input, usize expected_reg_count, usize loop_block_idx)
-    -> stdx::Box<helpers::SemaTestContext> {
+    -> stdx::box<helpers::SemaTestContext> {
     auto [ctx, idx]{helpers::collect_and_check(input)};
 
     const auto& registry{ctx->analyzer.get_registry()};

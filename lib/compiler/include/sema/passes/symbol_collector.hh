@@ -89,7 +89,7 @@ class SymbolCollector {
     auto visit(ast::NodeID, const ast::ExpressionStatement&) -> void;
 
     [[nodiscard]] auto collect_import_payload(const ast::ImportStatement& import_stmt)
-        -> std::pair<std::string_view, stdx::Result<gsl::not_null<mod::Module*>, mod::Diagnostic>>;
+        -> std::pair<std::string_view, stdx::result<gsl::not_null<mod::Module*>, mod::Diagnostic>>;
 
     auto visit(ast::NodeID, const ast::ImportStatement&) -> void;
     auto visit(ast::NodeID, const ast::ReturnStatement&) -> void;
@@ -132,7 +132,7 @@ class SymbolCollector {
     usize               table_idx_;
     SymbolTableStack    table_stack_;
     Context&            ctx_;
-    stdx::Option<Type&> last_type_;
+    stdx::option<Type&> last_type_;
 
     DefaultCounter in_expr_scope_;
     DefaultCounter in_function_scope_;

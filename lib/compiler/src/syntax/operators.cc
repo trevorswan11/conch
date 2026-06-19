@@ -67,7 +67,7 @@ auto max_operator_length() noexcept -> usize {
         ->first.size();
 }
 
-auto get_operator_opt(std::string_view sv) noexcept -> stdx::Option<TokenType> {
+auto get_operator_opt(std::string_view sv) noexcept -> stdx::option<TokenType> {
     return ALL_OPERATORS.get_opt(sv).materialize();
 }
 

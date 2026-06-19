@@ -27,7 +27,7 @@ TEST_CASE("Error with no args") {
 TEST_CASE("Ast dump parser") {
     auto         args{helpers::MockArgv{{"ghoti"s, "debug"s}}};
     clap::Parser parser{args.argc(), args.argv(), std::cerr, false};
-    CHECK(parser.get_parsed().is<stdx::Unit>());
+    CHECK(parser.get_parsed().is<stdx::monostate>());
     REQUIRE(parser.parse());
     CHECK(parser.get_parsed().is<cmd::Debug>());
 }
