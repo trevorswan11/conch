@@ -84,7 +84,7 @@ auto SemaTestContext::check_poisoned(const sema::Symbol& sym, const sema::Type& 
 }
 
 auto SemaTestContext::get_string_literal_size(ast::ExpressionHandle      handle,
-                                              stdx::Option<mod::Module&> enclosing_mod) -> usize {
+                                              stdx::option<mod::Module&> enclosing_mod) -> usize {
     const auto& module{enclosing_mod.value_or(root_mod)};
     const auto& str_expr{helpers::unwrap(module.ast.get_as_opt<ast::StringExpression>(handle))};
     return str_expr.value.size() + 1;

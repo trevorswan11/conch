@@ -60,7 +60,7 @@ constexpr auto ALL_KEYWORDS{stdx::fixed::make_hash_map(keywords::FN,
 
 } // namespace
 
-auto get_keyword_opt(std::string_view sv) noexcept -> stdx::Option<TokenType> {
+auto get_keyword_opt(std::string_view sv) noexcept -> stdx::option<TokenType> {
     return ALL_KEYWORDS.get_opt(sv).materialize();
 }
 

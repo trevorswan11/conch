@@ -227,9 +227,9 @@ class ExplicitTypeID {
 
 } // namespace ghoti
 
-namespace stdx::traits {
+namespace stdx {
 
-template <> struct Nullable<ghoti::ast::NodeID> {
+template <> struct nullable<ghoti::ast::NodeID> {
     [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::NodeID {
         return ghoti::ast::NodeID::make_invalid();
     }
@@ -239,7 +239,7 @@ template <> struct Nullable<ghoti::ast::NodeID> {
     }
 };
 
-template <> struct Nullable<ghoti::ast::ExplicitTypeID> {
+template <> struct nullable<ghoti::ast::ExplicitTypeID> {
     [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::ExplicitTypeID {
         return ghoti::ast::ExplicitTypeID::make_invalid();
     }
@@ -249,4 +249,4 @@ template <> struct Nullable<ghoti::ast::ExplicitTypeID> {
     }
 };
 
-} // namespace stdx::traits
+} // namespace stdx

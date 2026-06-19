@@ -30,8 +30,8 @@ namespace ghoti::mod {
 
 auto format_module_diagnostic(std::ostream&                        os, // NOLINT
                               const detail::FormattableDiagnostic& diag,
-                              stdx::Option<const mod::Module&>     module,
-                              stdx::Option<bool>                   in_terminal) -> std::ostream& {
+                              stdx::option<const mod::Module&>     module,
+                              stdx::option<bool>                   in_terminal) -> std::ostream& {
     const auto tty{in_terminal.value_or(stdx::is_tty())};
 
     // Without a module, there is no source path and formatting is done trivially
@@ -59,14 +59,14 @@ auto Module::print_diagnostics(std::ostream& os) const -> void {
                     << "\n";
             }
         },
-        [](const stdx::Unit&) -> void {
-            UNREACHABLE("This function should've never been called with stdx::Unit");
+        [](const stdx::monostate&) -> void {
+            UNREACHABLE("This function should've never been called with stdx::monostate");
         });
 }
 
 auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
                                         const std::filesystem::path& parent_path)
-    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::result<gsl::not_null<Module*>, Diagnostic> {
     PROFILE_FUNCTION();
     ASSERT((parent_path.empty() || parent_path.is_absolute()) &&
            "Parent path must be absolute or empty");
@@ -81,7 +81,7 @@ auto ModuleManager::try_get_file_module(const std::filesystem::path& path,
 }
 
 auto ModuleManager::try_get_library_module(std::string_view name)
-    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::result<gsl::not_null<Module*>, Diagnostic> {
     PROFILE_FUNCTION();
     auto it{module_lut_.find(name)};
     if (it == module_lut_.end()) {
@@ -91,7 +91,7 @@ auto ModuleManager::try_get_library_module(std::string_view name)
 }
 
 auto ModuleManager::add_library_module(std::string_view name, const std::filesystem::path& path)
-    -> stdx::Result<void, Diagnostic> {
+    -> stdx::result<void, Diagnostic> {
     PROFILE_FUNCTION();
     const auto normalized{loader_.normalize(path)};
     if (!normalized) { return make_mod_err(normalized.error()); }
@@ -111,7 +111,7 @@ auto ModuleManager::add_library_module(std::string_view name, const std::filesys
 }
 
 auto ModuleManager::try_get(const std::filesystem::path& path)
-    -> stdx::Result<gsl::not_null<Module*>, Diagnostic> {
+    -> stdx::result<gsl::not_null<Module*>, Diagnostic> {
     // Prevent re-parsing by checking the map, safe as pointers are stable
     PROFILE_FUNCTION();
     if (auto it{modules_.find(path)}; it != modules_.end()) { return it->second.get(); }

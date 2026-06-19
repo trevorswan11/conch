@@ -259,8 +259,8 @@ enum class IntegerCategory : u8 {
     }
 }
 
-[[nodiscard]] auto to_base(TokenType tt) noexcept -> stdx::Option<Base>;
-[[nodiscard]] auto misc_from_char(char c) noexcept -> stdx::Option<TokenType>;
+[[nodiscard]] auto to_base(TokenType tt) noexcept -> stdx::option<Base>;
+[[nodiscard]] auto misc_from_char(char c) noexcept -> stdx::option<TokenType>;
 
 [[nodiscard]] constexpr auto is_i32(TokenType tt) noexcept -> bool {
     return TokenType::INT_2 <= tt && tt <= TokenType::INT_16;
@@ -308,7 +308,7 @@ struct TypedIdentifier {
     TokenType        type;
 };
 
-// Helper for ADL tuple get in stdx::fixed::HashMap
+// Helper for ADL tuple get in stdx::fixed::hash_map
 template <std::size_t I>
 [[nodiscard]] constexpr auto get(const syntax::TypedIdentifier& typed) noexcept -> auto& {
     if constexpr (I == 0) {
@@ -325,7 +325,7 @@ template <> struct ankerl::unordered_dense::hash<ghoti::syntax::TypedIdentifier>
     using TypedIdentifier = ghoti::syntax::TypedIdentifier;
 
     [[nodiscard]] auto operator()(const TypedIdentifier& type) const noexcept {
-        stdx::hash::Hasher hasher{type.type};
+        stdx::hash::hasher hasher{type.type};
         hasher.combine(type.name);
         return hasher.finalize();
     }

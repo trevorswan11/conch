@@ -18,10 +18,10 @@ class MemoryLoader final : public SourceLoader {
     auto add(const std::filesystem::path& path, const std::string& content) -> void;
 
     [[nodiscard]] auto load(const std::filesystem::path& path)
-        -> stdx::Result<std::string, Diagnostic> override;
+        -> stdx::result<std::string, Diagnostic> override;
 
     [[nodiscard]] auto normalize(const std::filesystem::path& path)
-        -> stdx::Result<std::filesystem::path, Error> override {
+        -> stdx::result<std::filesystem::path, Error> override {
         return path.lexically_normal();
     }
 

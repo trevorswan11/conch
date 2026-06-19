@@ -94,7 +94,7 @@ class TypeResolver {
         }
 
         // Only returns none when there are no types in the stack
-        [[nodiscard]] auto peek() const noexcept -> stdx::Option<Type&> {
+        [[nodiscard]] auto peek() const noexcept -> stdx::option<Type&> {
             if (stack_.empty()) { return stdx::none; }
             return *stack_.back();
         }
@@ -133,7 +133,7 @@ class TypeResolver {
     [[nodiscard]] auto resolve_builtin_call(ID                            id,
                                             const ast::CallExpression&    call,
                                             const types::BuiltinFunction& builtin)
-        -> stdx::Result<void, Diagnostic>;
+        -> stdx::result<void, Diagnostic>;
 
     auto resolve_call_args(gsl::span<const ast::CallExpression::Argument> args) -> ResolveResult;
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::CallExpression::Argument& arg)
@@ -148,7 +148,7 @@ class TypeResolver {
     // Returns the same type buffer that it was passed when resolution was successful
     [[nodiscard]] auto resolve_members(gsl::span<Type*>                   buf,
                                        gsl::span<const ast::MemberHandle> members)
-        -> stdx::Option<gsl::span<Type*>>;
+        -> stdx::option<gsl::span<Type*>>;
     template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
@@ -170,8 +170,8 @@ class TypeResolver {
     resolve_structural_access(Type&                          object_type,
                               ast::IdentifierHandle          member,
                               SourceLocation                 object_location,
-                              stdx::Option<std::string_view> object_name = stdx::none)
-        -> stdx::Result<gsl::not_null<Type*>, Diagnostic>;
+                              stdx::option<std::string_view> object_name = stdx::none)
+        -> stdx::result<gsl::not_null<Type*>, Diagnostic>;
 
     // Retrieve's the rightmost identifier name from the accessor
     [[nodiscard]] auto get_rightmost_name(ast::OuterAccessHandle) const noexcept
@@ -183,16 +183,16 @@ class TypeResolver {
 
     [[nodiscard]] auto validate_struct_initializer(ast::NodeID,
                                                    const ast::InitializerExpression&,
-                                                   Type&) -> stdx::Result<void, Diagnostic>;
+                                                   Type&) -> stdx::result<void, Diagnostic>;
 
     auto visit(ast::NodeID, const ast::InitializerExpression&) -> void;
     auto visit(ast::NodeID, const ast::LabelExpression&) -> void;
 
     [[nodiscard]] auto validate_enum_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> stdx::Option<Diagnostic>;
+        -> stdx::option<Diagnostic>;
 
     [[nodiscard]] auto validate_union_arms(ast::NodeID, const ast::MatchExpression&, Type&)
-        -> stdx::Option<Diagnostic>;
+        -> stdx::option<Diagnostic>;
 
     auto visit(ast::NodeID, const ast::MatchExpression&) -> void;
     auto visit(ast::NodeID, const ast::ReferenceExpression&) -> void;
@@ -225,9 +225,9 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
 
     // Returns `true` if the resolution was successful
-    [[nodiscard]] auto resolve_control_flow_label(stdx::Option<ast::IdentifierHandle> label,
+    [[nodiscard]] auto resolve_control_flow_label(stdx::option<ast::IdentifierHandle> label,
                                                   std::string_view                    stmt_name)
-        -> stdx::Result<stdx::Option<Symbol&>, Diagnostic>;
+        -> stdx::result<stdx::option<Symbol&>, Diagnostic>;
 
     auto visit(ast::NodeID, const ast::BreakStatement&) -> void;
     auto visit(ast::NodeID, const ast::ContinueStatement&) -> void;
@@ -253,8 +253,8 @@ class TypeResolver {
     auto visit(ast::ExplicitTypeID, const ast::ExplicitArrayType&) -> void;
 
     // Looks up the symbol by name in the current index ONLY. Changes no state on failure
-    auto resolve_symbol_info(ast::IdentifierHandle handle, stdx::Option<SymbolKind> kind)
-        -> stdx::Option<Symbol&>;
+    auto resolve_symbol_info(ast::IdentifierHandle handle, stdx::option<SymbolKind> kind)
+        -> stdx::option<Symbol&>;
 
     TypeResolver(mod::Module& resolving, Context& ctx)
         : resolving_{resolving}, table_idx_{*resolving.root_table_idx}, ctx_{ctx} {
@@ -276,7 +276,7 @@ class TypeResolver {
     StructuralValidator union_validator_;
 
     Context&            ctx_;
-    stdx::Option<Type&> last_type_;
+    stdx::option<Type&> last_type_;
 };
 
 } // namespace ghoti::sema

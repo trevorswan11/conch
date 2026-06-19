@@ -25,8 +25,8 @@ namespace ghoti::syntax {
 
 class Parser {
   public:
-    using PrefixFn = stdx::Result<ast::ExpressionHandle, Diagnostic> (*)(Parser&);
-    using InfixFn  = stdx::Result<ast::ExpressionHandle, Diagnostic> (*)(Parser&,
+    using PrefixFn = stdx::result<ast::ExpressionHandle, Diagnostic> (*)(Parser&);
+    using InfixFn  = stdx::result<ast::ExpressionHandle, Diagnostic> (*)(Parser&,
                                                                         ast::ExpressionHandle);
 
     class Checkpoint {
@@ -84,40 +84,40 @@ class Parser {
     }
 
     // Advances the cursor tokens only if the expected token type matches the actual peek token.
-    [[nodiscard]] auto expect_peek(TokenType expected) -> stdx::Result<void, Diagnostic>;
+    [[nodiscard]] auto expect_peek(TokenType expected) -> stdx::result<void, Diagnostic>;
 
     // Checks for a semicolon in either the current or peak token and advances state accordingly
     //
     // Only use this over `expect_peek` when a potentially-block expr has just been parsed
-    [[nodiscard]] auto expect_semicolon() -> stdx::Result<void, Diagnostic>;
+    [[nodiscard]] auto expect_semicolon() -> stdx::result<void, Diagnostic>;
 
     // Indiscriminately returns an error citing the peek token.
     [[nodiscard]] auto peek_error(TokenType expected) -> Diagnostic;
 
     [[nodiscard]] auto get_current_precedence() const noexcept
-        -> std::pair<Precedence, stdx::Option<Binding>>;
+        -> std::pair<Precedence, stdx::option<Binding>>;
     [[nodiscard]] auto get_peek_precedence() const noexcept
-        -> std::pair<Precedence, stdx::Option<Binding>>;
+        -> std::pair<Precedence, stdx::option<Binding>>;
 
     [[nodiscard]] auto parse_statement(SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
-        -> stdx::Result<ast::StatementHandle, Diagnostic>;
+        -> stdx::result<ast::StatementHandle, Diagnostic>;
     [[nodiscard]] auto parse_expression(Precedence precedence = Precedence::LOWEST)
-        -> stdx::Result<ast::ExpressionHandle, Diagnostic>;
+        -> stdx::result<ast::ExpressionHandle, Diagnostic>;
 
     // Assumes that the current token is looking at the start of the expression.
     // The resulting statement can only be a jump, block, or expression statement.
     [[nodiscard]] auto
     parse_restricted_statement(Error error, SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
-        -> stdx::Result<ast::StatementHandle, Diagnostic>;
+        -> stdx::result<ast::StatementHandle, Diagnostic>;
 
     // Parses a restricted statement only if an else token is currently looked at.
     [[nodiscard]] auto
     try_parse_restricted_alternate(Error             error,
                                    SemicolonBehavior behavior = SemicolonBehavior::REQUIRE)
-        -> stdx::Result<stdx::Option<ast::StatementHandle>, Diagnostic>;
+        -> stdx::result<stdx::option<ast::StatementHandle>, Diagnostic>;
 
-    static auto get_prefix_fn_opt(TokenType tt) noexcept -> stdx::Option<PrefixFn>;
-    static auto get_poll_infix_fn_opt(TokenType tt) noexcept -> stdx::Option<InfixFn>;
+    static auto get_prefix_fn_opt(TokenType tt) noexcept -> stdx::option<PrefixFn>;
+    static auto get_poll_infix_fn_opt(TokenType tt) noexcept -> stdx::option<InfixFn>;
 
     [[nodiscard]] auto get_ast() noexcept -> ast ::AST& { return *ast_; }
 
@@ -166,7 +166,7 @@ class Parser {
     Lexer                   lexer_;
     Token                   current_token_;
     Token                   peek_token_;
-    stdx::Option<ast::AST&> ast_;
+    stdx::option<ast::AST&> ast_;
 };
 
 } // namespace ghoti::syntax

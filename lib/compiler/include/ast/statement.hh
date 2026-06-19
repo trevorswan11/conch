@@ -28,22 +28,22 @@ struct BlockStatement {
     Statements statements;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct BreakStatement {
-    stdx::Option<IdentifierHandle> label;
-    stdx::Option<ExpressionHandle> expression;
+    stdx::option<IdentifierHandle> label;
+    stdx::option<ExpressionHandle> expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct ContinueStatement {
-    stdx::Option<IdentifierHandle> label;
+    stdx::option<IdentifierHandle> label;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 enum class DeclModifiers : u8 {
@@ -59,12 +59,12 @@ MAKE_ENUM_OPERATORS(DeclModifiers)
 
 struct DeclStatement {
     IdentifierHandle               name;
-    stdx::Option<ExplicitTypeID>   explicit_type;
-    stdx::Option<ExpressionHandle> value;
+    stdx::option<ExplicitTypeID>   explicit_type;
+    stdx::option<ExpressionHandle> value;
     DeclModifiers                  modifiers;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 
     [[nodiscard]] auto has_modifier(DeclModifiers flag) const noexcept -> bool {
         return modifiers_has(modifiers, flag);
@@ -80,53 +80,53 @@ struct DeferStatement {
     StatementHandle deferred;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct DiscardStatement {
     ExpressionHandle discarded;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct ExpressionStatement {
     ExpressionHandle expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser, syntax::SemicolonBehavior behavior)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 class AST;
 
 struct ImportStatement {
     ImportPayloadHandle            payload;
-    stdx::Option<IdentifierHandle> alias;
+    stdx::option<IdentifierHandle> alias;
 
     [[nodiscard]] static constexpr auto is_public(ast::NodeID id) noexcept -> bool {
         return id.get_token_type() == syntax::TokenType::PUBLIC;
     }
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 
     [[nodiscard]] auto get_name(const AST& tree) const noexcept
         -> std::pair<ast::IdentifierHandle, std::string_view>;
 };
 
 struct ReturnStatement {
-    stdx::Option<ExpressionHandle> expression;
+    stdx::option<ExpressionHandle> expression;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct TestStatement {
-    stdx::Option<StringHandle> description;
+    stdx::option<StringHandle> description;
     BlockHandle                block;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 struct UsingStatement {
@@ -138,7 +138,7 @@ struct UsingStatement {
     }
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<StatementHandle, syntax::Diagnostic>;
+        -> stdx::result<StatementHandle, syntax::Diagnostic>;
 };
 
 } // namespace ast

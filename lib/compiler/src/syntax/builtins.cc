@@ -49,18 +49,18 @@ constexpr auto ALL_BUILTINS_BY_SV{stdx::fixed::make_hash_map(builtins::ALIGN_CAS
                                                              builtins::PANIC)};
 
 constexpr auto ALL_BUILTINS_BY_TT{[] -> auto {
-    stdx::fixed::EnumMap<TokenType, stdx::Option<std::string_view>> builtins;
+    stdx::fixed::enum_map<TokenType, stdx::option<std::string_view>> builtins;
     for (const auto& [name, tok] : ALL_BUILTINS_BY_SV) { builtins[tok] = name; }
     return builtins;
 }()};
 
 } // namespace
 
-auto get_builtin_opt(TokenType tt) noexcept -> stdx::Option<std::string_view> {
+auto get_builtin_opt(TokenType tt) noexcept -> stdx::option<std::string_view> {
     return ALL_BUILTINS_BY_TT[tt];
 }
 
-auto get_builtin_opt(std::string_view sv) noexcept -> stdx::Option<TokenType> {
+auto get_builtin_opt(std::string_view sv) noexcept -> stdx::option<TokenType> {
     return ALL_BUILTINS_BY_SV.get_opt(sv).materialize();
 }
 

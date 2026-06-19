@@ -20,9 +20,8 @@
 namespace ghoti::tests::helpers {
 
 template <typename T>
-concept Unwrappable =
-    stdx::traits::Option<std::remove_cvref_t<T>> || stdx::traits::Result<std::remove_cvref_t<T>> ||
-    stdx::traits::OptSize<std::remove_cvref_t<T>>;
+concept Unwrappable = stdx::Option<std::remove_cvref_t<T>> ||
+                      stdx::Result<std::remove_cvref_t<T>> || stdx::OptSize<std::remove_cvref_t<T>>;
 
 // Unpacks the value in the option or result and returns its value if present
 template <Unwrappable U> [[nodiscard]] auto unwrap(U&& u) -> decltype(auto) {
@@ -40,9 +39,9 @@ template <Unwrappable U, typename E>
 
 template <Unwrappable U> auto unwrap_err(U&& u) -> decltype(auto) {
     using T = std::remove_cvref_t<U>;
-    if constexpr (stdx::traits::Option<T>) {
+    if constexpr (stdx::Option<T>) {
         REQUIRE_FALSE(u);
-    } else if constexpr (stdx::traits::Result<T>) {
+    } else if constexpr (stdx::Result<T>) {
         REQUIRE_FALSE(u);
         return u.error();
     }

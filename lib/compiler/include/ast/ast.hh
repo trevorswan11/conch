@@ -112,7 +112,7 @@ class AST {
 
     // Returns the casted node data at the requested index if present
     template <typename Data, traits::IndexableID ID>
-    [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> stdx::Option<const Data&> {
+    [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> stdx::option<const Data&> {
         return operator[](id).template as_opt<Data>();
     }
 

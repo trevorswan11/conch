@@ -83,15 +83,15 @@ auto Parser::consume(ast::AST& ast) -> Diagnostics {
     return diagnostics;
 }
 
-auto Parser::expect_peek(TokenType expected) -> stdx::Result<void, Diagnostic> {
+auto Parser::expect_peek(TokenType expected) -> stdx::result<void, Diagnostic> {
     if (peek_token_is(expected)) {
         advance();
         return {};
     }
-    return stdx::Err{peek_error(expected)};
+    return stdx::err{peek_error(expected)};
 }
 
-auto Parser::expect_semicolon() -> stdx::Result<void, Diagnostic> {
+auto Parser::expect_semicolon() -> stdx::result<void, Diagnostic> {
     using TokenType::SEMICOLON;
     if (current_token_is(SEMICOLON)) { return {}; }
     return expect_peek(SEMICOLON);
@@ -106,24 +106,24 @@ auto Parser::peek_error(TokenType expected) -> Diagnostic {
 }
 
 auto Parser::get_current_precedence() const noexcept
-    -> std::pair<Precedence, stdx::Option<Binding>> {
+    -> std::pair<Precedence, stdx::option<Binding>> {
     return Binding::try_get_from(current_token_.type)
         .transform([](const auto& binding) -> auto {
-            return std::pair{binding.precedence, stdx::Option<Binding>{binding}};
+            return std::pair{binding.precedence, stdx::option<Binding>{binding}};
         })
         .value_or(std::pair{Precedence::LOWEST, stdx::none});
 }
 
-auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, stdx::Option<Binding>> {
+auto Parser::get_peek_precedence() const noexcept -> std::pair<Precedence, stdx::option<Binding>> {
     return Binding::try_get_from(peek_token_.type)
         .transform([](const auto& binding) -> auto {
-            return std::pair{binding.precedence, stdx::Option<Binding>{binding}};
+            return std::pair{binding.precedence, stdx::option<Binding>{binding}};
         })
         .value_or(std::pair{Precedence::LOWEST, stdx::none});
 }
 
 auto Parser::parse_statement(SemicolonBehavior behavior)
-    -> stdx::Result<ast::StatementHandle, Diagnostic> {
+    -> stdx::result<ast::StatementHandle, Diagnostic> {
     // Not all decls are public so the condition needs to be rechecked
     PROFILE_FUNCTION();
     if (current_token_.type == TokenType::PUBLIC) {
@@ -151,7 +151,7 @@ auto Parser::parse_statement(SemicolonBehavior behavior)
 }
 
 auto Parser::parse_expression(Precedence precedence)
-    -> stdx::Result<ast::ExpressionHandle, Diagnostic> {
+    -> stdx::result<ast::ExpressionHandle, Diagnostic> {
     PROFILE_FUNCTION();
     if (current_token_is(TokenType::END)) {
         return make_syntax_err(Error::END_OF_TOKEN_STREAM, current_token_);
@@ -178,7 +178,7 @@ auto Parser::parse_expression(Precedence precedence)
 }
 
 [[nodiscard]] auto Parser::parse_restricted_statement(Error error, SemicolonBehavior behavior)
-    -> stdx::Result<ast::StatementHandle, Diagnostic> {
+    -> stdx::result<ast::StatementHandle, Diagnostic> {
     auto clause{TRY(parse_statement(behavior))};
 
     // The clause can only be a jump, block, or expression statement
@@ -193,7 +193,7 @@ auto Parser::parse_expression(Precedence precedence)
 }
 
 [[nodiscard]] auto Parser::try_parse_restricted_alternate(Error error, SemicolonBehavior behavior)
-    -> stdx::Result<stdx::Option<ast::StatementHandle>, Diagnostic> {
+    -> stdx::result<stdx::option<ast::StatementHandle>, Diagnostic> {
     if (peek_token_is(TokenType::ELSE)) {
         // Advance twice to actually look at the statement's first token
         advance(2);
@@ -205,7 +205,7 @@ auto Parser::parse_expression(Precedence precedence)
 namespace {
 
 constexpr auto PREFIX_FNS = [] -> auto {
-    stdx::fixed::EnumMap<TokenType, Parser::PrefixFn> fns;
+    stdx::fixed::enum_map<TokenType, Parser::PrefixFn> fns;
 
     fns[TokenType::IDENT]            = ast::IdentifierExpression::parse;
     fns[TokenType::U8]               = ast::U8Expression::parse;
@@ -259,7 +259,7 @@ constexpr auto PREFIX_FNS = [] -> auto {
 }();
 
 constexpr auto INFIX_FNS = [] -> auto {
-    stdx::fixed::EnumMap<TokenType, Parser::InfixFn> fns;
+    stdx::fixed::enum_map<TokenType, Parser::InfixFn> fns;
 
     fns[TokenType::PLUS]           = ast::BinaryExpression::parse;
     fns[TokenType::MINUS]          = ast::BinaryExpression::parse;
@@ -305,11 +305,11 @@ constexpr auto INFIX_FNS = [] -> auto {
 
 } // namespace
 
-auto Parser::get_prefix_fn_opt(TokenType tt) noexcept -> stdx::Option<PrefixFn> {
+auto Parser::get_prefix_fn_opt(TokenType tt) noexcept -> stdx::option<PrefixFn> {
     return PREFIX_FNS.get_opt(tt);
 }
 
-auto Parser::get_poll_infix_fn_opt(TokenType tt) noexcept -> stdx::Option<InfixFn> {
+auto Parser::get_poll_infix_fn_opt(TokenType tt) noexcept -> stdx::option<InfixFn> {
     return INFIX_FNS.get_opt(tt);
 }
 

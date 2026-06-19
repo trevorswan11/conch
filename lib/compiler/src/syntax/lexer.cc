@@ -105,7 +105,7 @@ auto Lexer::read_character(u8 n) noexcept -> void {
     }
 }
 
-auto Lexer::read_operator() const noexcept -> stdx::Option<Token> {
+auto Lexer::read_operator() const noexcept -> stdx::option<Token> {
     const auto start_line{line_no_};
     const auto start_col{col_no_};
 

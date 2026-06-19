@@ -83,7 +83,7 @@ class ASTDumper {
     auto visit(NodeID, const ReturnStatement&) -> void;
     auto visit(NodeID, const TestStatement&) -> void;
     auto visit(NodeID, const UsingStatement&) -> void;
-    auto visit(NodeID, stdx::Unit) -> void { fmt::println(out_, "<discarded>"); }
+    auto visit(NodeID, stdx::monostate) -> void { fmt::println(out_, "<discarded>"); }
 
     auto visit(ExplicitTypeID, const IdentifierExpression&) -> void;
     auto visit(ExplicitTypeID, const ModuleAccessExpression&) -> void;

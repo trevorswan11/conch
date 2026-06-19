@@ -168,9 +168,9 @@ using LabeledNodeHandle = Handle<NodeKind::DO_WHILE_LOOP_EXPRESSION,
 
 } // namespace ghoti::ast
 
-namespace stdx::traits {
+namespace stdx {
 
-template <ghoti::ast::NodeKind... Kinds> struct Nullable<ghoti::ast::Handle<Kinds...>> {
+template <ghoti::ast::NodeKind... Kinds> struct nullable<ghoti::ast::Handle<Kinds...>> {
     [[nodiscard]] static constexpr auto invalid() noexcept -> ghoti::ast::Handle<Kinds...> {
         return ghoti::ast::Handle<Kinds...>::make_invalid();
     }
@@ -181,4 +181,4 @@ template <ghoti::ast::NodeKind... Kinds> struct Nullable<ghoti::ast::Handle<Kind
     }
 };
 
-} // namespace stdx::traits
+} // namespace stdx

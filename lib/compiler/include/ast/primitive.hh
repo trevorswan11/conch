@@ -20,7 +20,7 @@ namespace ast {
         using value_type = ValueType;                              \
         value_type                value;                           \
         [[nodiscard]] static auto parse(syntax::Parser& parser)    \
-            -> stdx::Result<ExpressionHandle, syntax::Diagnostic>; \
+            -> stdx::result<ExpressionHandle, syntax::Diagnostic>; \
     };
 
 DECLARE_PRIMITIVE_EXPRESSION(StringExpression, std::string)
@@ -62,17 +62,17 @@ namespace ast {
 
 struct BoolExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct VoidExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 struct UndefinedExpression {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<ExpressionHandle, syntax::Diagnostic>;
+        -> stdx::result<ExpressionHandle, syntax::Diagnostic>;
 };
 
 } // namespace ast

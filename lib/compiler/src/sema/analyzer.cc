@@ -14,7 +14,7 @@
 
 namespace ghoti::sema {
 
-auto Analyzer::analyze(const std::filesystem::path& entry_path) -> stdx::Result<void, Diagnostic> {
+auto Analyzer::analyze(const std::filesystem::path& entry_path) -> stdx::result<void, Diagnostic> {
     PROFILE_FUNCTION();
     auto module_result{modules_.try_get_file_module(entry_path)};
     if (!module_result) {

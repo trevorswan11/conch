@@ -8,7 +8,7 @@
 
 namespace ghoti::cmd {
 
-auto Dispatcher::operator()(Debug& dump) -> stdx::Result<void, i32> {
+auto Dispatcher::operator()(Debug& dump) -> stdx::result<void, i32> {
     PROFILE_FUNCTION();
     dump.run();
     return {};

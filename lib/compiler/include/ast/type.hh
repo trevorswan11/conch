@@ -18,7 +18,7 @@ namespace syntax { class Parser; } // namespace syntax
 namespace ast {
 
 struct ExplicitArrayType {
-    stdx::Option<ExpressionHandle> dimension;
+    stdx::option<ExpressionHandle> dimension;
     bool                           null_terminated;
     ExplicitTypeID                 inner_explicit_type;
 };
@@ -29,16 +29,16 @@ struct ExplicitFunctionType {
     ExplicitTypeID              explicit_return_type;
 
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<ExplicitFunctionType, syntax::Diagnostic>;
+        -> stdx::result<ExplicitFunctionType, syntax::Diagnostic>;
 };
 
 struct ExplicitType {
     [[nodiscard]] static auto parse(syntax::Parser& parser)
-        -> stdx::Result<ExplicitTypeID, syntax::Diagnostic>;
+        -> stdx::result<ExplicitTypeID, syntax::Diagnostic>;
 
     // Parses an optionally present type and checks/advances for value initialization
     [[nodiscard]] static auto parse_opt_init(syntax::Parser& parser)
-        -> stdx::Result<std::pair<stdx::Option<ExplicitTypeID>, bool>, syntax::Diagnostic>;
+        -> stdx::result<std::pair<stdx::option<ExplicitTypeID>, bool>, syntax::Diagnostic>;
 };
 
 } // namespace ast

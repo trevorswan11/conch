@@ -13,7 +13,7 @@ namespace {
 
 using TypeMapping = std::pair<TypeKind, std::string_view>;
 
-constexpr auto TYPE_KIND_NAMES{stdx::fixed::EnumMap<TypeKind, std::string_view>::from(
+constexpr auto TYPE_KIND_NAMES{stdx::fixed::enum_map<TypeKind, std::string_view>::from(
     {},
     TypeMapping{TypeKind::POISON, "poison"},
     TypeMapping{TypeKind::I32, "i32"},

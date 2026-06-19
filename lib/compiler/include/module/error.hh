@@ -22,7 +22,7 @@ enum class Error : u8 {
 using Diagnostic = Diagnostic<Error>;
 
 template <typename... Args>
-[[nodiscard]] constexpr auto make_mod_err(Args&&... args) -> stdx::Err<Diagnostic> {
+[[nodiscard]] constexpr auto make_mod_err(Args&&... args) -> stdx::err<Diagnostic> {
     return stdx::make_err<Diagnostic>(std::forward<Args>(args)...);
 }
 

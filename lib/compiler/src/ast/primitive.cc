@@ -23,12 +23,12 @@ namespace ghoti::ast {
 namespace {
 
 // A global buffer for storing underscore-cleaned numeric tokens for `std::from_chars`
-constinit stdx::fixed::Vector<char, 1'024> numeric_buffer;
+constinit stdx::fixed::vector<char, 1'024> numeric_buffer;
 
 // Parses the requested value from the string, asserting the from_chars result if requested
 template <typename ValueType>
 [[nodiscard]] auto parse_primitive_value(std::string_view slice, syntax::TokenType type) noexcept
-    -> stdx::Option<ValueType> {
+    -> stdx::option<ValueType> {
     const auto base{syntax::token_type::to_base(type)};
     {
         // This is narrowly scoped to allow the first and last pointer names to be reused
@@ -49,7 +49,7 @@ template <typename ValueType>
 
     ValueType              v;
     std::from_chars_result result;
-    if constexpr (stdx::traits::FloatingPoint<ValueType>) {
+    if constexpr (std::floating_point<ValueType>) {
         result = std::from_chars(first, last, v);
     } else {
         result = std::from_chars(first, last, v, std::to_underlying(*base));
@@ -62,7 +62,7 @@ template <typename ValueType>
 }
 
 template <traits::ValuedPrimitive Primitive>
-auto parse_primitive(syntax::Parser& parser) -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+auto parse_primitive(syntax::Parser& parser) -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     using value_type = typename Primitive::value_type;
     const auto start_token{parser.get_current_token()};
@@ -84,7 +84,7 @@ auto parse_primitive(syntax::Parser& parser) -> stdx::Result<ExpressionHandle, s
 
 #define MAKE_PRIMITIVE_PARSER(Type)                             \
     auto Type::parse(syntax::Parser& parser)                    \
-        -> stdx::Result<ExpressionHandle, syntax::Diagnostic> { \
+        -> stdx::result<ExpressionHandle, syntax::Diagnostic> { \
         PROFILE_FUNCTION();                                     \
         return parse_primitive<Type>(parser);                   \
     }
@@ -97,7 +97,7 @@ MAKE_PRIMITIVE_PARSER(U64Expression)
 MAKE_PRIMITIVE_PARSER(USizeExpression)
 
 auto U8Expression::parse(syntax::Parser& parser)
-    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     const auto slice{start_token.slice};
@@ -124,13 +124,13 @@ MAKE_PRIMITIVE_PARSER(F32Expression)
 MAKE_PRIMITIVE_PARSER(F64Expression)
 
 auto BoolExpression::parse(syntax::Parser& parser)
-    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     return parser.add_expr<BoolExpression>(parser.get_current_token());
 }
 
 auto VoidExpression::parse(syntax::Parser& parser)
-    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
     TRY(parser.expect_peek(syntax::TokenType::RBRACE));
@@ -138,7 +138,7 @@ auto VoidExpression::parse(syntax::Parser& parser)
 }
 
 auto UndefinedExpression::parse(syntax::Parser& parser)
-    -> stdx::Result<ExpressionHandle, syntax::Diagnostic> {
+    -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     PROFILE_FUNCTION();
     return parser.add_expr<UndefinedExpression>(parser.get_current_token());
 }
