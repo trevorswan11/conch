@@ -11,8 +11,6 @@ namespace ghoti {
 struct SomethingLocationed {};
 struct SomethingElseLocationed {};
 
-namespace traits {
-
 template <> struct SourceInfo<SomethingLocationed> {
     static auto get(const SomethingLocationed&) noexcept -> SourceLocation { return {0, 42}; }
 };
@@ -20,8 +18,6 @@ template <> struct SourceInfo<SomethingLocationed> {
 template <> struct SourceInfo<SomethingElseLocationed> {
     static auto get(const SomethingElseLocationed&) noexcept -> SourceLocation { return {42, 0}; }
 };
-
-} // namespace traits
 
 namespace tests {
 
@@ -31,8 +27,8 @@ enum class TestEnum : u8 {
 };
 
 TEST_CASE("Diagnostic traits") {
-    STATIC_CHECK(traits::DiagnosticType<Diagnostic<TestEnum>>);
-    STATIC_CHECK_FALSE(traits::DiagnosticType<TestEnum>);
+    STATIC_CHECK(DiagnosticType<Diagnostic<TestEnum>>);
+    STATIC_CHECK_FALSE(DiagnosticType<TestEnum>);
 }
 
 TEST_CASE("Location and error only") {

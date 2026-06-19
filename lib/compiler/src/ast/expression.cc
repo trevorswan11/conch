@@ -531,7 +531,7 @@ auto InfiniteLoopExpression::parse(syntax::Parser& parser)
 
 namespace {
 
-template <traits::ASTNode Expr>
+template <NodeData Expr>
 [[nodiscard]] auto parse_infix(syntax::Parser& parser, ExpressionHandle lhs)
     -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     const auto op_token{parser.get_current_token()};
@@ -675,7 +675,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
     }
 
     std::vector<Arm> arms;
-    stdx::opt_size    catch_all_idx;
+    stdx::opt_size   catch_all_idx;
     usize            arm_idx{0};
 
     // Current token is either the LBRACE at the start or a comma before parsing
@@ -754,7 +754,7 @@ auto MatchExpression::parse(syntax::Parser& parser)
 
 namespace {
 
-template <traits::ASTNode Expr>
+template <NodeData Expr>
 [[nodiscard]] auto parse_prefix(syntax::Parser& parser)
     -> stdx::result<ExpressionHandle, syntax::Diagnostic> {
     const auto prefix_token{parser.get_current_token()};

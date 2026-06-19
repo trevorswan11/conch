@@ -50,11 +50,11 @@ template <NodeKind... AllowedKinds> class Handle {
     [[nodiscard]] constexpr auto get_index() const noexcept -> usize { return id_.get_index(); }
     [[nodiscard]] constexpr      operator NodeID() const noexcept { return id_; } // NOLINT
 
-    template <traits::ASTNode N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
+    template <NodeData N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
         return id_.is<N>();
     }
 
-    template <traits::ASTNode... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
+    template <NodeData... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
         return id_.any<Ns...>();
     }
 

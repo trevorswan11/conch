@@ -18,7 +18,7 @@
 
 namespace ghoti::ast {
 
-template <traits::IndexableID ID, typename Data> struct DataPoolBase {
+template <IndexableID ID, typename Data> struct DataPoolBase {
     std::vector<Data>           pool;
     std::vector<SourceLocation> locations;
 
@@ -30,7 +30,7 @@ template <traits::IndexableID ID, typename Data> struct DataPoolBase {
     constexpr auto emplace_back(const syntax::Token& start_token, Data&& data) -> u64 {
         const u64 index{pool.size()};
         pool.emplace_back(std::forward<Data>(data));
-        locations.emplace_back(traits::SourceInfo<syntax::Token>::get(start_token));
+        locations.emplace_back(SourceInfo<syntax::Token>::get(start_token));
         return index;
     }
 };
@@ -67,25 +67,25 @@ class AST {
         return {.nodes_size = nodes_.pool.size(), .types_size = explicit_types_.pool.size()};
     }
 
-    template <traits::ASTNode Data>
+    template <NodeData Data>
     [[nodiscard]] constexpr auto add_node(const syntax::Token& start_token, Data&& data) -> NodeID {
-        constexpr auto kind{traits::NodeKindOf<Data>::value()};
+        constexpr auto kind{NodeKindOf<Data>::value()};
         const auto     index{nodes_.emplace_back(start_token, std::forward<Data>(data))};
         return NodeID{kind, start_token.type, index};
     }
 
-    template <traits::ASTExplicitType Data>
+    template <ExplicitTypeData Data>
     [[nodiscard]] constexpr auto
     add_type(const syntax::Token& start_token, TypeModifier mod, Data&& data) -> ExplicitTypeID {
-        constexpr auto kind{traits::ExplicitTypeKindOf<Data>::value()};
+        constexpr auto kind{ExplicitTypeKindOf<Data>::value()};
         const auto     index{explicit_types_.emplace_back(start_token, std::forward<Data>(data))};
         return ExplicitTypeID{kind, mod, start_token.type, index};
     }
 
-    template <traits::IndexableID ID>
+    template <IndexableID ID>
     [[nodiscard]] constexpr auto location_of(ID id) const noexcept -> const SourceLocation& {
         ASSERT(id.is_valid(), "Attempt to access invalid id");
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (IndexableNodeID<ID>) {
             return nodes_.locations[id.get_index()];
         } else {
             return explicit_types_.locations[id.get_index()];
@@ -93,10 +93,10 @@ class AST {
     }
 
     // Returns the node data at the provided id
-    template <traits::IndexableID ID>
+    template <IndexableID ID>
     [[nodiscard]] constexpr auto operator[](ID id) const noexcept -> auto& {
         ASSERT(id.is_valid(), "Attempt to access invalid id");
-        if constexpr (traits::IndexableNodeID<ID>) {
+        if constexpr (IndexableNodeID<ID>) {
             return nodes_.pool[id.get_index()];
         } else {
             return explicit_types_.pool[id.get_index()];
@@ -104,14 +104,14 @@ class AST {
     }
 
     // Returns the casted node at the requested index
-    template <typename Data, traits::IndexableID ID>
+    template <typename Data, IndexableID ID>
     [[nodiscard]] constexpr auto get_as(ID id) const noexcept -> const Data& {
         ASSERT(id.template is<Data>(), "Illegal node data retrieval");
         return operator[](id).template as<Data>();
     }
 
     // Returns the casted node data at the requested index if present
-    template <typename Data, traits::IndexableID ID>
+    template <typename Data, IndexableID ID>
     [[nodiscard]] constexpr auto get_as_opt(ID id) const noexcept -> stdx::option<const Data&> {
         return operator[](id).template as_opt<Data>();
     }
@@ -122,8 +122,8 @@ class AST {
     }
 
   private:
-    DataPool<NodeID, NodeData>         nodes_;
-    DataPool<ExplicitTypeID, TypeData> explicit_types_;
+    DataPool<NodeID, NodeVariant>         nodes_;
+    DataPool<ExplicitTypeID, TypeVariant> explicit_types_;
 };
 
 } // namespace ghoti::ast

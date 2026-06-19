@@ -36,8 +36,6 @@ struct SourceLocation {
     }
 };
 
-namespace traits {
-
 template <typename T> struct SourceInfo;
 
 template <typename T>
@@ -54,8 +52,6 @@ template <> struct SourceInfo<std::pair<usize, usize>> {
 template <> struct SourceInfo<SourceLocation> {
     static auto get(const SourceLocation& loc) -> SourceLocation { return loc; }
 };
-
-} // namespace traits
 
 namespace mod { struct Module; } // namespace mod
 
@@ -108,22 +104,20 @@ template <stdx::ScopedEnum E> class Diagnostic {
     Diagnostic(stdx::option<std::string> msg, E err) noexcept
         : message_{std::move(msg)}, error_{err} {}
 
-    template <traits::Locateable T>
+    template <Locateable T>
     Diagnostic(stdx::option<std::string> msg, E err, const T& t) noexcept
-        : message_{std::move(msg)}, loc_{traits::SourceInfo<T>::get(t)}, error_{err} {}
+        : message_{std::move(msg)}, loc_{SourceInfo<T>::get(t)}, error_{err} {}
 
-    template <traits::Locateable T>
-    Diagnostic(E err, T t) : loc_{traits::SourceInfo<T>::get(t)}, error_{err} {}
+    template <Locateable T> Diagnostic(E err, T t) : loc_{SourceInfo<T>::get(t)}, error_{err} {}
 
     // Moves the passed diagnostic into a new one with an error code
     Diagnostic(Diagnostic&& other, E err) noexcept
         : message_{std::move(other.message_)}, loc_{other.loc_}, error_{err} {}
 
     // Moves the passed diagnostic into a new one with a specified source location
-    template <traits::Locateable T>
+    template <Locateable T>
     Diagnostic(Diagnostic&& other, const T& t) noexcept
-        : message_{std::move(other.message_)}, loc_{traits::SourceInfo<T>::get(t)},
-          error_{other.error_} {}
+        : message_{std::move(other.message_)}, loc_{SourceInfo<T>::get(t)}, error_{other.error_} {}
 
     [[nodiscard]] auto to_string(const stdx::option<std::string>& source_path = stdx::none,
                                  stdx::option<bool> in_terminal = stdx::none) const -> std::string {
@@ -153,17 +147,13 @@ template <stdx::ScopedEnum E> class Diagnostic {
     stdx::option<DiagnosticLevel> level_{DiagnosticLevel::ERROR};
 };
 
-namespace traits {
-
 template <typename T> struct is_diagnostic : std::false_type {};
 template <typename T> struct is_diagnostic<Diagnostic<T>> : std::true_type {};
 
 template <typename T>
 concept DiagnosticType = is_diagnostic<T>::value;
 
-} // namespace traits
-
-template <traits::DiagnosticType D> class DiagnosticList {
+template <DiagnosticType D> class DiagnosticList {
   public:
     using value_type = D;
     MAKE_ITERATOR(Diagnostics, std::vector<D>, diagnostics_) // cppcheck-suppress syntaxError

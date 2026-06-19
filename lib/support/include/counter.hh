@@ -7,15 +7,11 @@
 
 namespace ghoti {
 
-namespace traits {
-
 template <typename T>
 concept Countable = std::integral<T> && !std::same_as<T, bool>;
 
-} // namespace traits
-
 // A simple counter that with RAII-based up/down counting
-template <traits::Countable Underlying> class Counter {
+template <Countable Underlying> class Counter {
   public:
     class Guard {
       public:

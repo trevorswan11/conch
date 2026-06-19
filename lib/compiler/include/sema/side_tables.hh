@@ -15,7 +15,7 @@ namespace ghoti::sema {
 namespace detail {
 
 // An ID-indexable side table containing attached data
-template <traits::IndexableID ID, stdx::Option T> struct SideTable {
+template <ast::IndexableID ID, stdx::Option T> struct SideTable {
     std::vector<T> values;
 
     // Allows a handle wrapper of a node to be used for raw ID-based tables

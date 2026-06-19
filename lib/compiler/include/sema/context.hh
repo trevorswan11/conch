@@ -25,7 +25,7 @@ struct Context {
     TypePool&            pool;
     Diagnostics          diagnostics;
     std::ostream&        error_stream;
-    stdx::opt_size        prelude_index;
+    stdx::opt_size       prelude_index;
 
     Context(mod::ModuleManager&  modules,
             SymbolTableRegistry& registry,
@@ -89,7 +89,7 @@ struct Context {
     // Poisons the node and constructs an associated diagnostic to insert into the list
     //
     // Returns the poison type for optional non-lookup usage
-    template <traits::IndexableID ID, typename... Args>
+    template <ast::IndexableID ID, typename... Args>
     auto poison_node(mod::Module& module, ID id, Args&&... args) -> Type& {
         if constexpr (sizeof...(args) != 0) {
             diagnostics.emplace_back(std::forward<Args>(args)...);

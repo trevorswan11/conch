@@ -97,7 +97,7 @@ auto TypeResolver::visit(ast::NodeID id, const ast::ArrayExpression& array) -> v
     resolving_.set_sema_type(id, *last_type_);
 }
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 [[nodiscard]] auto TypeResolver::resolve_builtin_call(ID                            id,
                                                       const ast::CallExpression&    call,
                                                       const types::BuiltinFunction& builtin)
@@ -312,7 +312,7 @@ auto TypeResolver::get_call_arg_location(const ast::CallExpression::Argument& ar
     return arg.visit([this](auto id) -> SourceLocation { return resolving_.ast.location_of(id); });
 }
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::resolve_call(ID id, const ast::CallExpression& call) -> void {
     // The call can only yield a non-poison type if the function is valid
     resolve(call.function);
@@ -421,7 +421,7 @@ auto TypeResolver::resolve_members(gsl::span<Type*> buf, gsl::span<const ast::Me
     return buf;
 }
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
     PROFILE_FUNCTION();
     if (enum_expr.underlying) { resolve(*enum_expr.underlying); }
@@ -660,7 +660,7 @@ namespace {
 
 } // namespace
 
-template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbol& symbol) -> void {
+template <ast::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbol& symbol) -> void {
     auto& symbol_data{symbol.get_data()};
     switch (symbol.get_status()) {
     case SymbolStatus::RESOLVED:
@@ -732,7 +732,7 @@ template <traits::IndexableID ID> auto TypeResolver::resolve_symbol(ID id, Symbo
 
 VISITOR_TEMPLATE_INIT(TypeResolver, resolve_symbol, Symbol&)
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::resolve_ident(ID id, const ast::IdentifierExpression& ident) -> void {
     const auto name{ident.name};
     auto       symbol_opt{ctx_.registry.lookup(table_stack_, name)};
@@ -909,7 +909,7 @@ auto TypeResolver::get_rightmost_name(ast::OuterAccessHandle handle) const noexc
     }
 }
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::resolve_dot(ID id, const ast::DotExpression& dot) -> void {
     resolve(dot.object);
     if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); }
@@ -1535,7 +1535,7 @@ MAKE_PRIMITIVE_RESOLVER(UndefinedExpression, UNDEFINED)
 MAKE_PRIMITIVE_RESOLVER(F32Expression, F32)
 MAKE_PRIMITIVE_RESOLVER(F64Expression, F64)
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpression& access) -> void {
     // Resolving the right hand side recurses down to the identifier level
     resolve(access.outer);
@@ -1572,7 +1572,7 @@ auto TypeResolver::resolve_module_access(ID id, const ast::ModuleAccessExpressio
         if (!symbol_node) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
 
         stdx::option<ast::TypeModifier> mod;
-        if constexpr (traits::ExplicitTypeID<ID>) { mod = id.get_modifier(); }
+        if constexpr (ast::IndexableExplicitTypeID<ID>) { mod = id.get_modifier(); }
         switch (symbol->get_status()) {
         case SymbolStatus::RESOLVING: {
             const auto poison_out = [&] -> void {
@@ -1654,7 +1654,7 @@ namespace {
 
 } // namespace
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> void {
     PROFILE_FUNCTION();
     auto&                 struct_type{resolving_.get_sema_type(id)};
@@ -1701,7 +1701,7 @@ auto TypeResolver::visit(ID id, const ast::StructExpression& struct_expr) -> voi
 
 VISITOR_TEMPLATE_INIT(TypeResolver, visit, const ast::StructExpression&)
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto TypeResolver::visit(ID id, const ast::UnionExpression& union_expr) -> void {
     PROFILE_FUNCTION();
     auto&                 union_type{resolving_.get_sema_type(id)};

@@ -55,7 +55,7 @@ class TypeResolver {
   public:
     static auto resolve_types(mod::Module& module, Context& ctx) -> mod::ModuleState;
 
-    template <traits::IndexableID ID> auto resolve(ID id) -> void {
+    template <ast::IndexableID ID> auto resolve(ID id) -> void {
         resolving_.ast[id].visit([&](const auto& data) -> void { visit(id, data); });
     }
 
@@ -129,7 +129,7 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::ArrayExpression&) -> void;
 
     // This is meant to be called after the arguments have all been resolved
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     [[nodiscard]] auto resolve_builtin_call(ID                            id,
                                             const ast::CallExpression&    call,
                                             const types::BuiltinFunction& builtin)
@@ -141,22 +141,21 @@ class TypeResolver {
     [[nodiscard]] auto get_call_arg_location(const ast::CallExpression::Argument& arg)
         -> SourceLocation;
 
-    template <traits::IndexableID ID> auto resolve_call(ID, const ast::CallExpression&) -> void;
-    auto                                   visit(ast::NodeID, const ast::CallExpression&) -> void;
+    template <ast::IndexableID ID> auto resolve_call(ID, const ast::CallExpression&) -> void;
+    auto                                visit(ast::NodeID, const ast::CallExpression&) -> void;
     auto visit(ast::NodeID, const ast::DoWhileLoopExpression&) -> void;
 
     // Returns the same type buffer that it was passed when resolution was successful
     [[nodiscard]] auto resolve_members(gsl::span<Type*>                   buf,
                                        gsl::span<const ast::MemberHandle> members)
         -> stdx::option<gsl::span<Type*>>;
-    template <traits::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
+    template <ast::IndexableID ID> auto visit(ID, const ast::EnumExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::ForLoopExpression&) -> void;
     auto visit(ast::NodeID, const ast::FunctionExpression&) -> void;
 
-    template <traits::IndexableID ID> auto resolve_symbol(ID, Symbol&) -> void;
-    template <traits::IndexableID ID>
-    auto resolve_ident(ID, const ast::IdentifierExpression&) -> void;
+    template <ast::IndexableID ID> auto resolve_symbol(ID, Symbol&) -> void;
+    template <ast::IndexableID ID> auto resolve_ident(ID, const ast::IdentifierExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::IdentifierExpression&) -> void;
     auto visit(ast::NodeID, const ast::IfExpression&) -> void;
@@ -176,7 +175,7 @@ class TypeResolver {
     // Retrieve's the rightmost identifier name from the accessor
     [[nodiscard]] auto get_rightmost_name(ast::OuterAccessHandle) const noexcept
         -> std::string_view;
-    template <traits::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
+    template <ast::IndexableID ID> auto resolve_dot(ID, const ast::DotExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::DotExpression&) -> void;
     auto visit(ast::NodeID, const ast::RangeExpression&) -> void;
@@ -214,13 +213,13 @@ class TypeResolver {
     auto visit(ast::NodeID, const ast::VoidExpression&) -> void;
     auto visit(ast::NodeID, const ast::UndefinedExpression&) -> void;
 
-    template <traits::IndexableID ID>
+    template <ast::IndexableID ID>
     auto resolve_module_access(ID, const ast::ModuleAccessExpression&) -> void;
     auto visit(ast::NodeID, const ast::ModuleAccessExpression&) -> void;
 
-    template <traits::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
-    template <traits::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
-    auto visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
+    template <ast::IndexableID ID> auto visit(ID, const ast::StructExpression&) -> void;
+    template <ast::IndexableID ID> auto visit(ID, const ast::UnionExpression&) -> void;
+    auto                                visit(ast::NodeID, const ast::WhileLoopExpression&) -> void;
 
     auto visit(ast::NodeID, const ast::BlockStatement&) -> void;
 

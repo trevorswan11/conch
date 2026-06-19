@@ -97,9 +97,9 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do
     const auto                  idx{
         visit_scopes(TypeKind::BLOCK,
                      stdx::iter_pair{.iterable = block,
-                                                     .visitor = [this](const ast::StatementHandle& stmt) -> void {
-                                        collect(stmt);
-                                    }})};
+                                                      .visitor = [this](const ast::StatementHandle& stmt) -> void {
+                                         collect(stmt);
+                                     }})};
     last_type_->set_symbol_table_idx(idx);
     collecting_.set_sema_type(id, *last_type_.take());
 
@@ -110,22 +110,22 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::DoWhileLoopExpression& do
     }
 }
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::EnumExpression& enum_expr) -> void {
     PROFILE_FUNCTION();
     const auto scope_idx{visit_scopes(
         TypeKind::ENUM,
         stdx::iter_pair{enum_expr.enumerations,
-                       [this](const ast::EnumExpression::Enumeration& enumeration) -> void {
-                           if (enumeration.value) { collect(*enumeration.value); }
+                        [this](const ast::EnumExpression::Enumeration& enumeration) -> void {
+                            if (enumeration.value) { collect(*enumeration.value); }
 
-                           // Resolve the ident second to prevent self-referential values
-                           const auto& ident =
-                               collecting_.ast.get_as<ast::IdentifierExpression>(enumeration.name);
-                           try_declare<symbols::Enumeration>(ident.name, enumeration);
-                       }},
+                            // Resolve the ident second to prevent self-referential values
+                            const auto& ident =
+                                collecting_.ast.get_as<ast::IdentifierExpression>(enumeration.name);
+                            try_declare<symbols::Enumeration>(ident.name, enumeration);
+                        }},
         stdx::iter_pair{enum_expr.members,
-                       [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
+                        [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
@@ -212,9 +212,9 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::InfiniteLoopExpression& l
     const auto                  idx{
         visit_scopes(TypeKind::BLOCK,
                      stdx::iter_pair{.iterable = block,
-                                                     .visitor = [this](const ast::StatementHandle& stmt) -> void {
-                                        collect(stmt);
-                                    }})};
+                                                      .visitor = [this](const ast::StatementHandle& stmt) -> void {
+                                         collect(stmt);
+                                     }})};
     last_type_->set_symbol_table_idx(idx);
     collecting_.set_sema_type(id, *last_type_.take());
 }
@@ -290,45 +290,45 @@ MAKE_PREFIX_COLLECTOR(AddressOfExpression)
 MAKE_PREFIX_COLLECTOR(DereferenceExpression)
 MAKE_PREFIX_COLLECTOR(UnaryExpression)
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::StructExpression& struct_expr) -> void {
     PROFILE_FUNCTION();
     const auto scope_idx{visit_scopes(
         TypeKind::STRUCT,
         stdx::iter_pair{struct_expr.fields,
-                       [this](const ast::StructExpression::Field& field) -> void {
-                           if (field.default_value) { collect(*field.default_value); }
-                           collect(field.explicit_type);
+                        [this](const ast::StructExpression::Field& field) -> void {
+                            if (field.default_value) { collect(*field.default_value); }
+                            collect(field.explicit_type);
 
-                           // Resolve the ident last to prevent self-referential values
-                           const auto& ident =
-                               collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
-                           try_declare<symbols::StructField>(ident.name, field);
-                       }},
+                            // Resolve the ident last to prevent self-referential values
+                            const auto& ident =
+                                collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
+                            try_declare<symbols::StructField>(ident.name, field);
+                        }},
         stdx::iter_pair{struct_expr.members,
-                       [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
+                        [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
 
 VISITOR_TEMPLATE_INIT(SymbolCollector, visit, const ast::StructExpression&)
 
-template <traits::IndexableID ID>
+template <ast::IndexableID ID>
 auto SymbolCollector::visit(ID id, const ast::UnionExpression& union_expr) -> void {
     PROFILE_FUNCTION();
     const auto scope_idx{visit_scopes(
         TypeKind::UNION,
         stdx::iter_pair{union_expr.fields,
-                       [this](const ast::UnionExpression::Field& field) -> void {
-                           // Resolve the ident second to prevent self-referential values
-                           collect(field.explicit_type);
+                        [this](const ast::UnionExpression::Field& field) -> void {
+                            // Resolve the ident second to prevent self-referential values
+                            collect(field.explicit_type);
 
-                           const auto& ident =
-                               collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
-                           try_declare<symbols::UnionField>(ident.name, field);
-                       }},
+                            const auto& ident =
+                                collecting_.ast.get_as<ast::IdentifierExpression>(field.name);
+                            try_declare<symbols::UnionField>(ident.name, field);
+                        }},
         stdx::iter_pair{union_expr.members,
-                       [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
+                        [this](const ast::MemberHandle& member) -> void { collect(*member); }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_);
 }
@@ -370,9 +370,9 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::BlockStatement& block) ->
     const auto scope_idx{
         visit_scopes(TypeKind::BLOCK,
                      stdx::iter_pair{.iterable = block,
-                                    .visitor  = [this](const ast::StatementHandle& stmt) -> void {
-                                        collect(stmt);
-                                    }})};
+                                     .visitor  = [this](const ast::StatementHandle& stmt) -> void {
+                                         collect(stmt);
+                                     }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_.take());
 }
@@ -527,9 +527,9 @@ auto SymbolCollector::visit(ast::NodeID id, const ast::TestStatement& test) -> v
     const auto  scope_idx{
         visit_scopes(TypeKind::BLOCK,
                      stdx::iter_pair{.iterable = block,
-                                     .visitor  = [this](const ast::StatementHandle& stmt) -> void {
-                                        collect(stmt);
-                                    }})};
+                                      .visitor  = [this](const ast::StatementHandle& stmt) -> void {
+                                         collect(stmt);
+                                     }})};
     last_type_->set_symbol_table_idx(scope_idx);
     collecting_.set_sema_type(id, *last_type_.take());
 }

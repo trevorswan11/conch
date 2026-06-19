@@ -14,9 +14,7 @@
 #include "syntax/token.hh"
 #include "syntax/token_type.hh"
 
-namespace ghoti {
-
-namespace ast {
+namespace ghoti::ast {
 
 namespace detail {
 
@@ -63,13 +61,13 @@ class NodeID {
         return raw_ != detail::INVALID_ID;
     }
 
-    template <traits::ASTNode N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
-        return get_kind() == traits::NodeKindOf<N>::value();
+    template <NodeData N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
+        return get_kind() == NodeKindOf<N>::value();
     }
 
-    template <traits::ASTNode... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
+    template <NodeData... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
         const auto kind{get_kind()};
-        return ((kind == traits::NodeKindOf<Ns>::value()) || ...);
+        return ((kind == NodeKindOf<Ns>::value()) || ...);
     }
 
     [[nodiscard]] auto display_name() const noexcept -> std::string_view;
@@ -195,14 +193,13 @@ class ExplicitTypeID {
         return raw_ != detail::INVALID_ID;
     }
 
-    template <traits::ASTExplicitType N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
-        return get_kind() == traits::ExplicitTypeKindOf<N>::value();
+    template <ExplicitTypeData N> [[nodiscard]] constexpr auto is() const noexcept -> bool {
+        return get_kind() == ExplicitTypeKindOf<N>::value();
     }
 
-    template <traits::ASTExplicitType... Ns>
-    [[nodiscard]] constexpr auto any() const noexcept -> bool {
+    template <ExplicitTypeData... Ns> [[nodiscard]] constexpr auto any() const noexcept -> bool {
         const auto kind{get_kind()};
-        return ((kind == traits::ExplicitTypeKindOf<Ns>::value()) || ...);
+        return ((kind == ExplicitTypeKindOf<Ns>::value()) || ...);
     }
 
   private:
@@ -223,9 +220,7 @@ class ExplicitTypeID {
 
 #undef MAKE_MUTUALLY_EXCLUSIVE_TYPE_QUERY
 
-} // namespace ast
-
-} // namespace ghoti
+} // namespace ghoti::ast
 
 namespace stdx {
 
