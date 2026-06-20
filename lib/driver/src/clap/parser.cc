@@ -36,7 +36,7 @@ auto Parser::parse() -> stdx::result<void, i32> {
                           fmt::format("ghoti v{} ({})", GHOTI_VERSION_STR, GHOTI_GIT_INFO));
     app_.require_subcommand(1);
 
-    const auto* ast_app = app_.add_subcommand("debug", "Run the CLI interactive debugger");
+    const auto* ast_app{app_.add_subcommand("debug", "Run the CLI interactive debugger")};
 
     // No arguments should be handled by printing help an exiting
     if (argc_ == 1) {
