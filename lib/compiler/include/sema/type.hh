@@ -11,6 +11,7 @@
 #include <stdx/enum.hh>
 #include <stdx/fixed/vector.hh>
 #include <stdx/hash.hh>
+#include <stdx/memory.hh>
 #include <stdx/option.hh>
 #include <stdx/type_traits.hh>
 #include <stdx/types.hh>
@@ -240,6 +241,12 @@ namespace ghoti::sema {
 // A semantic type that is entirely owned by an arena of types
 class Type {
   public:
+    static constexpr auto TYPE_ARENA_BLOCK_SIZE = [] -> usize {
+        using namespace stdx::size_literals;
+        return 64_KiB;
+    }();
+
+  public:
     using Data = stdx::variant<types::Unresolved,
                                types::Poison,
                                types::BuiltinType,
@@ -331,7 +338,7 @@ class Type {
     Data           data_;
 
     // Initialization is restricted to the pool's arena exclusively
-    friend class stdx::arena;
+    friend class stdx::arena<TYPE_ARENA_BLOCK_SIZE>;
 };
 
 static_assert(stdx::TriviallyDestructible<Type>);
@@ -376,7 +383,7 @@ class TypePool {
     auto get_or_emplace(const types::Key& key) -> gsl::not_null<Type*>;
 
   private:
-    stdx::arena                                     arena_;
+    stdx::arena<Type::TYPE_ARENA_BLOCK_SIZE>        arena_;
     ankerl::unordered_dense::map<types::Key, Type*> cache_;
 };
 
