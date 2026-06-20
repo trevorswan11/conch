@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdx/config.h> // IWYU pragma: export
+#include <ghoti/config.h> // IWYU pragma: export
 
 namespace ghoti::win32 {
 
@@ -8,7 +8,7 @@ namespace ghoti::win32 {
 //
 // Can be safely created and destroyed multiple times on multiple threads
 class RichConsole {
-#if STDX_WINDOWS
+#if GHOTI_WINDOWS
   public:
     RichConsole() noexcept;
     ~RichConsole();

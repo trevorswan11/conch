@@ -1,7 +1,7 @@
 #include "platform/win32.hh"
 
 // "Abandon hope, all ye who enter here"
-#if STDX_WINDOWS
+#if GHOTI_WINDOWS
 #    include <atomic>
 #    include <handleapi.h>
 

@@ -30,7 +30,7 @@ class Parser {
     CLI::App app_;
     Parsed   parsed_;
 
-#if STDX_WINDOWS
+#if GHOTI_WINDOWS
     win32::RichConsole console_;
 #endif
 };
