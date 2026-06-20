@@ -68,7 +68,7 @@ auto TypeResolver::resolve_types(mod::Module& module, Context& ctx) -> mod::Modu
     do {                                                                                   \
         resolve(resolvable_expr);                                                          \
         if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_); } \
-    } while (0)
+    } while (false)
 
 namespace {
 
