@@ -46,9 +46,8 @@ auto Debug::run() -> void {
         const auto stdin_mod{*manager.try_get_file_module(stdin_path)};
         if (stdin_mod->is_errored()) { continue; }
 
-        ast::ASTDumper dumper{stdin_mod->ast, std::cout};
+        ast::Dumper dumper{stdin_mod->ast, std::cout};
         for (const auto& node : stdin_mod->ast) { dumper.dump(node); }
-
         if (stdin_mod->is_poisoned()) { continue; }
 
         const auto& registry{analyzer.get_registry()};

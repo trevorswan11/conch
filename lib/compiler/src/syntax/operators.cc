@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include <stdx/fixed/hash_map.hh>
+#include <stdx/fixed/hash_table.hh>
 #include <stdx/option.hh>
 #include <stdx/types.hh>
 

@@ -18,9 +18,9 @@
 
 namespace ghoti::ast {
 
-class ASTDumper {
+class Dumper {
   public:
-    explicit ASTDumper(const AST& ast, std::ostream& out) : out_{out}, ast_{ast} {}
+    explicit Dumper(const AST& ast, std::ostream& out) : out_{out}, ast_{ast} {}
 
     template <IndexableNodeID ID> auto dump(ID id) -> void {
         ast_[id].visit([&](const auto& data) -> void { this->visit(id, data); });

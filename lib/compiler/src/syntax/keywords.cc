@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include <stdx/fixed/hash_map.hh>
+#include <stdx/fixed/hash_table.hh>
 #include <stdx/option.hh>
 
 #include "syntax/token_type.hh"
