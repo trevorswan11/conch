@@ -41,11 +41,7 @@ pub fn build(b: *std.Build) !void {
 
     var package_flags = try compiler_flags.clone(b.allocator);
     try package_flags.appendSlice(b.allocator, dist_flags);
-
-    try compiler_flags.appendSlice(b.allocator, &.{
-        "-gen-cdb-fragment-path",
-        b.cache_root.join(b.allocator, &.{CDBGenerator.cdb_frags_dirname}) catch @panic("OOM"),
-    });
+    stdx.CDBGenerator.addCdbFlags(b, &compiler_flags);
 
     switch (optimize) {
         .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DGHOTI_DEBUG" }),
@@ -576,35 +572,6 @@ fn addTooling(b: *std.Build, config: struct {
     cloc_step.dependOn(&cloc.step);
 }
 
-const target_queries = [_]std.Target.Query{
-    .{ .cpu_arch = .x86_64, .os_tag = .macos },
-    .{ .cpu_arch = .aarch64, .os_tag = .macos },
-
-    .{ .cpu_arch = .x86, .os_tag = .linux },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux },
-    .{ .cpu_arch = .powerpc, .os_tag = .linux },
-    .{ .cpu_arch = .powerpc64, .os_tag = .linux },
-    .{ .cpu_arch = .powerpc64le, .os_tag = .linux },
-    .{ .cpu_arch = .riscv32, .os_tag = .linux },
-    .{ .cpu_arch = .riscv64, .os_tag = .linux },
-    .{ .cpu_arch = .loongarch64, .os_tag = .linux },
-
-    .{ .cpu_arch = .x86_64, .os_tag = .freebsd },
-    .{ .cpu_arch = .aarch64, .os_tag = .freebsd },
-    .{ .cpu_arch = .powerpc64, .os_tag = .freebsd },
-    .{ .cpu_arch = .powerpc64le, .os_tag = .freebsd },
-    .{ .cpu_arch = .riscv64, .os_tag = .freebsd },
-
-    .{ .cpu_arch = .x86, .os_tag = .netbsd },
-    .{ .cpu_arch = .x86_64, .os_tag = .netbsd },
-    .{ .cpu_arch = .aarch64, .os_tag = .netbsd },
-
-    .{ .cpu_arch = .x86, .os_tag = .windows },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows },
-    .{ .cpu_arch = .aarch64, .os_tag = .windows },
-};
-
 fn addPackageStep(b: *std.Build, config: struct {
     llvm: *LLVMBuilder,
     cxx_flags: []const []const u8,
@@ -614,7 +581,7 @@ fn addPackageStep(b: *std.Build, config: struct {
         .compressor = config.compressor,
     });
 
-    for (target_queries) |query| {
+    for (stdx.Packager.base_target_queries) |query| {
         const target = b.resolveTargetQuery(query);
         const stdx_dep = b.dependency("stdx", .{
             .target = target,
@@ -635,31 +602,19 @@ fn addPackageStep(b: *std.Build, config: struct {
             .packaging = true,
             .stdx_dep = stdx_dep,
         });
-
-        artifacts.ghoti.out_filename = stdx.utils.tryAppendExe(
-            b.allocator,
-            target,
-            b.fmt("{s}-{s}", .{ artifacts.ghoti.name, version_str }),
-        );
-        artifacts.ghoti.root_module.strip = true;
+        stdx.Packager.configureExe(b, target, version_str, artifacts.ghoti);
 
         const package_artifact_dirname = b.fmt("ghoti-{s}-{s}", .{ try query.zigTriple(b.allocator), version_str });
-        const staging = b.addWriteFiles();
-        const copy_paths = [_]struct { std.Build.LazyPath, []const u8 }{
-            .{ artifacts.ghoti.getEmittedBin(), artifacts.ghoti.out_filename },
-            .{ b.path("LICENSE"), "LICENSE" },
-            .{ b.path("README.md"), "README.md" },
-            .{ b.path(".github/CHANGELOG.md"), "CHANGELOG.md" },
+        const copy_paths = [_]stdx.Packager.CopyPath{
+            .{ .source = artifacts.ghoti.getEmittedBin(), .destination = artifacts.ghoti.out_filename },
+            .{ .source = b.path("LICENSE"), .destination = "LICENSE" },
+            .{ .source = b.path("README.md"), .destination = "README.md" },
+            .{ .source = b.path(".github/CHANGELOG.md"), .destination = "CHANGELOG.md" },
         };
-
-        for (copy_paths) |path| {
-            const src, const dst = path;
-            _ = staging.addCopyFile(src, b.fmt("{s}/{s}", .{ package_artifact_dirname, dst }));
-        }
 
         packager.addArchives(.{
             .target = target,
-            .staging = staging,
+            .copy_paths = &copy_paths,
             .output_dir_basename = package_artifact_dirname,
         });
     }
