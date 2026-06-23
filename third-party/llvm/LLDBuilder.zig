@@ -3,6 +3,7 @@ const std = @import("std");
 
 const LLVMBuilder = @import("LLVMBuilder.zig");
 
+const stdx = LLVMBuilder.stdx;
 const coff = @import("sources/lld/coff.zig");
 const common = @import("sources/lld/common.zig");
 const elf = @import("sources/lld/elf.zig");
@@ -149,7 +150,7 @@ fn buildCOFF(self: *const Self) ArtifactWithGen {
     self.llvm.synthesizeHeader(registry, coff.synthesize_options);
 
     var link_libs = self.llvm.target_artifacts.target_backends.targetsToBuild();
-    link_libs.appendSlice(b.allocator, &.{
+    link_libs.appendSlice(&.{
         self.lld_artifacts.common.core_lib,
         self.llvm.target_artifacts.binary_format,
         self.llvm.target_artifacts.bitcode.writer,
@@ -169,7 +170,7 @@ fn buildCOFF(self: *const Self) ArtifactWithGen {
         self.llvm.target_artifacts.target_backends.parser.core_lib,
         self.llvm.target_artifacts.windows_support.driver,
         self.llvm.target_artifacts.windows_support.manifest,
-    }) catch @panic("OOM");
+    });
 
     const root = self.metadata.root.path(b, coff.root);
     const lib = self.createLLDLibrary(.{
@@ -185,7 +186,7 @@ fn buildCOFF(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items,
+        .link_libraries = link_libs.items(),
         .bundle_compiler_rt = true,
     });
 
@@ -199,7 +200,7 @@ fn buildELF(self: *const Self) ArtifactWithGen {
     self.llvm.synthesizeHeader(registry, elf.synthesize_options);
 
     var link_libs = self.llvm.target_artifacts.target_backends.targetsToBuild();
-    link_libs.appendSlice(b.allocator, &.{
+    link_libs.appendSlice(&.{
         self.lld_artifacts.common.core_lib,
         self.llvm.target_artifacts.deps.zlib.artifact,
         self.llvm.target_artifacts.deps.zstd.artifact,
@@ -218,7 +219,7 @@ fn buildELF(self: *const Self) ArtifactWithGen {
         self.llvm.target_artifacts.support,
         self.llvm.target_artifacts.target_backends.parser.core_lib,
         self.llvm.target_artifacts.transforms.utils,
-    }) catch @panic("OOM");
+    });
 
     const root = self.metadata.root.path(b, elf.root);
     const lib = self.createLLDLibrary(.{
@@ -234,7 +235,7 @@ fn buildELF(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items,
+        .link_libraries = link_libs.items(),
         .bundle_compiler_rt = true,
     });
 
@@ -248,7 +249,7 @@ fn buildMachO(self: *const Self) ArtifactWithGen {
     self.llvm.synthesizeHeader(registry, macho.synthesize_options);
 
     var link_libs = self.llvm.target_artifacts.target_backends.targetsToBuild();
-    link_libs.appendSlice(b.allocator, &.{
+    link_libs.appendSlice(&.{
         self.lld_artifacts.common.core_lib,
         self.llvm.target_artifacts.binary_format,
         self.llvm.target_artifacts.bitcode.reader,
@@ -267,7 +268,7 @@ fn buildMachO(self: *const Self) ArtifactWithGen {
         self.llvm.target_artifacts.support,
         self.llvm.target_artifacts.target_backends.parser.core_lib,
         self.llvm.target_artifacts.text_api.core_lib,
-    }) catch @panic("OOM");
+    });
 
     const root = self.metadata.root.path(b, macho.root);
     const lib = self.createLLDLibrary(.{
@@ -284,7 +285,7 @@ fn buildMachO(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items,
+        .link_libraries = link_libs.items(),
     });
 
     return .{ .gen = registry, .core_lib = lib };
@@ -327,7 +328,7 @@ fn buildWasm(self: *const Self) ArtifactWithGen {
     self.llvm.synthesizeHeader(registry, wasm.synthesize_options);
 
     var link_libs = self.llvm.target_artifacts.target_backends.targetsToBuild();
-    link_libs.appendSlice(b.allocator, &.{
+    link_libs.appendSlice(&.{
         self.lld_artifacts.common.core_lib,
         self.llvm.target_artifacts.binary_format,
         self.llvm.target_artifacts.bitcode.writer,
@@ -341,7 +342,7 @@ fn buildWasm(self: *const Self) ArtifactWithGen {
         self.llvm.target_artifacts.profile_data.core_lib,
         self.llvm.target_artifacts.support,
         self.llvm.target_artifacts.target_backends.parser.core_lib,
-    }) catch @panic("OOM");
+    });
 
     const root = self.metadata.root.path(b, wasm.root);
     const lib = self.createLLDLibrary(.{
@@ -356,44 +357,40 @@ fn buildWasm(self: *const Self) ArtifactWithGen {
             self.llvm.configure_phase_artifacts.gen_vt.getDirectory(),
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
         },
-        .link_libraries = link_libs.items,
+        .link_libraries = link_libs.items(),
     });
 
     return .{ .gen = registry, .core_lib = lib };
 }
 
 pub fn allArtifacts(self: *const Self) []Artifact {
-    var all_artifacts: std.ArrayList(Artifact) = .empty;
-    all_artifacts.appendSlice(self.b.allocator, &.{
+    return stdx.ArrayList(Artifact).fromSlice(self.b, &.{
         self.lld_artifacts.common.core_lib,
         self.lld_artifacts.coff.core_lib,
         self.lld_artifacts.elf.core_lib,
         self.lld_artifacts.macho.core_lib,
         self.lld_artifacts.mingw.core_lib,
         self.lld_artifacts.wasm.core_lib,
-    }) catch @panic("OOM");
-    return all_artifacts.items;
+    }).wrapped.items;
 }
 
 pub fn allIncludePaths(self: *const Self) LLVMBuilder.AllIncludes {
-    var all_includes: std.ArrayList(std.Build.LazyPath) = .empty;
-    all_includes.appendSlice(self.b.allocator, &.{
+    const all_includes: stdx.ArrayList(std.Build.LazyPath) = .fromSlice(self.b, &.{
         self.metadata.lld_include,
         self.lld_artifacts.coff.gen.getDirectory(),
         self.lld_artifacts.elf.gen.getDirectory(),
         self.lld_artifacts.macho.gen.getDirectory(),
         self.lld_artifacts.mingw.gen.getDirectory(),
         self.lld_artifacts.wasm.gen.getDirectory(),
-    }) catch @panic("OOM");
+    });
 
-    var all_config_headers: std.ArrayList(*std.Build.Step.ConfigHeader) = .empty;
-    all_config_headers.appendSlice(self.b.allocator, &.{
+    const all_config_headers: stdx.ArrayList(*std.Build.Step.ConfigHeader) = .fromSlice(self.b, &.{
         self.metadata.vcs_version,
         self.lld_artifacts.common.version_inc,
-    }) catch @panic("OOM");
+    });
 
     return .{
-        .includes = all_includes.items,
-        .config_headers = all_config_headers.items,
+        .includes = all_includes.wrapped.items,
+        .config_headers = all_config_headers.wrapped.items,
     };
 }

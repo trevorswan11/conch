@@ -3,6 +3,7 @@ const std = @import("std");
 
 const LLVMBuilder = @import("LLVMBuilder.zig");
 
+const stdx = LLVMBuilder.stdx;
 const analysis = @import("sources/clang/analysis.zig");
 const api_notes = @import("sources/clang/api_notes.zig");
 const ast = @import("sources/clang/ast.zig");
@@ -1513,8 +1514,7 @@ fn buildFormatTool(self: *const Self) Artifact {
 
 /// Returns all clang-specific artifacts
 pub fn allArtifacts(self: *const Self) []Artifact {
-    var all_artifacts: std.ArrayList(Artifact) = .empty;
-    all_artifacts.appendSlice(self.b.allocator, &.{
+    return stdx.ArrayList(Artifact).fromSlice(self.b, &.{
         self.clang_artifacts.support,
         self.clang_artifacts.driver.core_lib,
         self.clang_artifacts.sema.core_lib,
@@ -1550,14 +1550,12 @@ pub fn allArtifacts(self: *const Self) []Artifact {
         self.clang_artifacts.tooling.refactoring,
         self.clang_artifacts.tooling.syntax.core_lib,
         self.clang_artifacts.tooling.transformer,
-    }) catch @panic("OOM");
-    return all_artifacts.items;
+    }).wrapped.items;
 }
 
 /// Populates all clang-specific include and config header paths for inclusion in modules
 pub fn allIncludePaths(self: *const Self) LLVMBuilder.AllIncludes {
-    var all_includes: std.ArrayList(std.Build.LazyPath) = .empty;
-    all_includes.appendSlice(self.b.allocator, &.{
+    const all_includes: stdx.ArrayList(std.Build.LazyPath) = .fromSlice(self.b, &.{
         self.metadata.clang_include,
         self.clang_artifacts.basic.gen.getDirectory(),
         self.clang_artifacts.static_analyzer.gen.getDirectory(),
@@ -1567,17 +1565,16 @@ pub fn allIncludePaths(self: *const Self) LLVMBuilder.AllIncludes {
         self.clang_artifacts.parse.gen.getDirectory(),
         self.clang_artifacts.serialization.gen.getDirectory(),
         self.clang_artifacts.tooling.syntax.gen.getDirectory(),
-    }) catch @panic("OOM");
+    });
 
-    var all_config_headers: std.ArrayList(*std.Build.Step.ConfigHeader) = .empty;
-    all_config_headers.appendSlice(self.b.allocator, &.{
+    const all_config_headers: stdx.ArrayList(*std.Build.Step.ConfigHeader) = .fromSlice(self.b, &.{
         self.metadata.vcs_version,
         self.config_h,
         self.clang_artifacts.basic.version_inc,
-    }) catch @panic("OOM");
+    });
 
     return .{
-        .includes = all_includes.items,
-        .config_headers = all_config_headers.items,
+        .includes = all_includes.wrapped.items,
+        .config_headers = all_config_headers.wrapped.items,
     };
 }

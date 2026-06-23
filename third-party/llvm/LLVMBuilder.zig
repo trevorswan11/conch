@@ -26,7 +26,8 @@ const transforms = @import("sources/llvm/transforms.zig");
 const xray = @import("sources/llvm/xray.zig");
 
 const parent_build = @import("../../build.zig");
-const Dependency = parent_build.stdx.Dependency;
+pub const stdx = parent_build.stdx;
+const Dependency = stdx.Dependency;
 pub const Artifact = Dependency.Artifact;
 const libxml2 = @import("../libxml2.zig");
 const zstd = parent_build.zstd;
@@ -161,10 +162,8 @@ const LLVMTargetArtifacts = struct {
         loong_arch: Artifact = undefined,
 
         /// Returns artifacts associated with the enabled targets, including the core.
-        pub fn targetsToBuild(self: *const TargetBackends) std.ArrayList(Artifact) {
-            const b = self.core_lib.step.owner;
-            var targets: std.ArrayList(Artifact) = .empty;
-            targets.appendSlice(b.allocator, &.{
+        pub fn targetsToBuild(self: *const TargetBackends) stdx.ArrayList(Artifact) {
+            return .fromSlice(self.core_lib.step.owner, &.{
                 self.core_lib,
                 self.x86,
                 self.aarch64,
@@ -174,8 +173,7 @@ const LLVMTargetArtifacts = struct {
                 self.xtensa,
                 self.powerpc,
                 self.loong_arch,
-            }) catch @panic("OOM");
-            return targets;
+            });
         }
     };
 
@@ -964,13 +962,13 @@ fn createConfigHeaders(self: *const Self, target: std.Target) ConfigHeaders {
     };
 }
 
-// Creates "macro_name(target1) macro_name(target2)... "
+/// Creates "macro_name(target1) macro_name(target2)... "
 fn formatDef(b: *std.Build, targets: []const []const u8, macro_name: []const u8) []const u8 {
-    var list: std.ArrayList(u8) = .empty;
+    var buf: std.Io.Writer.Allocating = .init(b.allocator);
     for (targets) |target| {
-        list.print(b.allocator, "{s}({s}) ", .{ macro_name, target }) catch unreachable;
+        buf.writer.print("{s}({s}) ", .{ macro_name, target }) catch @panic("OOM");
     }
-    return list.items;
+    return buf.written();
 }
 
 fn buildSupport(self: *const Self, config: struct {
@@ -4265,8 +4263,7 @@ fn buildDeps(self: *const Self, platform: Platform) ThirdPartyDeps {
 
 /// Returns all artifacts for the target platform
 pub fn allTargetArtifacts(self: *const Self) []Artifact {
-    var all_artifacts: std.ArrayList(Artifact) = .empty;
-    all_artifacts.appendSlice(self.b.allocator, &.{
+    return stdx.ArrayList(Artifact).fromSlice(self.b, &.{
         self.target_artifacts.deps.zlib.artifact,
         self.target_artifacts.deps.libxml2.artifact,
         self.target_artifacts.deps.zstd.artifact,
@@ -4362,8 +4359,7 @@ pub fn allTargetArtifacts(self: *const Self) []Artifact {
         self.target_artifacts.execution_engine.orc.shared,
         self.target_artifacts.execution_engine.orc.target_process,
         self.target_artifacts.execution_engine.runtime_dyld,
-    }) catch @panic("OOM");
-    return all_artifacts.items;
+    }).wrapped.items;
 }
 
 pub const AllIncludes = struct {
@@ -4373,21 +4369,21 @@ pub const AllIncludes = struct {
 
 /// Populates all include and config header paths for inclusion in modules
 pub fn allIncludePaths(self: *const Self) AllIncludes {
-    var all_includes: std.ArrayList(std.Build.LazyPath) = .empty;
-    all_includes.appendSlice(self.b.allocator, &.{
+    const all_includes: stdx.ArrayList(std.Build.LazyPath) = .fromSlice(self.b, &.{
         self.metadata.llvm_include,
         self.configure_phase_artifacts.gen_vt.getDirectory(),
         self.target_artifacts.intrinsics_gen.getDirectory(),
         self.target_artifacts.frontend.gen.getDirectory(),
         self.target_artifacts.target_backends.parser.gen.getDirectory(),
-    }) catch @panic("OOM");
+    });
 
-    var all_config_headers: std.ArrayList(*std.Build.Step.ConfigHeader) = .empty;
-    all_config_headers.append(self.b.allocator, self.metadata.vcs_revision) catch @panic("OOM");
+    const all_config_headers: stdx.ArrayList(*std.Build.Step.ConfigHeader) = .fromSlice(self.b, &.{
+        self.metadata.vcs_revision,
+    });
 
     return .{
-        .includes = all_includes.items,
-        .config_headers = all_config_headers.items,
+        .includes = all_includes.wrapped.items,
+        .config_headers = all_config_headers.wrapped.items,
     };
 }
 
