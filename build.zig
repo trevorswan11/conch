@@ -34,19 +34,18 @@ pub fn build(b: *std.Build) !void {
     const clang: *ClangBuilder = .init(llvm);
     const cdb_gen: *CDBGenerator = .init(b);
 
-    var compiler_flags: std.ArrayList([]const u8) = .empty;
-    try compiler_flags.appendSlice(b.allocator, &stdx.utils.base_cxx_flags);
-    try compiler_flags.appendSlice(b.allocator, &.{ "-DMAGIC_ENUM_RANGE_MAX=255", "-DREPLXX_STATIC" });
+    var compiler_flags: stdx.ArrayList([]const u8) = .fromSlice(b, &stdx.utils.base_cxx_flags);
+    compiler_flags.appendSlice(&.{ "-DMAGIC_ENUM_RANGE_MAX=255", "-DREPLXX_STATIC" });
     const dist_flags: []const []const u8 = &.{ "-DNDEBUG", "-DGHOTI_DIST" };
 
-    var package_flags = try compiler_flags.clone(b.allocator);
-    try package_flags.appendSlice(b.allocator, dist_flags);
-    stdx.CDBGenerator.addCdbFlags(b, &compiler_flags);
+    var package_flags = compiler_flags.clone();
+    package_flags.appendSlice(dist_flags);
+    stdx.CDBGenerator.addCdbFlags(b, &compiler_flags.wrapped);
 
     switch (optimize) {
-        .Debug => try compiler_flags.appendSlice(b.allocator, &.{ "-g", "-DGHOTI_DEBUG" }),
-        .ReleaseSafe => try compiler_flags.appendSlice(b.allocator, &.{"-DGHOTI_RELEASE"}),
-        .ReleaseFast, .ReleaseSmall => try compiler_flags.appendSlice(b.allocator, dist_flags),
+        .Debug => compiler_flags.appendSlice(&.{ "-g", "-DGHOTI_DEBUG" }),
+        .ReleaseSafe => compiler_flags.appendSlice(&.{"-DGHOTI_RELEASE"}),
+        .ReleaseFast, .ReleaseSmall => compiler_flags.appendSlice(dist_flags),
     }
 
     const install_tests_only = b.option(
@@ -58,18 +57,18 @@ pub fn build(b: *std.Build) !void {
     const site_builder = try SiteBuilder.init(b, optimize);
     if (site_builder) |site| try site.build();
 
-    var cdb_steps: std.ArrayList(*std.Build.Step) = .empty;
+    var cdb_steps: stdx.ArrayList(*std.Build.Step) = .init(b);
     const artifacts = try addArtifacts(b, .{
         .optimize = optimize,
         .llvm = llvm,
-        .cxx_flags = compiler_flags.items,
+        .cxx_flags = compiler_flags.items(),
         .cdb_steps = &cdb_steps,
         .install_tests_only = install_tests_only,
         .site_builder = site_builder,
         .stdx_dep = stdx_dep,
         .profile = profile,
     });
-    for (cdb_steps.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
+    for (cdb_steps.items()) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
     clang.build();
     const cppcheck = stdx_dep.artifact("cppcheck");
@@ -82,7 +81,7 @@ pub fn build(b: *std.Build) !void {
 
     try addPackageStep(b, .{
         .llvm = llvm,
-        .cxx_flags = package_flags.items,
+        .cxx_flags = package_flags.items(),
         .compressor = stdx_dep.artifact("compressor"),
     });
 
@@ -115,11 +114,11 @@ pub const ProjectPaths = struct {
         tests: []const u8,
 
         pub fn files(self: *const Project, b: *std.Build) ![][]const u8 {
-            return std.mem.concat(b.allocator, []const u8, &.{
-                try stdx.utils.collectFiles(b, self.inc, .{ .allowed_extensions = &.{".hh"} }),
-                try stdx.utils.collectFiles(b, self.src, .{ .allowed_extensions = &.{".cc"} }),
-                try stdx.utils.collectFiles(b, self.tests, .{ .allowed_extensions = &.{ ".hh", ".cc" } }),
-            });
+            var counted_files: stdx.ArrayList([]const u8) = .init(b);
+            try stdx.utils.collectFilesInto(b, self.inc, .{ .allowed_extensions = &.{".hh"} }, &counted_files);
+            try stdx.utils.collectFilesInto(b, self.src, .{ .allowed_extensions = &.{".cc"} }, &counted_files);
+            try stdx.utils.collectFilesInto(b, self.tests, .{ .allowed_extensions = &.{ ".hh", ".cc" } }, &counted_files);
+            return counted_files.items();
         }
     };
 
@@ -143,18 +142,20 @@ pub const ProjectPaths = struct {
     };
 
     pub fn collectToolingPaths(b: *std.Build) !stdx.steps.FmtPaths {
-        const cxx_paths = try std.mem.concat(b.allocator, []const u8, &.{
-            try compiler.files(b),
-            try driver.files(b),
-            try support.files(b),
-        });
+        var cxx_paths: stdx.ArrayList([]const u8) = .init(b);
+        cxx_paths.appendSlice(try compiler.files(b));
+        cxx_paths.appendSlice(try driver.files(b));
+        cxx_paths.appendSlice(try support.files(b));
 
-        return .{ .zig = &.{
-            "build.zig",
-            "build.zig.zon",
-            site ++ "rebuild.zig",
-            third_party ++ "go/SiteBuilder.zig",
-        }, .cxx = cxx_paths };
+        return .{
+            .zig = &.{
+                "build.zig",
+                "build.zig.zon",
+                site ++ "rebuild.zig",
+                third_party ++ "go/SiteBuilder.zig",
+            },
+            .cxx = cxx_paths.items(),
+        };
     }
 
     const stdlib = "lib/std/";
@@ -176,14 +177,14 @@ const TestArtifacts = struct {
     pub fn configure(
         self: *const TestArtifacts,
         b: *std.Build,
-        cdb_steps: ?*std.ArrayList(*std.Build.Step),
+        cdb_steps: ?*stdx.ArrayList(*std.Build.Step),
         install_dir: ?[]const u8,
         install_only: bool,
     ) !void {
         if (cdb_steps) |cdb| {
-            try cdb.append(b.allocator, &self.support_tests.step);
-            try cdb.append(b.allocator, &self.compiler_tests.step);
-            try cdb.append(b.allocator, &self.driver_tests.step);
+            cdb.append(&self.support_tests.step);
+            cdb.append(&self.compiler_tests.step);
+            cdb.append(&self.driver_tests.step);
         }
 
         const artifacts = [_]*std.Build.Step.Compile{
@@ -220,7 +221,7 @@ fn addArtifacts(b: *std.Build, config: struct {
     optimize: std.builtin.OptimizeMode,
     llvm: *LLVMBuilder,
     cxx_flags: []const []const u8,
-    cdb_steps: ?*std.ArrayList(*std.Build.Step),
+    cdb_steps: ?*stdx.ArrayList(*std.Build.Step),
     behavior: ?stdx.utils.ExecutableBehavior = null,
     auto_install: bool = true,
     packaging: bool = false,
@@ -274,7 +275,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         }),
     });
     if (config.auto_install) b.installArtifact(libsupport);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libsupport.step);
+    if (config.cdb_steps) |cdb_steps| cdb_steps.append(&libsupport.step);
 
     // LLVM is compiled from source because I like burning compute or something
     config.llvm.build(.{
@@ -304,7 +305,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         }),
     });
     if (config.auto_install) b.installArtifact(libcompiler);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libcompiler.step);
+    if (config.cdb_steps) |cdb_steps| cdb_steps.append(&libcompiler.step);
 
     // The user-facing library
     const libdriver = b.addLibrary(.{
@@ -327,7 +328,7 @@ fn addArtifacts(b: *std.Build, config: struct {
         }),
     });
     if (config.auto_install) b.installArtifact(libdriver);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &libdriver.step);
+    if (config.cdb_steps) |cdb_steps| cdb_steps.append(&libdriver.step);
 
     // The shippable executable
     const ghoti = stdx.utils.createExecutable(b, .{
@@ -354,19 +355,17 @@ fn addArtifacts(b: *std.Build, config: struct {
         },
     });
     if (config.auto_install) b.installArtifact(ghoti);
-    if (config.cdb_steps) |cdb_steps| try cdb_steps.append(b.allocator, &ghoti.step);
+    if (config.cdb_steps) |cdb_steps| cdb_steps.append(&ghoti.step);
 
     var tests: ?TestArtifacts = null;
     if (building_for_host) {
         const test_install_dir: ?[]const u8 = if (config.auto_install) "tests" else null;
-        const libcatch2 = config.stdx_dep.artifact("catch2");
 
         // Support's tests depend on the test runner but not LLVM
-        const support_tests = stdx.builders.strappedTest(config.stdx_dep.builder, .{
+        const support_tests = stdx.builders.strappedTest(b, .{
             .target = target,
             .optimize = config.optimize,
-            .libstdx = libstdx,
-            .libcatch2 = libcatch2,
+            .stdx = .{ .dep = config.stdx_dep },
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.support.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .profile = config.profile,
@@ -388,14 +387,12 @@ fn addArtifacts(b: *std.Build, config: struct {
                     },
                 },
             },
-            .asking_builder = b,
         });
 
-        const compiler_tests = stdx.builders.strappedTest(config.stdx_dep.builder, .{
+        const compiler_tests = stdx.builders.strappedTest(b, .{
             .target = target,
             .optimize = config.optimize,
-            .libstdx = libstdx,
-            .libcatch2 = libcatch2,
+            .stdx = .{ .dep = config.stdx_dep },
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.compiler.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .profile = config.profile,
@@ -418,14 +415,12 @@ fn addArtifacts(b: *std.Build, config: struct {
                     },
                 },
             },
-            .asking_builder = b,
         });
 
-        const driver_tests = stdx.builders.strappedTest(config.stdx_dep.builder, .{
+        const driver_tests = stdx.builders.strappedTest(b, .{
             .target = target,
             .optimize = config.optimize,
-            .libstdx = libstdx,
-            .libcatch2 = libcatch2,
+            .stdx = .{ .dep = config.stdx_dep },
             .cxx_files = try stdx.utils.collectFiles(b, ProjectPaths.driver.tests, .{}),
             .cxx_flags = config.cxx_flags,
             .profile = config.profile,
@@ -453,7 +448,6 @@ fn addArtifacts(b: *std.Build, config: struct {
                     },
                 },
             },
-            .asking_builder = b,
         });
 
         var webserver_tests: ?TestArtifacts.WebserverTests = null;
@@ -507,10 +501,6 @@ fn addTooling(b: *std.Build, config: struct {
     cppcheck: *std.Build.Step.Compile,
     site_builder: ?*SiteBuilder,
 }) !void {
-    const cdb_step = b.step("cdb", "Generate " ++ CDBGenerator.cdb_filename);
-    cdb_step.dependOn(&config.cdb_gen.step);
-    b.getInstallStep().dependOn(&config.cdb_gen.step);
-
     const fmt_steps = try stdx.steps.addFmt(b, .{
         .paths = try ProjectPaths.collectToolingPaths(b),
         .formatter = .{ .artifact = config.clang.clang_tools.clang_format },
@@ -558,18 +548,14 @@ fn addTooling(b: *std.Build, config: struct {
     }
     check_step.dependOn(&config.cdb_gen.step);
 
-    const counted_files = try std.mem.concat(b.allocator, []const u8, &.{
-        try stdx.utils.collectFiles(b, "lib", .{
-            .allowed_extensions = &counted_extensions,
-            .extra_files = &.{"build.zig"},
-        }),
-        try stdx.utils.collectFiles(b, "ghoti", .{ .allowed_extensions = &counted_extensions }),
-        try stdx.utils.collectFiles(b, "site", .{ .allowed_extensions = &counted_extensions }),
-    });
-
-    const cloc: *LOCCounter = .init(b, counted_files);
-    const cloc_step = b.step("cloc", "Count lines of code across the project");
-    cloc_step.dependOn(&cloc.step);
+    var counted_files: stdx.ArrayList([]const u8) = .init(b);
+    try stdx.utils.collectFilesInto(b, "lib", .{
+        .allowed_extensions = &counted_extensions,
+        .extra_files = &.{"build.zig"},
+    }, &counted_files);
+    try stdx.utils.collectFilesInto(b, "ghoti", .{ .allowed_extensions = &counted_extensions }, &counted_files);
+    try stdx.utils.collectFilesInto(b, "site", .{ .allowed_extensions = &counted_extensions }, &counted_files);
+    _ = LOCCounter.init(b, counted_files.items());
 }
 
 fn addPackageStep(b: *std.Build, config: struct {
