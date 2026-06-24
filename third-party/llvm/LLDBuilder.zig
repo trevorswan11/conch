@@ -186,7 +186,7 @@ fn buildCOFF(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items(),
+        .link_libraries = link_libs.wrapped.items,
         .bundle_compiler_rt = true,
     });
 
@@ -235,7 +235,7 @@ fn buildELF(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items(),
+        .link_libraries = link_libs.wrapped.items,
         .bundle_compiler_rt = true,
     });
 
@@ -285,7 +285,7 @@ fn buildMachO(self: *const Self) ArtifactWithGen {
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
             self.llvm.target_artifacts.target_backends.parser.gen.getDirectory(),
         },
-        .link_libraries = link_libs.items(),
+        .link_libraries = link_libs.wrapped.items,
     });
 
     return .{ .gen = registry, .core_lib = lib };
@@ -357,7 +357,7 @@ fn buildWasm(self: *const Self) ArtifactWithGen {
             self.llvm.configure_phase_artifacts.gen_vt.getDirectory(),
             self.llvm.target_artifacts.intrinsics_gen.getDirectory(),
         },
-        .link_libraries = link_libs.items(),
+        .link_libraries = link_libs.wrapped.items,
     });
 
     return .{ .gen = registry, .core_lib = lib };

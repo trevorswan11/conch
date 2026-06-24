@@ -61,14 +61,14 @@ pub fn build(b: *std.Build) !void {
     const artifacts = try addArtifacts(b, .{
         .optimize = optimize,
         .llvm = llvm,
-        .cxx_flags = compiler_flags.items(),
+        .cxx_flags = compiler_flags.wrapped.items,
         .cdb_steps = &cdb_steps,
         .install_tests_only = install_tests_only,
         .site_builder = site_builder,
         .stdx_dep = stdx_dep,
         .profile = profile,
     });
-    for (cdb_steps.items()) |cdb_step| cdb_gen.step.dependOn(cdb_step);
+    for (cdb_steps.wrapped.items) |cdb_step| cdb_gen.step.dependOn(cdb_step);
 
     clang.build();
     const cppcheck = stdx_dep.artifact("cppcheck");
@@ -81,7 +81,7 @@ pub fn build(b: *std.Build) !void {
 
     try addPackageStep(b, .{
         .llvm = llvm,
-        .cxx_flags = package_flags.items(),
+        .cxx_flags = package_flags.wrapped.items,
         .compressor = stdx_dep.artifact("compressor"),
     });
 
@@ -118,7 +118,7 @@ pub const ProjectPaths = struct {
             try stdx.utils.collectFilesInto(b, self.inc, .{ .allowed_extensions = &.{".hh"} }, &counted_files);
             try stdx.utils.collectFilesInto(b, self.src, .{ .allowed_extensions = &.{".cc"} }, &counted_files);
             try stdx.utils.collectFilesInto(b, self.tests, .{ .allowed_extensions = &.{ ".hh", ".cc" } }, &counted_files);
-            return counted_files.items();
+            return counted_files.wrapped.items;
         }
     };
 
@@ -154,7 +154,7 @@ pub const ProjectPaths = struct {
                 site ++ "rebuild.zig",
                 third_party ++ "go/SiteBuilder.zig",
             },
-            .cxx = cxx_paths.items(),
+            .cxx = cxx_paths.wrapped.items,
         };
     }
 
@@ -555,7 +555,7 @@ fn addTooling(b: *std.Build, config: struct {
     }, &counted_files);
     try stdx.utils.collectFilesInto(b, "ghoti", .{ .allowed_extensions = &counted_extensions }, &counted_files);
     try stdx.utils.collectFilesInto(b, "site", .{ .allowed_extensions = &counted_extensions }, &counted_files);
-    _ = LOCCounter.init(b, counted_files.items());
+    _ = LOCCounter.init(b, counted_files.wrapped.items);
 }
 
 fn addPackageStep(b: *std.Build, config: struct {
