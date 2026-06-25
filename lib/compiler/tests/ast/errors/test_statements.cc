@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <stdx/types.hh>
 
@@ -210,22 +211,14 @@ TEST_CASE("Non-terminated imports") {
 
 TEST_CASE("Incorrectly terminated jumps") {
     using namespace std::string_view_literals;
-    constexpr std::array inputs{"return"sv, "continue"sv, "break"sv};
-    for (const auto& input : inputs) {
-        helpers::test_parser_fail(input,
-                                  syntax::Diagnostic{"Expected token SEMICOLON, found END",
-                                                     syntax::Error::UNEXPECTED_TOKEN,
-                                                     std::pair{0UZ, input.size()}});
-    }
-
-    helpers::test_parser_fail(
-        "return return",
-        syntax::Diagnostic{"No prefix parse function for RETURN(return) found",
-                           syntax::Error::MISSING_PREFIX_PARSER,
-                           std::pair{0UZ, 7UZ}});
+    const auto input{GENERATE("return"sv, "continue"sv, "break"sv)};
+    helpers::test_parser_fail(input,
+                              syntax::Diagnostic{"Expected token SEMICOLON, found END",
+                                                 syntax::Error::UNEXPECTED_TOKEN,
+                                                 std::pair{0UZ, input.size()}});
 }
 
-TEST_CASE("Illegal continue/break control flow") {
+TEST_CASE("Illegal control flow") {
     helpers::test_parser_fail("continue 4;",
                               syntax::Diagnostic{"Continue statements may only contain labels",
                                                  syntax::Error::VALUED_CONTINUE,
@@ -235,6 +228,12 @@ TEST_CASE("Illegal continue/break control flow") {
                               syntax::Diagnostic{"Valued break statements must be labeled",
                                                  syntax::Error::VALUED_BREAK_MISSING_LABEL,
                                                  std::pair{0UZ, 0UZ}});
+
+    helpers::test_parser_fail(
+        "return return",
+        syntax::Diagnostic{"No prefix parse function for RETURN(return) found",
+                           syntax::Error::MISSING_PREFIX_PARSER,
+                           std::pair{0UZ, 7UZ}});
 }
 
 TEST_CASE("Non-terminated test") {

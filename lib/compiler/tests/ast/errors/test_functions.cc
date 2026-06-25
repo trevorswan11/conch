@@ -2,6 +2,7 @@
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <stdx/types.hh>
 
@@ -43,17 +44,14 @@ TEST_CASE("Out-of-place self parameter") {
 }
 
 TEST_CASE("Illegal self parameter modifier") {
-    const auto test_illegal_self = [](std::string_view modifier) -> void {
-        helpers::test_parser_fail(
-            fmt::format("fn({} self): i32 {{}};", modifier),
-            syntax::Diagnostic{
-                "Self parameters cannot be marked volatile; they must be values, refs, or pointers",
-                syntax::Error::ILLEGAL_SELF_PARAMETER_MODIFIER,
-                std::pair{0UZ, 3UZ}});
-    };
+    const auto modifier{GENERATE("volatile", "mut_volatile")};
 
-    test_illegal_self("volatile");
-    test_illegal_self("mut_volatile");
+    helpers::test_parser_fail(
+        fmt::format("fn({} self): i32 {{}};", modifier),
+        syntax::Diagnostic{
+            "Self parameters cannot be marked volatile; they must be values, refs, or pointers",
+            syntax::Error::ILLEGAL_SELF_PARAMETER_MODIFIER,
+            std::pair{0UZ, 3UZ}});
 }
 
 TEST_CASE("Out-of-place variadic parameter") {
