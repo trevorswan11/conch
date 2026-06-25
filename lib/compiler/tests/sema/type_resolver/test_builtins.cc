@@ -1,8 +1,8 @@
-#include <array>
 #include <string_view>
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 
 #include "ast/expression.hh"
@@ -52,12 +52,10 @@ auto test_builtin_resolve(const syntax::Builtin& builtin,
 namespace bis = syntax::builtins;
 
 TEST_CASE("Builtin 'safe' casts") {
-    constexpr std::array safe_casts{bis::ALIGN_CAST, bis::PTR_CAST, bis::BIT_CAST, bis::AS};
-    for (const auto& bi : safe_casts) {
-        test_builtin_resolve(bi, "i32, 23UZ", [](helpers::SemaTestContext& ctx) -> sema::Type& {
-            return ctx.get_type(sema::TypeKind::I32);
-        });
-    }
+    const auto bi{GENERATE(bis::ALIGN_CAST, bis::PTR_CAST, bis::BIT_CAST, bis::AS)};
+    test_builtin_resolve(bi, "i32, 23UZ", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        return ctx.get_type(sema::TypeKind::I32);
+    });
 }
 
 TEST_CASE("Builtin 'unsafe' casts") {
@@ -76,13 +74,11 @@ TEST_CASE("Builtin 'unsafe' casts") {
 }
 
 TEST_CASE("Builtin bit/byte operations") {
-    constexpr std::array ops{
-        bis::ALIGN_OF, bis::SIZE_OF, bis::CLZ, bis::CTZ, bis::POP_COUNT, bis::INT_FROM_PTR};
-    for (const auto& bi : ops) {
-        test_builtin_resolve(bi, "123", [](helpers::SemaTestContext& ctx) -> sema::Type& {
-            return ctx.get_type(sema::TypeKind::USIZE);
-        });
-    }
+    const auto bi{GENERATE(
+        bis::ALIGN_OF, bis::SIZE_OF, bis::CLZ, bis::CTZ, bis::POP_COUNT, bis::INT_FROM_PTR)};
+    test_builtin_resolve(bi, "123", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        return ctx.get_type(sema::TypeKind::USIZE);
+    });
 }
 
 TEST_CASE("Builtin type introspection") {
@@ -135,37 +131,35 @@ TEST_CASE("Builtin pointer conversions") {
 }
 
 TEST_CASE("Builtins memory operation") {
-    constexpr std::array ops{bis::MEMCPY, bis::MEMSET, bis::MEMMOVE};
-    for (const auto& bi : ops) {
-        test_builtin_resolve(
-            bi,
-            "a, b",
-            [](helpers::SemaTestContext& ctx) -> sema::Type& {
-                return ctx.get_type(sema::TypeKind::VOID);
-            },
-            "var a: i32; var b: i32;");
-    }
+    const auto bi{GENERATE(bis::MEMCPY, bis::MEMSET, bis::MEMMOVE)};
+    test_builtin_resolve(
+        bi,
+        "a, b",
+        [](helpers::SemaTestContext& ctx) -> sema::Type& {
+            return ctx.get_type(sema::TypeKind::VOID);
+        },
+        "var a: i32; var b: i32;");
 }
 
 TEST_CASE("Builtin arithmetic") {
-    constexpr std::array fns{bis::SQRT,
-                             bis::SIN,
-                             bis::COS,
-                             bis::TAN,
-                             bis::EXP,
-                             bis::EXP2,
-                             bis::LOG,
-                             bis::LOG2,
-                             bis::LOG10,
-                             bis::ABS,
-                             bis::FLOOR,
-                             bis::CEIL};
-    for (const auto& bi : fns) {
-        test_builtin_resolve(bi, "2.34f", [](helpers::SemaTestContext& ctx) -> sema::Type& {
-            return ctx.get_type(sema::TypeKind::F32);
-        });
-    }
+    const auto bi{GENERATE(bis::SQRT,
+                           bis::SIN,
+                           bis::COS,
+                           bis::TAN,
+                           bis::EXP,
+                           bis::EXP2,
+                           bis::LOG,
+                           bis::LOG2,
+                           bis::LOG10,
+                           bis::ABS,
+                           bis::FLOOR,
+                           bis::CEIL)};
+    test_builtin_resolve(bi, "2.34f", [](helpers::SemaTestContext& ctx) -> sema::Type& {
+        return ctx.get_type(sema::TypeKind::F32);
+    });
+}
 
+TEST_CASE("SIMD Arithmetic") {
     test_builtin_resolve(
         bis::MUL_ADD, "f64, 1.0, 2.0, 3.0", [](helpers::SemaTestContext& ctx) -> sema::Type& {
             return ctx.get_type(sema::TypeKind::F64);

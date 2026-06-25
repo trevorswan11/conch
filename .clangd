@@ -9,3 +9,7 @@ CompileFlags:
 Diagnostics:
     Suppress: [static_non_static]
     MissingIncludes: Strict
+
+Style:
+    QuotedHeaders: ["lib/.*", "fuzz/.*"]
+    AngledHeaders: ["stdx/.*", "fmt/.*", "magic_enum/.*"]

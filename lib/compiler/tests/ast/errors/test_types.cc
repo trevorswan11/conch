@@ -1,8 +1,8 @@
-#include <array>
 #include <string_view>
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include "helpers/ast.hh"
 #include "syntax/error.hh"
@@ -10,18 +10,14 @@
 namespace ghoti::tests {
 
 TEST_CASE("Function type restrictions") {
-    using namespace std::string_view_literals;
-    constexpr std::array illegal_inputs{"var a: &fn(): void;"sv, "var a: &mut fn(): void;"sv};
-
     const auto expected_diag = [] -> syntax::Diagnostic {
         return {"Functions types may only be values or pointers",
                 syntax::Error::ILLEGAL_FUNCTION_TYPE_MODIFIER,
                 std::pair{0UZ, 7UZ}};
     };
 
-    for (const auto& illegal : illegal_inputs) {
-        helpers::test_parser_fail(illegal, expected_diag());
-    }
+    const auto illegal{GENERATE("var a: &fn(): void;", "var a: &mut fn(): void;")};
+    helpers::test_parser_fail(illegal, expected_diag());
 }
 
 TEST_CASE("Bodied function type") {
