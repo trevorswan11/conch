@@ -197,11 +197,9 @@ class ModuleManager {
     ankerl::unordered_dense::map<std::filesystem::path, stdx::box<Module>> modules_;
 
     // Maps physical ghoti modules to their path on disk
-    ankerl::unordered_dense::map<std::string,
-                                 std::filesystem::path,
-                                 stdx::hash::string_transparent_hash,
-                                 std::equal_to<>>
-        module_lut_;
+    ankerl::unordered_dense::
+        map<std::string, std::filesystem::path, stdx::string_transparent_hash, std::equal_to<>>
+            module_lut_;
 };
 
 } // namespace ghoti::mod

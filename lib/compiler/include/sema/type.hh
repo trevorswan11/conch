@@ -185,7 +185,7 @@ class Key {
 
     // This is a high quality hash for the purposes of `unordered_dense`
     [[nodiscard]] constexpr auto hash() const noexcept -> u64 {
-        stdx::hash::hasher h{std::to_underlying(kind_)};
+        stdx::hasher h{std::to_underlying(kind_)};
         h.combine(mut_);
         h.combine(markers_);
         return h.finalize();
@@ -210,7 +210,7 @@ class Key {
   private:
     TypeKind            kind_;
     MutabilityModifiers mut_;
-    stdx::hash::hasher  markers_;
+    stdx::hasher        markers_;
 
     friend class sema::Type;
 };
@@ -241,10 +241,7 @@ namespace ghoti::sema {
 // A semantic type that is entirely owned by an arena of types
 class Type {
   public:
-    static constexpr auto TYPE_ARENA_BLOCK_SIZE = [] -> usize {
-        using namespace stdx::size_literals;
-        return 64_KiB;
-    }();
+    static constexpr auto TYPE_ARENA_BLOCK_SIZE{stdx::sizes::kib(64UZ)};
 
   public:
     using Data = stdx::variant<types::Unresolved,

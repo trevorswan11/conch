@@ -325,7 +325,7 @@ template <> struct ankerl::unordered_dense::hash<ghoti::syntax::TypedIdentifier>
     using TypedIdentifier = ghoti::syntax::TypedIdentifier;
 
     [[nodiscard]] auto operator()(const TypedIdentifier& type) const noexcept {
-        stdx::hash::hasher hasher{type.type};
+        stdx::hasher hasher{type.type};
         hasher.combine(type.name);
         return hasher.finalize();
     }
