@@ -1388,6 +1388,11 @@ auto emitter::emit_ident(ast::node_id id, const ast::identifier_expr& ident) -> 
     }
 
     const auto sema_type{active_mod().get_sema_type_opt(id)};
+    // A bare reference to a sibling `const fn` static member inside a member body lowers to the
+    // same function symbol `Type.member` would, not an `undefined` fn value.
+    if (sema_type && sema_type->get_kind() == sema::type_kind::FUNCTION) {
+        return value{ref_symbol_name(id, ident.name), sema_type};
+    }
     return value{undefined_val{}, sema_type};
 }
 
