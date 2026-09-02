@@ -2143,20 +2143,23 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
                "Closure implementation signature must have self");
         args.emplace_back(value{binding->id, const_cast<sema::type&>(*fn_data->params[0])});
     } else if (has_implicit_self && !fn_data->params.empty()) {
-        const auto& self_param_type{*fn_data->params[0]};
-        const auto  obj_expr_h{dot_call->object};
-        const auto  obj_type{active_mod().get_sema_type_opt(obj_expr_h)};
+        auto&      self_param_type{const_cast<sema::type&>(*fn_data->params[0])};
+        const auto obj_expr_h{dot_call->object};
+        const auto obj_type{active_mod().get_sema_type_opt(obj_expr_h)};
+        const auto self_kind{self_param_type.get_kind()};
 
-        if (self_param_type.get_kind() == sema::type_kind::POINTER ||
-            self_param_type.get_kind() == sema::type_kind::REFERENCE) {
+        // The receiver of a `&self`/`^self` method needs the same adjustment a `&`/`^`
+        // argument gets
+        if (self_kind == sema::type_kind::POINTER || self_kind == sema::type_kind::REFERENCE) {
             if (obj_type && (obj_type->get_kind() == sema::type_kind::POINTER ||
                              obj_type->get_kind() == sema::type_kind::REFERENCE)) {
-                args.emplace_back(emit_expression(obj_expr_h));
+                // A `^T`/`&T` receiver already yields an address, so pass its raw
+                // value retyped to the self-param mode
+                args.emplace_back(value{emit_expression_id_raw(*obj_expr_h).data, self_param_type});
             } else {
-                const auto obj_lval{emit_lvalue(obj_expr_h)};
-                const auto addr{
-                    builder_.emit_address_of(obj_lval, const_cast<sema::type&>(self_param_type))};
-                args.emplace_back(value{addr, const_cast<sema::type&>(self_param_type)});
+                // Anything else is an lvalue to take the address of.
+                const auto addr{builder_.emit_address_of(emit_lvalue(obj_expr_h), self_param_type)};
+                args.emplace_back(value{addr, self_param_type});
             }
         } else {
             args.emplace_back(emit_expression(obj_expr_h));
