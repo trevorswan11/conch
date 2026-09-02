@@ -149,6 +149,13 @@ class const_eval {
         -> stdx::option<const_value>;
     auto eval_module_access(ast::node_id id, const ast::module_access_expr& mod_access)
         -> stdx::option<const_value>;
+
+    // Resolves a (possibly chained) module-access operand to the imported module it names
+    auto resolve_module_chain(ast::node_id node) -> stdx::option<mod::module&>;
+
+    // Evaluates `member`, looked up in `target_mod`'s root scope, as a cross-module constant.
+    auto eval_module_member(mod::module& target_mod, std::string_view member)
+        -> stdx::option<const_value>;
     auto eval_match(ast::node_id id, const ast::match_expr& match) -> stdx::option<const_value>;
     auto eval_unwrap(ast::node_id id, const ast::unwrap_expr& unwrap) -> stdx::option<const_value>;
     auto match_pattern(const ast::match_pattern_handle& pattern_h, const const_value& target)

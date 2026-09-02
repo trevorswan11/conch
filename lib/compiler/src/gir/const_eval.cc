@@ -861,9 +861,83 @@ auto const_eval::eval_implicit_access(ast::node_id id, const ast::implicit_acces
     return stdx::none;
 }
 
+auto const_eval::resolve_module_chain(ast::node_id node) -> stdx::option<mod::module&> {
+    // Base case: a bare identifier naming an imported module in the current scope.
+    if (const auto ident{module_->ast.get_as_opt<ast::identifier_expr>(node)}) {
+        if (!module_->root_table_idx) { return stdx::none; }
+        const auto& table{ctx_.registry.get(*module_->root_table_idx)};
+        const auto  sym{table.get_opt(ident->name)};
+        if (!sym) { return stdx::none; }
+        const auto kind{sym->get_kind_opt()};
+        if (!kind || *kind != sema::symbol_kind::MODULE) { return stdx::none; }
+        const auto snode{sym->get_data().as_opt<sema::symbols::node_t>()};
+        if (!snode) { return stdx::none; }
+        const auto sema_type{module_->get_sema_type_opt(*snode)};
+        if (!sema_type) { return stdx::none; }
+        const auto m_data{sema_type->get_data().as_opt<sema::types::module>()};
+        if (!m_data) { return stdx::none; }
+        return m_data->imported;
+    }
+
+    // Recursive case: `<outer>::<segment>` where `<outer>` itself names a module and
+    // `<segment>` is a module re-exported from it.
+    if (const auto nested{module_->ast.get_as_opt<ast::module_access_expr>(node)}) {
+        const auto outer_mod{resolve_module_chain(nested->outer)};
+        if (!outer_mod || !outer_mod->root_table_idx) { return stdx::none; }
+        const auto& seg_name{module_->ast.get_as<ast::identifier_expr>(nested->inner).name};
+        const auto& table{ctx_.registry.get(*outer_mod->root_table_idx)};
+        const auto  sym{table.get_opt(seg_name)};
+        if (!sym) { return stdx::none; }
+        const auto kind{sym->get_kind_opt()};
+        if (!kind || *kind != sema::symbol_kind::MODULE) { return stdx::none; }
+        const auto snode{sym->get_data().as_opt<sema::symbols::node_t>()};
+        if (!snode) { return stdx::none; }
+        const auto sema_type{outer_mod->get_sema_type_opt(*snode)};
+        if (!sema_type) { return stdx::none; }
+        const auto m_data{sema_type->get_data().as_opt<sema::types::module>()};
+        if (!m_data) { return stdx::none; }
+        return m_data->imported;
+    }
+
+    return stdx::none;
+}
+
+auto const_eval::eval_module_member(mod::module& target_mod, std::string_view member)
+    -> stdx::option<const_value> {
+    if (!target_mod.root_table_idx) { return stdx::none; }
+    const auto& table{ctx_.registry.get(*target_mod.root_table_idx)};
+
+    const auto sym{table.get_opt(member)};
+    if (!sym) { return stdx::none; }
+    const auto node{sym->get_data().as_opt<sema::symbols::node_t>()};
+    if (!node) { return stdx::none; }
+    const auto decl{target_mod.ast.get_as_opt<ast::decl_stmt>(*node)};
+    if (!decl || !decl->value) { return stdx::none; }
+
+    // A plain cross-module function decays to a value naming its GIR symbol
+    if (target_mod.ast.get_as_opt<ast::function_expr>(*decl->value)) {
+        const auto fn_type{target_mod.get_sema_type_opt(*decl->value)};
+        if (fn_type && fn_type->get_kind() == sema::type_kind::FUNCTION) {
+            return const_value{scoped_symbol_name(*target_mod.root_table_idx, member), *fn_type};
+        }
+        return stdx::none;
+    }
+
+    const_eval inner_eval{ctx_, target_mod};
+    inner_eval.set_symbol_scoping(symbol_scoping_);
+    return inner_eval.try_eval(*decl->value);
+}
+
 auto const_eval::eval_module_access(ast::node_id, const ast::module_access_expr& mod_access)
     -> stdx::option<const_value> {
     const auto& inner_name{module_->ast.get_as<ast::identifier_expr>(mod_access.inner).name};
+
+    // Resolve the outer prefix to a module, then read inner from it
+    if (module_->ast.get_as_opt<ast::module_access_expr>(mod_access.outer)) {
+        const auto target_mod{resolve_module_chain(mod_access.outer)};
+        if (!target_mod) { return stdx::none; }
+        return eval_module_member(*target_mod, inner_name);
+    }
 
     const auto outer_ident{module_->ast.get_as_opt<ast::identifier_expr>(mod_access.outer)};
     if (!outer_ident || !module_->root_table_idx) { return stdx::none; }
@@ -896,29 +970,8 @@ auto const_eval::eval_module_access(ast::node_id, const ast::module_access_expr&
         const auto sema_type{module_->get_sema_type_opt(*node)};
         if (!sema_type) { return stdx::none; }
         const auto m_data{sema_type->get_data().as_opt<sema::types::module>()};
-        if (!m_data || !m_data->imported.root_table_idx) { return stdx::none; }
-        auto&       inner_mod{m_data->imported};
-        const auto& inner_table{ctx_.registry.get(*inner_mod.root_table_idx)};
-
-        const auto inner_sym{inner_table.get_opt(inner_name)};
-        if (!inner_sym) { return stdx::none; }
-        const auto inner_node{inner_sym->get_data().as_opt<sema::symbols::node_t>()};
-        if (!inner_node) { return stdx::none; }
-        const auto inner_decl{inner_mod.ast.get_as_opt<ast::decl_stmt>(*inner_node)};
-        if (!inner_decl || !inner_decl->value) { return stdx::none; }
-
-        // A plain cross-module function decays to a value naming its GIR symbol
-        if (inner_mod.ast.get_as_opt<ast::function_expr>(*inner_decl->value)) {
-            const auto fn_type{inner_mod.get_sema_type_opt(*inner_decl->value)};
-            if (fn_type && fn_type->get_kind() == sema::type_kind::FUNCTION) {
-                return const_value{scoped_symbol_name(*inner_mod.root_table_idx, inner_name),
-                                   *fn_type};
-            }
-            return stdx::none;
-        }
-        const_eval inner_eval{ctx_, inner_mod};
-        inner_eval.set_symbol_scoping(symbol_scoping_);
-        return inner_eval.try_eval(*inner_decl->value);
+        if (!m_data) { return stdx::none; }
+        return eval_module_member(m_data->imported, inner_name);
     }
 
     return stdx::none;
