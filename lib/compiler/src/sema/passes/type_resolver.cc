@@ -4724,7 +4724,9 @@ auto type_resolver::instantiate_generic(type&                             callee
                                                  std::move(type_param_frame)};
     inst_resolver.resolve(fn_expr.explicit_return_type);
     if (inst_resolver.last_type_->is_poison()) { return stdx::none; }
-    auto&      return_type{*inst_resolver.last_type_.take()};
+    // `denoted_type` unwraps a `@typeOf(param)` return annotation to the type it names, so it
+    // isn't mistaken for a `fn(...): type` type constructor.
+    auto&      return_type{denoted_type(*inst_resolver.last_type_.take())};
     const auto is_auto_return{return_type.get_kind() == type_kind::AUTO};
     inst_resolver.return_trackers_.emplace_back(return_tracker{
         .return_types   = {},
@@ -4788,9 +4790,12 @@ auto type_resolver::instantiate_generic(type&                             callee
     // Distinct `constexpr` argument values must produce distinct symbols.
     for (const auto& cx : constexpr_args) { mangled_name += fmt::format("_cx{}", cx.mangle()); }
 
-    // A `fn(...): type` generic is a type constructor and its instantiation is the type the body
+    // A `fn(...): type` generic is a type constructor: every parameter is a type and the body
+    // returns the type it builds. A dependent value parameter rules that out.
+    const bool all_params_are_types{std::ranges::all_of(
+        inst_param_types, [](const type* p) { return p->get_kind() == type_kind::TYPE; })};
     const bool is_type_ctor{!is_auto_return && return_type.get_kind() == type_kind::TYPE &&
-                            tracker.has_returns()};
+                            tracker.has_returns() && all_params_are_types};
     type* deduced_return_type{(is_auto_return || is_type_ctor) ? &tracker.deduced_return_type(ctx_)
                                                                : &return_type};
 
