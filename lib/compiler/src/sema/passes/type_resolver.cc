@@ -4137,6 +4137,9 @@ auto type_resolver::visit(ast::node_id id, const ast::import_stmt& import_stmt) 
             error::IMPORTED_MODULE_CONTAINS_ERRORS,
             resolving_.ast.location_of(id));
     }
+
+    // Give the alias identifier the module type so the LSP can hover over it
+    resolving_.set_sema_type_if(ident_id, import_type);
     last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::VOID_));
 }
 
