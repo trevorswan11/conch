@@ -3644,7 +3644,8 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
         builder_.set_segment(arm_body_seg);
         {
             const scope_guard arm_guard{scopes_};
-            if (arm.capture) {
+            // `|_|` is an anonymous capture: it consumes the arm's payload slot but binds nothing.
+            if (arm.capture && arm.capture->is<ast::identifier_expr>()) {
                 const auto& cap_ident{active_ast().get_as<ast::identifier_expr>(*arm.capture)};
                 auto&       cap_type{active_mod()
                                    .get_sema_type_opt(*arm.capture)
