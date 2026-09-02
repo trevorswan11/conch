@@ -2814,25 +2814,27 @@ auto gather_arm_duplicates(gsl::span<const ast::match_expr::arm> arms,
                            type_resolver::structural_validator&  validator,
                            bool require_implicit_access) -> stdx::option<diagnostic> {
     for (const auto& arm : arms) {
-        if (arm.pattern.is<ast::discarded>()) { continue; }
+        for (const auto& pattern : arm.patterns) {
+            if (pattern.is<ast::discarded>()) { continue; }
 
-        // It's only possible to verify access expressions
-        const auto pattern_node{resolving.ast.get_as_opt<ast::implicit_access_expr>(arm.pattern)};
-        if (!pattern_node) {
-            if (require_implicit_access) {
-                return diagnostic{
-                    "Match arm may only have an implicit access pattern in this context",
-                    error::ILLEGAL_MATCH_PATTERN,
-                    resolving.ast.location_of(arm.pattern)};
+            // It's only possible to verify access expressions
+            const auto pattern_node{resolving.ast.get_as_opt<ast::implicit_access_expr>(pattern)};
+            if (!pattern_node) {
+                if (require_implicit_access) {
+                    return diagnostic{
+                        "Match arm may only have an implicit access pattern in this context",
+                        error::ILLEGAL_MATCH_PATTERN,
+                        resolving.ast.location_of(pattern)};
+                }
+                continue;
             }
-            continue;
-        }
 
-        const auto& ident{resolving.ast.get_as<ast::identifier_expr>(pattern_node->member)};
-        if (!validator.seen.insert(ident.name).second) {
-            validator.duplicates.emplace_back(ident.name);
+            const auto& ident{resolving.ast.get_as<ast::identifier_expr>(pattern_node->member)};
+            if (!validator.seen.insert(ident.name).second) {
+                validator.duplicates.emplace_back(ident.name);
+            }
+            validator.provided.emplace_back(ident.name);
         }
-        validator.provided.emplace_back(ident.name);
     }
     return stdx::none;
 }
@@ -2989,25 +2991,30 @@ auto type_resolver::resolve_type_match(ast::node_id           id,
         }
         if (i == *match.catch_all_idx) { continue; }
 
-        resolve(arm.pattern);
-        if (last_type_->is_poison()) { return resolving_.set_sema_type(id, *last_type_.take()); }
-        auto& pat_type{*last_type_.take()};
+        for (const auto& pattern : arm.patterns) {
+            resolve(pattern);
+            if (last_type_->is_poison()) {
+                return resolving_.set_sema_type(id, *last_type_.take());
+            }
+            auto& pat_type{*last_type_.take()};
 
-        // A pattern that folds to a concrete value is not a type.
-        if (const auto pat_cv{evaluator.try_eval(arm.pattern)};
-            pat_cv && !pat_cv->is_poison() && !pat_cv->is<stdx::option<sema::type&>>()) {
-            return last_type_.emplace(
-                ctx_.poison_node(resolving_,
-                                 id,
-                                 "A 'match' on a type expects every arm pattern to be a type",
-                                 error::ILLEGAL_MATCH_PATTERN,
-                                 resolving_.ast.location_of(arm.pattern)));
-        }
+            // A pattern that folds to a concrete value is not a type.
+            if (const auto pat_cv{evaluator.try_eval(pattern)};
+                pat_cv && !pat_cv->is_poison() && !pat_cv->is<stdx::option<sema::type&>>()) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "A 'match' on a type expects every arm pattern to be a type",
+                                     error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(pattern)));
+            }
 
-        if (concrete && !selected) {
-            if (auto& pat_concrete{denoted_type(pat_type)};
-                pat_concrete.is_resolved() && sema::is_same_unqualified(*concrete, pat_concrete)) {
-                selected.emplace(i);
+            if (concrete && !selected) {
+                if (auto& pat_concrete{denoted_type(pat_type)};
+                    pat_concrete.is_resolved() &&
+                    sema::is_same_unqualified(*concrete, pat_concrete)) {
+                    selected.emplace(i);
+                }
             }
         }
     }
@@ -3085,7 +3092,8 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         if (!matcher_denotes_type) {
             for (usize i{0}; i < match.arms.size(); ++i) {
                 if (match.catch_all_idx && i == *match.catch_all_idx) { continue; }
-                matcher_denotes_type = denotes_type(denotes_type, *match.arms[i].pattern);
+                matcher_denotes_type =
+                    denotes_type(denotes_type, *match.arms[i].primary_pattern());
                 break;
             }
         }
@@ -3220,7 +3228,7 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             if (const auto union_data{matcher_data.as_opt<types::union_t>()}) {
                 // At this point the pattern is guaranteed to be an implicit access
                 const auto implicit_access{
-                    resolving_.ast.get_as_opt<ast::implicit_access_expr>(arm.pattern)};
+                    resolving_.ast.get_as_opt<ast::implicit_access_expr>(arm.primary_pattern())};
                 ASSERT(implicit_access, "Union validator failed to error");
                 const auto& ident =
                     resolving_.ast.get_as<ast::identifier_expr>(implicit_access->member);
@@ -3247,10 +3255,11 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             resolve_symbol_info(*arm.capture, symbol_kind::VALUE);
         }
 
-        // The pattern is resolved against the matcher's type
-        if (!arm.pattern.is<ast::discarded>()) {
+        // Each pattern is resolved against the matcher's type
+        for (const auto& pattern : arm.patterns) {
+            if (pattern.is<ast::discarded>()) { continue; }
             const structural_guard pattern_g{implicit_type_stack_, matcher_type};
-            TRY_RESOLVE(arm.pattern);
+            TRY_RESOLVE(pattern);
         }
         TRY_RESOLVE(arm.dispatch);
 

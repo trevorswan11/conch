@@ -3580,7 +3580,8 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
         auto& arm_body_seg{fn.add_segment()};
         auto& next_arm_seg{fn.add_segment()};
 
-        const auto pattern_node_id{*arm.pattern};
+        // Phase 1: one pattern per arm. Multi-pattern OR lowering lands with feature B.
+        const auto pattern_node_id{*arm.primary_pattern()};
         const auto is_discard{pattern_node_id.get_token_type() ==
                                   syntax::token_type_t::UNDERSCORE ||
                               active_ast()[pattern_node_id].template is<ast::discarded>()};

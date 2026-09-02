@@ -1194,7 +1194,8 @@ auto match_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, synt
             pattern_opt.emplace(pattern_raw);
         }
 
-        const match_pattern_handle pattern{*pattern_opt};
+        std::vector<match_pattern_handle> patterns;
+        patterns.emplace_back(*pattern_opt);
         TRY(parser.expect_peek(syntax::token_type_t::FAT_ARROW));
 
         // There is an optional capture for every arm
@@ -1229,7 +1230,7 @@ auto match_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, synt
         parser.advance();
         const auto consequence{TRY(parser.parse_restricted_statement(
             syntax::error::ILLEGAL_MATCH_ARM, syntax::semicolon_behavior::DISALLOW))};
-        arms.emplace_back(pattern, capture, modifier, consequence);
+        arms.emplace_back(std::move(patterns), capture, modifier, consequence);
         arm_idx += 1;
 
         // The lack of a comma must mean we're at the end of the arm list

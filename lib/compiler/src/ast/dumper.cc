@@ -548,8 +548,10 @@ auto dumper::visit(node_id, const match_expr& match) -> void {
 
             {
                 const indent::guard g_inner{indent_, false};
-                fmt::print(out_, "{}Pattern: ", indent_.current_branch());
-                dump(arm.pattern);
+                for (const auto& pattern : arm.patterns) {
+                    fmt::print(out_, "{}Pattern: ", indent_.current_branch());
+                    dump(pattern);
+                }
             }
 
             if (arm.capture) {

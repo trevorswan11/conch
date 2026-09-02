@@ -991,7 +991,9 @@ auto const_eval::eval_match(ast::node_id id, const ast::match_expr& match)
     };
 
     for (const auto& arm : match.arms) {
-        if (match_pattern(arm.pattern, *matcher_val)) {
+        const bool arm_matches{std::ranges::any_of(
+            arm.patterns, [&](const auto& pattern) { return match_pattern(pattern, *matcher_val); })};
+        if (arm_matches) {
             if (arm.capture && arm.capture->template is<ast::identifier_expr>()) {
                 const auto& ident{module_->ast.get_as<ast::identifier_expr>(*arm.capture)};
                 if (!call_stack_.empty()) {
