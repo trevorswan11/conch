@@ -2134,7 +2134,7 @@ auto type_resolver::visit(ast::node_id id, const ast::if_expr& if_expr) -> void 
                     TRY_RESOLVE(*if_expr.alternate);
                     live_type.emplace(arm_value_type(*if_expr.alternate));
                 }
-                static_cast<void>(last_type_.take());
+                last_type_.reset();
                 auto& node_type{live_type ? *live_type
                                           : ctx_.get_builtin_resolved_type(type_kind::VOID_)};
                 // Per-instantiation verdicts are captured and replayed by instantiate_generic.
@@ -3044,19 +3044,10 @@ auto type_resolver::resolve_type_match(ast::node_id           id,
     last_type_.emplace(*result_type);
 }
 
-auto type_resolver::resolve_constexpr_match(ast::node_id id, const ast::match_expr& match) -> void {
+auto type_resolver::resolve_constexpr_match(ast::node_id           id,
+                                            const ast::match_expr& match,
+                                            type&                  matcher_type) -> void {
     PROFILE_FUNCTION();
-
-    for (const auto& arm : match.arms) {
-        if (arm.capture) {
-            return last_type_.emplace(
-                ctx_.poison_node(resolving_,
-                                 id,
-                                 "'match constexpr' arms cannot bind a capture",
-                                 error::ILLEGAL_MATCH_PATTERN,
-                                 resolving_.ast.location_of(*arm.capture)));
-        }
-    }
 
     gir::const_eval evaluator{ctx_, resolving_};
     const auto      scrutinee{evaluator.try_eval(match.matcher)};
@@ -3094,6 +3085,38 @@ auto type_resolver::resolve_constexpr_match(ast::node_id id, const ast::match_ex
     {
         auto&       live_table_type{resolving_.get_sema_type(live)};
         const scope live_scope{table_stack_, live_table_type.get_symbol_table_idx(), table_idx_};
+
+        if (live.capture && live.capture->is<ast::identifier_expr>()) {
+            if (scrutinee->is<stdx::option<sema::type&>>()) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "'match constexpr' on a type value cannot bind a capture",
+                                     error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(*live.capture)));
+            }
+            if (!live.modifier.is_value()) {
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    "'match constexpr' captures cannot use a reference or pointer modifier",
+                    error::ILLEGAL_MATCH_PATTERN,
+                    resolving_.ast.location_of(*live.capture)));
+            }
+
+            type* cap_type{&denoted_type(matcher_type)};
+            if (const auto ud{matcher_type.get_data().as_opt<types::union_t>()}) {
+                if (const auto ia{resolving_.ast.get_as_opt<ast::implicit_access_expr>(
+                        *live.primary_pattern())}) {
+                    const auto& table{ctx_.registry.get(matcher_type.get_symbol_table_idx())};
+                    const auto& pident{resolving_.ast.get_as<ast::identifier_expr>(ia->member)};
+                    cap_type = &ud->type_at(table.get_proxy(pident.name).index);
+                }
+            }
+            resolving_.set_sema_type(*live.capture, *cap_type);
+            resolve_symbol_info(*live.capture, symbol_kind::VALUE);
+        }
+
         TRY_RESOLVE(live.dispatch);
     }
 
@@ -3117,7 +3140,7 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
     auto& matcher_type{*last_type_.take()};
 
     // `match constexpr` folds its scrutinee and type-checks only the arm it selects.
-    if (match.is_constexpr) { return resolve_constexpr_match(id, match); }
+    if (match.is_constexpr) { return resolve_constexpr_match(id, match, matcher_type); }
 
     // A scrutinee that denotes a compile-time `type` takes the type-match path: only the
     // selected arm is checked/emitted, `if constexpr`-style.

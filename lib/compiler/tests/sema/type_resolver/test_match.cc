@@ -340,6 +340,8 @@ TEST_CASE("Resolving a 'match constexpr'") {
         "const T := i32; _ = match constexpr (T) { i32 => 1, bool => not_real, _ => 0 };");
     helpers::resolve_and_check(
         "constexpr N := 2; _ = match constexpr (N) { 1 => 10, 2 => 20, 3 => bad, _ => 0 };");
+    helpers::resolve_and_check(
+        "constexpr N := 2; _ = match constexpr (N) { 1, 2 => |v| v, _ => 0 };");
 }
 
 TEST_CASE("Illegal 'match constexpr'") {
@@ -353,10 +355,16 @@ TEST_CASE("Illegal 'match constexpr'") {
         sema::diagnostic{"'match constexpr' has no arm matching the scrutinee and no '_' arm",
                          sema::error::CONSTEXPR_EVALUATION_FAILED,
                          std::pair{0UZ, 22UZ}});
-    helpers::test_resolver_fail("constexpr N := 1; _ = match constexpr (N) { 1 => |v| v, _ => 0 };",
-                                sema::diagnostic{"'match constexpr' arms cannot bind a capture",
-                                                 sema::error::ILLEGAL_MATCH_PATTERN,
-                                                 std::pair{0UZ, 50UZ}});
+    helpers::test_resolver_fail(
+        "const T := i32; _ = match constexpr (T) { i32 => |t| 1, _ => 0 };",
+        sema::diagnostic{"'match constexpr' on a type value cannot bind a capture",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 50UZ}});
+    helpers::test_resolver_fail(
+        "constexpr N := 1; _ = match constexpr (N) { 1 => |&mut v| v, _ => 0 };",
+        sema::diagnostic{"'match constexpr' captures cannot use a reference or pointer modifier",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 55UZ}});
 }
 
 TEST_CASE("Resolving multi-value match arms") {

@@ -1852,7 +1852,7 @@ auto const_eval::eval_stmt(const ast::stmt_handle& stmt) -> stdx::option<const_v
                 module_->ast[expr_id].template is<ast::match_expr>()) {
                 return try_eval(expr_id);
             }
-            static_cast<void>(try_eval(expr_id));
+            DISCARD(try_eval(expr_id));
             return stdx::none;
         });
 }
@@ -1896,7 +1896,7 @@ auto const_eval::eval_while(ast::node_id, const ast::while_loop_expr& loop)
 
         if (const auto body_res{eval_stmt(loop.block)}) { return body_res; }
 
-        if (loop.continuation) { static_cast<void>(try_eval(*loop.continuation)); }
+        if (loop.continuation) { DISCARD(try_eval(*loop.continuation)); }
     }
     return stdx::none;
 }

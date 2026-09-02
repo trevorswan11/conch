@@ -3530,13 +3530,18 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
     ASSERT(sema_type, "Match expression must have a resolved sema type");
     const bool yields_value{sema_type->get_kind() != sema::type_kind::VOID_};
 
-    // The resolver already selected an arm for a `match` on a compile-time type: emit only it.
+    // The resolver already selected an arm (`match` on a compile-time type, or `match constexpr`).
+    stdx::opt_size forced_arm;
     if (const auto it{active_mod().match_arm_results.find(id.get_index())};
         it != active_mod().match_arm_results.end()) {
-        const auto& chosen{match.arms[it->second]};
-        if (yields_value) { return emit_stmt_as_value(chosen.dispatch); }
-        emit_stmt(chosen.dispatch);
-        return value{void_val{}, sema_type};
+        forced_arm.emplace(it->second);
+        // With no capture there is nothing to bind: emit only the chosen dispatch.
+        if (!match.arms[it->second].capture) {
+            const auto& chosen{match.arms[it->second]};
+            if (yields_value) { return emit_stmt_as_value(chosen.dispatch); }
+            emit_stmt(chosen.dispatch);
+            return value{void_val{}, sema_type};
+        }
     }
 
     if (const auto cv{const_eval_.try_eval(id)}) {
@@ -3576,9 +3581,11 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
         }
     }
 
-    for (const auto& arm : match.arms) {
-        auto& arm_body_seg{fn.add_segment()};
-        auto& next_arm_seg{fn.add_segment()};
+    for (usize arm_idx{0}; arm_idx < match.arms.size(); ++arm_idx) {
+        if (forced_arm && arm_idx != *forced_arm) { continue; }
+        const auto& arm{match.arms[arm_idx]};
+        auto&       arm_body_seg{fn.add_segment()};
+        auto&       next_arm_seg{fn.add_segment()};
 
         const auto primary_id{*arm.primary_pattern()};
         const auto is_discard{primary_id.get_token_type() == syntax::token_type_t::UNDERSCORE ||
@@ -3610,7 +3617,8 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
             return value{is_eq, bool_type};
         }};
 
-        if (is_discard) {
+        if (forced_arm || is_discard) {
+            // The arm was already selected at compile time, or it is the catch-all.
             builder_.emit_goto(arm_body_seg.get_id());
         } else {
             stdx::option<value> matched;

@@ -158,6 +158,34 @@ TEST_CASE("'match constexpr' selects its arm at compile time") {
     )") == 20);
 }
 
+TEST_CASE("'match constexpr' arm binds a capture to the folded scrutinee") {
+    CHECK(helpers::compile_and_run(R"(
+        constexpr LEVEL := 2;
+        pub const main := fn(): i32 {
+            return match constexpr (LEVEL) {
+                0 => |v| v,
+                1, 2, 3 => |v| v * 10,
+                _ => -1,
+            };
+        };
+    )") == 20);
+}
+
+TEST_CASE("'match constexpr' capture works per generic instantiation") {
+    constexpr std::string_view program{R"(
+        const scaled := fn(constexpr n: i32): i32 {
+            return match constexpr (n) {
+                1, 2 => |v| v * 10,
+                _ => 0,
+            };
+        };
+        pub const main := fn(): i32 {
+            return scaled(2) + scaled(9);
+        };
+    )"};
+    CHECK(helpers::compile_and_run(program) == 20);
+}
+
 TEST_CASE("'match constexpr' folds per generic instantiation") {
     constexpr std::string_view program{R"(
         const tag := fn(T: type): i32 {

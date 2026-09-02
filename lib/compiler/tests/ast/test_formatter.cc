@@ -361,6 +361,7 @@ TEST_CASE("formatter round trip: control flow") {
     round_trips("match (n) { 1..10 => |v| v, 10..=20 => 2, _ => 0 };");
     round_trips("match (n) { 1, 2, 5..9 => |v| v, _ => 0 };");
     round_trips("match constexpr (T) { i32 => 1, i64 => 2, _ => 0 };");
+    round_trips("match constexpr (n) { 1, 2 => |v| v, _ => 0 };");
     round_trips("a: { continue :a; };");
     round_trips(R"(test "dump" { import other; @expect(a == true); })");
 }
