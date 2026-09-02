@@ -25,9 +25,7 @@ struct explicit_array_type {
 };
 
 struct explicit_function_type {
-    std::vector<explicit_type_id> parameter_types;
-    // One name per non-variadic parameter; parallel to `parameter_types`. Names are required for
-    // readability and to let the formatter round-trip the type, but carry no semantic meaning.
+    std::vector<explicit_type_id>  parameter_types;
     std::vector<identifier_handle> parameter_names;
     bool                           variadic;
     explicit_type_id               explicit_return_type;

@@ -456,7 +456,6 @@ TEST_CASE("formatter preserves trailing comments on statements without extra bla
 }
 
 TEST_CASE("formatter keeps the blank line before a leading comment group") {
-    // Top-level: blank line before the first comment of a leading group is preserved (#216).
     constexpr std::string_view top_level{R"(const a: i32 = 2;
 
 // some comment
@@ -464,7 +463,6 @@ const b: i32 = 3;
 )"};
     CHECK(format_source(top_level) == top_level);
 
-    // Same inside a block body.
     constexpr std::string_view in_block{R"(const f := fn(): void {
     var a := 1;
 
@@ -474,7 +472,6 @@ const b: i32 = 3;
 )"};
     CHECK(format_source(in_block) == in_block);
 
-    // A blank line between two leading comments is still kept.
     constexpr std::string_view two_comments{R"(const a: i32 = 2;
 
 // first
@@ -484,14 +481,12 @@ const b: i32 = 3;
 )"};
     CHECK(format_source(two_comments) == two_comments);
 
-    // No blank line is invented when the source has none.
     constexpr std::string_view no_blank{R"(const a: i32 = 2;
 // some comment
 const b: i32 = 3;
 )"};
     CHECK(format_source(no_blank) == no_blank);
 
-    // The first comment in the file never gains a leading blank line.
     CHECK(format_source("// file header\nconst a := 1;\n") == "// file header\nconst a := 1;\n");
 }
 
