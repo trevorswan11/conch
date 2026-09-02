@@ -1196,6 +1196,29 @@ auto match_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, synt
 
         std::vector<match_pattern_handle> patterns;
         patterns.emplace_back(*pattern_opt);
+
+        // An arm may list several comma-separated patterns before its `=>`.
+        const bool is_catch_all_arm{catch_all_idx == arm_idx};
+        while (parser.peek_token_is(syntax::token_type_t::COMMA)) {
+            parser.advance();
+            parser.advance();
+            if (is_catch_all_arm || parser.current_token_is(syntax::token_type_t::UNDERSCORE)) {
+                return make_syntax_err("A catch-all '_' arm cannot list additional patterns",
+                                       syntax::error::ILLEGAL_MATCH_CATCH_ALL,
+                                       parser.get_current_token());
+            }
+
+            const auto extra_tok{parser.get_current_token()};
+            const auto extra_raw{TRY(parser.parse_expression())};
+            if (!match_pattern_handle::any_compatible(extra_raw->get_kind())) {
+                return make_syntax_err(
+                    fmt::format("Unmatchable expression '{}' used as a match arm pattern",
+                                extra_raw->display_name()),
+                    syntax::error::ILLEGAL_MATCH_PATTERN,
+                    extra_tok);
+            }
+            patterns.emplace_back(extra_raw);
+        }
         TRY(parser.expect_peek(syntax::token_type_t::FAT_ARROW));
 
         // There is an optional capture for every arm

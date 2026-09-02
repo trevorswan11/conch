@@ -3206,8 +3206,10 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         }
 
         if (!match.catch_all_idx) {
-            // With a required arm count the counts must match
-            if (required_arm_count && required_arm_count != match.arms.size()) {
+            // With a required arm count the total pattern count must match
+            usize listed_pattern_count{0};
+            for (const auto& arm : match.arms) { listed_pattern_count += arm.patterns.size(); }
+            if (required_arm_count && *required_arm_count != listed_pattern_count) {
                 return last_type_.emplace(ctx_.poison_node(
                     resolving_,
                     id,
@@ -3262,16 +3264,25 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             // Unions implicitly unpack the value since the field is guaranteed to be valid
             stdx::option<type&> base_type;
             if (const auto union_data{matcher_data.as_opt<types::union_t>()}) {
-                // At this point the pattern is guaranteed to be an implicit access
-                const auto implicit_access{
-                    resolving_.ast.get_as_opt<ast::implicit_access_expr>(arm.primary_pattern())};
-                ASSERT(implicit_access, "Union validator failed to error");
-                const auto& ident =
-                    resolving_.ast.get_as<ast::identifier_expr>(implicit_access->member);
-
                 const auto& table{ctx_.registry.get(matcher_type.get_symbol_table_idx())};
-                const auto& proxy{table.get_proxy(ident.name)};
-                base_type.emplace(union_data->type_at(proxy.index));
+                // Every listed variant must carry the same payload type to share one capture.
+                for (const auto& pat : arm.patterns) {
+                    const auto ia{resolving_.ast.get_as_opt<ast::implicit_access_expr>(*pat)};
+                    ASSERT(ia, "Union validator failed to error");
+                    const auto& pident{resolving_.ast.get_as<ast::identifier_expr>(ia->member)};
+                    auto& pty{union_data->type_at(table.get_proxy(pident.name).index)};
+                    if (!base_type) {
+                        base_type.emplace(pty);
+                    } else if (!sema::is_same_unqualified(*base_type, pty)) {
+                        return last_type_.emplace(ctx_.poison_node(
+                            resolving_,
+                            id,
+                            "A capture on a multi-variant match arm requires every listed "
+                            "variant to carry the same payload type",
+                            error::ILLEGAL_MATCH_PATTERN,
+                            resolving_.ast.location_of(*arm.capture)));
+                    }
+                }
             } else {
                 base_type.emplace(matcher_type);
             }

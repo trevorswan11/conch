@@ -65,4 +65,11 @@ TEST_CASE("Dumps a range pattern as a match arm") {
     CHECK(count_substr(out, "Pattern: ") == 2);
 }
 
+TEST_CASE("Dumps every pattern of a multi-value match arm") {
+    const auto out{dump_source("match (n) { 1, 2, 5..9 => |v| v, _ => 0 };")};
+    // Three listed patterns plus the catch-all pattern.
+    CHECK(count_substr(out, "Pattern: ") == 4);
+    CHECK(out.find("RangeExpression") != std::string::npos);
+}
+
 } // namespace ghoti::tests

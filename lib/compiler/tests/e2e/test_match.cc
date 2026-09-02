@@ -146,6 +146,23 @@ TEST_CASE("A range match arm dispatches on interval membership") {
     CHECK(helpers::compile_and_run(program) == 20);
 }
 
+TEST_CASE("A multi-value match arm is taken when any listed pattern matches") {
+    constexpr std::string_view program{R"(
+        const kind := fn(n: i32): i32 {
+            return match (n) {
+                0, 2, 4..8 => |v| v + 1,
+                1, 3 => 100,
+                _ => -1,
+            };
+        };
+        pub const main := fn(): i32 {
+            return kind(2) + kind(3) + kind(6) + kind(9);
+        };
+    )"};
+    // 3 (0,2,4..8 -> v+1) + 100 (1,3) + 7 (4..8 -> v+1) + -1 (catch-all) == 109
+    CHECK(helpers::compile_and_run(program) == 109);
+}
+
 TEST_CASE("A range match arm accepts runtime endpoints") {
     CHECK(helpers::compile_and_run(R"(
         pub const main := fn(): i32 {

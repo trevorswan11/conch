@@ -3580,39 +3580,48 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
         auto& arm_body_seg{fn.add_segment()};
         auto& next_arm_seg{fn.add_segment()};
 
-        // Phase 1: one pattern per arm. Multi-pattern OR lowering lands with feature B.
-        const auto pattern_node_id{*arm.primary_pattern()};
-        const auto is_discard{pattern_node_id.get_token_type() ==
-                                  syntax::token_type_t::UNDERSCORE ||
-                              active_ast()[pattern_node_id].template is<ast::discarded>()};
+        const auto primary_id{*arm.primary_pattern()};
+        const auto is_discard{primary_id.get_token_type() == syntax::token_type_t::UNDERSCORE ||
+                              active_ast()[primary_id].template is<ast::discarded>()};
+
+        // Test one pattern of the arm; the arm is taken if any of its patterns match.
+        const auto emit_pattern_test{[&](ast::node_id pat_id) -> value {
+            if (const auto range{active_ast().get_as_opt<ast::range_expr>(pat_id)}) {
+                const auto start_val{emit_expression(range->lhs)};
+                const auto end_val{emit_expression(range->rhs)};
+                const auto ge_cond{
+                    builder_.emit_binary(instruction_kind::GE, matcher_val, start_val, bool_type)};
+                const auto le_kind{pat_id.get_token_type() == syntax::token_type_t::DOT_DOT_EQ
+                                       ? instruction_kind::LE
+                                       : instruction_kind::LT};
+                const auto le_cond{builder_.emit_binary(le_kind, matcher_val, end_val, bool_type)};
+                return value{builder_.emit_binary(instruction_kind::AND,
+                                                  value{ge_cond, bool_type},
+                                                  value{le_cond, bool_type},
+                                                  bool_type),
+                             bool_type};
+            }
+            const auto is_eq{union_data && !union_data->is_untagged
+                                 ? emit_union_tag_eq(*matcher_addr, pat_id)
+                                 : builder_.emit_binary(instruction_kind::EQ,
+                                                        matcher_val,
+                                                        emit_expression_id(pat_id),
+                                                        bool_type)};
+            return value{is_eq, bool_type};
+        }};
 
         if (is_discard) {
             builder_.emit_goto(arm_body_seg.get_id());
-        } else if (const auto range{active_ast().get_as_opt<ast::range_expr>(pattern_node_id)}) {
-            const auto start_val{emit_expression(range->lhs)};
-            const auto end_val{emit_expression(range->rhs)};
-
-            const auto ge_cond{
-                builder_.emit_binary(instruction_kind::GE, matcher_val, start_val, bool_type)};
-            const auto is_inclusive{pattern_node_id.get_token_type() ==
-                                    syntax::token_type_t::DOT_DOT_EQ};
-            const auto le_kind{is_inclusive ? instruction_kind::LE : instruction_kind::LT};
-            const auto le_cond{builder_.emit_binary(le_kind, matcher_val, end_val, bool_type)};
-            const auto in_range{builder_.emit_binary(instruction_kind::AND,
-                                                     value{ge_cond, bool_type},
-                                                     value{le_cond, bool_type},
-                                                     bool_type)};
-            builder_.emit_cond_goto(
-                value{in_range, bool_type}, arm_body_seg.get_id(), next_arm_seg.get_id());
         } else {
-            const auto is_eq{union_data && !union_data->is_untagged
-                                 ? emit_union_tag_eq(*matcher_addr, pattern_node_id)
-                                 : builder_.emit_binary(instruction_kind::EQ,
-                                                        matcher_val,
-                                                        emit_expression_id(pattern_node_id),
-                                                        bool_type)};
-            builder_.emit_cond_goto(
-                value{is_eq, bool_type}, arm_body_seg.get_id(), next_arm_seg.get_id());
+            stdx::option<value> matched;
+            for (const auto& pat : arm.patterns) {
+                const auto test{emit_pattern_test(*pat)};
+                matched = matched ? value{builder_.emit_binary(
+                                              instruction_kind::OR, *matched, test, bool_type),
+                                          bool_type}
+                                  : test;
+            }
+            builder_.emit_cond_goto(*matched, arm_body_seg.get_id(), next_arm_seg.get_id());
         }
 
         builder_.set_segment(arm_body_seg);

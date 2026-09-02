@@ -337,6 +337,33 @@ TEST_CASE("Resolving well-formed range matching") {
         "var x: i32 = 0; var lo := 1; var hi := 8; _ = match (x) { lo..hi => 1, _ => 0 };");
 }
 
+TEST_CASE("Resolving multi-value match arms") {
+    helpers::resolve_and_check("var x: i32 = 0; _ = match (x) { 1, 2, 3 => |v| v, _ => 0 };");
+    helpers::resolve_and_check(
+        "var x: i32 = 0; _ = match (x) { 0, 5..9 => |v| v, _ => 0 };");
+    helpers::resolve_and_check(
+        "using U = union { a: i32, b: i32 }; var u := U{ .a = 1 }; "
+        "_ = match (u) { .a, .b => |v| v };");
+}
+
+TEST_CASE("A multi-variant capture requires one shared payload type") {
+    helpers::test_resolver_fail(
+        "using U = union { a: i32, b: bool }; var u := U{ .a = 1 }; "
+        "_ = match (u) { .a, .b => |v| v };",
+        sema::diagnostic{"A capture on a multi-variant match arm requires every listed "
+                         "variant to carry the same payload type",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 86UZ}});
+}
+
+TEST_CASE("Multi-value arms still reject overlapping constants") {
+    helpers::test_resolver_fail(
+        "var x: i32 = 0; _ = match (x) { 0, 4 => 1, 4..8 => 2, _ => 0 };",
+        sema::diagnostic{"This match arm pattern overlaps an earlier arm",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 43UZ}});
+}
+
 TEST_CASE("Illegal range match arms") {
     helpers::test_resolver_fail(
         "var b := true; _ = match (b) { 0..1 => 1, _ => 0 };",

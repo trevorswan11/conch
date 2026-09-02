@@ -195,6 +195,9 @@ TEST_CASE("formatter lays out if / match") {
     CHECK(format_source("const r := match (n) { 1..8 => 1, _ => 0 };") ==
           "const r := match (n) { 1..8 => 1, _ => 0 };\n");
 
+    CHECK(format_source("const r := match (n) { 1, 2, 3 => 1, _ => 0 };") ==
+          "const r := match (n) { 1, 2, 3 => 1, _ => 0 };\n");
+
     CHECK(format_source("match (u) { .a => |&mut v| { v = 1; }, _ => {}, };") == R"(match (u) {
     .a => |&mut v| {
         v = 1;
@@ -353,6 +356,7 @@ TEST_CASE("formatter round trip: control flow") {
     round_trips("loop { a; };");
     round_trips("match (a) { b => |c| d, e => |_| f, g => h, _ => d, };");
     round_trips("match (n) { 1..10 => |v| v, 10..=20 => 2, _ => 0 };");
+    round_trips("match (n) { 1, 2, 5..9 => |v| v, _ => 0 };");
     round_trips("a: { continue :a; };");
     round_trips(R"(test "dump" { import other; @expect(a == true); })");
 }
