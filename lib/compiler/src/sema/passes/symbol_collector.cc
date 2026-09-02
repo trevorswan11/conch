@@ -348,7 +348,7 @@ auto symbol_collector::visit(ast::node_id, const ast::match_expr& match) -> void
         const auto  new_idx{ctx_.registry.create()};
         const scope s{table_stack_, new_idx, table_idx_};
 
-        collect(arm.pattern);
+        for (const auto& pattern : arm.patterns) { collect(pattern); }
         if (arm.capture && (*arm.capture)->get_kind() == ast::node_kind::IDENTIFIER_EXPRESSION) {
             const auto& ident{collecting_.ast.get_as<ast::identifier_expr>(*arm.capture)};
             try_declare<symbols::match_capture>(ident.name, *arm.capture);
