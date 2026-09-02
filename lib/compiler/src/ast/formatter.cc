@@ -847,9 +847,9 @@ auto formatter::visit(node_id, const dot_expr& node) -> syntax::doc_id {
 }
 
 auto formatter::visit(node_id id, const range_expr& node) -> syntax::doc_id {
-    return doc_manager_.concat({format(node.lhs),
+    return doc_manager_.concat({node.lhs ? format(*node.lhs) : doc_manager_.nil(),
                                 doc_manager_.text(operator_spelling(id.get_token_type())),
-                                format(node.rhs)});
+                                node.rhs ? format(*node.rhs) : doc_manager_.nil()});
 }
 
 auto formatter::visit(node_id, const initializer_expr& node) -> syntax::doc_id {

@@ -2597,8 +2597,9 @@ auto emitter::emit_for(ast::node_id                   id,
         if (const auto range{active_ast().get_as_opt<ast::range_expr>(iter_id)}) {
             const bool inclusive{iter_id.get_token_type() == syntax::token_type_t::DOT_DOT_EQ};
 
-            const auto start_val{emit_expression(range->lhs)};
-            const auto end_val{emit_expression(range->rhs)};
+            ASSERT(range->lhs && range->rhs, "A for-loop range iterable needs both endpoints");
+            const auto start_val{emit_expression(*range->lhs)};
+            const auto end_val{emit_expression(*range->rhs)};
             auto*      elem_type{start_val.type ? &*start_val.type
                                                 : &ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
 
@@ -3611,8 +3612,9 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
         // Test one pattern of the arm; the arm is taken if any of its patterns match.
         const auto emit_pattern_test{[&](ast::node_id pat_id) -> value {
             if (const auto range{active_ast().get_as_opt<ast::range_expr>(pat_id)}) {
-                const auto start_val{emit_expression(range->lhs)};
-                const auto end_val{emit_expression(range->rhs)};
+                ASSERT(range->lhs && range->rhs, "A range pattern needs both endpoints");
+                const auto start_val{emit_expression(*range->lhs)};
+                const auto end_val{emit_expression(*range->rhs)};
                 const auto ge_cond{
                     builder_.emit_binary(instruction_kind::GE, matcher_val, start_val, bool_type)};
                 const auto le_kind{pat_id.get_token_type() == syntax::token_type_t::DOT_DOT_EQ
@@ -4193,13 +4195,10 @@ auto emitter::emit_slice_range(ast::node_id id, const ast::index_expr& index) ->
     const bool  inclusive{ast::node_id{index.index}.get_token_type() ==
                          syntax::token_type_t::DOT_DOT_EQ};
 
-    const auto lo{emit_coerced_expr(range.lhs, usize_type)};
-    auto       hi{emit_coerced_expr(range.rhs, usize_type)};
-    if (inclusive) {
-        hi = value{
-            builder_.emit_binary(instruction_kind::ADD, hi, value{u64{1}, usize_type}, usize_type),
-            usize_type};
-    }
+    // An omitted lower bound is `0`; an omitted upper bound is the source length, filled in once
+    // it is known below.
+    const auto lo{range.lhs ? emit_coerced_expr(*range.lhs, usize_type)
+                            : value{u64{0}, usize_type}};
 
     // Base element pointer and (for arrays / slices) the source length.
     auto  src_lval{emit_lvalue(index.array)};
@@ -4230,6 +4229,19 @@ auto emitter::emit_slice_range(ast::node_id id, const ast::index_expr& index) ->
         base_ptr = value{loaded_ptr.data, ptr_type};
     } else {
         UNREACHABLE("Range index source must be an array, slice, or pointer");
+    }
+
+    value hi{};
+    if (range.rhs) {
+        hi = emit_coerced_expr(*range.rhs, usize_type);
+        if (inclusive) {
+            hi = value{builder_.emit_binary(
+                           instruction_kind::ADD, hi, value{u64{1}, usize_type}, usize_type),
+                       usize_type};
+        }
+    } else {
+        ASSERT(src_len, "An open-ended `..` upper bound needs a known source length");
+        hi = *src_len;
     }
 
     // Bounds check: lo <= hi, and hi <= len when the source length is known.

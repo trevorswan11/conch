@@ -76,6 +76,7 @@ enum class error : u8 {
     ILLEGAL_LOCAL_DECL_MODIFIER,
     UNUSED_RESULT,
     ILLEGAL_DISCARDABLE,
+    ILLEGAL_OPEN_RANGE,
 };
 
 using diagnostic  = diagnostic<error>;

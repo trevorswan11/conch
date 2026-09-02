@@ -366,6 +366,8 @@ class type_resolver {
 
     bool in_mutating_context_{false};
     bool for_generic_instantiation_{false};
+    // True while resolving the index of a subscript, where an open-ended `range_expr` is legal.
+    bool in_subscript_index_{false};
 
     named_test_map_t     named_tests_;
     structural_validator struct_validator_;

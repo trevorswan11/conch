@@ -2232,9 +2232,24 @@ auto type_resolver::visit(ast::node_id id, const ast::index_expr& index) -> void
     }
 
     auto& single_item_type{*last_type_.take()};
+
+    // An open-ended range index (`x[lo..]`, `x[..hi]`, `x[..]`) needs `operand.len`, which a bare
+    // pointer does not have.
+    if (const auto range{resolving_.ast.get_as_opt<ast::range_expr>(index.index)};
+        range && (!range->lhs || !range->rhs) && array_data.is<types::pointer>()) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "An open-ended range needs a known length; index a pointer with an "
+                             "explicit `lo..hi` range instead",
+                             error::ILLEGAL_OPEN_RANGE,
+                             resolving_.ast.location_of(index.index)));
+    }
+
     {
-        auto&                  usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
-        const structural_guard g{implicit_type_stack_, usize_type};
+        auto&                       usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
+        const structural_guard      g{implicit_type_stack_, usize_type};
+        const mutating_context_guard subscript_g{in_subscript_index_, true};
         TRY_RESOLVE(index.index);
     }
     auto& access_type{*last_type_.take()};
@@ -2567,21 +2582,45 @@ auto type_resolver::visit(ast::node_id id, const ast::dot_expr& dot) -> void {
 
 auto type_resolver::visit(ast::node_id id, const ast::range_expr& range) -> void {
     PROFILE_FUNCTION();
-    TRY_RESOLVE(range.lhs);
-    auto* lhs_type{last_type_.take()};
-    {
+    auto& usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
+
+    // An omitted endpoint is filled from the indexed operand (`0` / `operand.len`), which only
+    // makes sense inside a subscript.
+    if ((!range.lhs || !range.rhs) && !in_subscript_index_) {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            "An open-ended range is only valid inside a subscript (`x[lo..]`, `x[..hi]`, `x[..]`)",
+            error::ILLEGAL_OPEN_RANGE,
+            resolving_.ast.location_of(id)));
+    }
+    if (!range.rhs && id.get_token_type() == syntax::token_type_t::DOT_DOT_EQ) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "An inclusive range `..=` requires an upper bound",
+                             error::ILLEGAL_OPEN_RANGE,
+                             resolving_.ast.location_of(id)));
+    }
+
+    type* lhs_type{&usize_type};
+    if (range.lhs) {
+        TRY_RESOLVE(*range.lhs);
+        lhs_type = last_type_.take();
+    }
+    if (range.rhs) {
         // Give a bare integer-literal upper bound the lower bound's type (`s.len .. 0`).
         const structural_guard g{implicit_type_stack_, *lhs_type};
-        TRY_RESOLVE(range.rhs);
-    }
-    auto& rhs_type{*last_type_.take()};
+        TRY_RESOLVE(*range.rhs);
+        auto& rhs_type{*last_type_.take()};
 
-    // ...and give a bare integer-literal lower bound the upper bound's type (`0 .. s.len`).
-    if (is_integer(rhs_type.get_kind())) {
-        if (const auto i32_node{resolving_.ast.get_as_opt<ast::i32_expr>(range.lhs)};
-            i32_node && i32_node->value >= 0) {
-            resolving_.set_sema_type(range.lhs, rhs_type);
-            lhs_type = &rhs_type;
+        // ...and give a bare integer-literal lower bound the upper bound's type (`0 .. s.len`).
+        if (range.lhs && is_integer(rhs_type.get_kind())) {
+            if (const auto i32_node{resolving_.ast.get_as_opt<ast::i32_expr>(*range.lhs)};
+                i32_node && i32_node->value >= 0) {
+                resolving_.set_sema_type(*range.lhs, rhs_type);
+                lhs_type = &rhs_type;
+            }
         }
     }
 
@@ -3440,11 +3479,21 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
                     resolving_.ast.location_of(*pattern)));
             }
 
+            if (range && (!range->lhs || !range->rhs)) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "A range pattern needs both endpoints; open-ended ranges are "
+                                     "only valid inside a subscript",
+                                     error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(*pattern)));
+            }
+
             {
                 const structural_guard pattern_g{implicit_type_stack_, matcher_type};
                 if (range) {
-                    TRY_RESOLVE(range->lhs);
-                    TRY_RESOLVE(range->rhs);
+                    TRY_RESOLVE(*range->lhs);
+                    TRY_RESOLVE(*range->rhs);
                 } else {
                     TRY_RESOLVE(pattern);
                 }
@@ -3454,8 +3503,8 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             if (range) {
                 const bool inclusive{(*pattern).get_token_type() ==
                                      syntax::token_type_t::DOT_DOT_EQ};
-                const auto lo{interval_probe.try_eval(range->lhs)};
-                const auto hi{interval_probe.try_eval(range->rhs)};
+                const auto lo{interval_probe.try_eval(*range->lhs)};
+                const auto hi{interval_probe.try_eval(*range->rhs)};
                 if (!lo || !hi) { continue; }
                 const auto lo_i{lo->as_int_opt()};
                 const auto hi_i{hi->as_int_opt()};

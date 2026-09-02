@@ -471,7 +471,21 @@ auto dumper::visit(node_id id, const dot_expr& node) -> void {
     }
 }
 
-MAKE_INFIX_DUMP(range_expr, RangeExpression, Lower, Upper)
+auto dumper::visit(node_id id, const range_expr& node) -> void {
+    PROFILE_FUNCTION();
+    fmt::println(out_, "RangeExpression ({})", magic_enum::enum_name(id.get_token_type()));
+    const auto side{[&](std::string_view label, const stdx::option<expr_handle>& side, bool last) {
+        const indent::guard g{indent_, last};
+        fmt::print(out_, "{}{}: ", indent_.current_branch(), label);
+        if (side) {
+            dump(*side);
+        } else {
+            fmt::println(out_, "(open)");
+        }
+    }};
+    side("Lower", node.lhs, false);
+    side("Upper", node.rhs, true);
+}
 
 auto dumper::visit(node_id, const initializer_expr& init) -> void {
     PROFILE_FUNCTION();
