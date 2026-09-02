@@ -1518,10 +1518,34 @@ auto type_resolver::visit(ast::node_id id, const ast::for_loop_expr& for_expr) -
     {
         const scope s{table_stack_, loop_type.get_symbol_table_idx(), table_idx_};
 
+        // A `for (arr, lo..) |v, i|` open-upper range needs a sibling array/slice to stop the loop.
+        bool has_open_upper_range{false};
+        bool has_bounding_iterable{false};
+        for (const auto& iterable : for_expr.iterables) {
+            const auto rng{resolving_.ast.get_as_opt<ast::range_expr>(iterable)};
+            if (rng && !rng->rhs) {
+                has_open_upper_range = true;
+            } else {
+                has_bounding_iterable = true;
+            }
+        }
+        if (has_open_upper_range && !has_bounding_iterable) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                "An open-ended range loop needs an array or slice iterable to bound it, e.g. "
+                "`for (arr, 0..) |v, i|`",
+                error::ILLEGAL_OPEN_RANGE,
+                resolving_.ast.location_of(id)));
+        }
+
         // The captures must be paired with the iterables inner types (shallow type check)
         for (const auto& [capture, iterable] :
              std::views::zip(for_expr.captures, for_expr.iterables)) {
-            TRY_RESOLVE(iterable);
+            {
+                const mutating_context_guard for_iter_g{in_for_iterable_, true};
+                TRY_RESOLVE(iterable);
+            }
             auto& iterable_type{*last_type_.take()};
             resolving_.set_sema_type(iterable, iterable_type);
 
@@ -2584,13 +2608,14 @@ auto type_resolver::visit(ast::node_id id, const ast::range_expr& range) -> void
     PROFILE_FUNCTION();
     auto& usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
 
-    // An omitted endpoint is filled from the indexed operand (`0` / `operand.len`), which only
-    // makes sense inside a subscript.
-    if ((!range.lhs || !range.rhs) && !in_subscript_index_) {
+    // An omitted endpoint is filled from context: the indexed operand inside `[]`, or a sibling
+    // iterable of a `for` loop. It is meaningless anywhere else.
+    if ((!range.lhs || !range.rhs) && !in_subscript_index_ && !in_for_iterable_) {
         return last_type_.emplace(ctx_.poison_node(
             resolving_,
             id,
-            "An open-ended range is only valid inside a subscript (`x[lo..]`, `x[..hi]`, `x[..]`)",
+            "An open-ended range is only valid inside a subscript (`x[lo..]`, `x[..hi]`, `x[..]`) "
+            "or a `for` loop paired with an array or slice",
             error::ILLEGAL_OPEN_RANGE,
             resolving_.ast.location_of(id)));
     }

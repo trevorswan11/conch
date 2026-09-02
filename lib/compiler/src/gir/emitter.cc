@@ -2604,10 +2604,15 @@ auto emitter::emit_for(ast::node_id                   id,
         const auto iter_id{*iter_handle};
         if (const auto range{active_ast().get_as_opt<ast::range_expr>(iter_id)}) {
             const bool inclusive{iter_id.get_token_type() == syntax::token_type_t::DOT_DOT_EQ};
+            auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
 
-            ASSERT(range->lhs && range->rhs, "A for-loop range iterable needs both endpoints");
-            const auto start_val{emit_expression(*range->lhs)};
-            const auto end_val{emit_expression(*range->rhs)};
+            // A missing lower bound counts from `0`; a missing upper bound (`for (arr, lo..)`)
+            // leans on a sibling iterable to stop the loop.
+            const auto start_val{range->lhs ? emit_expression(*range->lhs)
+                                            : value{u64{0}, usize_type}};
+            const bool open_upper{!range->rhs};
+            const auto end_val{open_upper ? value{u64{0}, usize_type}
+                                          : emit_expression(*range->rhs)};
             auto*      elem_type{start_val.type ? &*start_val.type
                                                 : &ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
 
@@ -2615,13 +2620,14 @@ auto emitter::emit_for(ast::node_id                   id,
             builder_.emit_store(slot, start_val);
 
             iter_infos.emplace_back<iterable_info>({
-                .is_range     = true,
-                .is_inclusive = inclusive,
-                .var_slot     = slot,
-                .elem_type    = elem_type,
-                .end_val      = end_val,
-                .capture_name = cap_name,
-                .capture_type = cap_type,
+                .is_range         = true,
+                .is_inclusive     = inclusive,
+                .range_open_upper = open_upper,
+                .var_slot         = slot,
+                .elem_type        = elem_type,
+                .end_val          = end_val,
+                .capture_name     = cap_name,
+                .capture_type     = cap_type,
             });
         } else {
             const auto arr_val{emit_lvalue(iter_handle)};
@@ -2691,6 +2697,8 @@ auto emitter::emit_for(ast::node_id                   id,
 
         value cond_val{true, bool_type};
         for (bool first{true}; const auto& info : iter_infos) {
+            // An open-upper range (`for (arr, lo..)`) contributes no stop condition of its own.
+            if (info.is_range && info.range_open_upper) { continue; }
             auto&      var_type{info.is_range ? *info.elem_type
                                               : ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
             const auto cur_val{builder_.emit_load(info.var_slot, var_type)};
