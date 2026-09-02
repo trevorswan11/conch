@@ -314,6 +314,15 @@ auto emitter::emit_type_ctor_member(mod::module& owner_mod, const sema::type_cto
         }
     }
 
+    // Make this constructor instantiation's `constexpr` parameter values visible to the member
+    // body, so `return tag;` / `return writeFn(...)` fold to the folded value.
+    sema::constexpr_frame ctor_frame;
+    if (const auto bindings{ctx_.instantiation_cache.get_type_ctor_bindings(tcm.typing_key)}) {
+        for (const auto& [name, val] : *bindings) { ctor_frame.insert_or_assign(name, val); }
+    }
+    const constexpr_frame_guard ctor_binding_guard{ctx_.constexpr_binding_frames,
+                                                   std::move(ctor_frame)};
+
     user_type_stack_.emplace_back(tcm.owner_clone);
     emit_function(tcm.member_decl, decl, *fn_expr, tcm.gir_name);
     user_type_stack_.pop_back();

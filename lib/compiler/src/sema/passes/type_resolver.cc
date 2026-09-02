@@ -4983,12 +4983,32 @@ auto type_resolver::instantiate_generic(type&                             callee
     // Distinct `constexpr` argument values must produce distinct symbols.
     for (const auto& cx : constexpr_args) { mangled_name += fmt::format("_cx{}", cx.mangle()); }
 
-    // A `fn(...): type` generic is a type constructor: every parameter is a type and the body
-    // returns the type it builds. A dependent value parameter rules that out.
+    // A `fn(...): type` generic is a type constructor: every parameter is a `type` or a
+    // `constexpr` value (erased from `inst_param_types`), and the body returns the type it builds.
     const bool all_params_are_types{std::ranges::all_of(
         inst_param_types, [](const type* p) { return p->get_kind() == type_kind::TYPE; })};
     const bool is_type_ctor{!is_auto_return && return_type.get_kind() == type_kind::TYPE &&
                             tracker.has_returns() && all_params_are_types};
+
+    // A plain (non-`constexpr`) value parameter is the one thing that keeps a `type`-returning fn
+    // from being a usable type constructor; point at it rather than failing cryptically later.
+    if (!is_type_ctor && !is_auto_return && return_type.get_kind() == type_kind::TYPE &&
+        tracker.has_returns() && !all_params_are_types) {
+        for (const auto& param : fn_expr.parameters) {
+            if (param.is_constexpr) { continue; }
+            const auto pty{fn_mod.get_sema_type_opt(param.explicit_type)};
+            if (pty && pty->get_kind() != type_kind::TYPE) {
+                const auto& pn{fn_mod.ast.get_as<ast::identifier_expr>(param.name).name};
+                ctx_.diags.emplace_back(
+                    fmt::format("a `fn(...): type` constructor cannot take a plain value parameter; "
+                                "mark '{}' `constexpr` so it is known at instantiation time",
+                                pn),
+                    error::TYPE_MISMATCH,
+                    fn_mod.ast.location_of(param.name));
+                return stdx::none;
+            }
+        }
+    }
     type* deduced_return_type{(is_auto_return || is_type_ctor) ? &tracker.deduced_return_type(ctx_)
                                                                : &return_type};
 
@@ -5002,6 +5022,22 @@ auto type_resolver::instantiate_generic(type&                             callee
                     ctx_, src_agg, fmt::format("{}#{}", mangled_name, agg_node->get_index()))};
                 register_type_ctor_members(
                     ctx_, fn_mod, *agg_node, src_agg, clone, mangled_name, std::move(typing));
+
+                // Hand this instantiation's `constexpr` parameter values to the member emit so
+                // `struct { ... const m := fn(&self) { return tag; }; }` can read them.
+                std::vector<std::pair<std::string, gir::const_value>> ctor_bindings;
+                for (usize p_idx{0}, cx_i{0}; p_idx < fn_expr.parameters.size(); ++p_idx) {
+                    if (!fn_expr.parameters[p_idx].is_constexpr) { continue; }
+                    if (cx_i >= constexpr_args.size()) { break; }
+                    const auto& p_name{
+                        fn_mod.ast.get_as<ast::identifier_expr>(fn_expr.parameters[p_idx].name).name};
+                    ctor_bindings.emplace_back(std::string{p_name}, constexpr_args[cx_i]);
+                    ++cx_i;
+                }
+                if (!ctor_bindings.empty()) {
+                    ctx_.instantiation_cache.set_type_ctor_bindings(mangled_name,
+                                                                   std::move(ctor_bindings));
+                }
                 deduced_return_type = &clone;
             }
         }
