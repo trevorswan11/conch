@@ -81,3 +81,7 @@
 - Per-monomorphization body typing and folded `constexpr` arguments now survive cross-module resolution, fixing `[n]T` with a `constexpr n` and type-constructor member `@this()` shapes across module boundaries
 - `^r` on a reference-typed value now yields `^T` aliasing the referent (like C++ `&ref`), instead of `^&T` pointing at the reference's own storage
     - `&r` on an already-reference value is still rejected
+
+# v0.3.0
+
+- Fix a bug where cross module re-exported symbols would break codegen
