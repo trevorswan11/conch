@@ -95,3 +95,12 @@
 ## alpha.2
 - Add support for freestanding linux (excluding powerpc64le / powerpc)
     - Previously segfaulted due to _start never being defined
+- Add `match constexpr` construct for multi-pattern constexpr-pruned 'branching'
+    - Pattern are checked to make sure conditions do not overlap
+    - Same semantics as `if constexpr`, only resolves the types in the chosen arm
+- Add ranges to match expression parser
+    - Was handled in emitter but I had missed it in the allowed pattern handles
+- Allow multiple patterns to be used in a match arm
+    - Captures can be used if all patterns are the same type
+- Add profiling hooks to various steps in the compilation pipeline
+    - Enabled by building with -Dprofile
