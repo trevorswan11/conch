@@ -1230,8 +1230,15 @@ auto formatter::visit(explicit_type_id id, const call_expr& node) -> syntax::doc
 
 auto formatter::visit(explicit_type_id id, const explicit_function_type& node) -> syntax::doc_id {
     std::vector<syntax::doc_id> params;
-    params.reserve(node.parameter_types.size());
-    for (const auto type : node.parameter_types) { params.emplace_back(format(type)); }
+    params.reserve(node.parameter_types.size() + (node.variadic ? 1 : 0));
+    for (usize i{0}; i < node.parameter_types.size(); ++i) {
+        auto entry{i < node.parameter_names.size()
+                       ? doc_manager_.concat({format(node.parameter_names[i]),
+                                              doc_manager_.text(": "),
+                                              format(node.parameter_types[i])})
+                       : format(node.parameter_types[i])};
+        params.emplace_back(std::move(entry));
+    }
     if (node.variadic) { params.emplace_back(doc_manager_.text("...")); }
 
     return with_modifier(id,

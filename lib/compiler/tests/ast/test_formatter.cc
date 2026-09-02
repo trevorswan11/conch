@@ -87,8 +87,8 @@ TEST_CASE("formatter round-trips types") {
           "var a: std::ArrayList(u8) = undefined;\n");
     CHECK(format_source("var a: List(i32) = undefined;") == "var a: List(i32) = undefined;\n");
     CHECK(format_source("var v: mut volatile i32 = 42;") == "var v: mut volatile i32 = 42;\n");
-    CHECK(format_source("var f: ^fn(&a, ^mut B, ...): ^E = undefined;") ==
-          "var f: ^fn(&a, ^mut B, ...): ^E = undefined;\n");
+    CHECK(format_source("var f: ^fn(x: &a, y: ^mut B, ...): ^E = undefined;") ==
+          "var f: ^fn(x: &a, y: ^mut B, ...): ^E = undefined;\n");
     CHECK(format_source("var a: [N:0]u8 = undefined;") == "var a: [N:0]u8 = undefined;\n");
 }
 
@@ -295,7 +295,7 @@ TEST_CASE("formatter round trip: precedence and nesting are preserved") {
 }
 
 TEST_CASE("formatter round trip: functions and types") {
-    round_trips("var f_ptr: ^fn(&a, ^mut B, ...): &[0x2uz][N]^E = undefined;");
+    round_trips("var f_ptr: ^fn(x: &a, y: ^mut B, ...): &[0x2uz][N]^E = undefined;");
     round_trips("fn(^mut this, a: A, b: ^B, ): i32 { c; };");
     round_trips("fn(self): i32 {};");
     round_trips("pub const min := fn(a: auto, b: auto): auto { return if (a < b) a else b; };");
