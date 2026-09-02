@@ -304,9 +304,9 @@ auto formatter::format_members(std::vector<syntax::doc_id>&                     
     for (usize i{0}; i < members.size(); ++i) {
         const auto& member{members[i]};
         // i != 0 only: the field→first-member gap already gets a blank from aggregate_body.
-        auto        leading{consume_leading_comments(ast_.location_of(member).line, i != 0)};
-        auto        member_doc{format(member)};
-        auto        trailing{consume_trailing_comment(ast_.end_location_of(member).line)};
+        auto leading{consume_leading_comments(ast_.location_of(member).line, i != 0)};
+        auto member_doc{format(member)};
+        auto trailing{consume_trailing_comment(ast_.end_location_of(member).line)};
         if (trailing != doc_manager_.nil()) {
             member_doc = doc_manager_.concat({member_doc, trailing});
         }
@@ -543,6 +543,9 @@ auto formatter::decl_prefix(const decl_stmt& node) -> syntax::doc_id {
     std::vector<syntax::doc_id> parts;
     if (node.has_modifier(decl_modifiers::PUBLIC)) {
         parts.emplace_back(doc_manager_.text("pub "));
+    }
+    if (node.has_modifier(decl_modifiers::DISCARDABLE)) {
+        parts.emplace_back(doc_manager_.text("@discardable "));
     }
     if (node.has_modifier(decl_modifiers::EXPORT)) {
         if (node.link_name) {

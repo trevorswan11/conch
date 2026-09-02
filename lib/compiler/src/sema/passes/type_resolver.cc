@@ -4283,6 +4283,20 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
     if (resolved_type.is_poison()) {
         sym.set_kind(symbol_kind::POISONED);
     } else {
+        if (decl.has_modifier(ast::decl_modifiers::DISCARDABLE)) {
+            const auto fn_d{type_data.as_opt<types::function>()};
+            if (!fn_d && !type_data.is<types::builtin_function>()) {
+                ctx_.diags.emplace_back("'@discardable' may only be applied to a function",
+                                        error::ILLEGAL_DISCARDABLE,
+                                        resolving_.ast.location_of(id));
+            } else if (fn_d && fn_d->return_type.get_kind() == type_kind::VOID_) {
+                ctx_.diags.emplace_back(
+                    "'@discardable' has no effect on a function that returns 'void'",
+                    error::ILLEGAL_DISCARDABLE,
+                    resolving_.ast.location_of(id));
+            }
+        }
+
         const bool literal_type_anno{decl.explicit_type && decl.explicit_type->get_token_type() ==
                                                                syntax::token_type_t::TYPE_TYPE};
         if (decl.has_modifier(ast::decl_modifiers::VARIABLE) && literal_type_anno) {
@@ -4339,10 +4353,83 @@ auto type_resolver::visit(ast::node_id id, const ast::discard_stmt& discard) -> 
     last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::VOID_));
 }
 
+auto type_resolver::callee_is_discardable(const ast::call_expr& call) const -> bool {
+    const mod::module* home{&resolving_};
+    ast::node_id       fn_node{*call.function};
+
+    for (int hops{0}; hops < 16; ++hops) {
+        stdx::option<symbol&> sym;
+        if (const auto ident{home->ast.get_as_opt<ast::identifier_expr>(fn_node)}) {
+            sym = (home == &resolving_) ? ctx_.registry.lookup(table_stack_, ident->name)
+                                        : stdx::option<symbol&>{};
+            if (!sym && home->root_table_idx) {
+                sym = ctx_.registry.get_from_opt(*home->root_table_idx, ident->name);
+            }
+        } else if (const auto mac{home->ast.get_as_opt<ast::module_access_expr>(fn_node)}) {
+            const auto outer_type{home->get_sema_type_opt(mac->outer)};
+            const auto m_data{outer_type ? outer_type->get_data().as_opt<types::module>()
+                                         : stdx::none};
+            if (!m_data || !m_data->imported.root_table_idx) { return false; }
+            const auto& inner_ident{home->ast.get_as<ast::identifier_expr>(mac->inner)};
+            sym  = ctx_.registry.get_from_opt(*m_data->imported.root_table_idx, inner_ident.name);
+            home = &m_data->imported;
+        } else {
+            return false;
+        }
+        if (!sym) { return false; }
+
+        const auto node{sym->get_data().as_opt<symbols::node_t>()};
+        if (!node) { return false; }
+        const auto decl{home->ast.get_as_opt<ast::decl_stmt>(*node)};
+        if (!decl) { return false; }
+        if (decl->has_modifier(ast::decl_modifiers::DISCARDABLE)) { return true; }
+
+        // Follow a direct `const g := f` / `const g := m::f` re-export to the real declaration.
+        if (decl->value && (home->ast.get_as_opt<ast::identifier_expr>(*decl->value) ||
+                            home->ast.get_as_opt<ast::module_access_expr>(*decl->value))) {
+            fn_node = *decl->value;
+            continue;
+        }
+        return false;
+    }
+    return false;
+}
+
+auto type_resolver::check_unused_result(ast::node_id stmt_id, const ast::expr_stmt& stmt) -> void {
+    const auto value_type{resolving_.get_sema_type_opt(stmt.expression)};
+    if (!value_type || value_type->is_poison()) { return; }
+    switch (value_type->get_kind()) {
+    case type_kind::VOID_:
+    case type_kind::NORETURN:
+    case type_kind::AUTO:     return;
+    default:                  break;
+    }
+
+    // Only a call whose result is thrown away is flagged; a bare `a + b;` is left alone for now.
+    const auto call{resolving_.ast.get_as_opt<ast::call_expr>(*stmt.expression)};
+    const auto unwrap{resolving_.ast.get_as_opt<ast::unwrap_expr>(*stmt.expression)};
+    if (!call && !unwrap) { return; }
+    if (call) {
+        // `@builtin(...)` calls (`@expect`, `@memcpy`, …) are their own category, not covered.
+        if (const auto fn_ty{resolving_.get_sema_type_opt(call->function)};
+            fn_ty && fn_ty->get_data().is<types::builtin_function>()) {
+            return;
+        }
+        if (callee_is_discardable(*call)) { return; }
+    }
+
+    ctx_.diags.emplace_back(
+        "result of this call is unused; bind it, pass it on, `_ =` it, or mark the callee "
+        "'@discardable'",
+        error::UNUSED_RESULT,
+        resolving_.ast.location_of(stmt_id));
+}
+
 auto type_resolver::visit(ast::node_id id, const ast::expr_stmt& expr) -> void {
     PROFILE_FUNCTION();
     TRY_RESOLVE(expr.expression);
     resolving_.set_sema_type(expr.expression, *last_type_.take());
+    check_unused_result(id, expr);
     last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::VOID_));
 }
 

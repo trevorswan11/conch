@@ -310,6 +310,8 @@ TEST_CASE("formatter round trip: functions and types") {
     round_trips("pub threadlocal var tls_state: i64 = 0l;");
     round_trips("weak extern const maybe: fn(): void;");
     round_trips("pub weak const overridable := fn(): i32 { return 1; };");
+    round_trips("@discardable extern const puts: fn(s: ^u8): i32;");
+    round_trips("pub @discardable const log := fn(msg: i32): i32 { return msg; };");
     round_trips("pub const stub := naked fn(): void {};");
     round_trips("pub const handler := fn() callconv(.win64): void {};");
     round_trips("const cb := fn(x: i32) callconv(.stdcall): i32 { return x; };");

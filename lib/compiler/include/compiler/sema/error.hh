@@ -74,6 +74,8 @@ enum class error : u8 {
     UNWRAP_OUTSIDE_FUNCTION,
     TEST_BUILTIN_OUTSIDE_TEST,
     ILLEGAL_LOCAL_DECL_MODIFIER,
+    UNUSED_RESULT,
+    ILLEGAL_DISCARDABLE,
 };
 
 using diagnostic  = diagnostic<error>;
