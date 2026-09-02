@@ -902,7 +902,7 @@ auto formatter::visit(node_id id, const match_expr& node) -> syntax::doc_id {
     if (dangling != doc_manager_.nil()) { arms.emplace_back(dangling); }
 
     return doc_manager_.concat({
-        doc_manager_.text("match ("),
+        doc_manager_.text(node.is_constexpr ? "match constexpr (" : "match ("),
         format(node.matcher),
         doc_manager_.text(") "),
         doc_manager_.delimited("{", "}", std::move(arms), true, true),

@@ -3044,10 +3044,80 @@ auto type_resolver::resolve_type_match(ast::node_id           id,
     last_type_.emplace(*result_type);
 }
 
+auto type_resolver::resolve_constexpr_match(ast::node_id id, const ast::match_expr& match) -> void {
+    PROFILE_FUNCTION();
+
+    for (const auto& arm : match.arms) {
+        if (arm.capture) {
+            return last_type_.emplace(
+                ctx_.poison_node(resolving_,
+                                 id,
+                                 "'match constexpr' arms cannot bind a capture",
+                                 error::ILLEGAL_MATCH_PATTERN,
+                                 resolving_.ast.location_of(*arm.capture)));
+        }
+    }
+
+    gir::const_eval evaluator{ctx_, resolving_};
+    const auto      scrutinee{evaluator.try_eval(match.matcher)};
+    if (!scrutinee || scrutinee->is_poison()) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "'match constexpr' requires a compile-time-known scrutinee",
+                             error::CONSTEXPR_EVALUATION_FAILED,
+                             resolving_.ast.location_of(match.matcher)));
+    }
+
+    stdx::opt_size selected;
+    for (usize i{0}; i < match.arms.size() && !selected; ++i) {
+        if (match.catch_all_idx && i == *match.catch_all_idx) { continue; }
+        for (const auto& pattern : match.arms[i].patterns) {
+            if (evaluator.arm_pattern_matches(pattern, *scrutinee)) {
+                selected.emplace(i);
+                break;
+            }
+        }
+    }
+    if (!selected) { selected = match.catch_all_idx; }
+    if (!selected) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "'match constexpr' has no arm matching the scrutinee and no '_' arm",
+                             error::CONSTEXPR_EVALUATION_FAILED,
+                             resolving_.ast.location_of(id)));
+    }
+
+    // Only the live arm is type-checked; the rest is dead code.
+    const auto& live{match.arms[*selected]};
+    {
+        auto&       live_table_type{resolving_.get_sema_type(live)};
+        const scope live_scope{table_stack_, live_table_type.get_symbol_table_idx(), table_idx_};
+        TRY_RESOLVE(live.dispatch);
+    }
+
+    type* result_type{&ctx_.get_builtin_resolved_type(type_kind::VOID_)};
+    if (const auto es{resolving_.ast.get_as_opt<ast::expr_stmt>(live.dispatch)}) {
+        if (const auto inner{resolving_.get_sema_type_opt(es->expression)}) {
+            if (!inner->is_poison() && inner->get_kind() != type_kind::VOID_) {
+                result_type = inner.get();
+            }
+        }
+    }
+
+    resolving_.match_arm_results.insert_or_assign(id.get_index(), *selected);
+    resolving_.set_sema_type(id, *result_type);
+    last_type_.emplace(*result_type);
+}
+
 auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void {
     PROFILE_FUNCTION();
     TRY_RESOLVE(match.matcher);
     auto& matcher_type{*last_type_.take()};
+
+    // `match constexpr` folds its scrutinee and type-checks only the arm it selects.
+    if (match.is_constexpr) { return resolve_constexpr_match(id, match); }
 
     // A scrutinee that denotes a compile-time `type` takes the type-match path: only the
     // selected arm is checked/emitted, `if constexpr`-style.

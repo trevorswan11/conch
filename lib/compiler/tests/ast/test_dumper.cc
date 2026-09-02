@@ -72,4 +72,11 @@ TEST_CASE("Dumps every pattern of a multi-value match arm") {
     CHECK(out.find("RangeExpression") != std::string::npos);
 }
 
+TEST_CASE("Dumps a constexpr match marker") {
+    CHECK(dump_source("match (n) { 1 => 2, _ => 0 };").find("MatchExpression (constexpr)") ==
+          std::string::npos);
+    CHECK(dump_source("match constexpr (n) { 1 => 2, _ => 0 };")
+              .find("MatchExpression (constexpr)") != std::string::npos);
+}
+
 } // namespace ghoti::tests

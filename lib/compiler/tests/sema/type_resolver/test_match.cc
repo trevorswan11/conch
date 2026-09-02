@@ -337,6 +337,32 @@ TEST_CASE("Resolving well-formed range matching") {
         "var x: i32 = 0; var lo := 1; var hi := 8; _ = match (x) { lo..hi => 1, _ => 0 };");
 }
 
+TEST_CASE("Resolving a 'match constexpr'") {
+    // Only the selected arm is type-checked; dead arms may name undeclared symbols.
+    helpers::resolve_and_check(
+        "const T := i32; _ = match constexpr (T) { i32 => 1, bool => not_real, _ => 0 };");
+    helpers::resolve_and_check(
+        "constexpr N := 2; _ = match constexpr (N) { 1 => 10, 2 => 20, 3 => bad, _ => 0 };");
+}
+
+TEST_CASE("Illegal 'match constexpr'") {
+    helpers::test_resolver_fail(
+        "var x: i32 = 0; _ = match constexpr (x) { 1 => 2, _ => 0 };",
+        sema::diagnostic{"'match constexpr' requires a compile-time-known scrutinee",
+                         sema::error::CONSTEXPR_EVALUATION_FAILED,
+                         std::pair{0UZ, 37UZ}});
+    helpers::test_resolver_fail(
+        "constexpr N := 9; _ = match constexpr (N) { 1 => 10, 2 => 20 };",
+        sema::diagnostic{"'match constexpr' has no arm matching the scrutinee and no '_' arm",
+                         sema::error::CONSTEXPR_EVALUATION_FAILED,
+                         std::pair{0UZ, 22UZ}});
+    helpers::test_resolver_fail(
+        "constexpr N := 1; _ = match constexpr (N) { 1 => |v| v, _ => 0 };",
+        sema::diagnostic{"'match constexpr' arms cannot bind a capture",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 50UZ}});
+}
+
 TEST_CASE("Resolving multi-value match arms") {
     helpers::resolve_and_check("var x: i32 = 0; _ = match (x) { 1, 2, 3 => |v| v, _ => 0 };");
     helpers::resolve_and_check(

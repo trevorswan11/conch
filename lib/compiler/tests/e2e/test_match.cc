@@ -146,6 +146,35 @@ TEST_CASE("A range match arm dispatches on interval membership") {
     CHECK(helpers::compile_and_run(program) == 20);
 }
 
+TEST_CASE("'match constexpr' selects its arm at compile time") {
+    // The dead arm calls an undeclared function yet the program still compiles.
+    CHECK(helpers::compile_and_run(R"(
+        pub const main := fn(): i32 {
+            return match constexpr (2) {
+                1 => 10,
+                2 => 20,
+                _ => missing(),
+            };
+        };
+    )") == 20);
+}
+
+TEST_CASE("'match constexpr' folds per generic instantiation") {
+    constexpr std::string_view program{R"(
+        const tag := fn(T: type): i32 {
+            return match constexpr (T) {
+                i32 => 4,
+                i64 => 8,
+                _ => 0,
+            };
+        };
+        pub const main := fn(): i32 {
+            return tag(i32) + tag(i64);
+        };
+    )"};
+    CHECK(helpers::compile_and_run(program) == 12);
+}
+
 TEST_CASE("A multi-value match arm is taken when any listed pattern matches") {
     constexpr std::string_view program{R"(
         const kind := fn(n: i32): i32 {

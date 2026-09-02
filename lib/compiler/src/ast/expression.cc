@@ -1141,6 +1141,13 @@ auto match_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, synt
     PROFILE_FUNCTION();
     const auto start_token{parser.get_current_token()};
 
+    // `match constexpr` selects its live arm at compile time, like `if constexpr`.
+    bool is_constexpr{false};
+    if (parser.peek_token_is(syntax::token_type_t::CONSTEXPR)) {
+        is_constexpr = true;
+        parser.advance();
+    }
+
     // Conditions have to be surrounded by parentheses
     TRY(parser.expect_peek(syntax::token_type_t::LPAREN));
     parser.advance();
@@ -1265,7 +1272,8 @@ auto match_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, synt
     }
 
     TRY(parser.expect_peek(syntax::token_type_t::RBRACE));
-    return parser.add_expr<match_expr>(start_token, matcher, std::move(arms), catch_all_idx);
+    return parser.add_expr<match_expr>(
+        start_token, matcher, std::move(arms), catch_all_idx, is_constexpr);
 }
 
 namespace {
