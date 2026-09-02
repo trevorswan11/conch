@@ -1075,12 +1075,10 @@ auto range_expr::parse(syntax::parser& parser, expr_handle lhs)
     const auto lhs_start{parser.get_location_of(*lhs)};
     const auto prec{parser.get_current_precedence().first};
     const auto rhs{TRY(parse_range_upper(parser, prec))};
-    return parser.add_expr<range_expr>(
-        lhs_start, op_token, stdx::option<expr_handle>{lhs}, rhs);
+    return parser.add_expr<range_expr>(lhs_start, op_token, stdx::option<expr_handle>{lhs}, rhs);
 }
 
-auto range_expr::parse(syntax::parser& parser)
-    -> stdx::result<expr_handle, syntax::diagnostic> {
+auto range_expr::parse(syntax::parser& parser) -> stdx::result<expr_handle, syntax::diagnostic> {
     PROFILE_FUNCTION();
     const auto op_token{parser.get_current_token()};
     const auto prec{parser.get_current_precedence().first};

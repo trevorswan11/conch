@@ -269,9 +269,6 @@ struct dot_expr {
 
 #undef DECLARE_INFIX_EXPRESSION
 
-// The `..` / `..=` operator is stored in the node id. In subscript position either endpoint may
-// be omitted (`x[lo..]`, `x[..hi]`, `x[..]`); the resolver rejects a missing endpoint anywhere
-// else. `lhs` is unset for the `..hi` prefix form.
 struct range_expr {
     stdx::option<expr_handle> lhs;
     stdx::option<expr_handle> rhs;

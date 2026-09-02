@@ -34,9 +34,9 @@ using constexpr_arg_map = ankerl::unordered_dense::map<std::string,
 // member functions can read them at emit time. Keyed by the constructor's mangled name.
 using type_ctor_binding_map =
     ankerl::unordered_dense::map<std::string,
-                                std::vector<std::pair<std::string, gir::const_value>>,
-                                stdx::string_transparent_hash,
-                                stdx::string_transparent_eq>;
+                                 std::vector<std::pair<std::string, gir::const_value>>,
+                                 stdx::string_transparent_hash,
+                                 stdx::string_transparent_eq>;
 
 // Per-monomorphization body typing, replayed at emit time: `[n]T` with a `constexpr n`, and the
 // `@this()` shape of a `fn(T): type` constructor's member functions.
@@ -129,7 +129,7 @@ class generic_instantiation_cache {
         return stdx::none;
     }
 
-    auto set_type_ctor_bindings(std::string                                          key,
+    auto set_type_ctor_bindings(std::string                                           key,
                                 std::vector<std::pair<std::string, gir::const_value>> bindings)
         -> void {
         type_ctor_bindings_.insert_or_assign(std::move(key), std::move(bindings));

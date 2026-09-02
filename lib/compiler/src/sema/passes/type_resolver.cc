@@ -2247,8 +2247,8 @@ auto type_resolver::visit(ast::node_id id, const ast::index_expr& index) -> void
     }
 
     {
-        auto&                       usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
-        const structural_guard      g{implicit_type_stack_, usize_type};
+        auto&                        usize_type{ctx_.get_builtin_resolved_type(type_kind::USIZE)};
+        const structural_guard       g{implicit_type_stack_, usize_type};
         const mutating_context_guard subscript_g{in_subscript_index_, true};
         TRY_RESOLVE(index.index);
     }
@@ -4990,8 +4990,7 @@ auto type_resolver::instantiate_generic(type&                             callee
     const bool is_type_ctor{!is_auto_return && return_type.get_kind() == type_kind::TYPE &&
                             tracker.has_returns() && all_params_are_types};
 
-    // A plain (non-`constexpr`) value parameter is the one thing that keeps a `type`-returning fn
-    // from being a usable type constructor; point at it rather than failing cryptically later.
+    // Force constexpr param if constructing a type (inspo from zig)
     if (!is_type_ctor && !is_auto_return && return_type.get_kind() == type_kind::TYPE &&
         tracker.has_returns() && !all_params_are_types) {
         for (const auto& param : fn_expr.parameters) {
@@ -5000,9 +4999,10 @@ auto type_resolver::instantiate_generic(type&                             callee
             if (pty && pty->get_kind() != type_kind::TYPE) {
                 const auto& pn{fn_mod.ast.get_as<ast::identifier_expr>(param.name).name};
                 ctx_.diags.emplace_back(
-                    fmt::format("a `fn(...): type` constructor cannot take a plain value parameter; "
-                                "mark '{}' `constexpr` so it is known at instantiation time",
-                                pn),
+                    fmt::format(
+                        "a `fn(...): type` constructor cannot take a plain value parameter; "
+                        "mark '{}' `constexpr` so it is known at instantiation time",
+                        pn),
                     error::TYPE_MISMATCH,
                     fn_mod.ast.location_of(param.name));
                 return stdx::none;
@@ -5023,28 +5023,27 @@ auto type_resolver::instantiate_generic(type&                             callee
                 register_type_ctor_members(
                     ctx_, fn_mod, *agg_node, src_agg, clone, mangled_name, std::move(typing));
 
-                // Hand this instantiation's `constexpr` parameter values to the member emit so
-                // `struct { ... const m := fn(&self) { return tag; }; }` can read them.
+                // Hand this instantiation's `constexpr` parameter values to the member emit
                 std::vector<std::pair<std::string, gir::const_value>> ctor_bindings;
                 for (usize p_idx{0}, cx_i{0}; p_idx < fn_expr.parameters.size(); ++p_idx) {
                     if (!fn_expr.parameters[p_idx].is_constexpr) { continue; }
                     if (cx_i >= constexpr_args.size()) { break; }
                     const auto& p_name{
-                        fn_mod.ast.get_as<ast::identifier_expr>(fn_expr.parameters[p_idx].name).name};
+                        fn_mod.ast.get_as<ast::identifier_expr>(fn_expr.parameters[p_idx].name)
+                            .name};
                     ctor_bindings.emplace_back(std::string{p_name}, constexpr_args[cx_i]);
                     ++cx_i;
                 }
                 if (!ctor_bindings.empty()) {
                     ctx_.instantiation_cache.set_type_ctor_bindings(mangled_name,
-                                                                   std::move(ctor_bindings));
+                                                                    std::move(ctor_bindings));
                 }
                 deduced_return_type = &clone;
             }
         }
     }
 
-    // A type constructor has no runtime body -- its whole result is `deduced_return_type`. Skip
-    // the emit-time plumbing and don't register a GIR instantiation for it.
+    // A type constructor has no runtime body
     if (!is_type_ctor) {
         // Hand the folded values to the emitter out-of-band
         if (!constexpr_args.empty()) {
