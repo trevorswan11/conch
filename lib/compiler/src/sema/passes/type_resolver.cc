@@ -1232,12 +1232,44 @@ auto type_resolver::resolve_call(ID id, const ast::call_expr& call) -> void {
                         resolve(arg_id);
                         auto* arg_type{last_type_.take()};
                         if (arg_type->is_poison()) { return stdx::none; }
+                        // `@typeOf(x)` in a `type` argument position denotes the type it wraps.
+                        if (param_type->get_kind() == type_kind::TYPE) {
+                            return denoted_type(*arg_type);
+                        }
                         return arg_type;
                     });
                 if (!result_arg_type) { any_arg_poison = true; }
                 concrete_arg_types[i++] = result_arg_type.take();
             }
             if (any_arg_poison) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+
+            // An argument that still contains `auto` (`@typeOf(a)` where `a: auto`) can only be
+            // resolved once the enclosing generic is instantiated
+            const auto arg_contains_auto{[](auto&& self, const type& t) -> bool {
+                const auto& d{denoted_type(const_cast<type&>(t))};
+                if (d.get_kind() == type_kind::AUTO) { return true; }
+                const auto& data{d.get_data()};
+                if (const auto p{data.template as_opt<types::pointer>()}) {
+                    return self(self, p->underlying);
+                }
+                if (const auto r{data.template as_opt<types::reference>()}) {
+                    return self(self, r->underlying);
+                }
+                if (const auto sl{data.template as_opt<types::slice>()}) {
+                    return self(self, sl->underlying);
+                }
+                if (const auto ar{data.template as_opt<types::array>()}) {
+                    return self(self, ar->underlying);
+                }
+                return false;
+            }};
+            if (std::ranges::any_of(concrete_arg_types, [&](type* t) {
+                    return arg_contains_auto(arg_contains_auto, *t);
+                })) {
+                auto& placeholder{*ctx_.pool[{type_kind::AUTO, types::mut::CONSTANT}]};
+                resolving_.set_sema_type(id, placeholder);
+                return last_type_.emplace(placeholder);
+            }
 
             // Fold the argument supplied for each `constexpr` parameter to a compile-time value
             const auto& cx_params{fn_info_opt->fn_expr->parameters};
