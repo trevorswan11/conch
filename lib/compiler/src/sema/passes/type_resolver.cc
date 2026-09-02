@@ -4792,9 +4792,12 @@ auto type_resolver::instantiate_generic(type&                             callee
     const auto& block{fn_mod.ast.get_as<ast::block_stmt>(fn_expr.body)};
 
     bool resolved_poison{false};
-    for (const auto& stmt : block) {
-        inst_resolver.resolve(stmt);
-        if (inst_resolver.last_type_->is_poison()) { resolved_poison = true; }
+    {
+        PROFILE_SCOPE("instantiate_generic: resolve body");
+        for (const auto& stmt : block) {
+            inst_resolver.resolve(stmt);
+            if (inst_resolver.last_type_->is_poison()) { resolved_poison = true; }
+        }
     }
     if (ctx_.diags.size() > diags_before || resolved_poison) {
         // Attribute diags here to `fn_mod`so they print against the defining file

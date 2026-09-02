@@ -4,9 +4,8 @@
 
 #include "helpers/codegen.hh"
 #include "helpers/sema.hh"
+#include "support/test.hh"
 
-// Exercises symbols reached through two or more `pub import` hops, the shape a standard
-// library builds on: `import "std" -> pub import "std/os" -> pub import "std/os/linux"`.
 namespace ghoti::tests {
 
 namespace {
@@ -43,12 +42,10 @@ constexpr std::string_view TOP{R"(
     pub import "mid.gh" as top_mid;
 )"};
 
-[[nodiscard]] auto chain_files() -> std::vector<mock_file> {
-    return {
-        mock_file{"leaf.gh", LEAF, "leaf"},
-        mock_file{"mid.gh", MID, "mid"},
-        mock_file{"top.gh", TOP, "top"},
-    };
+[[nodiscard]] auto chain_files() {
+    return helpers::make_vector<mock_file>(mock_file{"leaf.gh", LEAF, "leaf"},
+                                           mock_file{"mid.gh", MID, "mid"},
+                                           mock_file{"top.gh", TOP, "top"});
 }
 
 } // namespace

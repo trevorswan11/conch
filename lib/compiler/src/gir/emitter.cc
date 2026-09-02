@@ -75,7 +75,10 @@ namespace {
 
 auto emitter::emit(bool include_builtin_test_runtime) -> module {
     PROFILE_FUNCTION();
-    const_eval_.resolve_all_deferred_types();
+    {
+        PROFILE_SCOPE("emitter: resolve deferred types");
+        const_eval_.resolve_all_deferred_types();
+    }
 
     const auto emit_top_level_stmt = [&](mod::module& module, ast::node_id id) {
         return module.ast[id].visit(
@@ -115,29 +118,35 @@ auto emitter::emit(bool include_builtin_test_runtime) -> module {
     symbol_scoping_ = symbol_scoping::build(ctx_, ast_module_, imported_mods);
     const_eval_.set_symbol_scoping(symbol_scoping_);
 
-    for (const auto root_id : ast_module_.ast) { emit_top_level_stmt(ast_module_, root_id); }
-    for (const auto& inst : ast_module_.generic_instantiations) {
-        emit_generic_instantiation(inst);
-    }
-    for (const auto& tcm : ast_module_.type_ctor_member_emits) {
-        emit_type_ctor_member(ast_module_, tcm);
+    {
+        PROFILE_SCOPE("emitter: emit root module");
+        for (const auto root_id : ast_module_.ast) { emit_top_level_stmt(ast_module_, root_id); }
+        for (const auto& inst : ast_module_.generic_instantiations) {
+            emit_generic_instantiation(inst);
+        }
+        for (const auto& tcm : ast_module_.type_ctor_member_emits) {
+            emit_type_ctor_member(ast_module_, tcm);
+        }
     }
 
     gir_module_.mark_import_boundary();
 
-    for (auto* other_mod : imported_mods) {
-        if (!other_mod || other_mod->is_poisoned() || other_mod->is_errored()) { continue; }
-        auto prev_module{std::exchange(active_module_, other_mod)};
-        const_eval_.set_module(*other_mod);
-        for (const auto root_id : other_mod->ast) { emit_top_level_stmt(*other_mod, root_id); }
-        for (const auto& inst : other_mod->generic_instantiations) {
-            emit_generic_instantiation(inst);
+    {
+        PROFILE_SCOPE("emitter: emit imported modules");
+        for (auto* other_mod : imported_mods) {
+            if (!other_mod || other_mod->is_poisoned() || other_mod->is_errored()) { continue; }
+            auto prev_module{std::exchange(active_module_, other_mod)};
+            const_eval_.set_module(*other_mod);
+            for (const auto root_id : other_mod->ast) { emit_top_level_stmt(*other_mod, root_id); }
+            for (const auto& inst : other_mod->generic_instantiations) {
+                emit_generic_instantiation(inst);
+            }
+            for (const auto& tcm : other_mod->type_ctor_member_emits) {
+                emit_type_ctor_member(*other_mod, tcm);
+            }
+            active_module_ = prev_module;
+            const_eval_.set_module(*prev_module);
         }
-        for (const auto& tcm : other_mod->type_ctor_member_emits) {
-            emit_type_ctor_member(*other_mod, tcm);
-        }
-        active_module_ = prev_module;
-        const_eval_.set_module(*prev_module);
     }
 
     for (const auto name : pending_builtin_runtime_) { ensure_builtin_runtime(name); }
