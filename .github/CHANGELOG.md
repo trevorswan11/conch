@@ -84,9 +84,14 @@
 
 # v0.3.0
 
+## alpha.1
 - Fix a bug where cross module re-exported symbols would break codegen (#199)
 - Fix a bug where the LSP would not autocomplete builtin functions (#193)
 - Fix a bug where the LSP would not show type information above import statement identifiers (#192)
 - Fix a bug where functions would show the GIR '->' return type notation instead of the ':' one in LSP hover (#195)
 - Fix a bug where mutability and volatile modifiers would not be included in the stringified representations of types (#194)
 - Prevent unsupported declaration modifiers from being used in local functions
+
+## alpha.2
+- Add support for freestanding linux (excluding powerpc64le / powerpc)
+    - Previously segfaulted due to _start never being defined

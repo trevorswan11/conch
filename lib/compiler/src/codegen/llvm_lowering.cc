@@ -158,7 +158,105 @@ auto llvm_lowering::emit_main_entry_wrapper(std::string_view user_main_name) -> 
         builder_.CreateRet(ret_i32);
     }
 
+    if (triple.isOSLinux()) { emit_freestanding_start(main_fn); }
     return main_fn;
+}
+
+auto llvm_lowering::emit_freestanding_start(llvm::Function* main_fn) -> void {
+    const llvm::Triple triple{llvm_module_->getTargetTriple()};
+
+    std::string asm_text;
+    switch (triple.getArch()) {
+    case llvm::Triple::x86_64:
+        asm_text = "xorl %ebp, %ebp\n\t"    // mark the outermost frame
+                   "movq (%rsp), %rdi\n\t"  // argc
+                   "leaq 8(%rsp), %rsi\n\t" // argv
+                   "andq $$-16, %rsp\n\t"   // realign for the SysV call
+                   "call main\n\t"
+                   "movl %eax, %edi\n\t"  // exit code <- main()'s return
+                   "movl $$231, %eax\n\t" // __NR_exit_group
+                   "syscall\n\t"
+                   "ud2\n\t";
+        break;
+    case llvm::Triple::aarch64:
+        asm_text = "mov x29, xzr\n\t"
+                   "mov x30, xzr\n\t"
+                   "ldr x0, [sp]\n\t"   // argc (read before realigning sp)
+                   "add x1, sp, #8\n\t" // argv
+                   "mov x2, sp\n\t"
+                   "and x2, x2, #-16\n\t"
+                   "mov sp, x2\n\t"
+                   "bl main\n\t"
+                   "mov w8, #94\n\t" // __NR_exit_group
+                   "svc #0\n\t"
+                   "brk #0\n\t";
+        break;
+    case llvm::Triple::riscv64:
+        asm_text = "li s0, 0\n\t"
+                   "ld a0, 0(sp)\n\t"   // argc
+                   "addi a1, sp, 8\n\t" // argv
+                   "andi sp, sp, -16\n\t"
+                   "call main\n\t"
+                   "li a7, 94\n\t" // __NR_exit_group  (asm-generic table)
+                   "ecall\n\t"
+                   "unimp\n\t";
+        break;
+    case llvm::Triple::riscv32:
+        asm_text = "li s0, 0\n\t"
+                   "lw a0, 0(sp)\n\t"   // argc (32-bit word)
+                   "addi a1, sp, 4\n\t" // argv
+                   "andi sp, sp, -16\n\t"
+                   "call main\n\t"
+                   "li a7, 94\n\t" // __NR_exit_group  (asm-generic table)
+                   "ecall\n\t"
+                   "unimp\n\t";
+        break;
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+        // One template for A32 and T32. The kernel delivers an 8-byte aligned sp at
+        // entry (AAPCS), so no realign is needed before the call to `main`
+        asm_text = "ldr r0, [sp, #0]\n\t" // argc
+                   "add r1, sp, #4\n\t"   // argv
+                   "bl main\n\t"
+                   "movs r7, #248\n\t" // __NR_exit_group  (ARM EABI)
+                   "svc #0\n\t"
+                   "udf #0\n\t";
+        break;
+    case llvm::Triple::loongarch64:
+        // LoongArch registers are spelled `$a0` etc.; `$` is the operand sigil in
+        // an LLVM asm string, so each one is escaped as `$$`.
+        asm_text = "move $$fp, $$zero\n\t"
+                   "ld.d $$a0, $$sp, 0\n\t"   // argc
+                   "addi.d $$a1, $$sp, 8\n\t" // argv
+                   "bl main\n\t"
+                   "ori $$a7, $$zero, 94\n\t" // __NR_exit_group  (asm-generic table)
+                   "syscall 0\n\t"
+                   "break 0\n\t";
+        break;
+    default:
+        // Linux arch with a diagnostic before lowering runs. Kept as a safe no-op.
+        return;
+    }
+
+    auto* void_ty{llvm::Type::getVoidTy(context_)};
+    auto* start_ty{llvm::FunctionType::get(void_ty, false)};
+    auto* start_fn{llvm::Function::Create(
+        start_ty, llvm::Function::ExternalLinkage, "_start", llvm_module_.get())};
+    start_fn->addFnAttr(llvm::Attribute::Naked);
+    start_fn->addFnAttr(llvm::Attribute::NoInline);
+    start_fn->addFnAttr(llvm::Attribute::NoUnwind);
+    start_fn->addFnAttr(llvm::Attribute::NoBuiltin);
+    start_fn->addFnAttr("no-stack-arg-probe", "true");
+
+    auto* entry_bb{llvm::BasicBlock::Create(context_, "entry", start_fn)};
+    builder_.SetInsertPoint(entry_bb);
+
+    auto* asm_ty{llvm::FunctionType::get(void_ty, false)};
+    auto* start_asm{
+        llvm::InlineAsm::get(asm_ty, asm_text, "~{memory}", true, false, llvm::InlineAsm::AD_ATT)};
+    builder_.CreateCall(start_asm, {});
+    builder_.CreateUnreachable();
+    llvm::appendToUsed(*llvm_module_, {start_fn, main_fn});
 }
 
 auto llvm_lowering::emit_argv_slice(llvm::Function* entry_fn, bool want_real_args) -> llvm::Value* {
@@ -499,6 +597,9 @@ auto llvm_lowering::emit_test_entry_wrapper(const gir::module& gir_mod, bool rec
     } else {
         builder_.CreateRet(builder_.getInt32(0));
     }
+
+    // Same freestanding-entry story as a normal executable (see emit_main_entry_wrapper).
+    if (triple.isOSLinux()) { emit_freestanding_start(main_fn); }
 
     return main_fn;
 }

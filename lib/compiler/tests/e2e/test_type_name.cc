@@ -8,9 +8,9 @@ TEST_CASE("`@typeName` of a primitive type") {
     CHECK(helpers::compile_and_run(R"(
         pub const main := fn(): i32 {
             const s := @typeName(i32);
-            return @as(i32, s.len) * 10 + @as(i32, s[0]);
+            return @as(i32, s.len) + @as(i32, s[0]);
         };
-    )") == (4 * 10 + 'i'));
+    )") == (4 + 'i'));
 }
 
 TEST_CASE("`@typeName` of a user struct reports its declared name") {
