@@ -147,7 +147,6 @@ TEST_CASE("A range match arm dispatches on interval membership") {
 }
 
 TEST_CASE("'match constexpr' selects its arm at compile time") {
-    // The dead arm calls an undeclared function yet the program still compiles.
     CHECK(helpers::compile_and_run(R"(
         pub const main := fn(): i32 {
             return match constexpr (2) {

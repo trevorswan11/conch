@@ -32,7 +32,7 @@ templ SyntaxMatchPage() {
 		<li>Arms of match expressions must be comma separated and there may be a trailing comma</li>
 		<li>Loops are expressions and must be terminated by a semicolon</li>
 		<li>
-			An arm may list several comma-separated patterns before its <code>=&gt;</code>; the arm is taken when the scrutinee matches any of them
+			An arm may list several comma-separated patterns; the arm is taken when the scrutinee matches any of them
 			<ul>
 				<li>A single capture is shared by every listed pattern</li>
 				<li>For a union or enum, every listed variant must carry the same payload type to bind a capture</li>

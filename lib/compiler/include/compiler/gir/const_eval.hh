@@ -61,7 +61,6 @@ class const_eval {
     // Attempt to evaluate node as a compile-time constant. Returns none if non-constant.
     [[nodiscard]] auto try_eval(ast::node_id id) -> stdx::option<const_value>;
 
-    // Does `target` satisfy this match arm pattern? Used for `match constexpr` arm selection.
     [[nodiscard]] auto arm_pattern_matches(const ast::match_pattern_handle& pattern,
                                            const const_value&               target) -> bool {
         return match_pattern(pattern, target);

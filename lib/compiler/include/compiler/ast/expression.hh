@@ -306,8 +306,7 @@ struct label_expr {
 
 struct match_expr {
     struct arm {
-        // One arm may list several patterns (`a, b, 1..8 => ...`). A catch-all arm holds a
-        // single discarded handle here, so `patterns` is never empty.
+        // One arm may list several patterns (`a, b, 1..8 => ...`) or a single discard
         std::vector<match_pattern_handle>      patterns;
         stdx::option<discardable_ident_handle> capture;
         // Only meaningful when `capture` holds a real (non-discarded) identifier

@@ -3162,8 +3162,7 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         if (!matcher_denotes_type) {
             for (usize i{0}; i < match.arms.size(); ++i) {
                 if (match.catch_all_idx && i == *match.catch_all_idx) { continue; }
-                matcher_denotes_type =
-                    denotes_type(denotes_type, *match.arms[i].primary_pattern());
+                matcher_denotes_type = denotes_type(denotes_type, *match.arms[i].primary_pattern());
                 break;
             }
         }
@@ -3315,13 +3314,13 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
 
     // Constant scalar values and range intervals, closed on both ends, for overlap detection.
     struct arm_interval {
-        i64                        lo;
-        i64                        hi;
-        ast::match_pattern_handle  pat;
+        i64                       lo;
+        i64                       hi;
+        ast::match_pattern_handle pat;
     };
     std::vector<arm_interval> const_intervals;
-    gir::const_eval          interval_probe{ctx_, resolving_};
-    const bool               scalar_match{matcher_data.is<types::builtin_type>() &&
+    gir::const_eval           interval_probe{ctx_, resolving_};
+    const bool                scalar_match{matcher_data.is<types::builtin_type>() &&
                             matcher_type.get_kind() != type_kind::BOOL};
 
     // Each arm was assigned a new scope index on the first pass
@@ -3340,7 +3339,7 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
                     const auto ia{resolving_.ast.get_as_opt<ast::implicit_access_expr>(*pat)};
                     ASSERT(ia, "Union validator failed to error");
                     const auto& pident{resolving_.ast.get_as<ast::identifier_expr>(ia->member)};
-                    auto& pty{union_data->type_at(table.get_proxy(pident.name).index)};
+                    auto&       pty{union_data->type_at(table.get_proxy(pident.name).index)};
                     if (!base_type) {
                         base_type.emplace(pty);
                     } else if (!sema::is_same_unqualified(*base_type, pty)) {
