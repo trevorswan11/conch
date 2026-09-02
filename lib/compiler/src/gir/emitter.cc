@@ -3711,7 +3711,11 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
 
             if (yields_value && res_slot) {
                 const auto arm_val{emit_stmt_as_value(arm.dispatch)};
-                builder_.emit_store(*res_slot, arm_val);
+                // A block body that diverges (`|e| { return e; }`, `_ => { return N; }`) already
+                // terminated the segment; storing its `void` result would outlive the terminator.
+                if (const auto seg{builder_.get_segment()}; seg && !seg->has_terminator()) {
+                    builder_.emit_store(*res_slot, arm_val);
+                }
             } else {
                 emit_stmt(arm.dispatch);
             }
