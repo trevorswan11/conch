@@ -3180,6 +3180,31 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         default: UNREACHABLE("Builtin types should never take this type kind");
         }
 
+        // A range arm can never make an integer/byte match exhaustive on its own.
+        const bool has_range_arm{std::ranges::any_of(match.arms, [&](const auto& arm) {
+            return std::ranges::any_of(arm.patterns, [&](const auto& p) {
+                return resolving_.ast.get_as_opt<ast::range_expr>(*p).has_value();
+            });
+        })};
+        if (has_range_arm) {
+            if (matcher_type.get_kind() == type_kind::BOOL) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "Range patterns are not allowed when matching on 'bool'",
+                                     sema::error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(match.matcher)));
+            }
+            if (!match.catch_all_idx) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "A 'match' with a range pattern requires a catch-all '_' arm",
+                                     sema::error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(match.matcher)));
+            }
+        }
+
         if (!match.catch_all_idx) {
             // With a required arm count the counts must match
             if (required_arm_count && required_arm_count != match.arms.size()) {
@@ -3215,6 +3240,17 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             sema::error::TYPE_MISMATCH,
             resolving_.ast.location_of(match.matcher)));
     }
+
+    // Constant scalar values and range intervals, closed on both ends, for overlap detection.
+    struct arm_interval {
+        i64                        lo;
+        i64                        hi;
+        ast::match_pattern_handle  pat;
+    };
+    std::vector<arm_interval> const_intervals;
+    gir::const_eval          interval_probe{ctx_, resolving_};
+    const bool               scalar_match{matcher_data.is<types::builtin_type>() &&
+                            matcher_type.get_kind() != type_kind::BOOL};
 
     // Each arm was assigned a new scope index on the first pass
     for (const auto& arm : match.arms) {
@@ -3258,8 +3294,52 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         // Each pattern is resolved against the matcher's type
         for (const auto& pattern : arm.patterns) {
             if (pattern.is<ast::discarded>()) { continue; }
-            const structural_guard pattern_g{implicit_type_stack_, matcher_type};
-            TRY_RESOLVE(pattern);
+
+            const auto range{resolving_.ast.get_as_opt<ast::range_expr>(*pattern)};
+            if (range && !scalar_match) {
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    "Range patterns are only valid when matching on an integer or byte value",
+                    error::ILLEGAL_MATCH_PATTERN,
+                    resolving_.ast.location_of(*pattern)));
+            }
+
+            {
+                const structural_guard pattern_g{implicit_type_stack_, matcher_type};
+                if (range) {
+                    TRY_RESOLVE(range->lhs);
+                    TRY_RESOLVE(range->rhs);
+                } else {
+                    TRY_RESOLVE(pattern);
+                }
+            }
+
+            if (!scalar_match) { continue; }
+            if (range) {
+                const bool inclusive{(*pattern).get_token_type() ==
+                                     syntax::token_type_t::DOT_DOT_EQ};
+                const auto lo{interval_probe.try_eval(range->lhs)};
+                const auto hi{interval_probe.try_eval(range->rhs)};
+                if (!lo || !hi) { continue; }
+                const auto lo_i{lo->as_int_opt()};
+                const auto hi_i{hi->as_int_opt()};
+                if (!lo_i || !hi_i) { continue; }
+                const i64 hi_closed{inclusive ? *hi_i : *hi_i - 1};
+                if (hi_closed < *lo_i) {
+                    return last_type_.emplace(ctx_.poison_node(
+                        resolving_,
+                        id,
+                        "Range pattern is empty; its lower bound exceeds its upper bound",
+                        error::ILLEGAL_MATCH_PATTERN,
+                        resolving_.ast.location_of(*pattern)));
+                }
+                const_intervals.emplace_back(*lo_i, hi_closed, pattern);
+            } else if (const auto pv{interval_probe.try_eval(*pattern)}) {
+                if (const auto v{pv->as_int_opt()}) {
+                    const_intervals.emplace_back(*v, *v, pattern);
+                }
+            }
         }
         TRY_RESOLVE(arm.dispatch);
 
@@ -3277,6 +3357,22 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
         if ((!first_type || first_type->get_kind() == type_kind::VOID_) &&
             arm_dispatch_type->get_kind() != type_kind::VOID_) {
             first_type = *arm_dispatch_type;
+        }
+    }
+
+    // Two arm patterns that both fold to constants may not cover the same value.
+    for (usize i{0}; i < const_intervals.size(); ++i) {
+        for (usize j{i + 1}; j < const_intervals.size(); ++j) {
+            const auto& a{const_intervals[i]};
+            const auto& b{const_intervals[j]};
+            if (a.lo <= b.hi && b.lo <= a.hi) {
+                return last_type_.emplace(
+                    ctx_.poison_node(resolving_,
+                                     id,
+                                     "This match arm pattern overlaps an earlier arm",
+                                     error::ILLEGAL_MATCH_PATTERN,
+                                     resolving_.ast.location_of(b.pat)));
+            }
         }
     }
 

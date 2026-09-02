@@ -328,6 +328,33 @@ TEST_CASE("Illegal resolved builtin matcher type") {
     }
 }
 
+TEST_CASE("Resolving well-formed range matching") {
+    helpers::resolve_and_check(
+        "var x: i32 = 0; _ = match (x) { 0..5 => 1, 5..10 => 2, _ => 0 };");
+    helpers::resolve_and_check("var x: u8 = 0; _ = match (x) { 0..=4 => |v| v, _ => 0 };");
+    // Runtime endpoints are permitted; overlap analysis simply skips them.
+    helpers::resolve_and_check(
+        "var x: i32 = 0; var lo := 1; var hi := 8; _ = match (x) { lo..hi => 1, _ => 0 };");
+}
+
+TEST_CASE("Illegal range match arms") {
+    helpers::test_resolver_fail(
+        "var b := true; _ = match (b) { 0..1 => 1, _ => 0 };",
+        sema::diagnostic{"Range patterns are not allowed when matching on 'bool'",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 26UZ}});
+    helpers::test_resolver_fail(
+        "var x: i32 = 0; _ = match (x) { 5..1 => 1, _ => 0 };",
+        sema::diagnostic{"Range pattern is empty; its lower bound exceeds its upper bound",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 32UZ}});
+    helpers::test_resolver_fail(
+        "var x: i32 = 0; _ = match (x) { 0..5 => 1, 3 => 2, _ => 0 };",
+        sema::diagnostic{"This match arm pattern overlaps an earlier arm",
+                         sema::error::ILLEGAL_MATCH_PATTERN,
+                         std::pair{0UZ, 43UZ}});
+}
+
 TEST_CASE("Illegal resolved arbitrary matcher type") {
     const auto expected_diag = [](std::string_view kind, usize col) -> sema::diagnostic {
         return {

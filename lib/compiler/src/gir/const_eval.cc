@@ -1075,7 +1075,10 @@ auto const_eval::match_pattern(const ast::match_pattern_handle& pattern_h,
             const auto start_int{start_val->as_int_opt()};
             const auto end_int{end_val->as_int_opt()};
             if (target_int && start_int && end_int) {
-                return *target_int >= *start_int && *target_int < *end_int;
+                const bool inclusive{pattern_id.get_token_type() ==
+                                     syntax::token_type_t::DOT_DOT_EQ};
+                return *target_int >= *start_int &&
+                       (inclusive ? *target_int <= *end_int : *target_int < *end_int);
             }
         }
     }

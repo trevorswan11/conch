@@ -129,6 +129,37 @@ TEST_CASE("Match arm capture mutates a whole-value (non-union) scrutinee by muta
     )") == 15);
 }
 
+TEST_CASE("A range match arm dispatches on interval membership") {
+    constexpr std::string_view program{R"(
+        const classify := fn(n: i32): i32 {
+            return match (n) {
+                0..10 => 1,
+                10..=20 => |v| v,
+                _ => -1,
+            };
+        };
+        pub const main := fn(): i32 {
+            return classify(3) + classify(20) + classify(99);
+        };
+    )"};
+    // 1 (0..10) + 20 (10..=20 capture) + -1 (catch-all) == 20
+    CHECK(helpers::compile_and_run(program) == 20);
+}
+
+TEST_CASE("A range match arm accepts runtime endpoints") {
+    CHECK(helpers::compile_and_run(R"(
+        pub const main := fn(): i32 {
+            var x: i32 = 7;
+            var lo: i32 = 5;
+            var hi: i32 = 9;
+            return match (x) {
+                lo..hi => 1,
+                _ => 0,
+            };
+        };
+    )") == 1);
+}
+
 TEST_CASE("A direct `union == .field` comparison checks the active field") {
     SECTION("True when the field is active") {
         CHECK(helpers::compile_and_run(R"(
