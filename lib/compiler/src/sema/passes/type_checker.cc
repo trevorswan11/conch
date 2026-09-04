@@ -42,9 +42,18 @@ auto type_checker::emit_diagnostic(std::string_view              message,
 }
 
 auto type_checker::get_operand_type(const gir::value& val) -> stdx::option<type&> {
-    if (val.type) { return val.type; }
+    // A `constexpr_int` / `constexpr_float` operand that was never coerced to a concrete
+    // peer materializes as `i32` / `f64`; treat it as that everywhere downstream.
+    const auto concrete{[&](type& t) -> type& {
+        if (t.get_kind() == type_kind::CONSTEXPR_INT) { return ctx_.get_int(32, true); }
+        if (t.get_kind() == type_kind::CONSTEXPR_FLOAT) {
+            return ctx_.get_builtin_resolved_type(type_kind::F64);
+        }
+        return t;
+    }};
+    if (val.type) { return concrete(*val.type); }
     if (const auto lid{val.data.as_opt<gir::local_id>()}) {
-        if (auto it{locals_.find(*lid)}; it != locals_.end()) { return *it->second.type; }
+        if (auto it{locals_.find(*lid)}; it != locals_.end()) { return concrete(*it->second.type); }
     }
     return stdx::none;
 }

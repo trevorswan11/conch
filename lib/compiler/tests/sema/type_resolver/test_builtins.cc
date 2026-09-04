@@ -59,7 +59,7 @@ TEST_CASE("Builtin 'safe' casts") {
 
 TEST_CASE("Builtin 'unsafe' casts") {
     test_builtin_resolve(
-        bis::CONST_CAST, "^23", [](helpers::sema_test_context& ctx) -> sema::type& {
+        bis::CONST_CAST, "^23i32", [](helpers::sema_test_context& ctx) -> sema::type& {
             return ctx.get_type<sema::types::mut::MUTABLE>(sema::type_kind::POINTER,
                                                            ctx.get_int_type(32, true));
         });
@@ -118,6 +118,7 @@ TEST_CASE("typeOf denotes the wrapped type in a value's or parameter's explicit 
     )")};
 
     const auto& i32_type{ctx->get_int_type(32, true)};
+    const auto& cx_int{ctx->get_type(sema::type_kind::CONSTEXPR_INT)};
     const auto& bool_type{ctx->get_type(sema::type_kind::BOOL)};
 
     const auto decl_type = [&](std::string_view name) -> const sema::type& {
@@ -126,8 +127,10 @@ TEST_CASE("typeOf denotes the wrapped type in a value's or parameter's explicit 
         return type;
     };
 
-    CHECK(decl_type("Alias") == ctx->get_type(sema::type_kind::TYPE, i32_type));
-    CHECK(decl_type("via_alias") == i32_type);
+    // `@typeOf` of an unsuffixed literal is `constexpr_int`; a generic / `auto` parameter
+    // materializes such an argument to its concrete peer, so `call_echo` is `i32`.
+    CHECK(decl_type("Alias") == ctx->get_type(sema::type_kind::TYPE, cx_int));
+    CHECK(decl_type("via_alias") == cx_int);
     CHECK(decl_type("direct") == bool_type);
     CHECK(decl_type("call_echo") == i32_type);
 }
@@ -173,7 +176,7 @@ TEST_CASE("Builtin pointer conversions") {
         });
 
     test_builtin_resolve(
-        bis::SLICE_FROM_PTR, "^1, 20UZ", [](helpers::sema_test_context& ctx) -> sema::type& {
+        bis::SLICE_FROM_PTR, "^1i32, 20UZ", [](helpers::sema_test_context& ctx) -> sema::type& {
             return ctx.get_type(sema::type_kind::SLICE, false, ctx.get_int_type(32, true));
         });
 }
@@ -231,14 +234,14 @@ TEST_CASE("Builtin function arity mismatch") {
 TEST_CASE("Const cast quick type checking") {
     helpers::test_resolver_fail(
         "const foo := @constCast(1);",
-        sema::diagnostic{"Expected pointer, reference, slice, or array type; found 'i32'",
+        sema::diagnostic{"Expected pointer, reference, slice, or array type; found 'constexpr_int'",
                          sema::error::TYPE_MISMATCH,
                          std::pair{0UZ, 24UZ}});
 }
 
 TEST_CASE("Other builtin quick type mismatch") {
     helpers::test_resolver_fail(
-        "const foo := @ptrFromArray(1);",
+        "const foo := @ptrFromArray(1i32);",
         sema::diagnostic{"Expected an array-yielding expression; found 'i32'",
                          sema::error::TYPE_MISMATCH,
                          std::pair{0UZ, 27UZ}});
@@ -249,7 +252,7 @@ TEST_CASE("Other builtin quick type mismatch") {
                                                  std::pair{0UZ, 25UZ}});
 
     helpers::test_resolver_fail(
-        "const foo := @sliceFromPtr(1, 20UZ);",
+        "const foo := @sliceFromPtr(1i32, 20UZ);",
         sema::diagnostic{"Expected a pointer-yielding expression; found 'i32'",
                          sema::error::TYPE_MISMATCH,
                          std::pair{0UZ, 27UZ}});

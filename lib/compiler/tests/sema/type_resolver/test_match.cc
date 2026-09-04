@@ -262,7 +262,7 @@ TEST_CASE("Illegal match arms with primitives") {
             };
         };
 
-        helpers::test_resolver_fail("match (1) { 3 => 5 };", expected_diag("i32"));
+        helpers::test_resolver_fail("match (1) { 3 => 5 };", expected_diag("constexpr_int"));
         helpers::test_resolver_fail("match (1i64) { 3 => 5 };", expected_diag("i64"));
         helpers::test_resolver_fail("match (1z) { 3 => 5 };", expected_diag("isize"));
         helpers::test_resolver_fail("match (1u32) { 3 => 5 };", expected_diag("u32"));

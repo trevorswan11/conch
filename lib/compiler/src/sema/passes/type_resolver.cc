@@ -173,9 +173,16 @@ auto type_resolver::visit(ast::node_id id, const ast::array_expr& array) -> void
         return;
     }
 
-    for (const auto& item : array.items) { resolve(item); }
+    // Resolve the element type first so each item can be typed against it (an unsuffixed
+    // literal element then binds the concrete element type instead of staying `constexpr_*`).
     resolve(array.item_explicit_type);
     auto& item_type{*last_type_.take()};
+    if (item_type.is_resolved() && item_type.get_kind() != type_kind::AUTO) {
+        const structural_guard g{implicit_type_stack_, item_type};
+        for (const auto& item : array.items) { resolve(item); }
+    } else {
+        for (const auto& item : array.items) { resolve(item); }
+    }
 
     if (!item_type.is_resolved()) {
         return last_type_.emplace(ctx_.poison_node(
@@ -637,8 +644,8 @@ template <ast::IndexableID ID>
     case token_type_t::BUILTIN_DIV_FLOOR:
     case token_type_t::BUILTIN_REM:
     case token_type_t::BUILTIN_MOD:       {
-        auto&      lhs_type{*get_resolved_call_arg_type(call.arguments[0])};
-        auto&      rhs_type{*get_resolved_call_arg_type(call.arguments[1])};
+        auto&      lhs_type{constexpr_numeric_view(*get_resolved_call_arg_type(call.arguments[0]))};
+        auto&      rhs_type{constexpr_numeric_view(*get_resolved_call_arg_type(call.arguments[1]))};
         const bool floats_ok{builtin_id == token_type_t::BUILTIN_MIN ||
                              builtin_id == token_type_t::BUILTIN_MAX};
         const auto accepts{
@@ -869,6 +876,14 @@ auto type_resolver::resolve_call_args(gsl::span<const ast::call_expr::argument> 
         });
     }
     return any_poison ? resolve_result::POISONED : resolve_result::OK;
+}
+
+auto type_resolver::constexpr_numeric_view(type& t) -> type& {
+    switch (t.get_kind()) {
+    case type_kind::CONSTEXPR_INT:   return ctx_.get_int(32, true);
+    case type_kind::CONSTEXPR_FLOAT: return ctx_.get_builtin_resolved_type(type_kind::F64);
+    default:                         return t;
+    }
 }
 
 auto type_resolver::get_resolved_call_arg_type(const ast::call_expr::argument& arg)
@@ -1402,7 +1417,9 @@ auto type_resolver::resolve_call(ID id, const ast::call_expr& call) -> void {
                         if (param_type->get_kind() == type_kind::TYPE) {
                             return denoted_type(*arg_type);
                         }
-                        return arg_type;
+                        // A `constexpr_*` literal argument materializes before it binds a
+                        // generic `T` / `auto` parameter, keeping instantiations concrete.
+                        return &constexpr_numeric_view(*arg_type);
                     });
                 if (!result_arg_type) { any_arg_poison = true; }
                 concrete_arg_types[i++] = result_arg_type.take();
@@ -2602,11 +2619,22 @@ auto type_resolver::visit(ast::node_id id, const ast::binary_expr& binary) -> vo
     }
     auto& rhs_type{*last_type_.take()};
 
-    if (is_integer(rhs_type.get_kind())) {
-        if (const auto lit{resolving_.ast.get_as_opt<ast::int_literal_expr>(binary.lhs)};
-            lit && lit->width == 0 && !lit->is_size) {
+    // Peer typing for `constexpr_int` / `constexpr_float` operands: a constexpr operand
+    // adopts a concrete numeric peer; two constexpr operands stay constexpr, promoting
+    // `constexpr_int` to `constexpr_float` when the other side is a float literal.
+    {
+        const auto lk{lhs_type->get_kind()};
+        const auto rk{rhs_type.get_kind()};
+        if (is_constexpr_numeric(lk) && is_numeric(rk) && !is_constexpr_numeric(rk)) {
             resolving_.set_sema_type(binary.lhs, rhs_type);
             lhs_type = &rhs_type;
+        } else if (is_constexpr_numeric(rk) && is_numeric(lk) && !is_constexpr_numeric(lk)) {
+            resolving_.set_sema_type(binary.rhs, *lhs_type);
+        } else if (is_constexpr_numeric(lk) && is_constexpr_numeric(rk) && lk != rk) {
+            auto& promoted{ctx_.get_builtin_resolved_type(type_kind::CONSTEXPR_FLOAT)};
+            resolving_.set_sema_type(binary.lhs, promoted);
+            resolving_.set_sema_type(binary.rhs, promoted);
+            lhs_type = &promoted;
         }
     }
 
@@ -3099,6 +3127,10 @@ auto type_resolver::visit(ast::node_id id, const ast::range_expr& range) -> void
         }
     }
 
+    // A range over unsuffixed literal bounds (`0..5`) iterates concrete integers, not
+    // `constexpr_int`.
+    lhs_type = &constexpr_numeric_view(*lhs_type);
+
     // Due to deferred type checking just use one endpoint's type for the placeholder slice.
     auto& slice_type{ctx_.get_slice(types::mut::CONSTANT, false, *lhs_type)};
     resolving_.set_sema_type(id, slice_type);
@@ -3343,8 +3375,10 @@ auto type_resolver::visit(ast::node_id id, const ast::label_expr& label) -> void
         label_data.add_yield_type(ctx_.get_builtin_resolved_type(type_kind::VOID_));
     }
 
-    // The last type inherits the result type to help propagation of poison
-    auto& result_type{*label_data.get_yield_types()[0]};
+    // The last type inherits the result type to help propagation of poison. A labeled
+    // block/loop that only yields `constexpr_*` values is a control-flow result, not a
+    // literal: materialize it to its concrete peer.
+    auto& result_type{constexpr_numeric_view(*label_data.get_yield_types()[0])};
     ASSERT(result_type.is_resolved(), "The label's inner type should've been resolved");
     label_type.resolve_if<type::data_t>(result_type.get_data());
     resolving_.set_sema_type(label.name, result_type);
@@ -3796,10 +3830,12 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
             }
             break;
         case type_kind::ISIZE:
-        case type_kind::USIZE: break;
-        case type_kind::BOOL:  required_arm_count.emplace(2); break;
+        case type_kind::USIZE:
+        case type_kind::CONSTEXPR_INT: break;
+        case type_kind::BOOL:          required_arm_count.emplace(2); break;
         case type_kind::F32:
         case type_kind::F64:
+        case type_kind::CONSTEXPR_FLOAT:
             return last_type_.emplace(
                 ctx_.poison_node(resolving_,
                                  id,
@@ -4360,10 +4396,13 @@ auto type_resolver::visit(ast::node_id id, const ast::int_literal_expr& expr) ->
     } else if (expr.width != 0) {
         resolved = &ctx_.get_int(expr.width, expr.is_signed);
     } else {
-        resolved = &ctx_.get_int(32, true); // canonical width-less type
-        // A width-less literal coerces to its integer context (wide types, `isize`/`usize`).
+        // An unsuffixed integer literal is `constexpr_int`: it coerces to whatever concrete
+        // numeric type its context needs (range-checked when folded). With no context it
+        // stays `constexpr_int` and materializes as `i32` at runtime.
+        resolved = &ctx_.get_builtin_resolved_type(type_kind::CONSTEXPR_INT);
         if (const auto implicit_type{implicit_type_stack_.peek()};
-            implicit_type && is_integer(implicit_type->get_kind())) {
+            implicit_type &&
+            (is_integer(implicit_type->get_kind()) || is_float(implicit_type->get_kind()))) {
             resolved = implicit_type.get();
         }
     }
@@ -4391,7 +4430,10 @@ auto type_resolver::visit(ast::node_id id, const ast::float_literal_expr& expr) 
                              resolving_.ast.location_of(id)));
     }
 
-    type* resolved{&ctx_.get_builtin_resolved_type(kind)};
+    // An unsuffixed real literal is `constexpr_float`: it coerces to any concrete float its
+    // context needs, and materializes as `f64` at runtime with no context.
+    type* resolved{expr.width == 0 ? &ctx_.get_builtin_resolved_type(type_kind::CONSTEXPR_FLOAT)
+                                   : &ctx_.get_builtin_resolved_type(kind)};
     if (expr.width == 0) {
         if (const auto implicit_type{implicit_type_stack_.peek()};
             implicit_type && is_float(implicit_type->get_kind())) {
@@ -4645,6 +4687,8 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
                     illegal_auto_field(
                         "Struct", ident.name, resolving_.ast.location_of(field.explicit_type))));
             }
+            // A field type inferred from an unsuffixed literal default materializes.
+            field_type = &constexpr_numeric_view(*field_type);
         } else if (field.default_value) {
             const structural_guard inner_g{implicit_type_stack_, *field_type};
             TRY_RESOLVE(*field.default_value);
@@ -5176,6 +5220,19 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
             resolve(*decl.value);
             if (last_type_->is_poison()) { return poison_out(); }
             resolving_.set_sema_type_if(id, *last_type_.take());
+        }
+
+        // A `var` (or explicit `: auto`) binding whose inferred type is `constexpr_*` has no
+        // stable place to stay constexpr: materialize it to its runtime peer now. An
+        // un-annotated `const` keeps `constexpr_*` so it can still coerce anywhere.
+        const bool wants_concrete{decl.has_modifier(ast::decl_modifiers::VARIABLE) ||
+                                  (decl.explicit_type && decl.explicit_type->get_token_type() ==
+                                                             syntax::token_type_t::AUTO_TYPE)};
+        if (wants_concrete) {
+            auto& dt{resolving_.get_sema_type(id)};
+            if (is_constexpr_numeric(dt.get_kind())) {
+                resolving_.set_sema_type(id, constexpr_numeric_view(dt));
+            }
         }
     }
 

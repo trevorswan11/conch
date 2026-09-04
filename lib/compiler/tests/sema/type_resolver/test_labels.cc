@@ -78,7 +78,7 @@ _ = blk: {
         const auto [_, data]{ctx->get_symbol<syms::label>("blk", idx + 1)};
         const auto yield_types{data.get_yield_types()};
         CHECK(yield_types.size() == 4);
-        CHECK(*yield_types[0] == ctx->get_int_type(32, true));
+        CHECK(*yield_types[0] == ctx->get_type(sema::type_kind::CONSTEXPR_INT));
         CHECK(*yield_types[1] == ctx->get_type(sema::type_kind::BOOL));
         CHECK(*yield_types[2] ==
               ctx->get_type(sema::type_kind::ARRAY, true, 4, ctx->get_int_type(8, false)));

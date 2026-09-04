@@ -21,7 +21,7 @@ TEST_CASE("Builtin type resolution") {
         CHECK(sema::type_kind_display_name(type) == expected_name);
     };
 
-    check_bi_type("1", "i32");
+    check_bi_type("1", "constexpr_int"); // unsuffixed: stays constexpr in an un-annotated const
     check_bi_type("1i64", "i64");
     check_bi_type("1z", "isize");
     check_bi_type("1u32", "u32");
@@ -33,7 +33,7 @@ TEST_CASE("Builtin type resolution") {
     check_bi_type("undefined", "undefined");
     check_bi_type("unreachable", "noreturn");
     check_bi_type("1.0f32", "f32");
-    check_bi_type("1.0", "f64");
+    check_bi_type("1.0", "constexpr_float");
 }
 
 TEST_CASE("Nested type resolution") {
@@ -112,7 +112,7 @@ TEST_CASE("Loop resolution") {
     helpers::resolve_and_check("const a := loop { const foo := 42; };");
     helpers::test_resolver_fail(
         "for (23) |_| { var a: i32 = undefined; }",
-        sema::diagnostic{"Iterables may only be arrays or slices; found 'i32'",
+        sema::diagnostic{"Iterables may only be arrays or slices; found 'constexpr_int'",
                          sema::error::TYPE_MISMATCH,
                          std::pair{0UZ, 5UZ}});
 }

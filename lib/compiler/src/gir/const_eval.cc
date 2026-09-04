@@ -552,6 +552,13 @@ auto const_eval::eval_node(ast::node_id id) -> stdx::option<const_value> {
         [&](const ast::int_literal_expr& data) -> stdx::option<const_value> {
             const auto sema_type{module_->get_sema_type_opt(id)};
             auto&      t{sema_type ? *sema_type : ctx_.get_int(32, true)};
+            // An unsuffixed integer literal used in a float context folds to a float value.
+            if (sema::is_float(t.get_kind()) || t.get_kind() == sema::type_kind::CONSTEXPR_FLOAT) {
+                if (t.get_kind() == sema::type_kind::F80 || t.get_kind() == sema::type_kind::F128) {
+                    return stdx::none;
+                }
+                return make_scalar_const(static_cast<f64>(static_cast<i128>(data.value)), t);
+            }
             if (sema::is_unsigned_integer(t)) {
                 return make_scalar_const(static_cast<u128>(data.value), t);
             }

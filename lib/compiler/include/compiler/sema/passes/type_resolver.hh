@@ -134,7 +134,13 @@ class type_resolver {
         [[nodiscard]] auto has_returns() const noexcept -> bool { return !return_types.empty(); }
         [[nodiscard]] auto deduced_return_type(context& ctx) const noexcept -> type& {
             if (return_types.empty()) { return ctx.get_builtin_resolved_type(type_kind::VOID_); }
-            return *return_types.front();
+            auto& first{*return_types.front()};
+            // An inferred (`: auto`) return type never stays `constexpr_*`: pin it to its peer.
+            if (first.get_kind() == type_kind::CONSTEXPR_INT) { return ctx.get_int(32, true); }
+            if (first.get_kind() == type_kind::CONSTEXPR_FLOAT) {
+                return ctx.get_builtin_resolved_type(type_kind::F64);
+            }
+            return first;
         }
     };
 
@@ -211,6 +217,10 @@ class type_resolver {
     auto resolve_call_args(gsl::span<const ast::call_expr::argument> args) -> resolve_result;
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::call_expr::argument& arg)
         -> gsl::not_null<type*>;
+    // Views a `constexpr_int` / `constexpr_float` as the concrete type it materializes to
+    // (`i32` / `f64`); any other type is returned unchanged. For checks that need a
+    // concrete numeric peer without threading coercion through the caller.
+    [[nodiscard]] auto constexpr_numeric_view(type& t) -> type&;
     [[nodiscard]] auto get_call_arg_location(const ast::call_expr::argument& arg)
         -> source_location;
 

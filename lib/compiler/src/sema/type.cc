@@ -178,10 +178,16 @@ auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool {
     // An unsuffixed integer literal coerces to any concrete integer or float (the value's
     // range is checked when it is folded against its target); an unsuffixed real literal
     // coerces to any concrete float. `constexpr_int` also feeds `constexpr_float`.
-    if (from_kind == type_kind::CONSTEXPR_INT) {
-        return is_integer(to_kind) || is_float(to_kind) || to_kind == type_kind::CONSTEXPR_FLOAT;
+    if (from_kind == type_kind::CONSTEXPR_INT) { return is_numeric(to_kind); }
+    if (from_kind == type_kind::CONSTEXPR_FLOAT) {
+        return is_float(to_kind) || to_kind == type_kind::CONSTEXPR_FLOAT;
     }
-    if (from_kind == type_kind::CONSTEXPR_FLOAT) { return is_float(to_kind); }
+    // A concrete numeric also flows *into* a `constexpr_*` slot: such a slot materializes as
+    // `i32` / `f64`, so this is just the identity coercion in disguise.
+    if (to_kind == type_kind::CONSTEXPR_INT) { return is_integer(from_kind); }
+    if (to_kind == type_kind::CONSTEXPR_FLOAT) {
+        return is_float(from_kind) || is_integer(from_kind);
+    }
 
     // A float widens to any wider float (`f16 -> f32 -> f64 -> f80 -> f128`).
     if (is_float(from_kind)) {

@@ -498,6 +498,27 @@ auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest
 
     const auto val{emit_expression(expr_id)};
 
+    // A `constexpr_int` / `constexpr_float` value already carries its exact numeric payload;
+    // coercing it to a concrete peer is a pure retype (no truncating cast), so the constant
+    // re-lowers with the destination's LLVM type.
+    if (val.type && sema::is_constexpr_numeric(val.type->get_kind()) &&
+        sema::is_numeric(dest_type.get_kind())) {
+        auto& concrete{const_cast<sema::type&>(dest_type)};
+        if (sema::is_float(dest_type.get_kind()) &&
+            val.type->get_kind() == sema::type_kind::CONSTEXPR_INT) {
+            // int literal -> float context: convert the payload to floating point.
+            if (const auto iv{val.as_opt<i64>()}) { return value{static_cast<f64>(*iv), concrete}; }
+            if (const auto uv{val.as_opt<u64>()}) { return value{static_cast<f64>(*uv), concrete}; }
+            if (const auto iv{val.as_opt<i128>()}) {
+                return value{static_cast<f64>(*iv), concrete};
+            }
+            if (const auto uv{val.as_opt<u128>()}) {
+                return value{static_cast<f64>(*uv), concrete};
+            }
+        }
+        return value{val.data, concrete};
+    }
+
     // A numeric value narrower than the destination widens implicitly (`iW`->`iV`, `f32`->`f64`,
     // ...)
     if (val.type && sema::is_numeric(dest_type.get_kind()) &&
@@ -1453,6 +1474,10 @@ auto emitter::emit_expression_id_raw(ast::node_id id) -> value {
         [&](const ast::int_literal_expr& data) -> value {
             const auto sema_type{active_mod().get_sema_type_opt(id)};
             auto&      t{sema_type ? *sema_type : ctx_.get_int(32, true)};
+            // An unsuffixed integer literal in a float context is a float constant.
+            if (sema::is_float(t.get_kind()) || t.get_kind() == sema::type_kind::CONSTEXPR_FLOAT) {
+                return value{static_cast<f64>(static_cast<i128>(data.value)), t};
+            }
             if (sema::is_unsigned_integer(t)) {
                 const u128 v{data.value};
                 if (v <= static_cast<u128>(UINT64_MAX)) { return value{static_cast<u64>(v), t}; }
@@ -2161,7 +2186,8 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
                         if (operand_kind == sema::type_kind::POINTER) {
                             return pointer_to_bool(operand, false);
                         }
-                        if (sema::is_integer(operand_kind)) {
+                        if (sema::is_integer(operand_kind) ||
+                            sema::is_constexpr_int(operand_kind)) {
                             auto& bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
                             return value{builder_.emit_binary(instruction_kind::NE,
                                                               operand,
