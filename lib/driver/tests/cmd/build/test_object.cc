@@ -200,6 +200,41 @@ TEST_CASE("build_obj command execution") {
         CHECK(std::filesystem::file_size(obj_file) > 0);
     }
 
+    SECTION("A syntax error inside a -m library module fails cleanly instead of crashing "
+            "codegen") {
+        codegen::llvm_scope scope;
+        tempfile            broken_lib{"test_broken_lib.gh"};
+        tempfile            src_file{"test_broken_lib_import.gh"};
+        tempfile            obj_file{"test_broken_lib_output.o"};
+
+        {
+            std::ofstream lib_out{broken_lib.path};
+            fmt::print(lib_out, R"(
+                pub const custom_fn := fn(x: i64): i64 {{
+                    return x + 100l;
+                }};
+            )");
+
+            std::ofstream src_out{src_file.path};
+            fmt::print(src_out, R"(
+                pub import mylib;
+
+                pub const run_custom := fn(v: i64): i64 {{
+                    return mylib::custom_fn(v);
+                }};
+            )");
+        }
+
+        std::vector<cmd::build::module_binding> modules{{"mylib", broken_lib}};
+        cmd::build_obj                          cmd{{
+                                     .input_path  = src_file,
+                                     .output_path = obj_file,
+                                     .modules     = std::move(modules),
+        }};
+        CHECK(UNWRAP_ERR(cmd.execute()) == clap::error::COMPILATION_FAILED);
+        CHECK_FALSE(std::filesystem::exists(obj_file));
+    }
+
     SECTION("Custom generic library module import via -m on disk") {
         codegen::llvm_scope scope;
         tempfile            custom_lib{"test_custom_generic_lib.gh"};
