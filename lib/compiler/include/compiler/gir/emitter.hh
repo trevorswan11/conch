@@ -270,16 +270,27 @@ class emitter {
                                                u32         fbits,
                                                sema::type& field_type,
                                                value       new_field_val) -> void;
-    [[nodiscard]] auto emit_packed_field_assign(ast::node_id                 id,
-                                                const ast::dot_expr&         dot,
-                                                const ast::assignment_expr&  assign,
-                                                syntax::token_type_t         op_type,
-                                                const sema::types::struct_t& st) -> value;
-    [[nodiscard]] auto emit_packed_union_field_assign(ast::node_id                id,
-                                                      const ast::dot_expr&        dot,
-                                                      const ast::assignment_expr& assign,
-                                                      syntax::token_type_t        op_type,
-                                                      const sema::types::union_t& ut) -> value;
+    [[nodiscard]] auto emit_packed_bits_merge(value       old_backing,
+                                              u32         n,
+                                              u32         offset,
+                                              u32         fbits,
+                                              sema::type& field_type,
+                                              value       new_field_val) -> value;
+
+    // The bit layout of one field within its bit-packed enclosing aggregate.
+    struct packed_field_layout {
+        u32         n{1};      // backing-integer width of the enclosing aggregate
+        u32         offset{0}; // LSB-first bit offset of the field (always 0 for a union)
+        u32         fbits{1};  // width of the field
+        usize       field_idx{0};
+        sema::type* field_type{nullptr};
+    };
+    [[nodiscard]] auto packed_layout_of(const ast::dot_expr& dot) -> packed_field_layout;
+    auto               emit_packed_store(const ast::dot_expr& dot, value field_val) -> void;
+    [[nodiscard]] auto emit_packed_field_assign(ast::node_id                id,
+                                                const ast::dot_expr&        dot,
+                                                const ast::assignment_expr& assign,
+                                                syntax::token_type_t        op_type) -> value;
     auto               emit_call(ast::node_id id, const ast::call_expr& call) -> value;
     auto               emit_asm(ast::node_id id, const ast::asm_expr& node) -> value;
     auto               emit_ident(ast::node_id id, const ast::identifier_expr& ident) -> value;

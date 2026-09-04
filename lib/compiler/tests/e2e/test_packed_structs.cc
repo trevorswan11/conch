@@ -101,6 +101,75 @@ TEST_CASE("nested packed struct field round-trips") {
     )") == 0);
 }
 
+TEST_CASE("nested packed struct field write updates only its own bits") {
+    CHECK(helpers::compile_and_run(R"(
+        const Inner := packed struct { x: u4, y: u4 };
+        const Outer := packed struct { head: u8, body: Inner };
+        pub const main := fn(): i32 {
+            var o: Outer = .{ .head = 200, .body = .{ .x = 3, .y = 12 } };
+            o.body.x = 9;
+            if (@as(i32, o.body.x) != 9) { return 1; }
+            if (@as(i32, o.body.y) != 12) { return 2; }
+            if (@as(i32, o.head) != 200) { return 3; }
+            o.body.y = 1;
+            o.head = 5;
+            if (@as(i32, o.body.x) != 9 or @as(i32, o.body.y) != 1 or @as(i32, o.head) != 5) {
+                return 4;
+            }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("nested packed struct compound assignment") {
+    CHECK(helpers::compile_and_run(R"(
+        const Inner := packed struct { x: u4, y: u4 };
+        const Outer := packed struct { head: u8, body: Inner };
+        pub const main := fn(): i32 {
+            var o: Outer = .{ .head = 10, .body = .{ .x = 1, .y = 2 } };
+            o.body.x += 5;
+            o.body.y *= 3;
+            o.head -= 4;
+            if (@as(i32, o.body.x) != 6) { return 1; }
+            if (@as(i32, o.body.y) != 6) { return 2; }
+            if (@as(i32, o.head) != 6) { return 3; }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("three-deep nested packed struct write") {
+    CHECK(helpers::compile_and_run(R"(
+        const A := packed struct { lo: u2, hi: u2 };
+        const B := packed struct { a: A, tag: u4 };
+        const C := packed struct { b: B, flag: bool };
+        pub const main := fn(): i32 {
+            var c: C = .{ .b = .{ .a = .{ .lo = 0, .hi = 0 }, .tag = 0 }, .flag = false };
+            c.b.a.hi = 3;
+            c.b.tag = 10;
+            c.flag = true;
+            if (@as(i32, c.b.a.hi) != 3 or @as(i32, c.b.a.lo) != 0) { return 1; }
+            if (@as(i32, c.b.tag) != 10) { return 2; }
+            if (!c.flag) { return 3; }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("nested packed union write reinterprets the shared bits") {
+    CHECK(helpers::compile_and_run(R"(
+        const Inner := packed union { a: u8, b: u4 };
+        const Outer := packed struct { head: u4, body: Inner };
+        pub const main := fn(): i32 {
+            var o: Outer = .{ .head = 5, .body = .{ .a = 255 } };
+            o.body.b = 1;
+            if (@as(i32, o.body.a) != 241) { return 1; }
+            if (@as(i32, o.head) != 5) { return 2; }
+            return 0;
+        };
+    )") == 0);
+}
+
 TEST_CASE("extern packed struct keeps C field layout, not bit-packing") {
     CHECK(helpers::compile_and_run(R"(
         const E := extern packed struct { a: i32, b: u8 };

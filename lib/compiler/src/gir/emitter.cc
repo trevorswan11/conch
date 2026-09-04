@@ -1319,6 +1319,14 @@ auto emitter::emit_decl_stmt(ast::node_id id, const ast::decl_stmt& decl) -> voi
     ASSERT(sema_type, "Local declaration must have a resolved sema type");
     if (sema_type->get_kind() == sema::type_kind::TYPE) { return; }
 
+    // A local `const T := struct/union/enum/interface { ... }` declares a type, not a runtime
+    // value: it gets no storage and its `struct_expr` is never emitted as an expression.
+    // (Member functions / static consts on a function-local type are not yet supported.)
+    if (decl.value &&
+        decl.value->any<ast::struct_expr, ast::union_expr, ast::enum_expr, ast::interface_expr>()) {
+        return;
+    }
+
     const auto is_const{decl.has_modifier(ast::decl_modifiers::CONSTANT) ||
                         decl.has_modifier(ast::decl_modifiers::CONSTEXPR)};
 
@@ -1817,8 +1825,9 @@ auto emitter::emit_packed_bits_extract(
     auto&       fbits_uint{ctx_.get_int(static_cast<u16>(fbits), false)};
     const value narrowed{builder_.emit_cast(instruction_kind::WIDEN_CAST, shifted, fbits_uint),
                          fbits_uint};
-    if (sema::is_float(kind) || kind == sema::type_kind::BOOL || kind == sema::type_kind::STRUCT) {
-        // `bool` is `i1`, a nested `packed struct` is its own `iN`: reinterpret the bits.
+    if (sema::is_float(kind) || kind == sema::type_kind::BOOL || kind == sema::type_kind::STRUCT ||
+        kind == sema::type_kind::UNION) {
+        // `bool` is `i1`, a nested `packed` aggregate is its own `iN`: reinterpret the bits.
         return value{builder_.emit_cast(instruction_kind::BIT_CAST, narrowed, field_type),
                      field_type};
     }
@@ -1847,13 +1856,27 @@ auto emitter::emit_packed_field_write(value                        backing_addr,
 auto emitter::emit_packed_bits_insert(
     value backing_addr, u32 n, u32 offset, u32 fbits, sema::type& field_type, value new_field_val)
     -> void {
+    auto&       backing_ty{ctx_.get_int(static_cast<u16>(n), false)};
+    const value old_backing{builder_.emit_load(backing_addr, backing_ty), backing_ty};
+    const value merged{
+        emit_packed_bits_merge(old_backing, n, offset, fbits, field_type, new_field_val)};
+    builder_.emit_store(backing_addr, merged);
+}
+
+// Pure form: return the `n`-bit backing integer that is `old_backing` with `fbits` bits at
+// `offset` replaced by `new_field_val` reinterpreted from `field_type`. Used for nested
+// bit-packed writes, where the enclosing field has no address to read-modify-write through.
+auto emitter::emit_packed_bits_merge(
+    value old_backing, u32 n, u32 offset, u32 fbits, sema::type& field_type, value new_field_val)
+    -> value {
     auto& backing_ty{ctx_.get_int(static_cast<u16>(n), false)};
     auto& fbits_uint{ctx_.get_int(static_cast<u16>(fbits), false)};
 
     const auto kind{field_type.get_kind()};
     value      as_fbits{new_field_val};
-    if (sema::is_float(kind) || kind == sema::type_kind::BOOL || kind == sema::type_kind::STRUCT) {
-        // `bool` is `i1`, a nested `packed struct` is its own `iN`: reinterpret the bits.
+    if (sema::is_float(kind) || kind == sema::type_kind::BOOL || kind == sema::type_kind::STRUCT ||
+        kind == sema::type_kind::UNION) {
+        // `bool` is `i1`, a nested `packed` aggregate is its own `iN`: reinterpret the bits.
         as_fbits = value{builder_.emit_cast(instruction_kind::BIT_CAST, new_field_val, fbits_uint),
                          fbits_uint};
     } else if (kind == sema::type_kind::POINTER || kind == sema::type_kind::REFERENCE) {
@@ -1880,7 +1903,6 @@ auto emitter::emit_packed_bits_insert(
     const u128 mask{(field_mask << offset) & all_ones};
     const u128 inv_mask{all_ones ^ mask};
 
-    const value old_backing{builder_.emit_load(backing_addr, backing_ty), backing_ty};
     const value bits_in{
         builder_.emit_binary(instruction_kind::AND, shifted, value{mask, backing_ty}, backing_ty),
         backing_ty};
@@ -1888,64 +1910,71 @@ auto emitter::emit_packed_bits_insert(
         builder_.emit_binary(
             instruction_kind::AND, old_backing, value{inv_mask, backing_ty}, backing_ty),
         backing_ty};
-    const value merged{builder_.emit_binary(instruction_kind::OR, cleared, bits_in, backing_ty),
-                       backing_ty};
-    builder_.emit_store(backing_addr, merged);
+    return value{builder_.emit_binary(instruction_kind::OR, cleared, bits_in, backing_ty),
+                 backing_ty};
 }
 
-auto emitter::emit_packed_field_assign(ast::node_id                 id,
-                                       const ast::dot_expr&         dot,
-                                       const ast::assignment_expr&  assign,
-                                       syntax::token_type_t         op_type,
-                                       const sema::types::struct_t& st) -> value {
-    PROFILE_FUNCTION();
-    // Address of the backing integer: the object's own storage, one pointer/ref unwound.
-    auto base_lval{emit_lvalue(dot.object)};
-    if (const auto obj_t{active_mod().get_sema_type_opt(dot.object)}) {
-        if (obj_t->get_data().as_opt<sema::types::pointer>() ||
-            obj_t->get_data().as_opt<sema::types::reference>()) {
-            base_lval.data = value::data_t{builder_.emit_load(base_lval, *obj_t)};
-        }
-    }
+namespace {
 
+// Peels one `^`/`&` layer off `t`.
+[[nodiscard]] auto peel_ptr_ref(const sema::type& t) -> const sema::type& {
+    if (const auto p{t.get_data().as_opt<sema::types::pointer>()}) { return p->underlying; }
+    if (const auto r{t.get_data().as_opt<sema::types::reference>()}) { return r->underlying; }
+    return t;
+}
+
+[[nodiscard]] auto is_bit_packed_agg(const sema::type& t) -> bool {
+    if (const auto st{t.get_data().as_opt<sema::types::struct_t>()}) { return st->is_bit_packed(); }
+    if (const auto ut{t.get_data().as_opt<sema::types::union_t>()}) { return ut->is_bit_packed(); }
+    return false;
+}
+
+} // namespace
+
+// The bit layout of `dot`'s field within its (bit-packed) enclosing aggregate.
+auto emitter::packed_layout_of(const ast::dot_expr& dot) -> packed_field_layout {
+    const auto& obj_ty{peel_ptr_ref(*active_mod().get_sema_type_opt(dot.object))};
     const auto& member_ident{active_ast().get_as<ast::identifier_expr>(dot.member)};
-    const auto& table{ctx_.registry.get(
-        // the (possibly pointer-unwound) struct type's symbol table
-        [&] {
-            auto              ot{active_mod().get_sema_type_opt(dot.object)};
-            const sema::type* u{ot.get()};
-            if (const auto p{u->get_data().as_opt<sema::types::pointer>()}) {
-                u = &p->underlying;
-            } else if (const auto r{u->get_data().as_opt<sema::types::reference>()}) {
-                u = &r->underlying;
-            }
-            return u->get_symbol_table_idx();
-        }())};
+    const auto& table{ctx_.registry.get(obj_ty.get_symbol_table_idx())};
     const auto  field_idx{table.get_proxy(member_ident.name).index};
-    auto&       field_type{
-        active_mod().get_sema_type_opt(dot.member).value_or(*active_mod().get_sema_type_opt(id))};
+    auto&       field_type{active_mod()
+                         .get_sema_type_opt(dot.member)
+                         .value_or(*active_mod().get_sema_type_opt(dot.object))};
 
-    value new_field{};
-    if (op_type == syntax::token_type_t::ASSIGN) {
-        new_field = emit_coerced_expr(assign.rhs, field_type);
-    } else {
-        const auto base_kind{map_binary_op(op_type).value_or(instruction_kind::ADD)};
-        const auto old_field{emit_packed_field_read(base_lval, st, field_idx, field_type)};
-        const auto rhs{emit_expression(assign.rhs)};
-        new_field =
-            value{emit_checked_binary(base_kind, old_field, rhs, field_type, id), field_type};
+    if (const auto st{obj_ty.get_data().as_opt<sema::types::struct_t>()}) {
+        const auto n{sema::packed_backing_bits(*st, target_ptr_bits_).value_or(1)};
+        return {.n          = n,
+                .offset     = sema::packed_field_offset(*st, field_idx, target_ptr_bits_),
+                .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
+                .field_idx  = field_idx,
+                .field_type = &field_type};
     }
-
-    emit_packed_field_write(base_lval, st, field_idx, field_type, new_field);
-    return new_field;
+    const auto& ut{obj_ty.get_data().as<sema::types::union_t>()};
+    const auto  n{sema::packed_union_backing_bits(ut, target_ptr_bits_).value_or(1)};
+    return {.n          = n,
+            .offset     = 0,
+            .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
+            .field_idx  = field_idx,
+            .field_type = &field_type};
 }
 
-auto emitter::emit_packed_union_field_assign(ast::node_id                id,
-                                             const ast::dot_expr&        dot,
-                                             const ast::assignment_expr& assign,
-                                             syntax::token_type_t        op_type,
-                                             const sema::types::union_t& ut) -> value {
-    PROFILE_FUNCTION();
+// Stores `field_val` into `dot`'s bit-packed field. When `dot.object` is itself a bit-packed
+// field access (a nested `packed` aggregate), it has no address: merge `field_val` into the
+// enclosing value and recurse one level out. Otherwise `dot.object` has storage and we
+// read-modify-write its backing integer in place.
+auto emitter::emit_packed_store(const ast::dot_expr& dot, value field_val) -> void {
+    const auto layout{packed_layout_of(dot)};
+
+    const auto inner{active_ast().get_as_opt<ast::dot_expr>(dot.object)};
+    if (inner && is_bit_packed_agg(peel_ptr_ref(*active_mod().get_sema_type_opt(inner->object)))) {
+        auto&       backing_ty{ctx_.get_int(static_cast<u16>(layout.n), false)};
+        const value old_obj{emit_expression(dot.object).data, backing_ty};
+        const value new_obj{emit_packed_bits_merge(
+            old_obj, layout.n, layout.offset, layout.fbits, *layout.field_type, field_val)};
+        emit_packed_store(*inner, new_obj);
+        return;
+    }
+
     auto base_lval{emit_lvalue(dot.object)};
     if (const auto obj_t{active_mod().get_sema_type_opt(dot.object)}) {
         if (obj_t->get_data().as_opt<sema::types::pointer>() ||
@@ -1953,22 +1982,37 @@ auto emitter::emit_packed_union_field_assign(ast::node_id                id,
             base_lval.data = value::data_t{builder_.emit_load(base_lval, *obj_t)};
         }
     }
+    emit_packed_bits_insert(
+        base_lval, layout.n, layout.offset, layout.fbits, *layout.field_type, field_val);
+}
 
-    auto& field_type{
-        active_mod().get_sema_type_opt(dot.member).value_or(*active_mod().get_sema_type_opt(id))};
+// `dot.<field> <op>= rhs`, where the (unwrapped) type of `dot.object` is a bit-packed
+// `packed struct` / `packed union`.
+auto emitter::emit_packed_field_assign(ast::node_id                id,
+                                       const ast::dot_expr&        dot,
+                                       const ast::assignment_expr& assign,
+                                       syntax::token_type_t        op_type) -> value {
+    PROFILE_FUNCTION();
+    const auto layout{packed_layout_of(dot)};
+    auto&      field_type{*layout.field_type};
 
     value new_field{};
     if (op_type == syntax::token_type_t::ASSIGN) {
         new_field = emit_coerced_expr(assign.rhs, field_type);
     } else {
-        const auto base_kind{map_binary_op(op_type).value_or(instruction_kind::ADD)};
-        const auto old_field{emit_packed_field_read(base_lval, ut, field_type)};
+        auto&       backing_ty{ctx_.get_int(static_cast<u16>(layout.n), false)};
+        const value backing{emit_expression(dot.object).data, backing_ty};
+        const auto  old_field{
+            emit_packed_bits_extract(backing, layout.n, layout.offset, layout.fbits, field_type)};
+        auto base_tok{op_type};
+        if (const auto b{syntax::token_type::get_compound_base_op(op_type)}) { base_tok = *b; }
+        const auto base_kind{map_binary_op(base_tok).value_or(instruction_kind::ADD)};
         const auto rhs{emit_expression(assign.rhs)};
         new_field =
             value{emit_checked_binary(base_kind, old_field, rhs, field_type, id), field_type};
     }
 
-    emit_packed_field_write(base_lval, ut, field_type, new_field);
+    emit_packed_store(dot, new_field);
     return new_field;
 }
 
@@ -1987,13 +2031,8 @@ auto emitter::emit_assignment(ast::node_id id, const ast::assignment_expr& assig
             } else if (const auto r{u->get_data().as_opt<sema::types::reference>()}) {
                 u = &r->underlying;
             }
-            if (const auto st{u->get_data().as_opt<sema::types::struct_t>()};
-                st && st->is_bit_packed()) {
-                return emit_packed_field_assign(id, *dot, assign, op_type, *st);
-            }
-            if (const auto ut{u->get_data().as_opt<sema::types::union_t>()};
-                ut && ut->is_bit_packed()) {
-                return emit_packed_union_field_assign(id, *dot, assign, op_type, *ut);
+            if (is_bit_packed_agg(*u)) {
+                return emit_packed_field_assign(id, *dot, assign, op_type);
             }
         }
     }
@@ -2026,7 +2065,9 @@ auto emitter::emit_assignment(ast::node_id id, const ast::assignment_expr& assig
     case syntax::token_type_t::XOR_ASSIGN:
     case syntax::token_type_t::SHL_ASSIGN:
     case syntax::token_type_t::SHR_ASSIGN:     {
-        const auto base_kind{map_binary_op(op_type).value_or(instruction_kind::ADD)};
+        auto base_tok{op_type};
+        if (const auto b{syntax::token_type::get_compound_base_op(op_type)}) { base_tok = *b; }
+        const auto base_kind{map_binary_op(base_tok).value_or(instruction_kind::ADD)};
         auto&      target_type{*lhs_lval.type};
         const auto loaded{builder_.emit_load(lhs_lval, target_type)};
         const auto rhs{emit_expression(assign.rhs)};
