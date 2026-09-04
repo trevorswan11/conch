@@ -418,6 +418,7 @@ template <ast::IndexableID ID>
     case token_type_t::BUILTIN_INT_FROM_PTR:
     case token_type_t::BUILTIN_ALIGN_OF:
     case token_type_t::BUILTIN_SIZE_OF:
+    case token_type_t::BUILTIN_BIT_SIZE_OF:
     case token_type_t::BUILTIN_CLZ:
     case token_type_t::BUILTIN_CTZ:
     case token_type_t::BUILTIN_POP_COUNT:    {

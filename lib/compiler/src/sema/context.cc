@@ -163,6 +163,7 @@ auto inject_functions(symbol_table& prelude, type_pool& pool) -> void {
 
     inject_function(bis::ALIGN_OF, params(t_auto), t_usize);
     inject_function(bis::SIZE_OF, params(t_auto), t_usize);
+    inject_function(bis::BIT_SIZE_OF, params(t_auto), t_usize);
     inject_function(bis::TYPE_OF, params(t_auto), t_type);
     inject_function(bis::THIS, params(), t_type);
     inject_function(bis::TAG_NAME, params(t_auto), t_c_str);

@@ -165,4 +165,18 @@ TEST_CASE("extern packed union is not bit-packed") {
     )") == 17);
 }
 
+TEST_CASE("@bitSizeOf reports the backing width of bit-packed aggregates") {
+    CHECK(helpers::compile_and_run(R"(
+        const S := packed struct { a: u3, b: u5, c: bool };
+        const U := packed union { a: u8, b: u20, c: u3 };
+        pub const main := fn(): i32 {
+            if (@bitSizeOf(S) != 9) { return 1; }
+            if (@bitSizeOf(U) != 20) { return 2; }
+            // @sizeOf rounds the 9-bit struct up to 2 ABI bytes
+            if (@sizeOf(S) != 2) { return 3; }
+            return 0;
+        };
+    )") == 0);
+}
+
 } // namespace ghoti::tests

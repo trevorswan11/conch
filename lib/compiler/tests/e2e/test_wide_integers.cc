@@ -43,6 +43,36 @@ TEST_CASE("@sizeOf of arbitrary-width integers") {
     )") == 0);
 }
 
+TEST_CASE("@bitSizeOf reports a type's exact bit width") {
+    CHECK(helpers::compile_and_run(R"(
+        const Pair := struct { a: i32, b: i32 };
+        pub const main := fn(): i32 {
+            if (@bitSizeOf(u1) != 1 or @bitSizeOf(i8) != 8) { return 1; }
+            if (@bitSizeOf(u9) != 9 or @bitSizeOf(i17) != 17) { return 2; }
+            if (@bitSizeOf(u100) != 100 or @bitSizeOf(i128) != 128) { return 3; }
+            if (@bitSizeOf(bool) != 1) { return 4; }
+            if (@bitSizeOf(f16) != 16 or @bitSizeOf(f32) != 32 or @bitSizeOf(f64) != 64) {
+                return 5;
+            }
+            // a plain aggregate falls back to @sizeOf(T) * 8
+            if (@bitSizeOf(Pair) != @sizeOf(Pair) * 8) { return 6; }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("@bitSizeOf differs from @sizeOf for sub-byte and odd widths") {
+    CHECK(helpers::compile_and_run(R"(
+        pub const main := fn(): i32 {
+            // u9 occupies 2 ABI bytes but only 9 bits
+            if (@sizeOf(u9) != 2 or @bitSizeOf(u9) != 9) { return 1; }
+            var x: u17 = 3;
+            if (@bitSizeOf(@typeOf(x)) != 17) { return 2; }
+            return 0;
+        };
+    )") == 0);
+}
+
 TEST_CASE("arbitrary-width integers widen implicitly to wider same-signedness types") {
     CHECK(helpers::compile_and_run(R"(
         const take_u16 := fn(x: u16): u16 { return x; };

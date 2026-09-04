@@ -2300,6 +2300,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             return value{void_val{}, ret_type};
         }
         case syntax::token_type_t::BUILTIN_SIZE_OF:
+        case syntax::token_type_t::BUILTIN_BIT_SIZE_OF:
         case syntax::token_type_t::BUILTIN_ALIGN_OF:
         case syntax::token_type_t::BUILTIN_TYPE_OF:
         case syntax::token_type_t::BUILTIN_TYPE_NAME:

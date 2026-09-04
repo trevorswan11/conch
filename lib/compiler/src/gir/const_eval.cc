@@ -1611,6 +1611,57 @@ auto const_eval::eval_builtin(ast::node_id          id,
         const auto al{type_align_of(*target_type, ptr_size)};
         return const_value{static_cast<u64>(al), usize_type};
     }
+    case syntax::token_type_t::BUILTIN_BIT_SIZE_OF: {
+        VERIFY(!call.arguments.empty(), "Arity mismatch not verified during resolution");
+        const auto&               arg{call.arguments.front()};
+        stdx::option<sema::type&> target_type;
+        if (const auto type_id{arg.as_opt<ast::explicit_type_id>()}) {
+            target_type = module_->get_sema_type_opt(*type_id);
+        } else if (const auto expr_h{arg.as_opt<ast::expr_handle>()}) {
+            target_type = module_->get_sema_type_opt(*expr_h);
+        }
+        if (!target_type) { return stdx::none; }
+
+        if (const auto dc{target_type->get_data().as_opt<sema::types::deferred_call>()}) {
+            if (const auto r{try_resolve_deferred_call(dc->call)}) { target_type.emplace(*r); }
+        }
+        // `@bitSizeOf(@typeOf(x))` hands us a `meta_type`; unwrap to the denoted type.
+        if (target_type->get_kind() == sema::type_kind::TYPE) {
+            if (const auto m{target_type->get_data().as_opt<sema::types::meta_type>()}) {
+                target_type.emplace(m->instance);
+            }
+        }
+
+        const auto ptr_size{
+            codegen::resolve_target_triple(ctx_.target_opts.triple_str).isArch64Bit() ? usize{8}
+                                                                                      : usize{4}};
+        const auto ptr_bits{static_cast<u32>(ptr_size) * 8};
+
+        const auto kind{target_type->get_kind()};
+        if (kind == sema::type_kind::INT) {
+            return const_value{static_cast<u64>(sema::int_width(*target_type)), usize_type};
+        }
+        if (kind == sema::type_kind::ISIZE || kind == sema::type_kind::USIZE) {
+            return const_value{static_cast<u64>(ptr_bits), usize_type};
+        }
+        if (kind == sema::type_kind::BOOL) { return const_value{u64{1}, usize_type}; }
+        if (sema::is_float(kind)) {
+            return const_value{static_cast<u64>(sema::float_bits(kind)), usize_type};
+        }
+        if (const auto st{target_type->get_data().as_opt<sema::types::struct_t>()};
+            st && st->is_bit_packed()) {
+            if (const auto n{sema::packed_backing_bits(*st, ptr_bits)}) {
+                return const_value{static_cast<u64>(*n), usize_type};
+            }
+        }
+        if (const auto ut{target_type->get_data().as_opt<sema::types::union_t>()};
+            ut && ut->is_bit_packed()) {
+            if (const auto n{sema::packed_union_backing_bits(*ut, ptr_bits)}) {
+                return const_value{static_cast<u64>(*n), usize_type};
+            }
+        }
+        return const_value{static_cast<u64>(type_size_of(*target_type, ptr_size) * 8), usize_type};
+    }
     case syntax::token_type_t::BUILTIN_TYPE_OF: {
         VERIFY(!call.arguments.empty(), "Arity mismatch not verified during resolution");
         const auto& arg{call.arguments.front()};
