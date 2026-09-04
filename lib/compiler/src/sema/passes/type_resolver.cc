@@ -1,6 +1,7 @@
 #include "compiler/sema/passes/type_resolver.hh"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <concepts>
 #include <ranges>
@@ -319,6 +320,49 @@ auto type_resolver::visit(ast::node_id id, const ast::asm_expr& node) -> void {
     resolving_.set_sema_type(id, node_type);
     last_type_.emplace(node_type);
 }
+
+namespace {
+
+// Bit width of a scalar type usable as an atomic operand, or none if the kind isn't supported.
+[[nodiscard]] auto atomic_operand_width(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32> {
+    switch (t.get_kind()) {
+    case type_kind::INT:     return u32{int_width(t)};
+    case type_kind::ISIZE:
+    case type_kind::USIZE:
+    case type_kind::POINTER: return ptr_bits;
+    case type_kind::BOOL:    return u32{8};
+    case type_kind::F16:
+    case type_kind::F32:
+    case type_kind::F64:
+    case type_kind::F80:
+    case type_kind::F128:    return u32{float_bits(t.get_kind())};
+    default:                 return stdx::none;
+    }
+}
+
+[[nodiscard]] auto is_valid_memory_order_name(std::string_view name) noexcept -> bool {
+    return name == "relaxed" || name == "acquire" || name == "release" || name == "acq_rel" ||
+           name == "seq_cst";
+}
+
+// A total order over `MemoryOrder` matching C++11 [atomics.types.operations]'s
+// "fail_order shall not be stronger than succ_order" rule closely enough for this purpose;
+// `release`/`acq_rel` are rejected outright as `fail_order` before this is ever consulted.
+[[nodiscard]] auto memory_order_rank(std::string_view name) noexcept -> int {
+    if (name == "relaxed") { return 0; }
+    if (name == "acquire" || name == "release") { return 1; }
+    if (name == "acq_rel") { return 2; }
+    if (name == "seq_cst") { return 3; }
+    return -1;
+}
+
+[[nodiscard]] auto is_valid_atomic_rmw_op_name(std::string_view name) noexcept -> bool {
+    constexpr std::array<std::string_view, 11> names{
+        "xchg", "add", "sub", "band", "nand", "bor", "bxor", "max", "min", "umax", "umin"};
+    return std::ranges::find(names, name) != names.end();
+}
+
+} // namespace
 
 template <ast::IndexableID ID>
 [[nodiscard]] auto type_resolver::resolve_builtin_call(ID                             id,
@@ -700,6 +744,216 @@ template <ast::IndexableID ID>
         return_type = &ctx_.get_builtin_resolved_type(type_kind::BOOL);
         break;
     }
+    case token_type_t::BUILTIN_ATOMIC_LOAD:
+    case token_type_t::BUILTIN_ATOMIC_STORE:
+    case token_type_t::BUILTIN_ATOMIC_RMW:
+    case token_type_t::BUILTIN_CMPXCHG_WEAK:
+    case token_type_t::BUILTIN_CMPXCHG_STRONG:
+    case token_type_t::BUILTIN_FENCE:          {
+        const auto builtin_name{*syntax::get_builtin_opt(builtin_id)};
+
+        if (builtin_id == token_type_t::BUILTIN_FENCE) {
+            const auto order{resolve_const_enum_arg(call.arguments[0], builtin_name, "order")};
+            if (!order) { return stdx::err{order.error()}; }
+            if (!is_valid_memory_order_name(order->name)) {
+                return make_sema_err(fmt::format("'{}' cannot use memory order '{}'; a fence "
+                                                 "accepts relaxed, acquire, release, acq_rel, "
+                                                 "or seq_cst",
+                                                 builtin_name,
+                                                 order->name),
+                                     error::TYPE_MISMATCH,
+                                     get_call_arg_location(call.arguments[0]));
+            }
+            return_type = &ctx_.get_builtin_resolved_type(type_kind::VOID_);
+            break;
+        }
+
+        // `@atomicStore` has no leading `T: type` argument -- `T` is `ptr`'s pointee instead.
+        const bool  has_t_arg{builtin_id != token_type_t::BUILTIN_ATOMIC_STORE};
+        const usize ptr_idx{has_t_arg ? 1UZ : 0UZ};
+
+        auto&      ptr_type{*get_resolved_call_arg_type(call.arguments[ptr_idx])};
+        const auto ptr_data{ptr_type.get_data().as_opt<types::pointer>()};
+        if (!ptr_data) {
+            return make_sema_err(fmt::format("'{}' expects 'ptr' to be a pointer ('^T' / '^mut "
+                                             "T'); found '{}'",
+                                             builtin_name,
+                                             type_kind_display_name(ptr_type)),
+                                 error::TYPE_MISMATCH,
+                                 get_call_arg_location(call.arguments[ptr_idx]));
+        }
+        auto& t{has_t_arg ? *get_resolved_call_arg_type(call.arguments[0]) : ptr_data->underlying};
+
+        const bool needs_mut_ptr{builtin_id != token_type_t::BUILTIN_ATOMIC_LOAD};
+        if (needs_mut_ptr && ptr_type.is_constant()) {
+            return make_sema_err(
+                fmt::format(
+                    "'{}' expects 'ptr' to point to a mutable location ('^mut {}'); found '{}'",
+                    builtin_name,
+                    type_kind_display_name(t),
+                    ptr_type.to_string()),
+                error::TYPE_MISMATCH,
+                get_call_arg_location(call.arguments[ptr_idx]));
+        }
+        if (!is_same_unqualified(ptr_data->underlying, t)) {
+            return make_sema_err(fmt::format("'{}' expects 'ptr' to point to '{}'; found '{}'",
+                                             builtin_name,
+                                             type_kind_display_name(t),
+                                             ptr_type.to_string()),
+                                 error::TYPE_MISMATCH,
+                                 get_call_arg_location(call.arguments[ptr_idx]));
+        }
+
+        const auto width{atomic_operand_width(t, target_ptr_bits())};
+        const bool width_ok{width && (*width == 8 || *width == 16 || *width == 32 || *width == 64 ||
+                                      (*width == 128 && target_has_128bit_atomics()))};
+        if (!width_ok) {
+            return make_sema_err(
+                fmt::format("'{}' operand type '{}' has no native atomic width on this target; "
+                            "8/16/32/64 bits are always supported, 128 only on x86_64/aarch64",
+                            builtin_name,
+                            type_kind_display_name(t)),
+                error::TYPE_MISMATCH,
+                get_call_arg_location(call.arguments[ptr_idx]));
+        }
+
+        // Every non-`ptr`/order/op operand (`val`, `expected`, `new`) must agree with `T`.
+        const auto check_matches_t = [&](usize            arg_idx,
+                                         std::string_view name) -> stdx::option<diagnostic> {
+            auto& arg_type{*get_resolved_call_arg_type(call.arguments[arg_idx])};
+            // A width-less `constexpr_int`/`constexpr_float` literal (e.g. a bare `1`) has no
+            // fixed type yet to compare unqualified against `T`; it coerces to any matching
+            // numeric family instead, mirroring ordinary call-argument coercion.
+            const bool ok{
+                is_same_unqualified(arg_type, t) ||
+                (arg_type.get_kind() == type_kind::CONSTEXPR_INT && is_integer(t.get_kind())) ||
+                (arg_type.get_kind() == type_kind::CONSTEXPR_FLOAT && is_float(t.get_kind()))};
+            if (ok) { return stdx::none; }
+            return diagnostic{fmt::format("'{}' expects '{}' to be '{}'; found '{}'",
+                                          builtin_name,
+                                          name,
+                                          type_kind_display_name(t),
+                                          type_kind_display_name(arg_type)),
+                              error::TYPE_MISMATCH,
+                              get_call_arg_location(call.arguments[arg_idx])};
+        };
+
+        switch (builtin_id) {
+        case token_type_t::BUILTIN_ATOMIC_LOAD: {
+            const auto order{resolve_const_enum_arg(call.arguments[2], builtin_name, "order")};
+            if (!order) { return stdx::err{order.error()}; }
+            if (order->name != "relaxed" && order->name != "acquire" && order->name != "seq_cst") {
+                return make_sema_err(
+                    fmt::format("'{}' cannot use memory order '{}'; loads accept relaxed, "
+                                "acquire, or seq_cst",
+                                builtin_name,
+                                order->name),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[2]));
+            }
+            return_type = &t;
+            break;
+        }
+        case token_type_t::BUILTIN_ATOMIC_STORE: {
+            if (auto diag{check_matches_t(1, "val")}) { return stdx::err{std::move(*diag)}; }
+            const auto order{resolve_const_enum_arg(call.arguments[2], builtin_name, "order")};
+            if (!order) { return stdx::err{order.error()}; }
+            if (order->name != "relaxed" && order->name != "release" && order->name != "seq_cst") {
+                return make_sema_err(
+                    fmt::format("'{}' cannot use memory order '{}'; stores accept relaxed, "
+                                "release, or seq_cst",
+                                builtin_name,
+                                order->name),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[2]));
+            }
+            return_type = &ctx_.get_builtin_resolved_type(type_kind::VOID_);
+            break;
+        }
+        case token_type_t::BUILTIN_ATOMIC_RMW: {
+            const auto op{resolve_const_enum_arg(call.arguments[2], builtin_name, "op")};
+            if (!op) { return stdx::err{op.error()}; }
+            if (!is_valid_atomic_rmw_op_name(op->name)) {
+                return make_sema_err(fmt::format("'{}' has no atomic RMW operation named '{}'",
+                                                 builtin_name,
+                                                 op->name),
+                                     error::TYPE_MISMATCH,
+                                     get_call_arg_location(call.arguments[2]));
+            }
+            if (auto diag{check_matches_t(3, "val")}) { return stdx::err{std::move(*diag)}; }
+            const auto order{resolve_const_enum_arg(call.arguments[4], builtin_name, "order")};
+            if (!order) { return stdx::err{order.error()}; }
+            if (!is_valid_memory_order_name(order->name)) {
+                return make_sema_err(
+                    fmt::format("'{}' cannot use memory order '{}'", builtin_name, order->name),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[4]));
+            }
+            return_type = &t;
+            break;
+        }
+        case token_type_t::BUILTIN_CMPXCHG_WEAK:
+        case token_type_t::BUILTIN_CMPXCHG_STRONG: {
+            if (auto diag{check_matches_t(2, "expected")}) { return stdx::err{std::move(*diag)}; }
+            if (auto diag{check_matches_t(3, "new")}) { return stdx::err{std::move(*diag)}; }
+
+            const auto succ{resolve_const_enum_arg(call.arguments[4], builtin_name, "succ_order")};
+            if (!succ) { return stdx::err{succ.error()}; }
+            if (!is_valid_memory_order_name(succ->name)) {
+                return make_sema_err(fmt::format("'{}' cannot use success memory order '{}'",
+                                                 builtin_name,
+                                                 succ->name),
+                                     error::TYPE_MISMATCH,
+                                     get_call_arg_location(call.arguments[4]));
+            }
+            const auto fail{resolve_const_enum_arg(call.arguments[5], builtin_name, "fail_order")};
+            if (!fail) { return stdx::err{fail.error()}; }
+            if (fail->name == "release" || fail->name == "acq_rel") {
+                return make_sema_err(
+                    fmt::format("'{}' cannot use failure memory order '{}'; 'fail_order' may not "
+                                "be release or acq_rel",
+                                builtin_name,
+                                fail->name),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[5]));
+            }
+            if (!is_valid_memory_order_name(fail->name) ||
+                memory_order_rank(fail->name) > memory_order_rank(succ->name)) {
+                return make_sema_err(
+                    fmt::format("'{}' failure memory order '{}' may not be stronger than its "
+                                "success order '{}'",
+                                builtin_name,
+                                fail->name,
+                                succ->name),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[5]));
+            }
+
+            // `out` follows the `_withOverflow` convention: `&mut T` or `^mut T`.
+            auto&       out_type{*get_resolved_call_arg_type(call.arguments[6])};
+            const auto  out_ref{out_type.get_data().as_opt<types::reference>()};
+            const auto  out_ptr{out_type.get_data().as_opt<types::pointer>()};
+            const type* out_underlying{out_ref   ? &out_ref->underlying
+                                       : out_ptr ? &out_ptr->underlying
+                                                 : nullptr};
+            if (!out_underlying || out_type.is_constant() ||
+                !is_same_unqualified(*out_underlying, t)) {
+                return make_sema_err(
+                    fmt::format("'{}' expects its 'out' argument to be a '&mut {}' result "
+                                "reference; found '{}'",
+                                builtin_name,
+                                type_kind_display_name(t),
+                                out_type.to_string()),
+                    error::TYPE_MISMATCH,
+                    get_call_arg_location(call.arguments[6]));
+            }
+            return_type = &ctx_.get_builtin_resolved_type(type_kind::BOOL);
+            break;
+        }
+        default: UNREACHABLE("Unhandled atomic builtin");
+        }
+        break;
+    }
     case token_type_t::BUILTIN_C_VA_START:
     case token_type_t::BUILTIN_C_VA_COPY:
     case token_type_t::BUILTIN_C_VA_END:   {
@@ -910,6 +1164,30 @@ auto type_resolver::get_resolved_call_arg_type(const ast::call_expr::argument& a
 
 auto type_resolver::get_call_arg_location(const ast::call_expr::argument& arg) -> source_location {
     return arg.visit([this](auto id) -> source_location { return resolving_.ast.location_of(id); });
+}
+
+auto type_resolver::resolve_const_enum_arg(const ast::call_expr::argument& arg,
+                                           std::string_view                builtin_name,
+                                           std::string_view                what)
+    -> stdx::result<gir::const_enum, diagnostic> {
+    const auto loc{get_call_arg_location(arg)};
+    const auto expr_h{arg.as_opt<ast::expr_handle>()};
+    if (!expr_h) {
+        return make_sema_err(
+            fmt::format("'{}' expects '{}' to be a compile-time constant", builtin_name, what),
+            error::TYPE_MISMATCH,
+            loc);
+    }
+    gir::const_eval ce{ctx_, resolving_};
+    const auto      val{ce.try_eval(*expr_h)};
+    const auto      en{val ? val->as_opt<gir::const_enum>() : stdx::none};
+    if (!en) {
+        return make_sema_err(
+            fmt::format("'{}' expects '{}' to be a compile-time constant", builtin_name, what),
+            error::TYPE_MISMATCH,
+            loc);
+    }
+    return *en;
 }
 
 auto type_resolver::local_const_fn_ref(ast::expr_handle expr) -> stdx::option<gir::const_value> {
@@ -2150,6 +2428,11 @@ auto type_resolver::target_has_x86_fp80() const -> bool {
 
 auto type_resolver::target_ptr_bits() const -> u32 {
     return codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits;
+}
+
+auto type_resolver::target_has_128bit_atomics() const -> bool {
+    const auto arch{codegen::target_facts::resolve(ctx_.target_opts.triple_str).arch};
+    return arch == "x86_64" || arch == "aarch64";
 }
 
 template <ast::IndexableID ID> auto type_resolver::resolve_symbol(ID id, symbol& sym) -> void {

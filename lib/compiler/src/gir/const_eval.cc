@@ -878,8 +878,35 @@ auto const_eval::eval_dot(ast::node_id, const ast::dot_expr& dot) -> stdx::optio
 
     if (const auto type_opt{target_val->as_opt<stdx::option<sema::type&>>()};
         type_opt && *type_opt) {
-        auto&      type{**type_opt};
+        auto* denoted{&**type_opt};
+        if (denoted->get_kind() == sema::type_kind::TYPE) {
+            if (const auto meta{denoted->get_data().as_opt<sema::types::meta_type>()}) {
+                denoted = &meta->instance;
+            }
+        }
+        auto&      type{*denoted};
         const auto kind{type.get_kind()};
+
+        // An enum variant reached through anything other than a bare identifier object (e.g.
+        // `builtin::MemoryOrder.seq_cst`, where `dot.object` is a `module_access_expr`) misses
+        // the bare-identifier fast path above; look it up the same way `eval_implicit_access`
+        // does for a `.seq_cst`-style implicit access against a known enum type.
+        if (const auto en{type.get_data().as_opt<sema::types::enum_t>()}) {
+            for (usize idx{0}; idx < en->ast_enumerations.size(); ++idx) {
+                const auto& e{en->ast_enumerations[idx]};
+                const auto& vname{en->enclosing.ast.get_as<ast::identifier_expr>(e.name).name};
+                if (vname == member_name) {
+                    auto val{static_cast<i64>(idx)};
+                    if (e.value) {
+                        if (const auto ev{try_eval(*e.value)}) {
+                            val = static_cast<i64>(ev->as_int_opt().value_or(val));
+                        }
+                    }
+                    return const_value{const_enum{std::string{member_name}, val}, type};
+                }
+            }
+        }
+
         const bool is_structural{kind == sema::type_kind::STRUCT ||
                                  kind == sema::type_kind::UNION || kind == sema::type_kind::ENUM};
         if (is_structural) {
@@ -1047,8 +1074,32 @@ auto const_eval::eval_module_access(ast::node_id, const ast::module_access_expr&
     if (!outer_ident || !module_->root_table_idx) { return stdx::none; }
     const auto& table{ctx_.registry.get(*module_->root_table_idx)};
 
-    const auto sym{table.get_opt(outer_ident->name)};
+    // `builtin::X` (and any other prelude-injected module) lives in the prelude table, not the
+    // resolving module's own root table -- fall back to it the same way the resolver's
+    // scope-chain lookup (`ctx_.registry.lookup(table_stack_, ...)`) would.
+    auto sym{table.get_opt(outer_ident->name)};
+    if (!sym && ctx_.prelude_index) {
+        sym = ctx_.registry.get(*ctx_.prelude_index).get_opt(outer_ident->name);
+    }
     if (!sym) { return stdx::none; }
+
+    // A prelude module (like `builtin`) is a `symbols::builtin` entry carrying its type
+    // directly, not an AST-backed `symbols::node_t`; check MODULE-kind first so both shapes
+    // reach the module lookup below.
+    if (const auto node_sym{sym->get_kind_opt()};
+        node_sym && *node_sym == sema::symbol_kind::MODULE) {
+        stdx::option<sema::type&> sema_type;
+        if (const auto bi{sym->get_data().as_opt<sema::symbols::builtin>()}) {
+            sema_type.emplace(bi->get_type());
+        } else if (const auto node{sym->get_data().as_opt<sema::symbols::node_t>()}) {
+            sema_type = module_->get_sema_type_opt(*node);
+        }
+        if (!sema_type) { return stdx::none; }
+        const auto m_data{sema_type->get_data().as_opt<sema::types::module>()};
+        if (!m_data) { return stdx::none; }
+        return eval_module_member(m_data->imported, inner_name);
+    }
+
     const auto node{sym->get_data().as_opt<sema::symbols::node_t>()};
     if (!node) { return stdx::none; }
 
@@ -1071,13 +1122,6 @@ auto const_eval::eval_module_access(ast::node_id, const ast::module_access_expr&
                                    module_->get_sema_type_opt(*decl->value)};
             }
         }
-    } else if (const auto node_sym{sym->get_kind_opt()};
-               node_sym && *node_sym == sema::symbol_kind::MODULE) {
-        const auto sema_type{module_->get_sema_type_opt(*node)};
-        if (!sema_type) { return stdx::none; }
-        const auto m_data{sema_type->get_data().as_opt<sema::types::module>()};
-        if (!m_data) { return stdx::none; }
-        return eval_module_member(m_data->imported, inner_name);
     }
 
     return stdx::none;

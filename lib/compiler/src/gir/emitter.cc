@@ -2566,6 +2566,71 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             }
             return value{void_val{}, ret_type};
         }
+        case syntax::token_type_t::BUILTIN_ATOMIC_LOAD:
+        case syntax::token_type_t::BUILTIN_ATOMIC_STORE:
+        case syntax::token_type_t::BUILTIN_ATOMIC_RMW:
+        case syntax::token_type_t::BUILTIN_CMPXCHG_WEAK:
+        case syntax::token_type_t::BUILTIN_CMPXCHG_STRONG:
+        case syntax::token_type_t::BUILTIN_FENCE:          {
+            const auto name{*syntax::get_builtin_opt(fn_token)};
+
+            // The order/op arguments are compile-time enum constants, sema-verified already;
+            // they ride on the instruction as ordinals rather than as GIR operand values.
+            const auto eval_order = [&](usize arg_idx) -> u8 {
+                const auto expr_h{*call.arguments[arg_idx].as_opt<ast::expr_handle>()};
+                const auto val{const_eval_.try_eval(expr_h)};
+                const auto en{val ? val->as_opt<const_enum>() : stdx::none};
+                ASSERT(en, "Atomic builtin order/op argument must fold to a const_enum");
+                return static_cast<u8>(en->value);
+            };
+
+            if (fn_token == syntax::token_type_t::BUILTIN_FENCE) {
+                builder_.emit_builtin_call(name, {}, ret_type, stdx::none, eval_order(0));
+                return value{void_val{}, ret_type};
+            }
+
+            const bool  has_t_arg{fn_token != syntax::token_type_t::BUILTIN_ATOMIC_STORE};
+            const usize ptr_idx{has_t_arg ? 1UZ : 0UZ};
+
+            std::vector<value> args;
+            args.emplace_back(emit_expression(*call.arguments[ptr_idx].as_opt<ast::expr_handle>()));
+
+            switch (fn_token) {
+            case syntax::token_type_t::BUILTIN_ATOMIC_LOAD: {
+                const auto order{eval_order(2)};
+                const auto res{
+                    builder_.emit_builtin_call(name, std::move(args), ret_type, stdx::none, order)};
+                return res ? value{*res, ret_type} : value{void_val{}, ret_type};
+            }
+            case syntax::token_type_t::BUILTIN_ATOMIC_STORE: {
+                args.emplace_back(emit_expression(*call.arguments[1].as_opt<ast::expr_handle>()));
+                const auto order{eval_order(2)};
+                builder_.emit_builtin_call(name, std::move(args), ret_type, stdx::none, order);
+                return value{void_val{}, ret_type};
+            }
+            case syntax::token_type_t::BUILTIN_ATOMIC_RMW: {
+                const auto op{eval_order(2)};
+                args.emplace_back(emit_expression(*call.arguments[3].as_opt<ast::expr_handle>()));
+                const auto order{eval_order(4)};
+                const auto res{
+                    builder_.emit_builtin_call(name, std::move(args), ret_type, op, order)};
+                return res ? value{*res, ret_type} : value{void_val{}, ret_type};
+            }
+            case syntax::token_type_t::BUILTIN_CMPXCHG_WEAK:
+            case syntax::token_type_t::BUILTIN_CMPXCHG_STRONG: {
+                args.emplace_back(emit_expression(*call.arguments[2].as_opt<ast::expr_handle>()));
+                args.emplace_back(emit_expression(*call.arguments[3].as_opt<ast::expr_handle>()));
+                const auto succ{eval_order(4)};
+                const auto fail{eval_order(5)};
+                args.emplace_back(
+                    emit_expression_id_raw(*call.arguments[6].as_opt<ast::expr_handle>()));
+                const auto res{builder_.emit_builtin_call(
+                    name, std::move(args), ret_type, stdx::none, succ, fail)};
+                return res ? value{*res, ret_type} : value{void_val{}, ret_type};
+            }
+            default: UNREACHABLE("Unhandled atomic builtin");
+            }
+        }
         default: {
             if (const auto cv{const_eval_.try_eval(id)}) { return cv->to_gir_value(); }
             break;

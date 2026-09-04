@@ -231,6 +231,14 @@ struct instruction {
     bool                          is_initializer{false};
     bool                          is_checked{false};
 
+    // Atomic builtins only: the compile-time-constant `MemoryOrder`/`AtomicRmwOp` enum
+    // ordinals from the call site, since the order/op arguments aren't lowered as GIR operand
+    // values. `atomic_op` is `@atomicRmw`'s op; `atomic_order` is the (sole, or success) memory
+    // order; `atomic_fail_order` is `@cmpxchgWeak`/`Strong`'s failure order.
+    stdx::option<u8> atomic_op{stdx::none};
+    stdx::option<u8> atomic_order{stdx::none};
+    stdx::option<u8> atomic_fail_order{stdx::none};
+
     [[nodiscard]] auto is_terminator() const noexcept -> bool { return gir::is_terminator(kind); }
     [[nodiscard]] auto has_result() const noexcept -> bool { return result.has_value(); }
     [[nodiscard]] auto is_volatile() const noexcept -> bool {

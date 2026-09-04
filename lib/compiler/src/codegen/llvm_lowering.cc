@@ -22,6 +22,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Alignment.h>
+#include <llvm/Support/AtomicOrdering.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/TargetParser/Triple.h>
@@ -96,6 +97,37 @@ namespace {
     case ast::calling_convention::X86_FASTCALL: return llvm::CallingConv::X86_FastCall;
     case ast::calling_convention::AAPCS:        return llvm::CallingConv::ARM_AAPCS;
     default:                                    return llvm::CallingConv::C;
+    }
+}
+
+// `ord` is a `MemoryOrder` enum ordinal (declaration order: relaxed, acquire, release, acq_rel,
+// seq_cst), as folded from the atomic builtin's call-site argument during GIR emission.
+[[nodiscard]] auto to_llvm_ordering(u8 ord) noexcept -> llvm::AtomicOrdering {
+    switch (ord) {
+    case 0:  return llvm::AtomicOrdering::Monotonic; // relaxed
+    case 1:  return llvm::AtomicOrdering::Acquire;
+    case 2:  return llvm::AtomicOrdering::Release;
+    case 3:  return llvm::AtomicOrdering::AcquireRelease;         // acq_rel
+    default: return llvm::AtomicOrdering::SequentiallyConsistent; // seq_cst
+    }
+}
+
+// `op` is an `AtomicRmwOp` enum ordinal (declaration order: xchg, add, sub, band, nand, bor,
+// bxor, max, min, umax, umin).
+[[nodiscard]] auto to_llvm_rmw_op(u8 op) noexcept -> llvm::AtomicRMWInst::BinOp {
+    using Op = llvm::AtomicRMWInst::BinOp;
+    switch (op) {
+    case 0:  return Op::Xchg;
+    case 1:  return Op::Add;
+    case 2:  return Op::Sub;
+    case 3:  return Op::And;
+    case 4:  return Op::Nand;
+    case 5:  return Op::Or;
+    case 6:  return Op::Xor;
+    case 7:  return Op::Max;
+    case 8:  return Op::Min;
+    case 9:  return Op::UMax;
+    default: return Op::UMin;
     }
 }
 
@@ -2167,6 +2199,60 @@ auto llvm_lowering::emit_builtin_call(const gir::instruction& inst) -> llvm::Val
             }
             builder_.CreateStore(result, out_ptr);
             return overflow;
+        }
+
+        case syntax::token_type_t::BUILTIN_ATOMIC_LOAD: {
+            VERIFY(!inst.operands.empty(), "Arity mismatch not verified during resolution");
+            auto* ptr{lower_value(inst.operands[0])};
+            if (!ptr || !inst.type) { return nullptr; }
+            auto* load{builder_.CreateLoad(types_.translate(*inst.type), ptr)};
+            load->setAtomic(to_llvm_ordering(inst.atomic_order.value_or(0)));
+            return load;
+        }
+        case syntax::token_type_t::BUILTIN_ATOMIC_STORE: {
+            VERIFY(inst.operands.size() >= 2, "Arity mismatch not verified during resolution");
+            auto* ptr{lower_value(inst.operands[0])};
+            auto* val{lower_value(inst.operands[1])};
+            if (!ptr || !val) { return nullptr; }
+            auto* store{builder_.CreateStore(val, ptr)};
+            store->setAtomic(to_llvm_ordering(inst.atomic_order.value_or(0)));
+            return nullptr;
+        }
+        case syntax::token_type_t::BUILTIN_ATOMIC_RMW: {
+            VERIFY(inst.operands.size() >= 2, "Arity mismatch not verified during resolution");
+            auto* ptr{lower_value(inst.operands[0])};
+            auto* val{lower_value(inst.operands[1])};
+            if (!ptr || !val) { return nullptr; }
+            return builder_.CreateAtomicRMW(to_llvm_rmw_op(inst.atomic_op.value_or(0)),
+                                            ptr,
+                                            val,
+                                            llvm::MaybeAlign(),
+                                            to_llvm_ordering(inst.atomic_order.value_or(0)));
+        }
+        case syntax::token_type_t::BUILTIN_CMPXCHG_WEAK:
+        case syntax::token_type_t::BUILTIN_CMPXCHG_STRONG: {
+            VERIFY(inst.operands.size() >= 4, "Arity mismatch not verified during resolution");
+            auto* ptr{lower_value(inst.operands[0])};
+            auto* expected{lower_value(inst.operands[1])};
+            auto* new_val{lower_value(inst.operands[2])};
+            auto* out_ptr{lower_value(inst.operands[3])};
+            if (!ptr || !expected || !new_val || !out_ptr) { return nullptr; }
+            auto* cmpxchg{
+                builder_.CreateAtomicCmpXchg(ptr,
+                                             expected,
+                                             new_val,
+                                             llvm::MaybeAlign(),
+                                             to_llvm_ordering(inst.atomic_order.value_or(0)),
+                                             to_llvm_ordering(inst.atomic_fail_order.value_or(0)))};
+            cmpxchg->setWeak(*builtin_tok == syntax::token_type_t::BUILTIN_CMPXCHG_WEAK);
+            auto* cx_result{builder_.CreateExtractValue(cmpxchg, {0U})};
+            auto* success{builder_.CreateExtractValue(cmpxchg, {1U})};
+            builder_.CreateStore(cx_result, out_ptr);
+            return success;
+        }
+        case syntax::token_type_t::BUILTIN_FENCE: {
+            builder_.CreateFence(to_llvm_ordering(inst.atomic_order.value_or(0)));
+            return nullptr;
         }
 
         default: break;
