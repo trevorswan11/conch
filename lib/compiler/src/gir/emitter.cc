@@ -117,6 +117,14 @@ auto emitter::emit(bool include_builtin_test_runtime) -> module {
         if (visited.insert(&builtin_mod).second) { imported_mods.emplace_back(&builtin_mod); }
     }
 
+    {
+        PROFILE_SCOPE("emitter: resolve deferred types in imported modules");
+        for (auto* m : imported_mods) {
+            const_eval evaluator{ctx_, *m};
+            evaluator.resolve_all_deferred_types();
+        }
+    }
+
     // With every participating module known, decide which same-named symbols must be qualified.
     symbol_scoping_ = symbol_scoping::build(ctx_, ast_module_, imported_mods);
     const_eval_.set_symbol_scoping(symbol_scoping_);
@@ -3914,7 +3922,11 @@ auto emitter::emit_enum_cast_guard(ast::node_id     site,
     // A compile-time-known value that already lands on a variant needs no runtime check.
     if (const auto cv{const_eval_.try_eval(*src_expr)}) {
         if (const auto known{cv->as_int_opt()}) {
-            if (std::ranges::contains(discriminants, *known)) { return; }
+            if (std::ranges::contains(discriminants |
+                                          std::views::transform([](i64 i) -> i128 { return i; }),
+                                      *known)) {
+                return;
+            }
         }
     }
 

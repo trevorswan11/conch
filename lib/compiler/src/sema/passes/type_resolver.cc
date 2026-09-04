@@ -20,6 +20,7 @@
 #include <stdx/option.hh>
 #include <stdx/profiler.hh>
 #include <stdx/result.hh>
+#include <stdx/string.hh>
 #include <stdx/types.hh>
 #include <stdx/utility.hh>
 #include <stdx/variant.hh>
@@ -1809,9 +1810,22 @@ auto type_resolver::resolve_call(ID id, const ast::call_expr& call) -> void {
                 return last_type_.emplace(*cached->return_type);
             }
 
-            auto inst_res{
+            const auto diags_before_inst{ctx_.diags.size()};
+            auto       inst_res{
                 instantiate_generic(callee_type, *fn_info_opt, concrete_arg_types, constexpr_args)};
-            if (!inst_res) { return last_type_.emplace(ctx_.poison_node(resolving_, id)); }
+            if (!inst_res) {
+                // `instantiate_generic` may have already reported so only report if not
+                if (ctx_.diags.size() == diags_before_inst) {
+                    return last_type_.emplace(ctx_.poison_node(
+                        resolving_,
+                        id,
+                        fmt::format("Failed to instantiate '{}'",
+                                    fn_info_opt->name.value_or("<generic function>")),
+                        error::CONSTEXPR_EVALUATION_FAILED,
+                        resolving_.ast.location_of(call.function)));
+                }
+                return last_type_.emplace(ctx_.poison_node(resolving_, id));
+            }
 
             auto& return_type{*inst_res->return_type};
             auto  mangled_name{inst_res->mangled_name};
@@ -2617,7 +2631,7 @@ auto type_resolver::resolve_ident(ID id, const ast::identifier_expr& ident) -> v
     // `iN` / `uN` are primitive integer types, not looked-up symbols.
     if (syntax::token_type::is_int_type_lexeme(name)) {
         u64 width{0};
-        for (const char c : name.substr(1)) {
+        for (const char c : stdx::string::substr(name, 1)) {
             width = width * 10 + static_cast<u64>(c - '0');
             if (width > 65'535) { break; }
         }
@@ -4888,7 +4902,8 @@ auto type_resolver::resolve_module_access(ID id, const ast::module_access_expr& 
         case symbol_status::RESOLVED: break;
         }
 
-        if (sym->get_kind() == symbol_kind::POISONED || !inner_mod.has_sema_type(*symbol_node)) {
+        if (sym->get_kind_opt() == symbol_kind::POISONED ||
+            !inner_mod.has_sema_type(*symbol_node)) {
             return last_type_.emplace(ctx_.poison_node(resolving_, id));
         }
 
@@ -5625,6 +5640,11 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
             resolving_.set_sema_type_if(id, *last_type_.take());
         }
 
+        if (!resolving_.has_sema_type(id)) {
+            last_type_.emplace(ctx_.get_poison());
+            return poison_out();
+        }
+
         // A `var` (or explicit `: auto`) binding whose inferred type is `constexpr_*` has no
         // stable place to stay constexpr: materialize it to its runtime peer now
         const bool wants_concrete{decl.has_modifier(ast::decl_modifiers::VARIABLE) ||
@@ -5657,19 +5677,40 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
                 return last_type_.emplace(ctx_.poison_node(resolving_, id));
             }
         }
-        if (decl.has_modifier(ast::decl_modifiers::DISCARDABLE)) {
-            const auto fn_d{type_data.as_opt<types::function>()};
-            if (!fn_d && !type_data.is<types::builtin_function>()) {
-                ctx_.diags.emplace_back("'@discardable' may only be applied to a function",
-                                        error::ILLEGAL_DISCARDABLE,
-                                        resolving_.ast.location_of(id));
-            } else if (fn_d && fn_d->return_type.get_kind() == type_kind::VOID_) {
-                ctx_.diags.emplace_back(
-                    "'@discardable' has no effect on a function that returns 'void'",
-                    error::ILLEGAL_DISCARDABLE,
-                    resolving_.ast.location_of(id));
+
+        [&] {
+            if (!decl.has_modifier(ast::decl_modifiers::DISCARDABLE)) { return; }
+            if (type_data.is<types::builtin_function>()) { return; }
+            if (const auto fn_d{type_data.as_opt<types::function>()}) {
+                if (fn_d->return_type.get_kind() == type_kind::VOID_) {
+                    ctx_.diags.emplace_back(
+                        "'@discardable' has no effect on a function that returns 'void'",
+                        error::ILLEGAL_DISCARDABLE,
+                        resolving_.ast.location_of(id));
+                }
+                return;
             }
-        }
+
+            if (const auto closure_d{type_data.as_opt<types::closure_t>()}) {
+                const auto sig_data{
+                    closure_d->signature.get_data().as_opt<sema::types::function>()};
+                if (!sig_data) {
+                    ctx_.diags.emplace_back("closure signature was somehow not a function",
+                                            error::TYPE_MISMATCH,
+                                            resolving_.ast.location_of(id));
+                } else if (sig_data->return_type.get_kind() == type_kind::VOID_) {
+                    ctx_.diags.emplace_back(
+                        "'@discardable' has no effect on a closure that returns 'void'",
+                        error::ILLEGAL_DISCARDABLE,
+                        resolving_.ast.location_of(id));
+                }
+                return;
+            }
+
+            ctx_.diags.emplace_back("'@discardable' may only be applied to functions",
+                                    error::ILLEGAL_DISCARDABLE,
+                                    resolving_.ast.location_of(id));
+        }();
 
         const bool literal_type_anno{decl.explicit_type && decl.explicit_type->get_token_type() ==
                                                                syntax::token_type_t::TYPE_TYPE};
