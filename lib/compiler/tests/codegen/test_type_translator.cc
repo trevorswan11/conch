@@ -265,8 +265,6 @@ TEST_CASE("Type translate packed struct types") {
     const auto [packed_sym, packed_data, packed_type]{
         ctx->get_type_sym_info<sema::symbols::node_t>("PackedHeader", idx)};
     auto* packed_llvm{translator.translate(packed_type)};
-    // A non-extern `packed struct` lowers to a single backing integer whose width is
-    // the sum of its fields' bit sizes: u8 + u32 == 40 bits.
     REQUIRE(packed_llvm->isIntegerTy());
     CHECK(llvm::cast<llvm::IntegerType>(packed_llvm)->getBitWidth() == 40);
 }

@@ -34,8 +34,6 @@ TEST_CASE("if constexpr: a folded non-generic condition resolves only the live a
 
         const auto [sym, _, node, type]{
             ctx->get_ast_type_sym_info<syms::node_t, ast::decl_stmt>("chosen", idx)};
-        // The live arm is the unsuffixed literal `7`, so an un-annotated `const` keeps it
-        // as `constexpr_int`.
         CHECK(type == ctx->get_type(sema::type_kind::CONSTEXPR_INT));
     }
 

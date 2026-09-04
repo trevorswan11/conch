@@ -127,8 +127,6 @@ TEST_CASE("typeOf denotes the wrapped type in a value's or parameter's explicit 
         return type;
     };
 
-    // `@typeOf` of an unsuffixed literal is `constexpr_int`; a generic / `auto` parameter
-    // materializes such an argument to its concrete peer, so `call_echo` is `i32`.
     CHECK(decl_type("Alias") == ctx->get_type(sema::type_kind::TYPE, cx_int));
     CHECK(decl_type("via_alias") == cx_int);
     CHECK(decl_type("direct") == bool_type);

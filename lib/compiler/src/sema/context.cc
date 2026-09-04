@@ -87,8 +87,6 @@ auto inject_types(symbol_table& prelude, type_pool& pool) -> void {
 
     namespace kws = syntax::keywords;
 
-    // Primitives. `iN` / `uN` are not prelude symbols; they resolve straight to a pooled
-    // `type_kind::INT` from their spelling (see `type_resolver::resolve_ident`).
     inject_type(kws::ISIZE, type_kind::ISIZE);
     inject_type(kws::USIZE, type_kind::USIZE);
     inject_type(kws::F16, type_kind::F16);

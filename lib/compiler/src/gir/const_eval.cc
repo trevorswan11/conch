@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
-#include <cstdint>
+#include <limits>
 #include <ranges>
 #include <stdx/type_traits.hh>
 #include <string>
@@ -38,12 +38,13 @@
 #include "compiler/syntax/builtins.hh"
 #include "compiler/syntax/token_type.hh"
 #include "support/counter.hh"
+#include "support/int128.hh"
 
 namespace ghoti::gir {
 
 namespace {
 
-// Compile-time integer results evaluate at 128-bit width (D4) but store in the narrowest
+// Compile-time integer results evaluate at 128-bit width but store in the narrowest
 // arm that holds them, so the common (<=64-bit) case is unchanged for every consumer.
 template <typename T>
 [[nodiscard]] auto make_scalar_const(T v, stdx::option<sema::type&> t) -> const_value {
@@ -51,13 +52,16 @@ template <typename T>
         return const_value{v, t};
     } else if constexpr (std::is_signed_v<T>) {
         const auto w{static_cast<i128>(v)};
-        if (w >= static_cast<i128>(INT64_MIN) && w <= static_cast<i128>(INT64_MAX)) {
+        if (w >= static_cast<i128>(std::numeric_limits<i64>::min()) &&
+            w <= static_cast<i128>(std::numeric_limits<u64>::max())) {
             return const_value{static_cast<i64>(w), t};
         }
         return const_value{w, t};
     } else {
         const auto w{static_cast<u128>(v)};
-        if (w <= static_cast<u128>(UINT64_MAX)) { return const_value{static_cast<u64>(w), t}; }
+        if (w <= static_cast<u128>(std::numeric_limits<u64>::max())) {
+            return const_value{static_cast<u64>(w), t};
+        }
         return const_value{w, t};
     }
 }
@@ -217,8 +221,6 @@ auto const_eval::resolve_all_deferred_types() -> void { resolve_all_deferred_arr
 
 namespace {
 
-// ABI byte size/alignment of an `iN` / `uN`: the next power-of-two byte count, capped at 8
-// for the widths reachable today (`>64` gains DataLayout-driven sizing in a later phase).
 [[nodiscard]] auto int_abi_bytes(u16 bits) -> usize {
     if (bits <= 8) { return 1; }
     if (bits <= 16) { return 2; }
@@ -565,7 +567,7 @@ auto const_eval::eval_node(ast::node_id id) -> stdx::option<const_value> {
             return make_scalar_const(static_cast<i128>(data.value), t);
         },
         [&](const ast::float_literal_expr& data) -> stdx::option<const_value> {
-            // `f80`/`f128` cannot be represented exactly at compile time; refuse to fold (D3).
+            // `f80`/`f128` cannot be represented exactly at compile time; refuse to fold
             if (data.width == 80 || data.width == 128) { return stdx::none; }
             const auto sema_type{module_->get_sema_type_opt(id)};
             if (sema_type && (sema_type->get_kind() == sema::type_kind::F80 ||

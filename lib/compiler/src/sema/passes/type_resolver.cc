@@ -173,8 +173,7 @@ auto type_resolver::visit(ast::node_id id, const ast::array_expr& array) -> void
         return;
     }
 
-    // Resolve the element type first so each item can be typed against it (an unsuffixed
-    // literal element then binds the concrete element type instead of staying `constexpr_*`).
+    // Resolve the element type first so each item can be typed against it
     resolve(array.item_explicit_type);
     auto& item_type{*last_type_.take()};
     if (item_type.is_resolved() && item_type.get_kind() != type_kind::AUTO) {
@@ -2619,9 +2618,7 @@ auto type_resolver::visit(ast::node_id id, const ast::binary_expr& binary) -> vo
     }
     auto& rhs_type{*last_type_.take()};
 
-    // Peer typing for `constexpr_int` / `constexpr_float` operands: a constexpr operand
-    // adopts a concrete numeric peer; two constexpr operands stay constexpr, promoting
-    // `constexpr_int` to `constexpr_float` when the other side is a float literal.
+    // Peer typing for `constexpr_int` / `constexpr_float` operands
     {
         const auto lk{lhs_type->get_kind()};
         const auto rk{rhs_type.get_kind()};
@@ -3375,9 +3372,7 @@ auto type_resolver::visit(ast::node_id id, const ast::label_expr& label) -> void
         label_data.add_yield_type(ctx_.get_builtin_resolved_type(type_kind::VOID_));
     }
 
-    // The last type inherits the result type to help propagation of poison. A labeled
-    // block/loop that only yields `constexpr_*` values is a control-flow result, not a
-    // literal: materialize it to its concrete peer.
+    // The last type inherits the result type to help propagation of poison
     auto& result_type{constexpr_numeric_view(*label_data.get_yield_types()[0])};
     ASSERT(result_type.is_resolved(), "The label's inner type should've been resolved");
     label_type.resolve_if<type::data_t>(result_type.get_data());
@@ -4108,8 +4103,7 @@ namespace {
 
 namespace {
 
-// A bit-packed `packed struct`/`packed union` has no per-field address, so `&p.field` /
-// `^p.field` is rejected.
+// `&p.field` / `^p.field` is rejected on packed aggregates as they are just integers
 [[nodiscard]] auto rhs_is_packed_field(const mod::module& mod, auto rhs) -> bool {
     const auto dot{mod.ast.template get_as_opt<ast::dot_expr>(rhs)};
     if (!dot) { return false; }
@@ -4396,16 +4390,12 @@ auto type_resolver::visit(ast::node_id id, const ast::int_literal_expr& expr) ->
     } else if (expr.width != 0) {
         resolved = &ctx_.get_int(expr.width, expr.is_signed);
     } else {
-        // An unsuffixed integer literal is `constexpr_int`: it coerces to whatever concrete
-        // numeric type its context needs (range-checked when folded). With no context it
-        // stays `constexpr_int` and materializes as `i32` at runtime.
+        // An unsuffixed integer literal is `constexpr_int` and coerces freely
         resolved = &ctx_.get_builtin_resolved_type(type_kind::CONSTEXPR_INT);
         if (const auto implicit_type{implicit_type_stack_.peek()};
             implicit_type &&
             (is_integer(implicit_type->get_kind()) || is_float(implicit_type->get_kind()))) {
-            // Adopt the concrete context only when the literal's magnitude fits it; an
-            // over-range literal stays `constexpr_int` so the coercion site reports it (and a
-            // `-` in front can still bring `-(2^(N-1))` into range).
+            // Adopt the concrete context only when the literal's magnitude fits it
             const auto ptr_bits{
                 codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits};
             if (is_float(implicit_type->get_kind()) ||
@@ -4438,8 +4428,7 @@ auto type_resolver::visit(ast::node_id id, const ast::float_literal_expr& expr) 
                              resolving_.ast.location_of(id)));
     }
 
-    // An unsuffixed real literal is `constexpr_float`: it coerces to any concrete float its
-    // context needs, and materializes as `f64` at runtime with no context.
+    // An unsuffixed real literal is `constexpr_float` and coerces freely
     type* resolved{expr.width == 0 ? &ctx_.get_builtin_resolved_type(type_kind::CONSTEXPR_FLOAT)
                                    : &ctx_.get_builtin_resolved_type(kind)};
     if (expr.width == 0) {
@@ -4709,10 +4698,9 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
                 incomplete_field(ident.name, resolving_.ast.location_of(field.explicit_type))));
         }
 
-        // A bit-packed `packed struct` may only hold packed-eligible fields (64 is a stand-in
-        // for the target pointer width; eligibility does not depend on its exact value).
+        // A bit-packed `packed struct` may only hold packed-eligible fields
         if (struct_expr.is_packed && !struct_expr.is_extern &&
-            !sema::packed_field_bits(*field_type, 64)) {
+            !sema::packed_field_bits(*field_type, 64)) { // 64 is technically arbitrary here
             return last_type_.emplace(ctx_.poison_node(
                 resolving_,
                 id,
@@ -4851,10 +4839,9 @@ auto type_resolver::visit(ID id, const ast::union_expr& union_expr) -> void {
             }
         }
 
-        // A bit-packed `packed union` may only hold packed-eligible fields (64 is a stand-in
-        // for the target pointer width; eligibility does not depend on its exact value).
+        // A bit-packed `packed union` may only hold packed-eligible fields
         if (union_expr.is_packed && !union_expr.is_extern &&
-            !sema::packed_field_bits(field_type, 64)) {
+            !sema::packed_field_bits(field_type, 64)) { // here too
             return last_type_.emplace(ctx_.poison_node(
                 resolving_,
                 id,
@@ -5231,8 +5218,7 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
         }
 
         // A `var` (or explicit `: auto`) binding whose inferred type is `constexpr_*` has no
-        // stable place to stay constexpr: materialize it to its runtime peer now. An
-        // un-annotated `const` keeps `constexpr_*` so it can still coerce anywhere.
+        // stable place to stay constexpr: materialize it to its runtime peer now
         const bool wants_concrete{decl.has_modifier(ast::decl_modifiers::VARIABLE) ||
                                   (decl.explicit_type && decl.explicit_type->get_token_type() ==
                                                              syntax::token_type_t::AUTO_TYPE)};

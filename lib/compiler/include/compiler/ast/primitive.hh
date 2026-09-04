@@ -8,9 +8,9 @@
 #include <stdx/types.hh>
 
 #include "compiler/ast/handle.hh"
-#include "compiler/int128.hh"
 #include "compiler/syntax/error.hh"
 #include "compiler/syntax/token_type.hh"
+#include "support/int128.hh"
 
 namespace ghoti {
 
@@ -26,11 +26,9 @@ struct string_expr {
         -> stdx::result<expr_handle, syntax::diagnostic>;
 };
 
-// An integer literal of any base. `width == 0` means width-less/coercible; otherwise the
-// literal is a fixed `iN`/`uN`. `is_size` selects `isize`/`usize` (the `z`/`uz` suffix).
 struct int_literal_expr {
     u128                 value{0};
-    u16                  width{0};
+    u16                  width{0}; // `width == 0` means width-less/coercible
     bool                 is_signed{false};
     bool                 is_size{false};
     syntax::numeric_base base{syntax::numeric_base::DECIMAL};
@@ -40,11 +38,9 @@ struct int_literal_expr {
         -> stdx::result<expr_handle, syntax::diagnostic>;
 };
 
-// A real literal. `width == 0` means coercible; otherwise 16/32/64/80/128. The value is
-// always kept at `f64` precision (see design doc 2.2).
 struct float_literal_expr {
     f64              value{0};
-    u8               width{0};
+    u8               width{0}; // `width == 0` means coercible
     std::string_view spelling;
 
     [[nodiscard]] static auto parse(syntax::parser& parser)

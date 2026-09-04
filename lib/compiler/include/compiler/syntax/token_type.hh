@@ -20,13 +20,12 @@ enum class token_type_t : u8 {
 
     IDENT,
 
-    // Integer literals, one per numeric base. Width/sign/`z` suffixes live in the lexeme.
     INT_2,
     INT_8,
     INT_10,
     INT_16,
 
-    REAL, // a real (floating-point) literal; width suffix lives in the lexeme
+    REAL,
     STRING,
     U8,
 
@@ -259,7 +258,6 @@ namespace token_type {
 [[nodiscard]] auto is_primitive(token_type_t type) noexcept -> bool;
 
 // Whether `s` has the shape of an arbitrary-width integer type: `i`/`u` then `[1-9][0-9]*`
-// (the numeric range 1..65535 is validated later, where a diagnostic can be issued).
 [[nodiscard]] auto is_int_type_lexeme(std::string_view s) noexcept -> bool;
 
 // Check whether the token is an ident, primitive type, or builtin function.

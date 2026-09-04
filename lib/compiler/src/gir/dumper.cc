@@ -11,12 +11,12 @@
 #include <stdx/option.hh>
 #include <stdx/types.hh>
 
-#include "compiler/gir/const_value.hh"
 #include "compiler/gir/function.hh"
 #include "compiler/gir/instruction.hh"
 #include "compiler/gir/module.hh"
 #include "compiler/gir/segment.hh"
 #include "compiler/sema/type.hh"
+#include "support/int128.hh"
 
 namespace ghoti::gir {
 

@@ -42,8 +42,6 @@ auto type_checker::emit_diagnostic(std::string_view              message,
 }
 
 auto type_checker::get_operand_type(const gir::value& val) -> stdx::option<type&> {
-    // A `constexpr_int` / `constexpr_float` operand that was never coerced to a concrete
-    // peer materializes as `i32` / `f64`; treat it as that everywhere downstream.
     const auto concrete{[&](type& t) -> type& {
         if (t.get_kind() == type_kind::CONSTEXPR_INT) { return ctx_.get_int(32, true); }
         if (t.get_kind() == type_kind::CONSTEXPR_FLOAT) {
@@ -720,8 +718,7 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
 }
 
 auto type_checker::check_store(const gir::instruction& inst) -> void {
-    // A bit-packed struct slot is really a backing integer; the emitter builds it by
-    // storing integers (zero-init, then shifted-in fields), so allow int -> packed struct.
+    // A bit-packed struct slot is really a backing integer
     const auto packed_backing_store{[](const type* dest, const type* val) -> bool {
         if (!dest || !val || !is_integer(val->get_kind())) { return false; }
         if (const auto st{dest->get_data().as_opt<types::struct_t>()}) {
@@ -750,7 +747,7 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                     emit_diagnostic(
                         fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                     type_kind_display_name(*val_t),
-                                    type_kind_display_name(*(it->second.type))),
+                                    type_kind_display_name(*it->second.type)),
                         error::TYPE_MISMATCH,
                         inst.location);
                 }
@@ -788,7 +785,7 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                             fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                         val_t ? type_kind_display_name(*val_t) : "unknown",
                                         ptr_data ? type_kind_display_name(ptr_data->underlying)
-                                                 : type_kind_display_name(*(it->second.type))),
+                                                 : type_kind_display_name(*it->second.type)),
                             error::TYPE_MISMATCH,
                             inst.location);
                     }
@@ -804,7 +801,7 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                             emit_diagnostic(
                                 fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                             type_kind_display_name(*val_t),
-                                            type_kind_display_name(*(it->second.type))),
+                                            type_kind_display_name(*it->second.type)),
                                 error::TYPE_MISMATCH,
                                 inst.location);
                         }
@@ -841,7 +838,7 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                 !packed_backing_store(it->second.type, &*val_t)) {
                 emit_diagnostic(fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                             type_kind_display_name(*val_t),
-                                            type_kind_display_name(*(it->second.type))),
+                                            type_kind_display_name(*it->second.type)),
                                 error::TYPE_MISMATCH,
                                 inst.location);
             }

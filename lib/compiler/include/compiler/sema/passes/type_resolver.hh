@@ -218,8 +218,6 @@ class type_resolver {
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::call_expr::argument& arg)
         -> gsl::not_null<type*>;
     // Views a `constexpr_int` / `constexpr_float` as the concrete type it materializes to
-    // (`i32` / `f64`); any other type is returned unchanged. For checks that need a
-    // concrete numeric peer without threading coercion through the caller.
     [[nodiscard]] auto constexpr_numeric_view(type& t) -> type&;
     [[nodiscard]] auto get_call_arg_location(const ast::call_expr::argument& arg)
         -> source_location;
@@ -410,7 +408,6 @@ class type_resolver {
         VERIFY(ctx.prelude_index, "TypeResolver must be used after prelude-injection");
     }
 
-    // Whether the compilation target has the `x86_fp80` type (`f80`).
     [[nodiscard]] auto target_has_x86_fp80() const -> bool;
 
   private:

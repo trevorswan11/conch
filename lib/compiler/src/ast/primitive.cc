@@ -4,7 +4,7 @@
 #include <array>
 #include <cctype>
 #include <charconv>
-#include <concepts>
+#include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -22,6 +22,9 @@
 #include "compiler/syntax/error.hh"
 #include "compiler/syntax/parser.hh"
 #include "compiler/syntax/token_type.hh"
+#include "stdx/string.hh"
+#include "support/int128.hh"
+#include "support/string_utils.hh"
 
 namespace ghoti::ast {
 
@@ -57,7 +60,6 @@ namespace {
     return !s.empty() && std::ranges::all_of(s, [](char c) { return c >= '0' && c <= '9'; });
 }
 
-// Parses a decimal width `[1-9][0-9]*` (already shape-checked). Returns 0 on out-of-range.
 [[nodiscard]] auto parse_width(std::string_view s) noexcept -> u32 {
     u64 w{0};
     for (const char c : s) {
@@ -73,10 +75,8 @@ struct int_suffix {
     bool is_size{false};
 };
 
-// One of: `` (none), `z`, `uz`, `u<W>`, `i<W>`. Returns none for a malformed suffix, with
-// `*message` set to a user-facing explanation.
-[[nodiscard]] auto classify_int_suffix(std::string_view suffix, std::string_view* message) noexcept
-    -> stdx::option<int_suffix> {
+[[nodiscard]] auto classify_int_suffix(std::string_view suffix) noexcept
+    -> stdx::result<int_suffix, std::string> {
     if (suffix.empty()) { return int_suffix{}; }
     if (suffix == "z" || suffix == "Z") { return int_suffix{.is_signed = true, .is_size = true}; }
     if (suffix == "uz" || suffix == "uZ" || suffix == "Uz" || suffix == "UZ") {
@@ -88,40 +88,36 @@ struct int_suffix {
     if ((head == 'u' || head == 'i') && all_digits(rest) && rest.front() != '0') {
         const auto width{parse_width(rest)};
         if (width == 0) {
-            *message = "integer literal width must be 1..65535";
-            return stdx::none;
+            return stdx::make_err<std::string>("integer literal width must be 1..65535");
         }
         return int_suffix{
             .width = static_cast<u16>(width), .is_signed = head == 'i', .is_size = false};
     }
 
     if (head == 'l' || head == 'L' || suffix == "ul" || suffix == "uL") {
-        *message = "the 'l'/'L' integer literal suffix has been removed; use an explicit width "
-                   "like '42i64'";
+        return stdx::make_err<std::string>(
+            "the 'l'/'L' integer literal suffix is not supported; use an explicit width "
+            "like '42i64'");
     } else if (head == 'u' || head == 'i') {
-        *message = "integer literal suffix needs a width, e.g. 42u8";
+        return stdx::make_err<std::string>("integer literal suffix needs a width, e.g. 42u8");
     } else {
-        *message = "unknown integer literal suffix";
+        return stdx::make_err<std::string>("unknown integer literal suffix");
     }
-    return stdx::none;
 }
 
-// Splits a lexeme into `<prefix><digits>` and a trailing suffix (`z`, `uz`, `u<W>`, `i<W>`,
-// or a malformed run). `u`/`i`/`z`/`l` are never digits in any supported base, so scanning
-// back from the tail is unambiguous.
+// Splits a lexeme into `<prefix><digits>` and a trailing suffix
 [[nodiscard]] auto split_int_lexeme(std::string_view lexeme, syntax::numeric_base base)
     -> std::pair<std::string_view, std::string_view> {
     const usize prefix{base == syntax::numeric_base::DECIMAL ? 0UZ : 2UZ};
-    const auto  ends_with_ci = [&](std::string_view suf) {
+    const auto  ends_with = [prefix, &lexeme](std::string_view suf) {
         return lexeme.size() >= prefix + suf.size() &&
-               std::ranges::equal(lexeme.substr(lexeme.size() - suf.size()),
-                                  suf,
-                                  [](char a, char b) { return std::tolower(a) == b; });
+               string_utils::ends_with_ci(stdx::string::substr(lexeme, lexeme.size() - suf.size()),
+                                          suf);
     };
-    if (ends_with_ci("uz")) {
+
+    if (ends_with("uz")) {
         return {lexeme.substr(0, lexeme.size() - 2), lexeme.substr(lexeme.size() - 2)};
-    }
-    if (ends_with_ci("z")) {
+    } else if (ends_with("z")) {
         return {lexeme.substr(0, lexeme.size() - 1), lexeme.substr(lexeme.size() - 1)};
     }
 
@@ -134,8 +130,6 @@ struct int_suffix {
         return {lexeme, {}}; // trailing digits belong to the number
     }
 
-    // A bare trailing letter run that is not itself a digit in this base (`l`, `u`, `if`, ...)
-    // is a malformed suffix; hex digits like `F` stay part of the number.
     usize j{lexeme.size()};
     while (j > prefix && std::isalpha(static_cast<u8>(lexeme[j - 1])) &&
            !syntax::digit_in_base(lexeme[j - 1], base)) {
@@ -168,28 +162,29 @@ auto int_literal_expr::parse(syntax::parser& parser)
             default:   return make_syntax_err(syntax::error::UNKNOWN_CHARACTER_ESCAPE, start_token);
             }
         }
-        return parser.add_expr<int_literal_expr>(
-            start_token,
-            int_literal_expr{.value     = value,
-                             .width     = 8,
-                             .is_signed = false,
-                             .is_size   = false,
-                             .base      = syntax::numeric_base::DECIMAL,
-                             .spelling  = slice});
+        return parser.add_expr<int_literal_expr>(start_token,
+                                                 int_literal_expr{
+                                                     .value     = value,
+                                                     .width     = 8,
+                                                     .is_signed = false,
+                                                     .is_size   = false,
+                                                     .base      = syntax::numeric_base::DECIMAL,
+                                                     .spelling  = slice,
+                                                 });
     }
 
     const auto base{
         syntax::token_type::to_base(start_token.type).value_or(syntax::numeric_base::DECIMAL)};
     const auto [digits, suffix]{split_int_lexeme(slice, base)};
 
-    std::string_view message;
-    const auto       info{classify_int_suffix(suffix, &message)};
+    const auto info{classify_int_suffix(suffix)};
     if (!info) {
         return make_syntax_err(
-            std::string{message}, syntax::error::INVALID_NUMBER_LITERAL, start_token);
+            std::move(info.error()), syntax::error::INVALID_NUMBER_LITERAL, start_token);
     }
 
-    const auto digits_only{base == syntax::numeric_base::DECIMAL ? digits : digits.substr(2)};
+    const auto digits_only{base == syntax::numeric_base::DECIMAL ? digits
+                                                                 : stdx::string::substr(digits, 2)};
     bool       overflow{false};
     const u128 value{parse_u128(digits_only, std::to_underlying(base), overflow)};
     if (overflow) {
@@ -197,12 +192,14 @@ auto int_literal_expr::parse(syntax::parser& parser)
     }
 
     return parser.add_expr<int_literal_expr>(start_token,
-                                             int_literal_expr{.value     = value,
-                                                              .width     = info->width,
-                                                              .is_signed = info->is_signed,
-                                                              .is_size   = info->is_size,
-                                                              .base      = base,
-                                                              .spelling  = slice});
+                                             int_literal_expr{
+                                                 .value     = value,
+                                                 .width     = info->width,
+                                                 .is_signed = info->is_signed,
+                                                 .is_size   = info->is_size,
+                                                 .base      = base,
+                                                 .spelling  = slice,
+                                             });
 }
 
 auto float_literal_expr::parse(syntax::parser& parser)

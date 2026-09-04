@@ -194,7 +194,6 @@ TEST_CASE("Lexing signed int variants") {
 }
 
 TEST_CASE("Lexing int suffixes attach to the number token") {
-    // The lexer keeps the whole `<digits><suffix>` run; suffix validity is a parser concern.
     test_lexer("0b1010u8 0b1010uz 0o17i9 0o17uz 42u32 42UZ 0x2Au64 123u16foo 0bu 0xu",
                {
                    {token_type_t::INT_2, "0b1010u8"},

@@ -1,7 +1,7 @@
 #include "compiler/gir/emitter.hh"
 
 #include <algorithm>
-#include <cstdint>
+#include <limits>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -40,6 +40,7 @@
 #include "compiler/sema/type.hh"
 #include "compiler/syntax/builtins.hh"
 #include "compiler/syntax/token_type.hh"
+#include "support/int128.hh"
 
 namespace ghoti::gir {
 
@@ -519,8 +520,7 @@ auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest
     const auto val{emit_expression(expr_id)};
 
     // A `constexpr_int` / `constexpr_float` value already carries its exact numeric payload;
-    // coercing it to a concrete peer is a pure retype (no truncating cast), so the constant
-    // re-lowers with the destination's LLVM type.
+    // coercing it to a concrete peer is a pure retype
     if (val.type && sema::is_constexpr_numeric(val.type->get_kind()) &&
         sema::is_numeric(dest_type.get_kind())) {
         auto& concrete{const_cast<sema::type&>(dest_type)};
@@ -1365,9 +1365,6 @@ auto emitter::emit_decl_stmt(ast::node_id id, const ast::decl_stmt& decl) -> voi
     ASSERT(sema_type, "Local declaration must have a resolved sema type");
     if (sema_type->get_kind() == sema::type_kind::TYPE) { return; }
 
-    // A local `const T := struct/union/enum/interface { ... }` declares a type, not a runtime
-    // value: it gets no storage and its `struct_expr` is never emitted as an expression.
-    // (Member functions / static consts on a function-local type are not yet supported.)
     if (decl.value &&
         decl.value->any<ast::struct_expr, ast::union_expr, ast::enum_expr, ast::interface_expr>()) {
         return;
@@ -1420,7 +1417,7 @@ auto emitter::emit_decl_stmt(ast::node_id id, const ast::decl_stmt& decl) -> voi
         if (decl.explicit_type && val.type && !sema::is_assignable(*val.type, *sema_type)) {
             ctx_.diags.emplace_back(
                 fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                            sema::type_kind_display_name(*(val.type)),
+                            sema::type_kind_display_name(*val.type),
                             sema::type_kind_display_name(*sema_type)),
                 sema::error::TYPE_MISMATCH,
                 active_ast().location_of(*decl.value));
@@ -1512,11 +1509,14 @@ auto emitter::emit_expression_id_raw(ast::node_id id) -> value {
             }
             if (sema::is_unsigned_integer(t)) {
                 const u128 v{data.value};
-                if (v <= static_cast<u128>(UINT64_MAX)) { return value{static_cast<u64>(v), t}; }
+                if (v <= static_cast<u128>(std::numeric_limits<u64>::max())) {
+                    return value{static_cast<u64>(v), t};
+                }
                 return value{v, t};
             }
             const auto v{static_cast<i128>(data.value)};
-            if (v >= static_cast<i128>(INT64_MIN) && v <= static_cast<i128>(INT64_MAX)) {
+            if (v >= static_cast<i128>(std::numeric_limits<i64>::min()) &&
+                v <= static_cast<i128>(std::numeric_limits<i64>::max())) {
                 return value{static_cast<i64>(v), t};
             }
             return value{v, t};
@@ -1860,8 +1860,7 @@ auto emitter::emit_packed_field_write(value                       backing_addr,
     emit_packed_bits_insert(backing_addr, n, 0, fbits, field_type, new_field_val);
 }
 
-// Slice `fbits` bits starting at `offset` out of `backing` (an `n`-bit integer value) and
-// reinterpret them as `field_type`.
+// Slice `fbits` bits starting at `offset` out of `backing` and reinterpret them as `field_type`
 auto emitter::emit_packed_bits_extract(
     value backing, u32 n, u32 offset, u32 fbits, sema::type& field_type) -> value {
     auto& backing_ty{ctx_.get_int(static_cast<u16>(n), false)};
@@ -1920,9 +1919,8 @@ auto emitter::emit_packed_bits_insert(
     builder_.emit_store(backing_addr, merged);
 }
 
-// Pure form: return the `n`-bit backing integer that is `old_backing` with `fbits` bits at
-// `offset` replaced by `new_field_val` reinterpreted from `field_type`. Used for nested
-// bit-packed writes, where the enclosing field has no address to read-modify-write through.
+// The `n`-bit backing integer that is `old_backing` with `fbits` bits at
+// `offset` replaced by `new_field_val` reinterpreted from `field_type` (for nested writes)
 auto emitter::emit_packed_bits_merge(
     value old_backing, u32 n, u32 offset, u32 fbits, sema::type& field_type, value new_field_val)
     -> value {
@@ -2000,25 +1998,25 @@ auto emitter::packed_layout_of(const ast::dot_expr& dot) -> packed_field_layout 
 
     if (const auto st{obj_ty.get_data().as_opt<sema::types::struct_t>()}) {
         const auto n{sema::packed_backing_bits(*st, target_ptr_bits_).value_or(1)};
-        return {.n          = n,
-                .offset     = sema::packed_field_offset(*st, field_idx, target_ptr_bits_),
-                .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
-                .field_idx  = field_idx,
-                .field_type = &field_type};
+        return {
+            .n          = n,
+            .offset     = sema::packed_field_offset(*st, field_idx, target_ptr_bits_),
+            .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
+            .field_idx  = field_idx,
+            .field_type = &field_type,
+        };
     }
     const auto& ut{obj_ty.get_data().as<sema::types::union_t>()};
     const auto  n{sema::packed_union_backing_bits(ut, target_ptr_bits_).value_or(1)};
-    return {.n          = n,
-            .offset     = 0,
-            .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
-            .field_idx  = field_idx,
-            .field_type = &field_type};
+    return {
+        .n          = n,
+        .offset     = 0,
+        .fbits      = sema::packed_field_bits(field_type, target_ptr_bits_).value_or(n),
+        .field_idx  = field_idx,
+        .field_type = &field_type,
+    };
 }
 
-// Stores `field_val` into `dot`'s bit-packed field. When `dot.object` is itself a bit-packed
-// field access (a nested `packed` aggregate), it has no address: merge `field_val` into the
-// enclosing value and recurse one level out. Otherwise `dot.object` has storage and we
-// read-modify-write its backing integer in place.
 auto emitter::emit_packed_store(const ast::dot_expr& dot, value field_val) -> void {
     const auto layout{packed_layout_of(dot)};
 
@@ -2043,8 +2041,6 @@ auto emitter::emit_packed_store(const ast::dot_expr& dot, value field_val) -> vo
         base_lval, layout.n, layout.offset, layout.fbits, *layout.field_type, field_val);
 }
 
-// `dot.<field> <op>= rhs`, where the (unwrapped) type of `dot.object` is a bit-packed
-// `packed struct` / `packed union`.
 auto emitter::emit_packed_field_assign(ast::node_id                id,
                                        const ast::dot_expr&        dot,
                                        const ast::assignment_expr& assign,
@@ -4714,8 +4710,7 @@ auto emitter::emit_initializer(ast::node_id id, const ast::initializer_expr& ini
     ASSERT(st, "Initializer target must be a struct type");
     const auto& table{ctx_.registry.get(sema_type->get_symbol_table_idx())};
 
-    // A bit-packed struct is a single backing integer: zero it, then OR each field
-    // in at its bit offset rather than storing through per-field GEPs.
+    // A bit-packed struct is a single backing integer: zero it, then OR each field instead of GEP
     if (st->is_bit_packed()) {
         const auto n{sema::packed_backing_bits(*st, target_ptr_bits_).value_or(1)};
         auto&      backing_ty{ctx_.get_int(static_cast<u16>(n), false)};
@@ -4809,9 +4804,7 @@ auto emitter::emit_dot(ast::node_id id, const ast::dot_expr& dot) -> value {
         return value{ref_symbol_name(id, member_ident.name), sema_type};
     }
 
-    // A directly-held bit-packed struct value has no addressable fields: read the whole
-    // backing integer as a value and slice the field out of it. (`^P`/`&P` still flow
-    // through the pointer path below, which loads the backing through the pointer.)
+    // A directly-held bit-packed struct value has no addressable fields
     if (const auto st{obj_type->get_data().as_opt<sema::types::struct_t>()};
         st && st->is_bit_packed()) {
         const auto& member_ident{active_ast().get_as<ast::identifier_expr>(dot.member)};

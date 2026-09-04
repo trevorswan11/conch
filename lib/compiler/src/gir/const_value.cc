@@ -18,27 +18,9 @@
 #include "compiler/gir/instruction.hh"
 #include "compiler/sema/context.hh"
 #include "compiler/sema/type.hh"
+#include "support/int128.hh"
 
 namespace ghoti::gir {
-
-auto to_string(u128 v) -> std::string {
-    if (v == 0) { return "0"; }
-    std::string digits;
-    while (v != 0) {
-        digits += static_cast<char>('0' + static_cast<int>(v % 10));
-        v /= 10;
-    }
-    std::ranges::reverse(digits);
-    return digits;
-}
-
-auto to_string(i128 v) -> std::string {
-    if (v < 0) {
-        // Negate in the unsigned domain so `i128` min does not overflow.
-        return "-" + to_string(static_cast<u128>(-(v + 1)) + 1);
-    }
-    return to_string(static_cast<u128>(v));
-}
 
 auto const_array::operator==(const const_array& other) const noexcept -> bool {
     return elements == other.elements;

@@ -1,5 +1,6 @@
 #include "compiler/sema/type.hh"
 
+#include <algorithm>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -10,11 +11,14 @@
 #include <gsl/pointers>
 #include <gsl/span>
 #include <magic_enum/magic_enum.hpp>
+#include <stdx/assert.hh>
 #include <stdx/enum.hh>
 #include <stdx/fixed/enum_map.hh>
+#include <stdx/option.hh>
 #include <stdx/types.hh>
 
 #include "compiler/module/module.hh"
+#include "support/int128.hh"
 #include "support/string_utils.hh"
 
 namespace ghoti::sema {
@@ -206,15 +210,12 @@ auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool {
     const auto from_kind{from.get_kind()};
     const auto to_kind{to.get_kind()};
 
-    // An unsuffixed integer literal coerces to any concrete integer or float (the value's
-    // range is checked when it is folded against its target); an unsuffixed real literal
-    // coerces to any concrete float. `constexpr_int` also feeds `constexpr_float`.
+    // An unsuffixed integer literal coerces to any concrete integer or float
     if (from_kind == type_kind::CONSTEXPR_INT) { return is_numeric(to_kind); }
     if (from_kind == type_kind::CONSTEXPR_FLOAT) {
         return is_float(to_kind) || to_kind == type_kind::CONSTEXPR_FLOAT;
     }
-    // A concrete numeric also flows *into* a `constexpr_*` slot: such a slot materializes as
-    // `i32` / `f64`, so this is just the identity coercion in disguise.
+    // A concrete numeric also flows into a `constexpr_*` slot
     if (to_kind == type_kind::CONSTEXPR_INT) { return is_integer(from_kind); }
     if (to_kind == type_kind::CONSTEXPR_FLOAT) {
         return is_float(from_kind) || is_integer(from_kind);

@@ -308,9 +308,7 @@ auto lexer::read_number() noexcept -> token_t {
                 start_col};
     }
 
-    // Consume a trailing suffix run, but only one that actually begins with a suffix letter
-    // (`u`/`i`/`z`/`l`/`f`); the parser validates the exact grammar. Anything else (`1e.`,
-    // `1x`) stays a separate token.
+    // Consume for diagnostics, the parser validates the exact grammar
     const auto suffix_start{pos_};
     if (pos_ < input_.size()) {
         switch (current_byte_) {

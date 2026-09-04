@@ -1,10 +1,8 @@
 #include "compiler/syntax/token_type.hh"
 
 #include <algorithm>
-#include <array>
 #include <cctype>
 #include <string_view>
-#include <utility>
 
 #include <stdx/assert.hh>
 #include <stdx/option.hh>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -16,15 +16,12 @@
 #include "compiler/ast/id.hh"
 #include "compiler/gir/instruction.hh"
 #include "compiler/sema/type.hh"
+#include "support/int128.hh"
 
 namespace ghoti::sema { struct context; } // namespace ghoti::sema
 namespace ghoti::mod { struct module; }   // namespace ghoti::mod
 
 namespace ghoti::gir {
-
-// Decimal rendering for 128-bit integers (`std::to_string`/`fmt` lack an overload).
-[[nodiscard]] auto to_string(u128 v) -> std::string;
-[[nodiscard]] auto to_string(i128 v) -> std::string;
 
 class const_value;
 
@@ -142,15 +139,17 @@ class const_value {
 
     // Narrow views that yield a value only when it fits the 64-bit range.
     [[nodiscard]] constexpr auto as_i64_opt() const noexcept -> stdx::option<i64> {
-        if (const auto v{as_int_opt()};
-            v && *v >= static_cast<i128>(INT64_MIN) && *v <= static_cast<i128>(INT64_MAX)) {
+        if (const auto v{as_int_opt()}; v &&
+                                        *v >= static_cast<i128>(std::numeric_limits<i64>::min()) &&
+                                        *v <= static_cast<i128>(std::numeric_limits<i64>::max())) {
             return static_cast<i64>(*v);
         }
         return stdx::none;
     }
 
     [[nodiscard]] constexpr auto as_u64_opt() const noexcept -> stdx::option<u64> {
-        if (const auto v{as_uint_opt()}; v && *v <= static_cast<u128>(UINT64_MAX)) {
+        if (const auto v{as_uint_opt()};
+            v && *v <= static_cast<u128>(std::numeric_limits<u64>::max())) {
             return static_cast<u64>(*v);
         }
         return stdx::none;

@@ -27,8 +27,6 @@ auto type_translator::translate(const sema::type& type) -> llvm::Type* {
     case sema::type_kind::F64:             return get_double_ty();
     case sema::type_kind::F80:             return llvm::Type::getX86_FP80Ty(context_);
     case sema::type_kind::F128:            return llvm::Type::getFP128Ty(context_);
-    // A constexpr literal that was never coerced to a concrete type materializes as its
-    // default runtime representation (`i32` / `f64`).
     case sema::type_kind::CONSTEXPR_INT:   return get_int32_ty();
     case sema::type_kind::CONSTEXPR_FLOAT: return get_double_ty();
     case sema::type_kind::VOID_:

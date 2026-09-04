@@ -16,6 +16,7 @@
 #include "compiler/ast/handle.hh"
 #include "compiler/ast/id.hh"
 #include "compiler/ast/statement.hh"
+#include "compiler/codegen/target.hh"
 #include "compiler/gir/builder.hh"
 #include "compiler/gir/const_eval.hh"
 #include "compiler/gir/const_value.hh"
@@ -28,6 +29,7 @@
 #include "compiler/sema/type.hh"
 #include "compiler/syntax/token_type.hh"
 #include "support/counter.hh"
+#include "support/int128.hh"
 #include "support/scope_guard.hh"
 
 namespace ghoti::gir {

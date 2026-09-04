@@ -22,8 +22,8 @@
 
 #include "compiler/ast/expression.hh"
 #include "compiler/ast/type.hh"
-#include "compiler/int128.hh"
 #include "compiler/module/module.hh"
+#include "support/int128.hh"
 
 namespace ghoti::sema {
 
@@ -38,9 +38,6 @@ enum class type_kind : u8 {
     F64,
     F80,
     F128,
-    // The type of an unsuffixed integer / real literal and of constexpr arithmetic over
-    // them: a compile-time-only value that implicitly coerces to any concrete numeric type
-    // it fits in. Materializes as `i32` / `f64` if it ever reaches runtime un-anchored.
     CONSTEXPR_INT,
     CONSTEXPR_FLOAT,
     VOID_,
@@ -84,7 +81,6 @@ class type;
     }
 }
 
-// Signedness lives in the INT payload, so these need the resolved type, not just the kind.
 [[nodiscard]] auto is_signed_integer(const type& t) noexcept -> bool;
 [[nodiscard]] auto is_unsigned_integer(const type& t) noexcept -> bool;
 
@@ -99,7 +95,6 @@ class type;
     }
 }
 
-// Bit width of a floating-point kind (16/32/64/80/128); 0 for a non-float.
 [[nodiscard]] constexpr auto float_bits(type_kind kind) noexcept -> u16 {
     switch (kind) {
     case type_kind::F16:  return 16;
@@ -111,12 +106,10 @@ class type;
     }
 }
 
-// The type of an unsuffixed integer literal / constexpr integer arithmetic.
 [[nodiscard]] constexpr auto is_constexpr_int(type_kind kind) noexcept -> bool {
     return kind == type_kind::CONSTEXPR_INT;
 }
 
-// The type of an unsuffixed real literal / constexpr float arithmetic.
 [[nodiscard]] constexpr auto is_constexpr_float(type_kind kind) noexcept -> bool {
     return kind == type_kind::CONSTEXPR_FLOAT;
 }
@@ -125,14 +118,11 @@ class type;
     return is_constexpr_int(kind) || is_constexpr_float(kind);
 }
 
-// `is_integer`/`is_float` are concrete-only (they imply a real bit width and ABI). A
-// constexpr literal counts as numeric for arithmetic, comparison, and coercion purposes.
+// A constexpr literal counts as numeric for arithmetic, comparison, and coercion purposes.
 [[nodiscard]] constexpr auto is_numeric(type_kind kind) noexcept -> bool {
     return is_integer(kind) || is_float(kind) || is_constexpr_numeric(kind);
 }
 
-// Whether `from` implicitly widens to `to` (`iW -> iV`/`uW -> uV` for `V > W`,
-// `uW -> iV` for `V > W`, narrow ints -> `isize`/`usize`, `f32 -> f64`).
 [[nodiscard]] auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool;
 
 [[nodiscard]] constexpr auto is_value_type(type_kind kind) noexcept -> bool {
@@ -187,7 +177,6 @@ struct poison {};
 
 using builtin_type = stdx::monostate;
 
-// Payload of a `type_kind::INT` type: an arbitrary-width integer.
 struct integer {
     u16  bits;
     bool is_signed;
@@ -239,9 +228,6 @@ struct union_t {
     bool                                    is_c_abi{false};
     bool                                    is_packed{false};
 
-    // `packed` without `extern`: a Zig-style bit-packed union backed by a single integer
-    // wide enough for its largest field; every field sits at bit offset 0.
-    // `extern packed union` keeps C-ABI byte semantics.
     [[nodiscard]] constexpr auto is_bit_packed() const noexcept -> bool {
         return is_packed && !is_c_abi;
     }
@@ -263,8 +249,6 @@ struct struct_t {
     bool                                     is_packed{false};
     gsl::span<u64>                           field_alignments;
 
-    // `packed` without `extern`: a Zig-style bit-packed struct backed by a single integer.
-    // `extern packed struct` keeps C-ABI `__attribute__((packed))` byte-offset semantics.
     [[nodiscard]] constexpr auto is_bit_packed() const noexcept -> bool {
         return is_packed && !is_c_abi;
     }
@@ -570,12 +554,10 @@ static_assert(stdx::TriviallyDestructible<type>);
 // Bit width of a resolved `type_kind::INT`; asserts the kind.
 [[nodiscard]] auto int_width(const type& t) noexcept -> u16;
 
-// Whether `t` is exactly the signed 32-bit integer type.
 [[nodiscard]] auto is_i32(const type& t) noexcept -> bool;
 
 // Whether the compile-time integer `value` (two's-complement, up to 128 bits) is representable
-// in the concrete integer type `target` (`iN`/`uN`/`isize`/`usize`; `ptr_bits` sizes the
-// latter two). Returns true for any non-integer `target` so callers can skip the check.
+// in the concrete integer type `target`
 [[nodiscard]] auto constexpr_int_fits(i128 value, const type& target, u32 ptr_bits) noexcept
     -> bool;
 

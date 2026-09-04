@@ -46,7 +46,7 @@ TEST_CASE("build_obj command execution") {
                 }};
 
                 pub const main := fn(): i64 {{
-                    return add(40l, 2l);
+                    return add(40, 2);
                 }};
             )");
         }
@@ -132,7 +132,7 @@ TEST_CASE("build_obj command execution") {
                 pub import "ghoti_test_helper.gh" as helper;
 
                 pub const calc := fn(x: i64): i64 {{
-                    return helper::multiply(x, 2l);
+                    return helper::multiply(x, 2);
                 }};
             )");
         }
@@ -175,7 +175,7 @@ TEST_CASE("build_obj command execution") {
             std::ofstream lib_out{custom_lib.path};
             fmt::print(lib_out, R"(
                 pub const custom_fn := fn(x: i64): i64 {{
-                    return x + 100l;
+                    return x + 100;
                 }};
             )");
 
@@ -225,7 +225,7 @@ TEST_CASE("build_obj command execution") {
                 pub import math;
 
                 pub const clamp_int := fn(v: i64): i64 {{
-                    return math::clamp(v, 0l, 100l);
+                    return math::clamp(v, 0, 100);
                 }};
             )");
         }

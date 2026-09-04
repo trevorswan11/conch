@@ -1,4 +1,5 @@
 #include <string>
+#include <string_view>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -29,11 +30,8 @@ TEST_CASE("Removed and malformed literal suffixes are rejected") {
     const auto err = [](std::string_view msg, syntax::error e) {
         return syntax::diagnostic{std::string{msg}, e, 0, 0};
     };
-    constexpr std::string_view needs_width{"integer literal suffix needs a width, e.g. 42u8"};
-    constexpr std::string_view l_removed{
-        "the 'l'/'L' integer literal suffix has been removed; use an explicit width like '42i64'"};
+    constexpr auto needs_width{"integer literal suffix needs a width, e.g. 42u8"};
 
-    helpers::test_parser_fail("42l;", err(l_removed, syntax::error::INVALID_NUMBER_LITERAL));
     helpers::test_parser_fail("42u;", err(needs_width, syntax::error::INVALID_NUMBER_LITERAL));
     helpers::test_parser_fail("42i;", err(needs_width, syntax::error::INVALID_NUMBER_LITERAL));
     helpers::test_parser_fail("42u0;", err(needs_width, syntax::error::INVALID_NUMBER_LITERAL));
