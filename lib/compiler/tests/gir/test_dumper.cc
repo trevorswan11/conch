@@ -194,11 +194,11 @@ constexpr std::string_view golden_input{R"(
     };
 
     const raw_write := fn(fd: i64, buf: ^u8, len: usize): i64 {
-        var ret: i64 = 0l;
+        var ret: i64 = 0i64;
         asm {
             template: "syscall",
             outputs: ("={rax}" = ret),
-            inputs: ("{rax}" = 1l, "{rdi}" = fd, "{rsi}" = buf, "{rdx}" = len),
+            inputs: ("{rax}" = 1i64, "{rdi}" = fd, "{rsi}" = buf, "{rdx}" = len),
             clobbers: ("rcx", "r11", "memory"),
             options: (volatile),
         };

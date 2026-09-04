@@ -168,7 +168,7 @@ TEST_CASE("Builtin pointer conversions") {
         "var a := [_]i32{0, 1, 2};");
 
     test_builtin_resolve(
-        bis::PTR_FROM_INT, "^i32, 0xc0ffeeul", [](helpers::sema_test_context& ctx) -> sema::type& {
+        bis::PTR_FROM_INT, "^i32, 0xc0ffeeu64", [](helpers::sema_test_context& ctx) -> sema::type& {
             return ctx.get_type(sema::type_kind::POINTER, ctx.get_int_type(32, true));
         });
 
@@ -190,7 +190,7 @@ TEST_CASE("Builtins memory operation") {
 }
 
 TEST_CASE("Builtin arithmetic") {
-    test_builtin_resolve(bis::ABS, "2.34f", [](helpers::sema_test_context& ctx) -> sema::type& {
+    test_builtin_resolve(bis::ABS, "2.34f32", [](helpers::sema_test_context& ctx) -> sema::type& {
         return ctx.get_type(sema::type_kind::F32);
     });
 }
@@ -243,7 +243,7 @@ TEST_CASE("Other builtin quick type mismatch") {
                          sema::error::TYPE_MISMATCH,
                          std::pair{0UZ, 27UZ}});
 
-    helpers::test_resolver_fail("const foo := @ptrFromInt(i32, 0xdeadbeeful);",
+    helpers::test_resolver_fail("const foo := @ptrFromInt(i32, 0xdeadbeefu64);",
                                 sema::diagnostic{"Expected a pointer type; found 'i32'",
                                                  sema::error::TYPE_MISMATCH,
                                                  std::pair{0UZ, 25UZ}});

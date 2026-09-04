@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <ranges>
 #include <stdx/type_traits.hh>
 #include <string>
@@ -514,38 +515,19 @@ auto const_eval::eval_node(ast::node_id id) -> stdx::option<const_value> {
 
     return module_->ast[id].visit(
         [](const auto&) -> stdx::option<const_value> { return stdx::none; },
-        [&](ast::i32_expr data) {
+        [&](const ast::int_literal_expr& data) -> stdx::option<const_value> {
             const auto sema_type{module_->get_sema_type_opt(id)};
-            return const_value{static_cast<i64>(data.value),
-                               sema_type ? *sema_type : ctx_.get_int(32, true)};
+            auto&      t{sema_type ? *sema_type : ctx_.get_int(32, true)};
+            if (sema::is_unsigned_integer(t)) {
+                return make_scalar_const(static_cast<u128>(data.value), t);
+            }
+            return make_scalar_const(static_cast<i128>(data.value), t);
         },
-        [&](ast::i64_expr data) {
-            return const_value{static_cast<i64>(data.value), ctx_.get_int(64, true)};
-        },
-        [&](ast::isize_expr data) {
-            return const_value{static_cast<i64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::ISIZE)};
-        },
-        [&](ast::u8_expr data) {
-            return const_value{static_cast<u64>(data.value), ctx_.get_int(8, false)};
-        },
-        [&](ast::u32_expr data) {
-            return const_value{static_cast<u64>(data.value), ctx_.get_int(32, false)};
-        },
-        [&](ast::u64_expr data) {
-            return const_value{static_cast<u64>(data.value), ctx_.get_int(64, false)};
-        },
-        [&](ast::usize_expr data) {
-            return const_value{static_cast<u64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
-        },
-        [&](ast::f32_expr data) {
-            return const_value{static_cast<f64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::F32)};
-        },
-        [&](ast::f64_expr data) {
-            return const_value{static_cast<f64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::F64)};
+        [&](const ast::float_literal_expr& data) -> stdx::option<const_value> {
+            const auto sema_type{module_->get_sema_type_opt(id)};
+            return const_value{data.value,
+                               sema_type ? *sema_type
+                                         : ctx_.get_builtin_resolved_type(sema::type_kind::F64)};
         },
         [&](ast::bool_expr) {
             return const_value{id.get_token_type() == syntax::token_type_t::BOOLEAN_TRUE,

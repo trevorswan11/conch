@@ -79,7 +79,7 @@ TEST_CASE("if constexpr: a generic body prunes per instantiation") {
                 return 32;
             }
         };
-        const r := pick(0l);
+        const r := pick(0i64);
     )")
               .empty());
 }

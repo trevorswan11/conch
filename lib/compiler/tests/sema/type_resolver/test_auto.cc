@@ -22,7 +22,7 @@ TEST_CASE("Declaration auto type inference") {
     auto [ctx, idx]{helpers::resolve_and_check(R"(
         var a: auto = 42;
         const b: auto = true;
-        var c := 100l;
+        var c := 100i64;
         const d := false;
         var s := "hello";
     )")};
@@ -212,7 +212,7 @@ TEST_CASE("Function return type auto inference") {
         auto [ctx, idx]{helpers::resolve_and_check(R"(
             const outer := fn(): auto {
                 const inner := fn(): auto {
-                    return 100l;
+                    return 100i64;
                 };
                 return inner();
             };
@@ -296,7 +296,7 @@ TEST_CASE("Generic function instantiation and deduplication") {
                 return a + b;
             };
             const r1 := add(1, 2);
-            const r2 := add(10l, 20l);
+            const r2 := add(10i64, 20i64);
         )")};
 
         const auto [r1_sym, r1_sym_data, r1_node, r1_type]{
@@ -360,7 +360,7 @@ TEST_CASE("Cross-module generic function instantiation") {
             import "math.gh" as math;
             const a := math::identity(42);
             const b := math::identity(true);
-            const c := math::double_val(100l);
+            const c := math::double_val(100i64);
         )",
         helpers::make_vector<helpers::mock_file>(
             helpers::mock_file{.path = "math.gh", .source = math_gh}))};

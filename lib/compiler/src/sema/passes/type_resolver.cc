@@ -2582,11 +2582,10 @@ auto type_resolver::visit(ast::node_id id, const ast::binary_expr& binary) -> vo
     auto& rhs_type{*last_type_.take()};
 
     if (is_integer(rhs_type.get_kind())) {
-        if (const auto i32_node{resolving_.ast.get_as_opt<ast::i32_expr>(binary.lhs)}) {
-            if (i32_node->value >= 0) {
-                resolving_.set_sema_type(binary.lhs, rhs_type);
-                lhs_type = &rhs_type;
-            }
+        if (const auto lit{resolving_.ast.get_as_opt<ast::int_literal_expr>(binary.lhs)};
+            lit && lit->width == 0 && !lit->is_size) {
+            resolving_.set_sema_type(binary.lhs, rhs_type);
+            lhs_type = &rhs_type;
         }
     }
 
@@ -3071,8 +3070,8 @@ auto type_resolver::visit(ast::node_id id, const ast::range_expr& range) -> void
 
         // ...and give a bare integer-literal lower bound the upper bound's type (`0 .. s.len`).
         if (range.lhs && is_integer(rhs_type.get_kind())) {
-            if (const auto i32_node{resolving_.ast.get_as_opt<ast::i32_expr>(*range.lhs)};
-                i32_node && i32_node->value >= 0) {
+            if (const auto lit{resolving_.ast.get_as_opt<ast::int_literal_expr>(*range.lhs)};
+                lit && lit->width == 0 && !lit->is_size) {
                 resolving_.set_sema_type(*range.lhs, rhs_type);
                 lhs_type = &rhs_type;
             }
@@ -4291,39 +4290,47 @@ auto type_resolver::visit(ast::node_id id, const ast::string_expr& string) -> vo
         resolving_.set_sema_type(id, *last_type_);                             \
     }
 
-#define MAKE_INT_PRIMITIVE_RESOLVER(NodeType, bits, is_signed)                 \
-    auto type_resolver::visit(ast::node_id id, const ast::NodeType&) -> void { \
-        PROFILE_FUNCTION();                                                    \
-        last_type_.emplace(ctx_.get_int((bits), (is_signed)));                 \
-        resolving_.set_sema_type(id, *last_type_);                             \
-    }
-
-auto type_resolver::visit(ast::node_id id, const ast::i32_expr& expr) -> void {
+auto type_resolver::visit(ast::node_id id, const ast::int_literal_expr& expr) -> void {
     PROFILE_FUNCTION();
-    auto* resolved_type{&ctx_.get_int(32, true)};
-    if (expr.value >= 0) {
-        if (const auto implicit_type{implicit_type_stack_.peek()}) {
-            const auto kind{implicit_type->get_kind()};
-            if (is_integer(kind)) { resolved_type = implicit_type.get(); }
+    type* resolved{nullptr};
+    if (expr.is_size) {
+        resolved =
+            &ctx_.get_builtin_resolved_type(expr.is_signed ? type_kind::ISIZE : type_kind::USIZE);
+    } else if (expr.width != 0) {
+        resolved = &ctx_.get_int(expr.width, expr.is_signed);
+    } else {
+        resolved = &ctx_.get_int(32, true); // canonical width-less type
+        // A width-less literal coerces to its integer context (wide types, `isize`/`usize`).
+        if (const auto implicit_type{implicit_type_stack_.peek()};
+            implicit_type && is_integer(implicit_type->get_kind())) {
+            resolved = implicit_type.get();
         }
     }
-    last_type_.emplace(*resolved_type);
+    last_type_.emplace(*resolved);
     resolving_.set_sema_type(id, *last_type_);
 }
 
-MAKE_INT_PRIMITIVE_RESOLVER(i64_expr, 64, true)
-MAKE_PRIMITIVE_RESOLVER(isize_expr, ISIZE)
-MAKE_INT_PRIMITIVE_RESOLVER(u32_expr, 32, false)
-MAKE_INT_PRIMITIVE_RESOLVER(u64_expr, 64, false)
-MAKE_PRIMITIVE_RESOLVER(usize_expr, USIZE)
-MAKE_INT_PRIMITIVE_RESOLVER(u8_expr, 8, false)
+auto type_resolver::visit(ast::node_id id, const ast::float_literal_expr& expr) -> void {
+    PROFILE_FUNCTION();
+    // f16/f80/f128 land in a later phase; treat their literals as width-less real for now.
+    type* resolved{&ctx_.get_builtin_resolved_type(type_kind::F64)};
+    if (expr.width == 32) {
+        resolved = &ctx_.get_builtin_resolved_type(type_kind::F32);
+    } else if (expr.width == 0 || expr.width == 16 || expr.width == 80 || expr.width == 128) {
+        if (const auto implicit_type{implicit_type_stack_.peek()};
+            implicit_type && is_float(implicit_type->get_kind())) {
+            resolved = implicit_type.get();
+        }
+    }
+    last_type_.emplace(*resolved);
+    resolving_.set_sema_type(id, *last_type_);
+}
+
 MAKE_PRIMITIVE_RESOLVER(bool_expr, BOOL)
 MAKE_PRIMITIVE_RESOLVER(void_expr, VOID_)
 MAKE_PRIMITIVE_RESOLVER(undefined_expr, UNDEFINED)
 MAKE_PRIMITIVE_RESOLVER(nullptr_expr, NULLPTR)
 MAKE_PRIMITIVE_RESOLVER(unreachable_expr, NORETURN)
-MAKE_PRIMITIVE_RESOLVER(f32_expr, F32)
-MAKE_PRIMITIVE_RESOLVER(f64_expr, F64)
 
 template <ast::IndexableID ID>
 auto type_resolver::resolve_module_access(ID id, const ast::module_access_expr& access) -> void {

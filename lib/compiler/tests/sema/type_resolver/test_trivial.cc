@@ -22,17 +22,17 @@ TEST_CASE("Builtin type resolution") {
     };
 
     check_bi_type("1", "i32");
-    check_bi_type("1l", "i64");
+    check_bi_type("1i64", "i64");
     check_bi_type("1z", "isize");
-    check_bi_type("1u", "u32");
-    check_bi_type("1ul", "u64");
+    check_bi_type("1u32", "u32");
+    check_bi_type("1u64", "u64");
     check_bi_type("1UZ", "usize");
     check_bi_type("'1'", "u8");
     check_bi_type("true", "bool");
     check_bi_type("{}", "void");
     check_bi_type("undefined", "undefined");
     check_bi_type("unreachable", "noreturn");
-    check_bi_type("1.0f", "f32");
+    check_bi_type("1.0f32", "f32");
     check_bi_type("1.0", "f64");
 }
 

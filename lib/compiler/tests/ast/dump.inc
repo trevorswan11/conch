@@ -10,7 +10,7 @@ R"(ExpressionStatement
         ├─ IdentifierExpression: c
         ├─ IdentifierExpression: d
         ├─ IdentifierExpression: e
-        ├─ I32Expression: 3
+        ├─ IntLiteralExpression: 3
         └─ StringExpression: 54
 ExpressionStatement
 └─ Expr: BinaryExpression (BOOLEAN_AND)
@@ -28,7 +28,7 @@ ExpressionStatement
     └─ RHS: BinaryExpression (EQ)
         ├─ LHS: IndexExpression
         │   ├─ Object: IdentifierExpression: b
-        │   └─ Index: USizeExpression: 3
+        │   └─ Index: IntLiteralExpression: 3uz
         └─ RHS: UnaryExpression (BANG)
             └─ Operand: IdentifierExpression: c
 ContinueStatement
@@ -53,14 +53,14 @@ DeclStatement
 ├─ Name: IdentifierExpression: SIZE
 ├─ Modifiers: CONSTEXPR
 ├─ Type: (inferred)
-└─ Value: USizeExpression: 2
+└─ Value: IntLiteralExpression: 2uz
 BlockStatement
 ├─ ExpressionStatement
 │   └─ Expr: IdentifierExpression: a
 ├─ ExpressionStatement
 │   └─ Expr: IdentifierExpression: b
 ├─ ExpressionStatement
-│   └─ Expr: I32Expression: 2
+│   └─ Expr: IntLiteralExpression: 2
 └─ ExpressionStatement
     └─ Expr: IdentifierExpression: c
 ExpressionStatement
@@ -68,7 +68,7 @@ ExpressionStatement
     ├─ Condition: BoolExpression: true
     ├─ Continuation: AssignmentExpression (PLUS_ASSIGN)
     │   ├─ Assignee: IdentifierExpression: i
-    │   └─ Value: I32Expression: 1
+    │   └─ Value: IntLiteralExpression: 1
     ├─ Body: BlockStatement
     │   └─ ExpressionStatement
     │       └─ Expr: IdentifierExpression: a
@@ -89,7 +89,7 @@ DeclStatement
 │       ├─ Variadic: true
 │       └─ Returns: ExplicitType (modifier: REF)
 │           └─ ArrayType
-│               ├─ Dimensions: USizeExpression: 2
+│               ├─ Dimensions: IntLiteralExpression: 0x2uz
 │               ├─ Null terminated: false
 │               └─ ExplicitType (modifier: VALUE)
 │                   └─ ArrayType
@@ -189,14 +189,14 @@ ExpressionStatement
     └─ Arms:
         ├─ Arm:
         │   ├─ Pattern: RangeExpression (DOT_DOT)
-        │   │   ├─ Lower: I32Expression: 1
-        │   │   └─ Upper: I32Expression: 8
+        │   │   ├─ Lower: IntLiteralExpression: 1
+        │   │   └─ Upper: IntLiteralExpression: 8
         │   └─ Dispatch: ExpressionStatement
         │       └─ Expr: IdentifierExpression: f
         ├─ Arm:
         │   ├─ Pattern: RangeExpression (DOT_DOT_EQ)
-        │   │   ├─ Lower: I32Expression: 8
-        │   │   └─ Upper: I32Expression: 16
+        │   │   ├─ Lower: IntLiteralExpression: 8
+        │   │   └─ Upper: IntLiteralExpression: 16
         │   ├─ Capture: g (modifier: VALUE)
         │   └─ Dispatch: ExpressionStatement
         │       └─ Expr: IdentifierExpression: h
@@ -212,8 +212,8 @@ ExpressionStatement
         │   ├─ Pattern: IdentifierExpression: b
         │   ├─ Pattern: IdentifierExpression: c
         │   ├─ Pattern: RangeExpression (DOT_DOT)
-        │   │   ├─ Lower: I32Expression: 1
-        │   │   └─ Upper: I32Expression: 4
+        │   │   ├─ Lower: IntLiteralExpression: 1
+        │   │   └─ Upper: IntLiteralExpression: 4
         │   ├─ Capture: d (modifier: VALUE)
         │   └─ Dispatch: ExpressionStatement
         │       └─ Expr: IdentifierExpression: e
@@ -233,7 +233,7 @@ ExpressionStatement
     │       │   ├─ Object: IdentifierExpression: arr
     │       │   └─ Index: IdentifierExpression: i
     │       └─ Index: IdentifierExpression: j
-    └─ Value: I32Expression: 2
+    └─ Value: IntLiteralExpression: 2
 ExpressionStatement
 └─ Expr: IfExpression
     ├─ Constexpr: false
@@ -292,7 +292,7 @@ ExpressionStatement
     ├─ Underlying: IdentifierExpression: u64 (primitive)
     ├─ Enumerations:
     │   ├─ Name: IdentifierExpression: A
-    │   │   └─ Default: U64Expression: 1
+    │   │   └─ Default: IntLiteralExpression: 1u64
     │   ├─ Name: IdentifierExpression: B
     │   │   └─ Default: IdentifierExpression: T
     │   └─ Name: IdentifierExpression: C
@@ -343,20 +343,20 @@ ExpressionStatement
     │       └─ Expr: IdentifierExpression: a
     └─ Condition: BoolExpression: true
 ExpressionStatement
-└─ Expr: I64Expression: 1
+└─ Expr: IntLiteralExpression: 1i64
 ExpressionStatement
-└─ Expr: ISizeExpression: 2
+└─ Expr: IntLiteralExpression: 2z
 ExpressionStatement
-└─ Expr: U32Expression: 3
+└─ Expr: IntLiteralExpression: 3u32
 ExpressionStatement
-└─ Expr: U8Expression: 97
+└─ Expr: IntLiteralExpression: 'a'
 ExpressionStatement
-└─ Expr: F32Expression: 2.3
+└─ Expr: FloatLiteralExpression: 2.3f32
 ExpressionStatement
-└─ Expr: F64Expression: 2.3
+└─ Expr: FloatLiteralExpression: 2.3
 ExpressionStatement
 └─ Expr: ArrayExpression
-    ├─ Size: USizeExpression: 1
+    ├─ Size: IntLiteralExpression: 1uz
     ├─ Null terminated: false
     ├─ Type: ExplicitType (modifier: VALUE)
     │   └─ IdentifierExpression: A
@@ -388,7 +388,7 @@ BlockStatement
 └─ <empty>
 DeferStatement
 └─ Deferred: ExpressionStatement
-    └─ Expr: I32Expression: 3
+    └─ Expr: IntLiteralExpression: 3
 ExpressionStatement
 └─ Expr: Initializer Expression:
     ├─ Object Type: <inferred>
@@ -396,7 +396,7 @@ ExpressionStatement
         └─ Initializer:
             ├─ Member: ImplicitAccessExpression
             │   └─ Member: IdentifierExpression: a
-            └─ Value: I32Expression: 3
+            └─ Value: IntLiteralExpression: 3
 ExpressionStatement
 └─ Expr: Initializer Expression:
     ├─ Object Type: IdentifierExpression: TT
@@ -461,7 +461,7 @@ ExpressionStatement
     ├─ Underlying: IdentifierExpression: i64 (primitive)
     ├─ Enumerations:
     │   └─ Name: IdentifierExpression: A
-    │       └─ Default: I64Expression: 2
+    │       └─ Default: IntLiteralExpression: 2i64
     ├─ Non-Exhaustive: false
     └─ Members:
         └─ DeclStatement
@@ -561,17 +561,17 @@ ExpressionStatement
     └─ Body: BlockStatement
         └─ <empty>
 ExpressionStatement
-└─ Expr: U8Expression: 10
+└─ Expr: IntLiteralExpression: '\n'
 ExpressionStatement
-└─ Expr: U8Expression: 13
+└─ Expr: IntLiteralExpression: '\r'
 ExpressionStatement
-└─ Expr: U8Expression: 9
+└─ Expr: IntLiteralExpression: '\t'
 ExpressionStatement
-└─ Expr: U8Expression: 92
+└─ Expr: IntLiteralExpression: '\\'
 ExpressionStatement
-└─ Expr: U8Expression: 39
+└─ Expr: IntLiteralExpression: '\''
 ExpressionStatement
-└─ Expr: U8Expression: 0
+└─ Expr: IntLiteralExpression: '\0'
 DeclStatement
 ├─ Name: IdentifierExpression: a
 ├─ Modifiers: VARIABLE
@@ -579,7 +579,7 @@ DeclStatement
 │   └─ IdentifierExpression: i32 (primitive)
 └─ Value: UndefinedExpression
 ExpressionStatement
-└─ Expr: I32Expression: 51
+└─ Expr: IntLiteralExpression: 0b00_11_00_11
 ExpressionStatement
 └─ Expr: AddressOfExpression (CARET_MUT)
     └─ Operand: IdentifierExpression: a
@@ -648,7 +648,7 @@ DeclStatement
 ├─ Modifiers: VARIABLE|THREADLOCAL
 ├─ Type: ExplicitType (modifier: VALUE)
 │   └─ IdentifierExpression: i32 (primitive)
-└─ Value: I32Expression: 0
+└─ Value: IntLiteralExpression: 0
 DeclStatement
 ├─ Name: IdentifierExpression: maybe
 ├─ Modifiers: CONSTANT|EXTERN|WEAK
@@ -670,7 +670,7 @@ DeclStatement
     │   └─ IdentifierExpression: i32 (primitive)
     └─ Body: BlockStatement
         └─ ReturnStatement
-            └─ Value: I32Expression: 0
+            └─ Value: IntLiteralExpression: 0
 DeclStatement
 ├─ Name: IdentifierExpression: stub
 ├─ Modifiers: CONSTANT
@@ -734,17 +734,17 @@ ExpressionStatement
         │   ├─ Public: false
         │   ├─ Type: ExplicitType (modifier: VALUE)
         │   │   └─ IdentifierExpression: i32 (primitive)
-        │   └─ Alignment: I32Expression: 4
+        │   └─ Alignment: IntLiteralExpression: 4
         ├─ Name: IdentifierExpression: b
         │   ├─ Public: false
         │   ├─ Type: ExplicitType (modifier: VALUE)
         │   │   └─ IdentifierExpression: u8 (primitive)
-        │   └─ Alignment: I32Expression: 8
+        │   └─ Alignment: IntLiteralExpression: 8
         └─ Name: IdentifierExpression: c
             ├─ Public: false
             ├─ Type: ExplicitType (modifier: VALUE)
             │   └─ IdentifierExpression: i32 (primitive)
-            └─ Alignment: I32Expression: 16
+            └─ Alignment: IntLiteralExpression: 16
 ExpressionStatement
 └─ Expr: UnionExpression
     ├─ Extern: false
@@ -753,7 +753,7 @@ ExpressionStatement
         │   ├─ Tag: IdentifierExpression: a
         │   ├─ Type: ExplicitType (modifier: VALUE)
         │   │   └─ IdentifierExpression: i32 (primitive)
-        │   └─ Alignment: I32Expression: 16
+        │   └─ Alignment: IntLiteralExpression: 16
         └─ Field:
             ├─ Tag: IdentifierExpression: b
             └─ Type: ExplicitType (modifier: MUT_REF)
@@ -769,7 +769,7 @@ DeclStatement
         │   ├─ Tag: IdentifierExpression: a
         │   ├─ Type: ExplicitType (modifier: VALUE)
         │   │   └─ IdentifierExpression: i32 (primitive)
-        │   └─ Alignment: I32Expression: 8
+        │   └─ Alignment: IntLiteralExpression: 8
         └─ Field:
             ├─ Tag: IdentifierExpression: b
             └─ Type: ExplicitType (modifier: VALUE)
@@ -844,7 +844,7 @@ DeclStatement
     │       ├─ Name: IdentifierExpression: cap
     │       ├─ Type: ExplicitType (modifier: VALUE)
     │       │   └─ IdentifierExpression: usize (primitive)
-    │       └─ Default: I32Expression: 4096
+    │       └─ Default: IntLiteralExpression: 4096
     └─ Methods:
         ├─ Method (kind: required, visibility: pub)
         │   ├─ Name: IdentifierExpression: write
