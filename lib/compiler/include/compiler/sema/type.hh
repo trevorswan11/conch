@@ -38,6 +38,11 @@ enum class type_kind : u8 {
     F64,
     F80,
     F128,
+    // The type of an unsuffixed integer / real literal and of constexpr arithmetic over
+    // them: a compile-time-only value that implicitly coerces to any concrete numeric type
+    // it fits in. Materializes as `i32` / `f64` if it ever reaches runtime un-anchored.
+    CONSTEXPR_INT,
+    CONSTEXPR_FLOAT,
     VOID_,
     UNDEFINED,
     NULLPTR,
@@ -106,8 +111,24 @@ class type;
     }
 }
 
+// The type of an unsuffixed integer literal / constexpr integer arithmetic.
+[[nodiscard]] constexpr auto is_constexpr_int(type_kind kind) noexcept -> bool {
+    return kind == type_kind::CONSTEXPR_INT;
+}
+
+// The type of an unsuffixed real literal / constexpr float arithmetic.
+[[nodiscard]] constexpr auto is_constexpr_float(type_kind kind) noexcept -> bool {
+    return kind == type_kind::CONSTEXPR_FLOAT;
+}
+
+[[nodiscard]] constexpr auto is_constexpr_numeric(type_kind kind) noexcept -> bool {
+    return is_constexpr_int(kind) || is_constexpr_float(kind);
+}
+
+// `is_integer`/`is_float` are concrete-only (they imply a real bit width and ABI). A
+// constexpr literal counts as numeric for arithmetic, comparison, and coercion purposes.
 [[nodiscard]] constexpr auto is_numeric(type_kind kind) noexcept -> bool {
-    return is_integer(kind) || is_float(kind);
+    return is_integer(kind) || is_float(kind) || is_constexpr_numeric(kind);
 }
 
 // Whether `from` implicitly widens to `to` (`iW -> iV`/`uW -> uV` for `V > W`,

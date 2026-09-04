@@ -175,6 +175,14 @@ auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool {
     const auto from_kind{from.get_kind()};
     const auto to_kind{to.get_kind()};
 
+    // An unsuffixed integer literal coerces to any concrete integer or float (the value's
+    // range is checked when it is folded against its target); an unsuffixed real literal
+    // coerces to any concrete float. `constexpr_int` also feeds `constexpr_float`.
+    if (from_kind == type_kind::CONSTEXPR_INT) {
+        return is_integer(to_kind) || is_float(to_kind) || to_kind == type_kind::CONSTEXPR_FLOAT;
+    }
+    if (from_kind == type_kind::CONSTEXPR_FLOAT) { return is_float(to_kind); }
+
     // A float widens to any wider float (`f16 -> f32 -> f64 -> f80 -> f128`).
     if (is_float(from_kind)) {
         return is_float(to_kind) && float_bits(from_kind) < float_bits(to_kind);

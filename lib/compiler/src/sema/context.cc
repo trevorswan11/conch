@@ -96,6 +96,8 @@ auto inject_types(symbol_table& prelude, type_pool& pool) -> void {
     inject_type(kws::F64, type_kind::F64);
     inject_type(kws::F80, type_kind::F80);
     inject_type(kws::F128, type_kind::F128);
+    inject_type(kws::CONSTEXPR_INT, type_kind::CONSTEXPR_INT);
+    inject_type(kws::CONSTEXPR_FLOAT, type_kind::CONSTEXPR_FLOAT);
     inject_type(kws::BOOL, type_kind::BOOL);
     inject_type(kws::VOID, type_kind::VOID_);
 

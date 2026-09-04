@@ -244,19 +244,21 @@ namespace {
 auto const_eval::type_align_of(const sema::type& type, usize ptr_size) -> usize {
     PROFILE_FUNCTION();
     switch (type.get_kind()) {
-    case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
-    case sema::type_kind::BOOL:      return 1;
-    case sema::type_kind::F16:       return 2;
-    case sema::type_kind::F32:       return 4;
-    case sema::type_kind::F64:       return 8;
+    case sema::type_kind::INT:             return int_abi_bytes(sema::int_width(type));
+    case sema::type_kind::BOOL:            return 1;
+    case sema::type_kind::F16:             return 2;
+    case sema::type_kind::F32:             return 4;
+    case sema::type_kind::CONSTEXPR_INT:   return 4; // materializes as i32
+    case sema::type_kind::F64:
+    case sema::type_kind::CONSTEXPR_FLOAT: return 8; // materializes as f64
     case sema::type_kind::F80:
-    case sema::type_kind::F128:      return 16;
+    case sema::type_kind::F128:            return 16;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
     case sema::type_kind::POINTER:
     case sema::type_kind::REFERENCE:
     case sema::type_kind::FUNCTION:
-    case sema::type_kind::SLICE:     return ptr_size;
+    case sema::type_kind::SLICE:           return ptr_size;
     case sema::type_kind::ARRAY:
         if (const auto arr{type.get_data().as_opt<sema::types::array>()}) {
             return type_align_of(arr->underlying, ptr_size);
@@ -321,20 +323,22 @@ auto const_eval::type_align_of(const sema::type& type, usize ptr_size) -> usize 
 auto const_eval::type_size_of(const sema::type& type, usize ptr_size) -> usize {
     PROFILE_FUNCTION();
     switch (type.get_kind()) {
-    case sema::type_kind::VOID_:     return 0;
-    case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
-    case sema::type_kind::BOOL:      return 1;
-    case sema::type_kind::F16:       return 2;
-    case sema::type_kind::F32:       return 4;
-    case sema::type_kind::F64:       return 8;
+    case sema::type_kind::VOID_:           return 0;
+    case sema::type_kind::INT:             return int_abi_bytes(sema::int_width(type));
+    case sema::type_kind::BOOL:            return 1;
+    case sema::type_kind::F16:             return 2;
+    case sema::type_kind::F32:             return 4;
+    case sema::type_kind::CONSTEXPR_INT:   return 4; // materializes as i32
+    case sema::type_kind::F64:
+    case sema::type_kind::CONSTEXPR_FLOAT: return 8; // materializes as f64
     case sema::type_kind::F80:
-    case sema::type_kind::F128:      return 16;
+    case sema::type_kind::F128:            return 16;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
     case sema::type_kind::POINTER:
     case sema::type_kind::REFERENCE:
-    case sema::type_kind::FUNCTION:  return ptr_size;
-    case sema::type_kind::SLICE:     return 2 * ptr_size;
+    case sema::type_kind::FUNCTION:        return ptr_size;
+    case sema::type_kind::SLICE:           return 2 * ptr_size;
     case sema::type_kind::ARRAY:
         if (const auto arr{type.get_data().as_opt<sema::types::array>()}) {
             const auto elem_size{type_size_of(arr->underlying, ptr_size)};
