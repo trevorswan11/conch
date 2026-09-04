@@ -4064,6 +4064,26 @@ namespace {
 
 } // namespace
 
+namespace {
+
+// A `packed struct` has no per-field address, so `&p.field` / `^p.field` is rejected.
+[[nodiscard]] auto rhs_is_packed_field(const mod::module& mod, auto rhs) -> bool {
+    const auto dot{mod.ast.template get_as_opt<ast::dot_expr>(rhs)};
+    if (!dot) { return false; }
+    const auto obj_t{mod.get_sema_type_opt(dot->object)};
+    if (!obj_t) { return false; }
+    const type* ot{obj_t.get()};
+    if (const auto p{ot->get_data().as_opt<types::pointer>()}) {
+        ot = &p->underlying;
+    } else if (const auto r{ot->get_data().as_opt<types::reference>()}) {
+        ot = &r->underlying;
+    }
+    const auto st{ot->get_data().as_opt<types::struct_t>()};
+    return st && st->is_bit_packed();
+}
+
+} // namespace
+
 auto type_resolver::visit(ast::node_id id, const ast::reference_expr& ref) -> void {
     PROFILE_FUNCTION();
     {
@@ -4072,6 +4092,15 @@ auto type_resolver::visit(ast::node_id id, const ast::reference_expr& ref) -> vo
         TRY_RESOLVE(ref.rhs);
     }
     auto& rhs_type{*last_type_.take()};
+
+    if (rhs_is_packed_field(resolving_, ref.rhs)) {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            "cannot take a reference to a field of a 'packed struct'; copy it into a local first",
+            error::ILLEGAL_PACKED_FIELD_ADDRESS,
+            resolving_.ast.location_of(id)));
+    }
 
     // References already behave like values
     if (rhs_type.get_kind() == type_kind::REFERENCE) {
@@ -4099,6 +4128,15 @@ auto type_resolver::visit(ast::node_id id, const ast::address_of_expr& adr_of) -
         TRY_RESOLVE(adr_of.rhs);
     }
     auto& rhs_type{*last_type_.take()};
+
+    if (rhs_is_packed_field(resolving_, adr_of.rhs)) {
+        return last_type_.emplace(ctx_.poison_node(
+            resolving_,
+            id,
+            "cannot take the address of a field of a 'packed struct'; copy it into a local first",
+            error::ILLEGAL_PACKED_FIELD_ADDRESS,
+            resolving_.ast.location_of(id)));
+    }
 
     gsl::not_null<type*> pointee{&rhs_type};
     if (const auto ref{rhs_type.get_data().as_opt<types::reference>()}) {
@@ -4611,6 +4649,31 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
                 incomplete_field(ident.name, resolving_.ast.location_of(field.explicit_type))));
         }
 
+        // A bit-packed `packed struct` may only hold packed-eligible fields (64 is a stand-in
+        // for the target pointer width; eligibility does not depend on its exact value).
+        if (struct_expr.is_packed && !struct_expr.is_extern &&
+            !sema::packed_field_bits(*field_type, 64)) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("field '{}' of type '{}' cannot appear in a 'packed struct'; only "
+                            "integers, floats, 'bool', enums, pointers, packed aggregates, and "
+                            "fixed arrays of those are allowed",
+                            ident.name,
+                            ctx_.type_display_name(*field_type)),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(field.explicit_type)));
+        }
+        if (struct_expr.is_packed && !struct_expr.is_extern && field.explicit_alignment) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("a 'packed struct' field cannot specify 'alignas' (field '{}')",
+                            ident.name),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(field.explicit_type)));
+        }
+
         if (struct_expr.is_extern) {
             const auto bad{scan_cabi_offenders(*field_type)};
             const auto loc{resolving_.ast.location_of(field.explicit_type)};
@@ -4647,6 +4710,24 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
         }
         field_alignments[i++] = align_val;
     }
+
+    if (struct_expr.is_packed && !struct_expr.is_extern) {
+        u64 total_bits{0};
+        for (const auto* ft : field_types) {
+            total_bits += ft ? sema::packed_field_bits(*ft, 64).value_or(0) : 0;
+        }
+        if (total_bits < 1 || total_bits > 128) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("a 'packed struct' backing width of {} bits is unsupported (the "
+                            "current limit is 128 bits)",
+                            total_bits),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(id)));
+        }
+    }
+
     committable_resolution<types::struct_t> resolution{struct_type,
                                                        field_types,
                                                        struct_expr.fields,

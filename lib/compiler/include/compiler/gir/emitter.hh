@@ -36,7 +36,8 @@ class emitter {
   public:
     explicit emitter(sema::context& ctx, mod::module& ast_mod) noexcept
         : ctx_{ctx}, ast_module_{ast_mod}, const_eval_{ctx_, ast_mod},
-          gir_module_{ast_mod, ctx_.arena}, runtime_safety_{ctx.runtime_safety} {}
+          gir_module_{ast_mod, ctx_.arena}, runtime_safety_{ctx.runtime_safety},
+          target_ptr_bits_{codegen::target_facts::resolve(ctx.target_opts.triple_str).ptr_bits} {}
     ~emitter() = default;
     MAKE_PINNED(emitter);
 
@@ -238,9 +239,29 @@ class emitter {
     // Keeps a tagged union's runtime discriminant in sync with a direct `union.field = ...` write
     auto sync_tagged_union_tag(ast::node_id assign_lhs) -> void;
     auto emit_assignment(ast::node_id id, const ast::assignment_expr& assign) -> value;
-    auto emit_call(ast::node_id id, const ast::call_expr& call) -> value;
-    auto emit_asm(ast::node_id id, const ast::asm_expr& node) -> value;
-    auto emit_ident(ast::node_id id, const ast::identifier_expr& ident) -> value;
+
+    // Bit-packed `packed struct` field access: shift/mask over the backing integer.
+    [[nodiscard]] auto emit_packed_field_read(value                        backing_addr,
+                                              const sema::types::struct_t& st,
+                                              usize                        field_idx,
+                                              sema::type&                  field_type) -> value;
+    [[nodiscard]] auto emit_packed_field_extract(value                        backing,
+                                                 const sema::types::struct_t& st,
+                                                 usize                        field_idx,
+                                                 sema::type&                  field_type) -> value;
+    auto               emit_packed_field_write(value                        backing_addr,
+                                               const sema::types::struct_t& st,
+                                               usize                        field_idx,
+                                               sema::type&                  field_type,
+                                               value                        new_field_val) -> void;
+    [[nodiscard]] auto emit_packed_field_assign(ast::node_id                 id,
+                                                const ast::dot_expr&         dot,
+                                                const ast::assignment_expr&  assign,
+                                                syntax::token_type_t         op_type,
+                                                const sema::types::struct_t& st) -> value;
+    auto               emit_call(ast::node_id id, const ast::call_expr& call) -> value;
+    auto               emit_asm(ast::node_id id, const ast::asm_expr& node) -> value;
+    auto               emit_ident(ast::node_id id, const ast::identifier_expr& ident) -> value;
     // Lvalue (address) of a `var`-style global backed by a GIR global.
     [[nodiscard]] auto global_ref_in(usize table_idx, std::string_view name) -> stdx::option<value>;
     [[nodiscard]] auto try_global_ref(std::string_view name) -> stdx::option<value>;
@@ -337,6 +358,7 @@ class emitter {
     std::vector<std::string_view> pending_builtin_runtime_;
     symbol_scoping                symbol_scoping_;
     bool                          runtime_safety_{true};
+    u32                           target_ptr_bits_{64};
 
     // While emitting an inherited interface default-method body: bare `self.method(...)` calls
     // are rewritten to target this impl's own methods (its body symbol table).

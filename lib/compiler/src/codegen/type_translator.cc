@@ -148,6 +148,16 @@ auto type_translator::translate_struct(const sema::types::struct_t& s, const sem
         return it->second;
     }
 
+    // A bit-packed `packed struct` is a bare backing integer, not an aggregate.
+    if (s.is_bit_packed()) {
+        const auto bits{
+            sema::packed_backing_bits(s, module_.getDataLayout().getPointerSizeInBits())};
+        ASSERT(bits, "a bit-packed struct must have an eligible, in-range layout");
+        auto* int_ty{llvm::IntegerType::get(context_, *bits)};
+        struct_cache_[&original] = int_ty;
+        return int_ty;
+    }
+
     auto* struct_ty{llvm::StructType::create(context_)};
     struct_cache_[&original] = struct_ty;
 

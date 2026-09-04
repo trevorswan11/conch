@@ -233,6 +233,12 @@ struct struct_t {
     bool                                     is_packed{false};
     gsl::span<u64>                           field_alignments;
 
+    // `packed` without `extern`: a Zig-style bit-packed struct backed by a single integer.
+    // `extern packed struct` keeps C-ABI `__attribute__((packed))` byte-offset semantics.
+    [[nodiscard]] constexpr auto is_bit_packed() const noexcept -> bool {
+        return is_packed && !is_c_abi;
+    }
+
     // The index location entirely depends on the number of fields which always come first
     [[nodiscard]] auto type_at(usize idx) const noexcept -> type& {
         ASSERT(idx < fields.size() + members.size(), "Index exceeds struct's types");
@@ -536,6 +542,19 @@ static_assert(stdx::TriviallyDestructible<type>);
 
 // Whether `t` is exactly the signed 32-bit integer type.
 [[nodiscard]] auto is_i32(const type& t) noexcept -> bool;
+
+// Bit width of `t` when used as a field of a bit-packed `packed struct`/`packed union`, or
+// none when `t` is not packed-eligible. `ptr_bits` sizes pointer-like fields.
+[[nodiscard]] auto packed_field_bits(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32>;
+
+// Total backing width `N` of a bit-packed `packed struct`: the sum of its field widths.
+// None if any field is ineligible or the sum exceeds 65535.
+[[nodiscard]] auto packed_backing_bits(const types::struct_t& s, u32 ptr_bits) noexcept
+    -> stdx::option<u32>;
+
+// LSB-first bit offset of field `idx` in a bit-packed `packed struct`.
+[[nodiscard]] auto packed_field_offset(const types::struct_t& s, usize idx, u32 ptr_bits) noexcept
+    -> u32;
 
 // All associated type lifetimes are tied to the pool
 class type_pool {

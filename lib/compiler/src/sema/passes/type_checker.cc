@@ -711,6 +711,14 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
 }
 
 auto type_checker::check_store(const gir::instruction& inst) -> void {
+    // A bit-packed struct slot is really a backing integer; the emitter builds it by
+    // storing integers (zero-init, then shifted-in fields), so allow int -> packed struct.
+    const auto packed_backing_store{[](const type* dest, const type* val) -> bool {
+        if (!dest || !val) { return false; }
+        const auto st{dest->get_data().as_opt<types::struct_t>()};
+        return st && st->is_bit_packed() && is_integer(val->get_kind());
+    }};
+
     if (inst.result && !inst.operands.empty()) {
         // Case A: Storing to a local_id alloca slot or param
         if (auto it{locals_.find(*inst.result)}; it != locals_.end()) {
@@ -723,7 +731,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                     return;
                 }
 
-                if (val_t && !is_assignable(*val_t, *it->second.type)) {
+                if (val_t && !is_assignable(*val_t, *it->second.type) &&
+                    !packed_backing_store(it->second.type, &*val_t)) {
                     emit_diagnostic(
                         fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                     type_kind_display_name(*val_t),
@@ -814,7 +823,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                 return;
             }
 
-            if (val_t && !is_assignable(*val_t, *it->second.type)) {
+            if (val_t && !is_assignable(*val_t, *it->second.type) &&
+                !packed_backing_store(it->second.type, &*val_t)) {
                 emit_diagnostic(fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
                                             type_kind_display_name(*val_t),
                                             type_kind_display_name(*(it->second.type))),

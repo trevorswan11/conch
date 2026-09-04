@@ -97,6 +97,8 @@ enum class error : u8 {
     DYN_BY_VALUE_SELF,
     STATIC_REQUIREMENT_UNSUPPORTED,
     UNSUPPORTED_TARGET,
+    ILLEGAL_PACKED_FIELD,
+    ILLEGAL_PACKED_FIELD_ADDRESS,
 };
 
 using diagnostic  = diagnostic<error>;

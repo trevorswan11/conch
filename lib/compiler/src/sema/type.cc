@@ -86,6 +86,63 @@ auto is_i32(const type& t) noexcept -> bool {
     return info && info->bits == 32 && info->is_signed;
 }
 
+auto packed_field_bits(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32> {
+    switch (t.get_kind()) {
+    case type_kind::INT:       return int_width(t);
+    case type_kind::BOOL:      return 1U;
+    case type_kind::ISIZE:
+    case type_kind::USIZE:
+    case type_kind::POINTER:
+    case type_kind::REFERENCE: return ptr_bits;
+    case type_kind::F16:
+    case type_kind::F32:
+    case type_kind::F64:
+    case type_kind::F80:
+    case type_kind::F128:      return float_bits(t.get_kind());
+    case type_kind::ENUM:
+        if (const auto e{t.get_data().as_opt<types::enum_t>()}) {
+            return packed_field_bits(e->underlying, ptr_bits);
+        }
+        return stdx::none;
+    case type_kind::STRUCT:
+        if (const auto st{t.get_data().as_opt<types::struct_t>()}; st && st->is_bit_packed()) {
+            return packed_backing_bits(*st, ptr_bits);
+        }
+        return stdx::none;
+    case type_kind::ARRAY:
+        if (const auto arr{t.get_data().as_opt<types::array>()}) {
+            if (const auto elem{packed_field_bits(arr->underlying, ptr_bits)}) {
+                const u64 total{static_cast<u64>(*elem) * arr->len};
+                if (total <= 65'535) { return static_cast<u32>(total); }
+            }
+        }
+        return stdx::none;
+    default: return stdx::none;
+    }
+}
+
+auto packed_backing_bits(const types::struct_t& s, u32 ptr_bits) noexcept -> stdx::option<u32> {
+    u64 total{0};
+    for (const auto* field : s.fields) {
+        if (!field) { continue; }
+        const auto bits{packed_field_bits(*field, ptr_bits)};
+        if (!bits) { return stdx::none; }
+        total += *bits;
+    }
+    if (total < 1 || total > 65'535) { return stdx::none; }
+    return static_cast<u32>(total);
+}
+
+auto packed_field_offset(const types::struct_t& s, usize idx, u32 ptr_bits) noexcept -> u32 {
+    u64 offset{0};
+    for (usize i{0}; i < idx && i < s.fields.size(); ++i) {
+        if (s.fields[i] != nullptr) {
+            offset += packed_field_bits(*s.fields[i], ptr_bits).value_or(0);
+        }
+    }
+    return static_cast<u32>(offset);
+}
+
 auto is_signed_integer(const type& t) noexcept -> bool {
     if (const auto info{as_integer(t)}) { return info->is_signed; }
     return t.get_kind() == type_kind::ISIZE;
