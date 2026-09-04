@@ -4613,9 +4613,22 @@ namespace {
 struct cabi_offenders {
     bool has_dyn{false};
     bool has_ref{false};
+    bool has_nonabi_scalar{false};
 };
 
+// A leaf integer/float width with no defined C ABI representation. `usize`/`isize` map to
+// `size_t`/`intptr_t` and are always fine; `f80` is C `long double` on x86 and is already
+// rejected off-x86 by `target_has_x86_fp80`, so it is not flagged here.
+[[nodiscard]] auto is_nonabi_scalar(const type& t) noexcept -> bool {
+    if (t.get_kind() == type_kind::INT) {
+        const auto bits{int_width(t)};
+        return bits != 8 && bits != 16 && bits != 32 && bits != 64;
+    }
+    return t.get_kind() == type_kind::F16 || t.get_kind() == type_kind::F128;
+}
+
 [[nodiscard]] auto scan_cabi_offenders(const type& t, cabi_offenders acc = {}) -> cabi_offenders {
+    if (is_nonabi_scalar(t)) { acc.has_nonabi_scalar = true; }
     return t.get_data().visit(
         [&acc](types::dyn_t) {
             acc.has_dyn = true;
@@ -4644,6 +4657,31 @@ struct cabi_offenders {
                     "pointer has no C ABI representation",
                     kind,
                     name),
+        error::ILLEGAL_REFERENCE_FIELD,
+        location};
+}
+
+[[nodiscard]] auto cabi_nonabi_scalar_field(std::string_view       kind,
+                                            std::string_view       name,
+                                            std::string_view       type_name,
+                                            const source_location& location) -> diagnostic {
+    return diagnostic{
+        fmt::format("extern {} field '{}' has type '{}', which has no C ABI representation; "
+                    "extern signatures accept 8/16/32/64-bit integers, usize/isize, bool, f32, "
+                    "f64, f80",
+                    kind,
+                    name,
+                    type_name),
+        error::ILLEGAL_REFERENCE_FIELD,
+        location};
+}
+
+[[nodiscard]] auto cabi_nonabi_scalar(std::string_view type_name, const source_location& location)
+    -> diagnostic {
+    return diagnostic{
+        fmt::format("'{}' has no C ABI representation; extern signatures accept 8/16/32/64-bit "
+                    "integers, usize/isize, bool, f32, f64, f80",
+                    type_name),
         error::ILLEGAL_REFERENCE_FIELD,
         location};
 }
@@ -4732,6 +4770,13 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
             if (bad.has_ref) {
                 return last_type_.emplace(ctx_.poison_node(
                     resolving_, id, extern_reference_field("struct", ident.name, loc)));
+            }
+            if (bad.has_nonabi_scalar) {
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    cabi_nonabi_scalar_field(
+                        "struct", ident.name, ctx_.type_display_name(*field_type), loc)));
             }
         }
 
@@ -4836,6 +4881,13 @@ auto type_resolver::visit(ID id, const ast::union_expr& union_expr) -> void {
             if (bad.has_ref) {
                 return last_type_.emplace(ctx_.poison_node(
                     resolving_, id, extern_reference_field("union", ident.name, loc)));
+            }
+            if (bad.has_nonabi_scalar) {
+                return last_type_.emplace(ctx_.poison_node(
+                    resolving_,
+                    id,
+                    cabi_nonabi_scalar_field(
+                        "union", ident.name, ctx_.type_display_name(field_type), loc)));
             }
         }
 
@@ -5237,6 +5289,18 @@ auto type_resolver::visit(ast::node_id id, const ast::decl_stmt& decl) -> void {
     if (resolved_type.is_poison()) {
         sym.set_kind(symbol_kind::POISONED);
     } else {
+        // No field-level path covers `extern` fn signatures / globals themselves; check here.
+        if (decl.has_modifier(ast::decl_modifiers::EXTERN)) {
+            const auto bad{scan_cabi_offenders(resolved_type)};
+            if (bad.has_nonabi_scalar) {
+                const auto loc{decl.explicit_type ? resolving_.ast.location_of(*decl.explicit_type)
+                                                  : resolving_.ast.location_of(id)};
+                ctx_.poison_symbol(sym,
+                                   cabi_nonabi_scalar(ctx_.type_display_name(resolved_type), loc));
+                resolving_.set_sema_type(decl.name, ctx_.get_poison());
+                return last_type_.emplace(ctx_.poison_node(resolving_, id));
+            }
+        }
         if (decl.has_modifier(ast::decl_modifiers::DISCARDABLE)) {
             const auto fn_d{type_data.as_opt<types::function>()};
             if (!fn_d && !type_data.is<types::builtin_function>()) {
