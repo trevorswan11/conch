@@ -3503,7 +3503,7 @@ auto emitter::emit_enum_cast_guard(ast::node_id     site,
         i64         disc{static_cast<i64>(idx)};
         if (enumeration.value) {
             if (const auto ev{const_eval_.try_eval(*enumeration.value)}) {
-                disc = ev->as_int_opt().value_or(disc);
+                disc = static_cast<i64>(ev->as_int_opt().value_or(disc));
             }
         }
         discriminants.emplace_back(disc);
@@ -3923,7 +3923,7 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
     }
 
     if (const auto cv{const_eval_.try_eval(id)}) {
-        if (const auto i{cv->as_int_opt()}) { return value{*i, sema_type}; }
+        if (const auto i{cv->as_int_opt()}) { return value{static_cast<i64>(*i), sema_type}; }
         if (const auto b{cv->as_opt<bool>()}) { return value{*b, sema_type}; }
         if (const auto f{cv->as_opt<f64>()}) { return value{*f, sema_type}; }
     }
@@ -4290,7 +4290,7 @@ auto emitter::emit_initializer(ast::node_id id, const ast::initializer_expr& ini
     ASSERT(sema_type, "Initializer expression must have a resolved sema type");
 
     if (const auto cv{const_eval_.try_eval(id)}) {
-        if (const auto i{cv->as_int_opt()}) { return value{*i, sema_type}; }
+        if (const auto i{cv->as_int_opt()}) { return value{static_cast<i64>(*i), sema_type}; }
         if (const auto b{cv->as_opt<bool>()}) { return value{*b, sema_type}; }
         if (const auto f{cv->as_opt<f64>()}) { return value{*f, sema_type}; }
     }
@@ -4406,7 +4406,7 @@ auto emitter::emit_dot(ast::node_id id, const ast::dot_expr& dot) -> value {
 
     if (dot_object_is_type_namespace(dot)) {
         if (const auto cv{const_eval_.try_eval(id)}) {
-            if (const auto i{cv->as_int_opt()}) { return value{*i, sema_type}; }
+            if (const auto i{cv->as_int_opt()}) { return value{static_cast<i64>(*i), sema_type}; }
             if (const auto b{cv->as_opt<bool>()}) { return value{*b, sema_type}; }
             if (const auto f{cv->as_opt<f64>()}) { return value{*f, sema_type}; }
             if (cv->is<const_struct>() || cv->is<const_array>() || cv->is<const_union>() ||
@@ -4511,7 +4511,7 @@ auto emitter::emit_dot(ast::node_id id, const ast::dot_expr& dot) -> value {
     }
 
     if (const auto cv{const_eval_.try_eval(id)}) {
-        if (const auto i{cv->as_int_opt()}) { return value{*i, sema_type}; }
+        if (const auto i{cv->as_int_opt()}) { return value{static_cast<i64>(*i), sema_type}; }
         if (const auto b{cv->as_opt<bool>()}) { return value{*b, sema_type}; }
         if (const auto f{cv->as_opt<f64>()}) { return value{*f, sema_type}; }
         if (cv->is<const_struct>() || cv->is<const_array>() || cv->is<const_union>() ||

@@ -42,6 +42,25 @@ namespace ghoti::gir {
 
 namespace {
 
+// Compile-time integer results evaluate at 128-bit width (D4) but store in the narrowest
+// arm that holds them, so the common (<=64-bit) case is unchanged for every consumer.
+template <typename T>
+[[nodiscard]] auto make_scalar_const(T v, stdx::option<sema::type&> t) -> const_value {
+    if constexpr (std::is_floating_point_v<T>) {
+        return const_value{v, t};
+    } else if constexpr (std::is_signed_v<T>) {
+        const auto w{static_cast<i128>(v)};
+        if (w >= static_cast<i128>(INT64_MIN) && w <= static_cast<i128>(INT64_MAX)) {
+            return const_value{static_cast<i64>(w), t};
+        }
+        return const_value{w, t};
+    } else {
+        const auto w{static_cast<u128>(v)};
+        if (w <= static_cast<u128>(UINT64_MAX)) { return const_value{static_cast<u64>(w), t}; }
+        return const_value{w, t};
+    }
+}
+
 template <typename T>
 [[nodiscard]] auto fold_binary_arithmetic(syntax::token_type_t      op_type,
                                           T                         l,
@@ -50,35 +69,35 @@ template <typename T>
                                           sema::type&               bool_type,
                                           auto&& on_div_zero) -> stdx::option<const_value> {
     switch (op_type) {
-    case syntax::token_type_t::PLUS:  return const_value{l + r, res_type};
-    case syntax::token_type_t::MINUS: return const_value{l - r, res_type};
-    case syntax::token_type_t::STAR:  return const_value{l * r, res_type};
+    case syntax::token_type_t::PLUS:  return make_scalar_const(l + r, res_type);
+    case syntax::token_type_t::MINUS: return make_scalar_const(l - r, res_type);
+    case syntax::token_type_t::STAR:  return make_scalar_const(l * r, res_type);
     case syntax::token_type_t::SLASH:
         if (r == 0) { return on_div_zero("Division by zero in compile-time constant expression"); }
-        return const_value{l / r, res_type};
+        return make_scalar_const(l / r, res_type);
     case syntax::token_type_t::PERCENT:
         if constexpr (std::is_integral_v<T>) {
             if (r == 0) {
                 return on_div_zero("Modulo by zero in compile-time constant expression");
             }
-            return const_value{l % r, res_type};
+            return make_scalar_const(l % r, res_type);
         } else {
             return stdx::none;
         }
     case syntax::token_type_t::BW_AND:
-        if constexpr (std::is_integral_v<T>) { return const_value{l & r, res_type}; }
+        if constexpr (std::is_integral_v<T>) { return make_scalar_const(l & r, res_type); }
         return stdx::none;
     case syntax::token_type_t::BW_OR:
-        if constexpr (std::is_integral_v<T>) { return const_value{l | r, res_type}; }
+        if constexpr (std::is_integral_v<T>) { return make_scalar_const(l | r, res_type); }
         return stdx::none;
     case syntax::token_type_t::CARET:
-        if constexpr (std::is_integral_v<T>) { return const_value{l ^ r, res_type}; }
+        if constexpr (std::is_integral_v<T>) { return make_scalar_const(l ^ r, res_type); }
         return stdx::none;
     case syntax::token_type_t::SHL:
-        if constexpr (std::is_integral_v<T>) { return const_value{l << r, res_type}; }
+        if constexpr (std::is_integral_v<T>) { return make_scalar_const(l << r, res_type); }
         return stdx::none;
     case syntax::token_type_t::SHR:
-        if constexpr (std::is_integral_v<T>) { return const_value{l >> r, res_type}; }
+        if constexpr (std::is_integral_v<T>) { return make_scalar_const(l >> r, res_type); }
         return stdx::none;
     case syntax::token_type_t::EQ:    return const_value{l == r, bool_type};
     case syntax::token_type_t::NEQ:   return const_value{l != r, bool_type};
@@ -763,7 +782,7 @@ auto const_eval::eval_dot(ast::node_id, const ast::dot_expr& dot) -> stdx::optio
                                     i64 val{static_cast<i64>(idx)};
                                     if (e.value) {
                                         if (const auto ev{try_eval(*e.value)}) {
-                                            val = ev->as_int_opt().value_or(val);
+                                            val = static_cast<i64>(ev->as_int_opt().value_or(val));
                                         }
                                     }
                                     return const_value{const_enum{std::string{member_name}, val},
@@ -868,7 +887,7 @@ auto const_eval::eval_implicit_access(ast::node_id id, const ast::implicit_acces
                     auto val{static_cast<i64>(idx)};
                     if (e.value) {
                         if (const auto ev{try_eval(*e.value)}) {
-                            val = ev->as_int_opt().value_or(val);
+                            val = static_cast<i64>(ev->as_int_opt().value_or(val));
                         }
                     }
                     return const_value{const_enum{std::string{member_name}, val}, sema_type};
@@ -982,7 +1001,9 @@ auto const_eval::eval_module_access(ast::node_id, const ast::module_access_expr&
             if (vname == inner_name) {
                 i64 val{static_cast<i64>(idx)};
                 if (e.value) {
-                    if (const auto ev{try_eval(*e.value)}) { val = ev->as_int_opt().value_or(val); }
+                    if (const auto ev{try_eval(*e.value)}) {
+                        val = static_cast<i64>(ev->as_int_opt().value_or(val));
+                    }
                 }
                 return const_value{const_enum{std::string{inner_name}, val},
                                    module_->get_sema_type_opt(*decl->value)};
@@ -1159,15 +1180,42 @@ auto const_eval::fold_binary_values(syntax::token_type_t op_type,
         return const_value::make_poison();
     };
 
+    const auto is_wide_arm    = [](const const_value& v) { return v.is<i128>() || v.is<u128>(); };
+    const auto is_narrow_int  = [](const const_value& v) { return v.is<i64>() || v.is<u64>(); };
+    const auto is_signed_wide = [](const const_value& v) { return v.is<i64>() || v.is<i128>(); };
+
     if (lhs.is<f64>() || rhs.is<f64>()) {
-        const auto l{lhs.is<f64>() ? lhs.as<f64>()
-                                   : (lhs.is<i64>() ? static_cast<f64>(lhs.as<i64>())
-                                                    : static_cast<f64>(lhs.as<u64>()))};
-        const auto r{rhs.is<f64>() ? rhs.as<f64>()
-                                   : (rhs.is<i64>() ? static_cast<f64>(rhs.as<i64>())
-                                                    : static_cast<f64>(rhs.as<u64>()))};
+        const auto to_f64 = [](const const_value& v) -> f64 {
+            if (v.is<f64>()) { return v.as<f64>(); }
+            if (const auto u{v.as_uint_opt()}) { return static_cast<f64>(*u); }
+            return static_cast<f64>(v.as_int_opt().value_or(0));
+        };
         const auto res_type{lhs.get_type() ? lhs.get_type() : rhs.get_type()};
-        return fold_binary_arithmetic(op_type, l, r, res_type, bool_type, on_div_zero);
+        return fold_binary_arithmetic(
+            op_type, to_f64(lhs), to_f64(rhs), res_type, bool_type, on_div_zero);
+    }
+
+    // A wide (128-bit) operand pulls the whole operation into the 128-bit comptime domain.
+    if ((is_wide_arm(lhs) || is_wide_arm(rhs)) && (is_wide_arm(lhs) || is_narrow_int(lhs)) &&
+        (is_wide_arm(rhs) || is_narrow_int(rhs))) {
+        const auto res_type{lhs.get_type() ? lhs.get_type() : rhs.get_type()};
+        const bool unsigned_op{
+            (lhs.is<u64>() || lhs.is<u128>() || rhs.is<u64>() || rhs.is<u128>()) &&
+            !is_signed_wide(lhs)};
+        if (unsigned_op) {
+            return fold_binary_arithmetic(op_type,
+                                          lhs.as_uint_opt().value_or(0),
+                                          rhs.as_uint_opt().value_or(0),
+                                          res_type,
+                                          bool_type,
+                                          on_div_zero);
+        }
+        return fold_binary_arithmetic(op_type,
+                                      lhs.as_int_opt().value_or(0),
+                                      rhs.as_int_opt().value_or(0),
+                                      res_type,
+                                      bool_type,
+                                      on_div_zero);
     }
 
     const auto is_unsigned{(lhs.is<u64>() || rhs.is<u64>()) && !lhs.is<i64>()};

@@ -24,6 +24,13 @@
 #include "compiler/ast/type.hh"
 #include "compiler/module/module.hh"
 
+// 128-bit integers back compile-time evaluation (D4); GNU extension, clang/gcc only.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpedantic"
+using i128 = __int128;
+using u128 = unsigned __int128;
+#pragma clang diagnostic pop
+
 namespace ghoti::sema {
 
 enum class type_kind : u8 {

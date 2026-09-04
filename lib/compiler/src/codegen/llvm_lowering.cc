@@ -67,6 +67,13 @@ namespace {
     return false;
 }
 
+// Build an integer constant of `ty`'s width from a full 128-bit value.
+[[nodiscard]] auto wide_int_constant(u128 v, llvm::Type* ty) -> llvm::Constant* {
+    const std::array<u64, 2> words{static_cast<u64>(v), static_cast<u64>(v >> 64)};
+    const llvm::APInt        value{128, words};
+    return llvm::ConstantInt::get(ty->getContext(), value.zextOrTrunc(ty->getIntegerBitWidth()));
+}
+
 [[nodiscard]] auto to_llvm_callconv(ast::calling_convention conv) noexcept
     -> llvm::CallingConv::ID {
     switch (conv) {
@@ -860,6 +867,8 @@ auto llvm_lowering::const_to_llvm(const gir::const_value& cv, llvm::Type* ty) ->
         return llvm::ConstantInt::get(ty, static_cast<u64>(*i), true);
     }
     if (const auto u{cv.as_opt<u64>()}) { return llvm::ConstantInt::get(ty, *u, false); }
+    if (const auto w{cv.as_opt<i128>()}) { return wide_int_constant(static_cast<u128>(*w), ty); }
+    if (const auto w{cv.as_opt<u128>()}) { return wide_int_constant(*w, ty); }
     if (const auto f{cv.as_opt<f64>()}) { return llvm::ConstantFP::get(ty, *f); }
     if (const auto b{cv.as_opt<bool>()}) { return llvm::ConstantInt::getBool(context_, *b); }
     if (const auto e{cv.as_opt<gir::const_enum>()}) {
@@ -1155,6 +1164,18 @@ auto llvm_lowering::lower_value(const gir::value& val, const sema::type* expecte
                      : val.type    ? types_.translate(*val.type)
                                    : types_.get_int64_ty()};
             return llvm::ConstantInt::get(ty, u, false);
+        },
+        [this, &val, expected_type](i128 w) -> llvm::Value* {
+            auto* ty{expected_type ? types_.translate(*expected_type)
+                     : val.type    ? types_.translate(*val.type)
+                                   : types_.get_int64_ty()};
+            return wide_int_constant(static_cast<u128>(w), ty);
+        },
+        [this, &val, expected_type](u128 w) -> llvm::Value* {
+            auto* ty{expected_type ? types_.translate(*expected_type)
+                     : val.type    ? types_.translate(*val.type)
+                                   : types_.get_int64_ty()};
+            return wide_int_constant(w, ty);
         },
         [this, &val, expected_type](f64 f) -> llvm::Value* {
             auto* ty{expected_type ? types_.translate(*expected_type)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,6 +21,10 @@ namespace ghoti::sema { struct context; } // namespace ghoti::sema
 namespace ghoti::mod { struct module; }   // namespace ghoti::mod
 
 namespace ghoti::gir {
+
+// Decimal rendering for 128-bit integers (`std::to_string`/`fmt` lack an overload).
+[[nodiscard]] auto to_string(u128 v) -> std::string;
+[[nodiscard]] auto to_string(i128 v) -> std::string;
 
 class const_value;
 
@@ -65,6 +70,8 @@ class const_value {
   public:
     using data_t = stdx::variant<i64,
                                  u64,
+                                 i128,
+                                 u128,
                                  f64,
                                  bool,
                                  std::string,
@@ -108,20 +115,43 @@ class const_value {
 
     [[nodiscard]] constexpr auto is_poison() const noexcept -> bool { return is<poison_val>(); }
 
-    [[nodiscard]] constexpr auto as_int_opt() const noexcept -> stdx::option<i64> {
+    // Signed view of any integer-like arm, widened to the 128-bit comptime domain (D4).
+    [[nodiscard]] constexpr auto as_int_opt() const noexcept -> stdx::option<i128> {
         if (is<i64>()) { return as<i64>(); }
-        if (is<u64>()) { return static_cast<i64>(as<u64>()); }
+        if (is<u64>()) { return static_cast<i128>(as<u64>()); }
+        if (is<i128>()) { return as<i128>(); }
+        if (is<u128>()) { return static_cast<i128>(as<u128>()); }
         if (is<const_enum>()) { return as<const_enum>().value; }
         return stdx::none;
     }
 
-    [[nodiscard]] constexpr auto as_uint_opt() const noexcept -> stdx::option<u64> {
+    [[nodiscard]] constexpr auto as_uint_opt() const noexcept -> stdx::option<u128> {
         if (is<u64>()) { return as<u64>(); }
+        if (is<u128>()) { return as<u128>(); }
         if (is<i64>()) {
-            if (const auto val{as<i64>()}; val >= 0) { return static_cast<u64>(val); }
+            if (const auto val{as<i64>()}; val >= 0) { return static_cast<u128>(val); }
+        }
+        if (is<i128>()) {
+            if (const auto val{as<i128>()}; val >= 0) { return static_cast<u128>(val); }
         }
         if (const auto en{as_opt<const_enum>()}) {
-            if (en->value >= 0) { return static_cast<u64>(en->value); }
+            if (en->value >= 0) { return static_cast<u128>(en->value); }
+        }
+        return stdx::none;
+    }
+
+    // Narrow views that yield a value only when it fits the 64-bit range.
+    [[nodiscard]] constexpr auto as_i64_opt() const noexcept -> stdx::option<i64> {
+        if (const auto v{as_int_opt()};
+            v && *v >= static_cast<i128>(INT64_MIN) && *v <= static_cast<i128>(INT64_MAX)) {
+            return static_cast<i64>(*v);
+        }
+        return stdx::none;
+    }
+
+    [[nodiscard]] constexpr auto as_u64_opt() const noexcept -> stdx::option<u64> {
+        if (const auto v{as_uint_opt()}; v && *v <= static_cast<u128>(UINT64_MAX)) {
+            return static_cast<u64>(*v);
         }
         return stdx::none;
     }

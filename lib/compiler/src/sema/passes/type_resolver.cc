@@ -3954,8 +3954,9 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
                 const auto lo_i{lo->as_int_opt()};
                 const auto hi_i{hi->as_int_opt()};
                 if (!lo_i || !hi_i) { continue; }
-                const i64 hi_closed{inclusive ? *hi_i : *hi_i - 1};
-                if (hi_closed < *lo_i) {
+                const auto lo_closed{static_cast<i64>(*lo_i)};
+                const i64  hi_closed{static_cast<i64>(inclusive ? *hi_i : *hi_i - 1)};
+                if (hi_closed < lo_closed) {
                     return last_type_.emplace(ctx_.poison_node(
                         resolving_,
                         id,
@@ -3963,10 +3964,11 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
                         error::ILLEGAL_MATCH_PATTERN,
                         resolving_.ast.location_of(*pattern)));
                 }
-                const_intervals.emplace_back(*lo_i, hi_closed, pattern);
+                const_intervals.emplace_back(lo_closed, hi_closed, pattern);
             } else if (const auto pv{interval_probe.try_eval(*pattern)}) {
                 if (const auto v{pv->as_int_opt()}) {
-                    const_intervals.emplace_back(*v, *v, pattern);
+                    const_intervals.emplace_back(
+                        static_cast<i64>(*v), static_cast<i64>(*v), pattern);
                 }
             }
         }

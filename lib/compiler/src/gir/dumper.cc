@@ -11,6 +11,7 @@
 #include <stdx/option.hh>
 #include <stdx/types.hh>
 
+#include "compiler/gir/const_value.hh"
 #include "compiler/gir/function.hh"
 #include "compiler/gir/instruction.hh"
 #include "compiler/gir/module.hh"
@@ -37,6 +38,8 @@ auto format_value(const value& val) -> std::string {
         [](void_val) { return "void"; },
         [](undefined_val) { return "undefined"; },
         [](nullptr_val) { return "nullptr"; },
+        [](i128 v) { return to_string(v); },
+        [](u128 v) { return to_string(v); },
         [](auto v) { return fmt::format("{}", v); });
 }
 

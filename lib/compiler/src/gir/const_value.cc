@@ -21,6 +21,25 @@
 
 namespace ghoti::gir {
 
+auto to_string(u128 v) -> std::string {
+    if (v == 0) { return "0"; }
+    std::string digits;
+    while (v != 0) {
+        digits += static_cast<char>('0' + static_cast<int>(v % 10));
+        v /= 10;
+    }
+    std::ranges::reverse(digits);
+    return digits;
+}
+
+auto to_string(i128 v) -> std::string {
+    if (v < 0) {
+        // Negate in the unsigned domain so `i128` min does not overflow.
+        return "-" + to_string(static_cast<u128>(-(v + 1)) + 1);
+    }
+    return to_string(static_cast<u128>(v));
+}
+
 auto const_array::operator==(const const_array& other) const noexcept -> bool {
     return elements == other.elements;
 }
@@ -118,6 +137,8 @@ auto const_value::mangle() const -> std::string {
     return data_.visit(
         [](i64 v) { return std::to_string(v); },
         [](u64 v) { return std::to_string(v); },
+        [](i128 v) { return to_string(v); },
+        [](u128 v) { return to_string(v); },
         [](f64 v) { return fmt::format("{}", v); },
         [](bool v) -> std::string { return v ? "true" : "false"; },
         [](const std::string& v) {
