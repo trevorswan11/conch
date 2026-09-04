@@ -1768,7 +1768,8 @@ auto emitter::emit_binary(ast::node_id id, const ast::binary_expr& binary) -> va
 
     const auto lhs{emit_expression(binary.lhs)};
     const auto rhs{emit_expression(binary.rhs)};
-    return value{emit_checked_binary(*kind_opt, lhs, rhs, *sema_type, id), sema_type};
+    return value{emit_checked_binary(*kind_opt, lhs, rhs, *sema_type, id, is_wrapping_op(op_type)),
+                 sema_type};
 }
 
 auto emitter::emit_unary(ast::node_id id, const ast::unary_expr& unary) -> value {
@@ -1784,7 +1785,8 @@ auto emitter::emit_unary(ast::node_id id, const ast::unary_expr& unary) -> value
         operand.type->get_kind() == sema::type_kind::POINTER) {
         return pointer_to_bool(operand, true);
     }
-    const auto dest{emit_checked_unary(*kind_opt, operand, *sema_type, id)};
+    const auto dest{
+        emit_checked_unary(*kind_opt, operand, *sema_type, id, is_wrapping_op(op_type))};
     return value{dest, sema_type};
 }
 
@@ -2061,8 +2063,9 @@ auto emitter::emit_packed_field_assign(ast::node_id                id,
         if (const auto b{syntax::token_type::get_compound_base_op(op_type)}) { base_tok = *b; }
         const auto base_kind{map_binary_op(base_tok).value_or(instruction_kind::ADD)};
         const auto rhs{emit_expression(assign.rhs)};
-        new_field =
-            value{emit_checked_binary(base_kind, old_field, rhs, field_type, id), field_type};
+        new_field = value{emit_checked_binary(
+                              base_kind, old_field, rhs, field_type, id, is_wrapping_op(base_tok)),
+                          field_type};
     }
 
     emit_packed_store(dot, new_field);
@@ -2109,24 +2112,32 @@ auto emitter::emit_assignment(ast::node_id id, const ast::assignment_expr& assig
 
     switch (op_type) {
     case syntax::token_type_t::PLUS_ASSIGN:
+    case syntax::token_type_t::PLUS_PERCENT_ASSIGN:
     case syntax::token_type_t::MINUS_ASSIGN:
+    case syntax::token_type_t::MINUS_PERCENT_ASSIGN:
     case syntax::token_type_t::STAR_ASSIGN:
+    case syntax::token_type_t::STAR_PERCENT_ASSIGN:
     case syntax::token_type_t::SLASH_ASSIGN:
     case syntax::token_type_t::PERCENT_ASSIGN:
     case syntax::token_type_t::BW_AND_ASSIGN:
     case syntax::token_type_t::BW_OR_ASSIGN:
     case syntax::token_type_t::XOR_ASSIGN:
     case syntax::token_type_t::SHL_ASSIGN:
-    case syntax::token_type_t::SHR_ASSIGN:     {
+    case syntax::token_type_t::SHL_PERCENT_ASSIGN:
+    case syntax::token_type_t::SHR_ASSIGN:           {
         auto base_tok{op_type};
         if (const auto b{syntax::token_type::get_compound_base_op(op_type)}) { base_tok = *b; }
         const auto base_kind{map_binary_op(base_tok).value_or(instruction_kind::ADD)};
         auto&      target_type{*lhs_lval.type};
         const auto loaded{builder_.emit_load(lhs_lval, target_type)};
         const auto rhs{emit_expression(assign.rhs)};
-        const auto res_val{
-            value{emit_checked_binary(base_kind, value{loaded, target_type}, rhs, target_type, id),
-                  target_type}};
+        const auto res_val{value{emit_checked_binary(base_kind,
+                                                     value{loaded, target_type},
+                                                     rhs,
+                                                     target_type,
+                                                     id,
+                                                     is_wrapping_op(base_tok)),
+                                 target_type}};
         builder_.emit_store(lhs_lval, res_val);
         return res_val;
     }
@@ -3879,10 +3890,11 @@ auto emitter::emit_checked_binary(instruction_kind kind,
                                   value            lhs,
                                   value            rhs,
                                   sema::type&      result_type,
-                                  ast::node_id) -> local_id {
+                                  ast::node_id,
+                                  bool wrapping) -> local_id {
     // Only integer arithmetic can trap, and only signed +/-/* can overflow.
     const auto k{result_type.get_kind()};
-    const bool checkable{runtime_safety_ && sema::is_integer(k) &&
+    const bool checkable{!wrapping && runtime_safety_ && sema::is_integer(k) &&
                          (((kind == instruction_kind::ADD || kind == instruction_kind::SUB ||
                             kind == instruction_kind::MUL) &&
                            sema::is_signed_integer(result_type)) ||
@@ -3894,8 +3906,9 @@ auto emitter::emit_checked_binary(instruction_kind kind,
 auto emitter::emit_checked_unary(instruction_kind kind,
                                  value            operand,
                                  sema::type&      result_type,
-                                 ast::node_id) -> local_id {
-    const bool checkable{runtime_safety_ && kind == instruction_kind::NEG &&
+                                 ast::node_id,
+                                 bool wrapping) -> local_id {
+    const bool checkable{!wrapping && runtime_safety_ && kind == instruction_kind::NEG &&
                          sema::is_signed_integer(result_type)};
     return builder_.emit_unary(kind, std::move(operand), result_type, checkable);
 }

@@ -114,6 +114,37 @@ template <typename T>
     }
 }
 
+// The plain (never-overflow-checked-at-fold-time) base op a wrapping token folds through.
+[[nodiscard]] constexpr auto wrapping_base_op(syntax::token_type_t tok) noexcept
+    -> stdx::option<syntax::token_type_t> {
+    switch (tok) {
+    case syntax::token_type_t::PLUS_PERCENT:  return syntax::token_type_t::PLUS;
+    case syntax::token_type_t::MINUS_PERCENT: return syntax::token_type_t::MINUS;
+    case syntax::token_type_t::STAR_PERCENT:  return syntax::token_type_t::STAR;
+    case syntax::token_type_t::SHL_PERCENT:   return syntax::token_type_t::SHL;
+    default:                                  return stdx::none;
+    }
+}
+
+// Truncates `folded`'s integer value to `bits` (two's-complement), rebuilding it at `res_type`.
+// A no-op past 128 bits: the fold already happened in the 128-bit comptime domain.
+[[nodiscard]] auto wrap_to_width(const const_value&        folded,
+                                 u16                       bits,
+                                 bool                      is_signed,
+                                 stdx::option<sema::type&> res_type) -> const_value {
+    if (bits == 0 || bits >= 128) { return folded; }
+    const u128 mask{(u128{1} << bits) - 1};
+    if (!is_signed) { return make_scalar_const(folded.as_uint_opt().value_or(0) & mask, res_type); }
+    const auto raw{static_cast<u128>(folded.as_int_opt().value_or(0))};
+    const auto masked{raw & mask};
+    const u128 sign_bit{u128{1} << (bits - 1)};
+    if (masked & sign_bit) {
+        return make_scalar_const(static_cast<i128>(masked) - static_cast<i128>(mask) - i128{1},
+                                 res_type);
+    }
+    return make_scalar_const(static_cast<i128>(masked), res_type);
+}
+
 } // namespace
 
 auto const_eval::try_eval(ast::node_id id) -> stdx::option<const_value> {
@@ -1202,6 +1233,32 @@ auto const_eval::fold_binary_values(syntax::token_type_t op_type,
                                     const const_value&   rhs,
                                     ast::node_id         id) -> stdx::option<const_value> {
     PROFILE_FUNCTION();
+
+    // Wrapping ops fold as their plain base op, then truncate to the operand's concrete width
+    // (two's-complement wrap). A width-less `constexpr_int` result has nothing to wrap to, so it
+    // folds exactly as the plain operator would.
+    if (const auto plain_op{wrapping_base_op(op_type)}) {
+        const auto folded{fold_binary_values(*plain_op, lhs, rhs, id)};
+        if (!folded || folded->is_poison()) { return folded; }
+        const auto res_type{folded->get_type()};
+        if (!res_type) { return folded; }
+        if (res_type->get_kind() == sema::type_kind::INT) {
+            return wrap_to_width(
+                *folded, sema::int_width(*res_type), sema::is_signed_integer(*res_type), res_type);
+        }
+        if (res_type->get_kind() == sema::type_kind::ISIZE ||
+            res_type->get_kind() == sema::type_kind::USIZE) {
+            const auto ptr_bits{
+                codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits};
+            return wrap_to_width(*folded,
+                                 static_cast<u16>(ptr_bits),
+                                 res_type->get_kind() == sema::type_kind::ISIZE,
+                                 res_type);
+        }
+        // `constexpr_int` (or anything else non-scalar-width): no wrap, plain-op result stands.
+        return folded;
+    }
+
     auto& bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
 
     const auto on_div_zero = [&](std::string_view msg) -> const_value {
@@ -1356,6 +1413,27 @@ auto const_eval::eval_unary(ast::node_id id, const ast::unary_expr& unary)
             return const_value{-static_cast<i64>(val->as<u64>()), val->get_type()};
         }
         if (val->is<f64>()) { return const_value{-val->as<f64>(), val->get_type()}; }
+    } else if (op_type == syntax::token_type_t::MINUS_PERCENT) {
+        // '-%' is restricted to signed integers (and width-less `constexpr_int`) by sema, so
+        // only the signed arms are meaningful here; negate, then wrap to the concrete width —
+        // well-defined even at INT_MIN, where plain '-' would trap under --runtime-safety.
+        stdx::option<const_value> negated;
+        if (val->is<i64>()) { negated.emplace(-val->as<i64>(), val->get_type()); }
+        if (val->is<i128>()) { negated.emplace(-val->as<i128>(), val->get_type()); }
+        if (!negated) { return stdx::none; }
+
+        const auto res_type{negated->get_type()};
+        if (res_type && res_type->get_kind() == sema::type_kind::INT) {
+            return wrap_to_width(
+                *negated, sema::int_width(*res_type), /*is_signed=*/true, res_type);
+        }
+        if (res_type && res_type->get_kind() == sema::type_kind::ISIZE) {
+            const auto ptr_bits{
+                codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits};
+            return wrap_to_width(
+                *negated, static_cast<u16>(ptr_bits), /*is_signed=*/true, res_type);
+        }
+        return negated; // `constexpr_int`: no wrap, plain negate stands.
     } else if (op_type == syntax::token_type_t::BANG) {
         if (val->is<bool>()) { return const_value{!val->as<bool>(), val->get_type()}; }
     } else if (op_type == syntax::token_type_t::NOT) {

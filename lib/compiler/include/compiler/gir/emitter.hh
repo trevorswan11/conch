@@ -152,15 +152,18 @@ class emitter {
                               ast::expr_handle src_expr) -> void;
 
     auto emit_null_pointer_check(value ptr, ast::node_id site) -> void;
+    // `wrapping` forces the overflow guard off unconditionally, for `+% -% *% <<%` / `-%x`
     auto emit_checked_binary(instruction_kind kind,
                              value            lhs,
                              value            rhs,
                              sema::type&      result_type,
-                             ast::node_id     site) -> local_id;
+                             ast::node_id     site,
+                             bool             wrapping = false) -> local_id;
     auto emit_checked_unary(instruction_kind kind,
                             value            operand,
                             sema::type&      result_type,
-                            ast::node_id     site) -> local_id;
+                            ast::node_id     site,
+                            bool             wrapping = false) -> local_id;
 
     auto pointer_to_bool(value ptr, bool invert) -> value;
     auto coerce_condition(value cond) -> value;
@@ -320,36 +323,53 @@ class emitter {
         return stdx::none;
     }
 
+    // Whether `tok` is one of the wrapping (never-trap) operator tokens: `+% -% *% <<%` binary,
+    // or `-%` prefix (its compound `_ASSIGN` form is unwrapped to the base token beforehand).
+    [[nodiscard]] static constexpr auto is_wrapping_op(syntax::token_type_t tok) noexcept -> bool {
+        switch (tok) {
+        case syntax::token_type_t::PLUS_PERCENT:
+        case syntax::token_type_t::MINUS_PERCENT:
+        case syntax::token_type_t::STAR_PERCENT:
+        case syntax::token_type_t::SHL_PERCENT:   return true;
+        default:                                  return false;
+        }
+    }
+
     [[nodiscard]] static constexpr auto map_binary_op(syntax::token_type_t tok) noexcept
         -> stdx::option<instruction_kind> {
         switch (tok) {
-        case syntax::token_type_t::PLUS:    return instruction_kind::ADD;
-        case syntax::token_type_t::MINUS:   return instruction_kind::SUB;
-        case syntax::token_type_t::STAR:    return instruction_kind::MUL;
-        case syntax::token_type_t::SLASH:   return instruction_kind::DIV;
-        case syntax::token_type_t::PERCENT: return instruction_kind::MOD;
-        case syntax::token_type_t::BW_AND:  return instruction_kind::AND;
-        case syntax::token_type_t::BW_OR:   return instruction_kind::OR;
-        case syntax::token_type_t::CARET:   return instruction_kind::XOR;
-        case syntax::token_type_t::SHL:     return instruction_kind::SHL;
-        case syntax::token_type_t::SHR:     return instruction_kind::SHR;
-        case syntax::token_type_t::EQ:      return instruction_kind::EQ;
-        case syntax::token_type_t::NEQ:     return instruction_kind::NE;
-        case syntax::token_type_t::LT:      return instruction_kind::LT;
-        case syntax::token_type_t::LT_EQ:   return instruction_kind::LE;
-        case syntax::token_type_t::GT:      return instruction_kind::GT;
-        case syntax::token_type_t::GT_EQ:   return instruction_kind::GE;
-        default:                            return stdx::none;
+        case syntax::token_type_t::PLUS:          return instruction_kind::ADD;
+        case syntax::token_type_t::PLUS_PERCENT:  return instruction_kind::ADD;
+        case syntax::token_type_t::MINUS:         return instruction_kind::SUB;
+        case syntax::token_type_t::MINUS_PERCENT: return instruction_kind::SUB;
+        case syntax::token_type_t::STAR:          return instruction_kind::MUL;
+        case syntax::token_type_t::STAR_PERCENT:  return instruction_kind::MUL;
+        case syntax::token_type_t::SLASH:         return instruction_kind::DIV;
+        case syntax::token_type_t::PERCENT:       return instruction_kind::MOD;
+        case syntax::token_type_t::BW_AND:        return instruction_kind::AND;
+        case syntax::token_type_t::BW_OR:         return instruction_kind::OR;
+        case syntax::token_type_t::CARET:         return instruction_kind::XOR;
+        case syntax::token_type_t::SHL:           return instruction_kind::SHL;
+        case syntax::token_type_t::SHL_PERCENT:   return instruction_kind::SHL;
+        case syntax::token_type_t::SHR:           return instruction_kind::SHR;
+        case syntax::token_type_t::EQ:            return instruction_kind::EQ;
+        case syntax::token_type_t::NEQ:           return instruction_kind::NE;
+        case syntax::token_type_t::LT:            return instruction_kind::LT;
+        case syntax::token_type_t::LT_EQ:         return instruction_kind::LE;
+        case syntax::token_type_t::GT:            return instruction_kind::GT;
+        case syntax::token_type_t::GT_EQ:         return instruction_kind::GE;
+        default:                                  return stdx::none;
         }
     }
 
     [[nodiscard]] static constexpr auto map_unary_op(syntax::token_type_t tok) noexcept
         -> stdx::option<instruction_kind> {
         switch (tok) {
-        case syntax::token_type_t::MINUS: return instruction_kind::NEG;
-        case syntax::token_type_t::BANG:  return instruction_kind::NOT;
-        case syntax::token_type_t::NOT:   return instruction_kind::BITNOT;
-        default:                          return stdx::none;
+        case syntax::token_type_t::MINUS:         return instruction_kind::NEG;
+        case syntax::token_type_t::MINUS_PERCENT: return instruction_kind::NEG;
+        case syntax::token_type_t::BANG:          return instruction_kind::NOT;
+        case syntax::token_type_t::NOT:           return instruction_kind::BITNOT;
+        default:                                  return stdx::none;
         }
     }
 

@@ -45,6 +45,7 @@
 #include "compiler/sema/symbol.hh"
 #include "compiler/sema/type.hh"
 #include "compiler/syntax/builtins.hh"
+#include "compiler/syntax/operators.hh"
 #include "compiler/syntax/token_type.hh"
 #include "support/diagnostic.hh"
 
@@ -2584,6 +2585,16 @@ auto type_resolver::visit(ast::node_id, const ast::cfg_stmt&) -> void {
     UNREACHABLE("cfg_stmt must be removed by the cfg pass before type resolution");
 }
 
+namespace {
+
+// A wrapping (`+% -% *% <<%` / `-%`) operator's operand: a concrete integer, or a width-less
+// `constexpr_int` (which wraps as the plain operator, having no fixed width to wrap to).
+[[nodiscard]] auto wrapping_operand_ok(const type& t) noexcept -> bool {
+    return is_integer(t.get_kind()) || t.get_kind() == type_kind::CONSTEXPR_INT;
+}
+
+} // namespace
+
 auto type_resolver::visit(ast::node_id id, const ast::assignment_expr& assign) -> void {
     PROFILE_FUNCTION();
     {
@@ -2594,6 +2605,28 @@ auto type_resolver::visit(ast::node_id id, const ast::assignment_expr& assign) -
     {
         const structural_guard g{implicit_type_stack_, lhs_type};
         TRY_RESOLVE(assign.rhs);
+    }
+    auto& rhs_type{*last_type_};
+
+    switch (id.get_token_type()) {
+    case syntax::token_type_t::PLUS_PERCENT_ASSIGN:
+    case syntax::token_type_t::MINUS_PERCENT_ASSIGN:
+    case syntax::token_type_t::STAR_PERCENT_ASSIGN:
+    case syntax::token_type_t::SHL_PERCENT_ASSIGN:
+        if (!lhs_type.is_poison() && !rhs_type.is_poison() &&
+            (!wrapping_operand_ok(lhs_type) || !wrapping_operand_ok(rhs_type))) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("operator '{}' expects two integer operands; found '{}' and '{}'",
+                            *syntax::get_operator_opt(id.get_token_type()),
+                            ctx_.type_display_name(lhs_type),
+                            ctx_.type_display_name(rhs_type)),
+                error::OPERATOR_TYPE_MISMATCH,
+                resolving_.ast.location_of(id)));
+        }
+        break;
+    default: break;
     }
 
     // Only pass 3 can verify assignment allowance due to mutability semantics
@@ -2650,6 +2683,25 @@ auto type_resolver::visit(ast::node_id id, const ast::binary_expr& binary) -> vo
     case syntax::token_type_t::BOOLEAN_OR:
         last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::BOOL));
         break;
+    case syntax::token_type_t::PLUS_PERCENT:
+    case syntax::token_type_t::MINUS_PERCENT:
+    case syntax::token_type_t::STAR_PERCENT:
+    case syntax::token_type_t::SHL_PERCENT:   {
+        if (!lhs_type->is_poison() && !rhs_type.is_poison() &&
+            (!wrapping_operand_ok(*lhs_type) || !wrapping_operand_ok(rhs_type))) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("operator '{}' expects two integer operands; found '{}' and '{}'",
+                            *syntax::get_operator_opt(id.get_token_type()),
+                            ctx_.type_display_name(*lhs_type),
+                            ctx_.type_display_name(rhs_type)),
+                error::OPERATOR_TYPE_MISMATCH,
+                resolving_.ast.location_of(id)));
+        }
+        last_type_.emplace(lhs_type);
+        break;
+    }
     default: last_type_.emplace(lhs_type); break;
     }
 
@@ -4219,6 +4271,21 @@ auto type_resolver::visit(ast::node_id id, const ast::unary_expr& node) -> void 
     TRY_RESOLVE(node.rhs);
     if (id.get_token_type() == syntax::token_type_t::BANG) {
         last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::BOOL));
+    } else if (id.get_token_type() == syntax::token_type_t::MINUS_PERCENT) {
+        // Mirrors plain unary '-': signed integers only (an unsigned '-x' is already rejected
+        // there too); '-%' only changes overflow behavior, not operand typing.
+        auto&      operand_type{*last_type_};
+        const bool ok{operand_type.get_kind() == type_kind::CONSTEXPR_INT ||
+                      is_signed_integer(operand_type)};
+        if (!operand_type.is_poison() && !ok) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("operator '-%' expects a signed integer operand; found '{}'",
+                            ctx_.type_display_name(operand_type)),
+                error::OPERATOR_TYPE_MISMATCH,
+                resolving_.ast.location_of(id)));
+        }
     }
     resolving_.set_sema_type(id, *last_type_);
 }
