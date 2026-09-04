@@ -82,6 +82,12 @@ struct sema_test_context {
         return *analyzer.get_pool()[{kind, Mutability, std::forward<Markers>(markers)...}];
     }
 
+    // The pooled `iN` / `uN` integer type
+    template <sema::types::mutability_modifiers Mutability = sema::types::mut::CONSTANT>
+    [[nodiscard]] auto get_int_type(u16 bits, bool is_signed) -> auto& {
+        return *analyzer.get_pool()[{sema::type_kind::INT, Mutability, bits, is_signed}];
+    }
+
     static auto check_poisoned(const sema::symbol& sym) -> void;
     auto        check_poisoned(const sema::type& type) -> void;
     auto        check_poisoned(const sema::symbol& sym, const sema::type& type) -> void;

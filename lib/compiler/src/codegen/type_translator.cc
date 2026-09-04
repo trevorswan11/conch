@@ -18,16 +18,9 @@ namespace ghoti::codegen {
 auto type_translator::translate(const sema::type& type) -> llvm::Type* {
     PROFILE_FUNCTION();
     switch (type.get_kind()) {
-    case sema::type_kind::I32:
-    case sema::type_kind::U32:       return get_int32_ty();
-    case sema::type_kind::I64:
-    case sema::type_kind::U64:       return get_int64_ty();
+    case sema::type_kind::INT:       return llvm::IntegerType::get(context_, sema::int_width(type));
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:     return get_usize_ty();
-    case sema::type_kind::I8:
-    case sema::type_kind::U8:        return get_int8_ty();
-    case sema::type_kind::I16:
-    case sema::type_kind::U16:       return get_int16_ty();
     case sema::type_kind::BOOL:      return get_int1_ty();
     case sema::type_kind::F32:       return get_float_ty();
     case sema::type_kind::F64:       return get_double_ty();

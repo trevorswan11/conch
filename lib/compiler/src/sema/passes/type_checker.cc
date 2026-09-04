@@ -179,8 +179,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                         emit_diagnostic(
                             fmt::format("Operator '{}' cannot be applied to types '{}' and '{}'",
                                         gir::instruction_kind_name(inst.kind),
-                                        type_kind_display_name(lhs_t->get_kind()),
-                                        type_kind_display_name(rhs_t->get_kind())),
+                                        type_kind_display_name(*lhs_t),
+                                        type_kind_display_name(*rhs_t)),
                             error::OPERATOR_TYPE_MISMATCH,
                             inst.location);
                     }
@@ -213,8 +213,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     emit_diagnostic(
                         fmt::format("Operator '{}' cannot be applied to types '{}' and '{}'",
                                     gir::instruction_kind_name(inst.kind),
-                                    type_kind_display_name(lhs_t->get_kind()),
-                                    type_kind_display_name(rhs_t->get_kind())),
+                                    type_kind_display_name(*lhs_t),
+                                    type_kind_display_name(*rhs_t)),
                         error::OPERATOR_TYPE_MISMATCH,
                         inst.location);
                 }
@@ -243,8 +243,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     emit_diagnostic(
                         fmt::format("Operator '{}' cannot be applied to types '{}' and '{}'",
                                     gir::instruction_kind_name(inst.kind),
-                                    type_kind_display_name(lhs_t->get_kind()),
-                                    type_kind_display_name(rhs_t->get_kind())),
+                                    type_kind_display_name(*lhs_t),
+                                    type_kind_display_name(*rhs_t)),
                         error::OPERATOR_TYPE_MISMATCH,
                         inst.location);
                 }
@@ -272,16 +272,16 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     emit_diagnostic(
                         fmt::format("Comparison operator cannot be applied to aggregate types "
                                     "'{}' and '{}'",
-                                    type_kind_display_name(lhs_t->get_kind()),
-                                    type_kind_display_name(rhs_t->get_kind())),
+                                    type_kind_display_name(*lhs_t),
+                                    type_kind_display_name(*rhs_t)),
                         error::OPERATOR_TYPE_MISMATCH,
                         inst.location);
                 } else if (!is_assignable(*lhs_t, *rhs_t) && !is_assignable(*rhs_t, *lhs_t)) {
                     emit_diagnostic(
                         fmt::format("Comparison operator cannot be applied to incompatible types "
                                     "'{}' and '{}'",
-                                    type_kind_display_name(lhs_t->get_kind()),
-                                    type_kind_display_name(rhs_t->get_kind())),
+                                    type_kind_display_name(*lhs_t),
+                                    type_kind_display_name(*rhs_t)),
                         error::OPERATOR_TYPE_MISMATCH,
                         inst.location);
                 }
@@ -311,8 +311,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     emit_diagnostic(
                         fmt::format("Relational operator cannot be applied to non-numeric or "
                                     "incompatible types '{}' and '{}'",
-                                    type_kind_display_name(lhs_t->get_kind()),
-                                    type_kind_display_name(rhs_t->get_kind())),
+                                    type_kind_display_name(*lhs_t),
+                                    type_kind_display_name(*rhs_t)),
                         error::OPERATOR_TYPE_MISMATCH,
                         inst.location);
                 }
@@ -333,7 +333,7 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
         if (!inst.operands.empty()) {
             const auto op_t{get_operand_type(inst.operands[0])};
             if (op_t && !op_t->is_poison()) {
-                if (!is_signed_integer(op_t->get_kind()) && !is_float(op_t->get_kind())) {
+                if (!is_signed_integer(*op_t) && !is_float(op_t->get_kind())) {
                     emit_diagnostic("Unary negation '-' requires a signed integer or float operand",
                                     error::OPERATOR_TYPE_MISMATCH,
                                     inst.location);
@@ -414,7 +414,7 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
         } else {
             if (inst.operands.empty() || inst.operands[0].data.is<gir::void_val>()) {
                 emit_diagnostic(fmt::format("Empty return in function expecting return type '{}'",
-                                            type_kind_display_name(expected_ret_t.get_kind())),
+                                            type_kind_display_name(expected_ret_t)),
                                 error::RETURN_TYPE_MISMATCH,
                                 inst.location);
             } else if (inst.operands[0].data.is<gir::undefined_val>()) {
@@ -422,7 +422,7 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                 if (!ret_t || ret_t->get_kind() != type_kind::NORETURN) {
                     emit_diagnostic(fmt::format("Function expecting return type '{}' does not "
                                                 "return a value on all code paths",
-                                                type_kind_display_name(expected_ret_t.get_kind())),
+                                                type_kind_display_name(expected_ret_t)),
                                     error::RETURN_TYPE_MISMATCH,
                                     inst.location);
                 }
@@ -432,8 +432,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     emit_diagnostic(
                         fmt::format("Return value of type '{}' is not assignable to function "
                                     "return type '{}'",
-                                    type_kind_display_name(ret_t->get_kind()),
-                                    type_kind_display_name(expected_ret_t.get_kind())),
+                                    type_kind_display_name(*ret_t),
+                                    type_kind_display_name(expected_ret_t)),
                         error::RETURN_TYPE_MISMATCH,
                         inst.location);
                 }
@@ -467,8 +467,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                                     fmt::format("Argument {} of type '{}' is not assignable to "
                                                 "parameter type '{}' in call to '{}'",
                                                 i + 1,
-                                                type_kind_display_name(arg_t->get_kind()),
-                                                type_kind_display_name(params[i]->type.get_kind()),
+                                                type_kind_display_name(*arg_t),
+                                                type_kind_display_name(params[i]->type),
                                                 *inst.callee_name),
                                     error::TYPE_MISMATCH,
                                     inst.location);
@@ -494,8 +494,8 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                                 fmt::format("Argument {} of type '{}' is not assignable to "
                                             "parameter type '{}' in call to '{}'",
                                             i + 1,
-                                            type_kind_display_name(arg_t->get_kind()),
-                                            type_kind_display_name(params[i]->type.get_kind()),
+                                            type_kind_display_name(*arg_t),
+                                            type_kind_display_name(params[i]->type),
                                             *inst.callee_name),
                                 error::TYPE_MISMATCH,
                                 inst.location);
@@ -533,12 +533,11 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                                     arg_t->get_kind() != sema::type_kind::TYPE &&
                                     !is_assignable(*arg_t, *fn_data->params[i])) {
                                     emit_diagnostic(
-                                        fmt::format(
-                                            "Argument {} of type '{}' is not assignable to "
-                                            "parameter type '{}' in indirect call",
-                                            i + 1,
-                                            type_kind_display_name(arg_t->get_kind()),
-                                            type_kind_display_name(fn_data->params[i]->get_kind())),
+                                        fmt::format("Argument {} of type '{}' is not assignable to "
+                                                    "parameter type '{}' in indirect call",
+                                                    i + 1,
+                                                    type_kind_display_name(*arg_t),
+                                                    type_kind_display_name(*(fn_data->params[i]))),
                                         error::TYPE_MISMATCH,
                                         inst.location);
                                 }
@@ -559,12 +558,11 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                                 arg_t->get_kind() != sema::type_kind::TYPE &&
                                 !is_assignable(*arg_t, *fn_data->params[i])) {
                                 emit_diagnostic(
-                                    fmt::format(
-                                        "Argument {} of type '{}' is not assignable to "
-                                        "parameter type '{}' in indirect call",
-                                        i + 1,
-                                        type_kind_display_name(arg_t->get_kind()),
-                                        type_kind_display_name(fn_data->params[i]->get_kind())),
+                                    fmt::format("Argument {} of type '{}' is not assignable to "
+                                                "parameter type '{}' in indirect call",
+                                                i + 1,
+                                                type_kind_display_name(*arg_t),
+                                                type_kind_display_name(*(fn_data->params[i]))),
                                     error::TYPE_MISMATCH,
                                     inst.location);
                             }
@@ -628,11 +626,11 @@ auto type_checker::check_instruction(gir::function& fn, const gir::instruction& 
                     (dest_k == type_kind::ENUM && sema::is_numeric(src_k)) ||
                     (src_k == type_kind::ENUM && sema::is_numeric(dest_k)) ||
                     (src_k == type_kind::ENUM && dest_k == type_kind::ENUM)};
-                if (!is_implicit_widenable(src_k, dest_k) &&
+                if (!is_implicit_widenable(*src_t, *dest_t) &&
                     !is_same_unqualified(*src_t, *dest_t) && !is_num_cast && !is_enum_repr_cast) {
                     emit_diagnostic(fmt::format("Cannot cast type '{}' to '{}'",
-                                                type_kind_display_name(src_k),
-                                                type_kind_display_name(dest_k)),
+                                                type_kind_display_name(*src_t),
+                                                type_kind_display_name(*dest_t)),
                                     error::TYPE_MISMATCH,
                                     inst.location);
                 }
@@ -728,8 +726,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                 if (val_t && !is_assignable(*val_t, *it->second.type)) {
                     emit_diagnostic(
                         fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                    type_kind_display_name(val_t->get_kind()),
-                                    type_kind_display_name(it->second.type->get_kind())),
+                                    type_kind_display_name(*val_t),
+                                    type_kind_display_name(*(it->second.type))),
                         error::TYPE_MISMATCH,
                         inst.location);
                 }
@@ -764,11 +762,10 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                                         inst.location);
                     } else {
                         emit_diagnostic(
-                            fmt::format(
-                                "Type mismatch in store: cannot assign '{}' to '{}'",
-                                val_t ? type_kind_display_name(val_t->get_kind()) : "unknown",
-                                ptr_data ? type_kind_display_name(ptr_data->underlying.get_kind())
-                                         : type_kind_display_name(it->second.type->get_kind())),
+                            fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
+                                        val_t ? type_kind_display_name(*val_t) : "unknown",
+                                        ptr_data ? type_kind_display_name(ptr_data->underlying)
+                                                 : type_kind_display_name(*(it->second.type))),
                             error::TYPE_MISMATCH,
                             inst.location);
                     }
@@ -783,8 +780,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                         if (val_t && !is_assignable(*val_t, *it->second.type)) {
                             emit_diagnostic(
                                 fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                            type_kind_display_name(val_t->get_kind()),
-                                            type_kind_display_name(it->second.type->get_kind())),
+                                            type_kind_display_name(*val_t),
+                                            type_kind_display_name(*(it->second.type))),
                                 error::TYPE_MISMATCH,
                                 inst.location);
                         }
@@ -801,8 +798,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                     if (val_t && !is_assignable(*val_t, ref_data->underlying)) {
                         emit_diagnostic(
                             fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                        type_kind_display_name(val_t->get_kind()),
-                                        type_kind_display_name(ref_data->underlying.get_kind())),
+                                        type_kind_display_name(*val_t),
+                                        type_kind_display_name(ref_data->underlying)),
                             error::TYPE_MISMATCH,
                             inst.location);
                     }
@@ -819,8 +816,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
 
             if (val_t && !is_assignable(*val_t, *it->second.type)) {
                 emit_diagnostic(fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                            type_kind_display_name(val_t->get_kind()),
-                                            type_kind_display_name(it->second.type->get_kind())),
+                                            type_kind_display_name(*val_t),
+                                            type_kind_display_name(*(it->second.type))),
                                 error::TYPE_MISMATCH,
                                 inst.location);
             }
@@ -843,8 +840,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                     if (val_t && !is_assignable(*val_t, ptr_data->underlying)) {
                         emit_diagnostic(
                             fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                        type_kind_display_name(val_t->get_kind()),
-                                        type_kind_display_name(ptr_data->underlying.get_kind())),
+                                        type_kind_display_name(*val_t),
+                                        type_kind_display_name(ptr_data->underlying)),
                             error::TYPE_MISMATCH,
                             inst.location);
                     }
@@ -856,8 +853,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                         if (val_t && !is_assignable(*val_t, *dest_t)) {
                             emit_diagnostic(
                                 fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                            type_kind_display_name(val_t->get_kind()),
-                                            type_kind_display_name(dest_t->get_kind())),
+                                            type_kind_display_name(*val_t),
+                                            type_kind_display_name(*dest_t)),
                                 error::TYPE_MISMATCH,
                                 inst.location);
                         }
@@ -874,8 +871,8 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
                     if (val_t && !is_assignable(*val_t, ref_data->underlying)) {
                         emit_diagnostic(
                             fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                                        type_kind_display_name(val_t->get_kind()),
-                                        type_kind_display_name(ref_data->underlying.get_kind())),
+                                        type_kind_display_name(*val_t),
+                                        type_kind_display_name(ref_data->underlying)),
                             error::TYPE_MISMATCH,
                             inst.location);
                     }

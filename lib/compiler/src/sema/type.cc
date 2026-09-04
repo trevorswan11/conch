@@ -61,7 +61,69 @@ auto type_kind_display_name(type_kind kind) noexcept -> std::string_view {
     return TYPE_KIND_NAMES[kind];
 }
 
+auto type_kind_display_name(const type& t) -> std::string {
+    if (const auto info{as_integer(t)}) {
+        return fmt::format("{}{}", info->is_signed ? 'i' : 'u', info->bits);
+    }
+    return std::string{type_kind_display_name(t.get_kind())};
+}
+
+auto as_integer(const type& t) noexcept -> stdx::option<types::integer> {
+    if (t.get_kind() != type_kind::INT) { return stdx::none; }
+    if (const auto info{t.get_data().as_opt<types::integer>()}) { return *info; }
+    // Unresolved pooled twin: recover identity from the key's mirrored fields.
+    return types::integer{t.get_key().get_int_bits(), t.get_key().get_int_signed()};
+}
+
+auto int_width(const type& t) noexcept -> u16 {
+    const auto info{as_integer(t)};
+    ASSERT(info, "int_width requires an INT type");
+    return info->bits;
+}
+
+auto is_i32(const type& t) noexcept -> bool {
+    const auto info{as_integer(t)};
+    return info && info->bits == 32 && info->is_signed;
+}
+
+auto is_signed_integer(const type& t) noexcept -> bool {
+    if (const auto info{as_integer(t)}) { return info->is_signed; }
+    return t.get_kind() == type_kind::ISIZE;
+}
+
+auto is_unsigned_integer(const type& t) noexcept -> bool {
+    if (const auto info{as_integer(t)}) { return !info->is_signed; }
+    return t.get_kind() == type_kind::USIZE;
+}
+
+auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool {
+    const auto from_kind{from.get_kind()};
+    const auto to_kind{to.get_kind()};
+
+    if (from_kind == type_kind::F32) { return to_kind == type_kind::F64; }
+
+    const auto from_int{as_integer(from)};
+    if (!from_int) { return false; }
+
+    // Narrow integers widen into the same-signedness pointer-sized type, mirroring the
+    // pre-unification pair table (`i8..i32 -> isize`, `u8..u32 -> usize`).
+    if (to_kind == type_kind::ISIZE) { return from_int->is_signed && from_int->bits < 64; }
+    if (to_kind == type_kind::USIZE) { return !from_int->is_signed && from_int->bits < 64; }
+
+    const auto to_int{as_integer(to)};
+    if (!to_int) { return false; }
+    if (to_int->bits <= from_int->bits) { return false; }
+    if (from_int->is_signed) { return to_int->is_signed; }
+    return true; // uW widens to any wider iV or uV
+}
+
 auto type::to_string() const -> std::string {
+    // An INT's width lives on the key, so it stringifies even before the payload is resolved.
+    if (get_kind() == type_kind::INT) {
+        const auto info{as_integer(*this)};
+        return fmt::format(
+            "{}{}{}", leaf_qualifier(*this), info->is_signed ? 'i' : 'u', info->bits);
+    }
     return data_.visit(
         [this](types::pointer ptr) {
             return fmt::format("^{}{}", container_qualifier(*this), ptr.underlying.to_string());
@@ -162,6 +224,7 @@ auto is_same_unqualified(const type& a, const type& b) noexcept -> bool {
 
     const auto kind{a.get_kind()};
     switch (kind) {
+    case type_kind::INT:       return as_integer(a) == as_integer(b);
     case type_kind::BOOL:
     case type_kind::VOID_:
     case type_kind::UNDEFINED:
@@ -232,7 +295,7 @@ auto is_assignable(const type& src, const type& dest) noexcept -> bool {
     // nullptr is assignable to any pointer type, but never to a reference
     if (src.get_kind() == type_kind::NULLPTR) { return dest.get_kind() == type_kind::POINTER; }
 
-    if (is_implicit_widenable(src.get_kind(), dest.get_kind())) { return true; }
+    if (is_implicit_widenable(src, dest)) { return true; }
     const auto src_kind{src.get_kind()};
     const auto dest_kind{dest.get_kind()};
 

@@ -197,6 +197,18 @@ auto const_eval::resolve_all_deferred_types() -> void { resolve_all_deferred_arr
 
 namespace {
 
+// ABI byte size/alignment of an `iN` / `uN`: the next power-of-two byte count, capped at 8
+// for the widths reachable today (`>64` gains DataLayout-driven sizing in a later phase).
+[[nodiscard]] auto int_abi_bytes(u16 bits) -> usize {
+    if (bits <= 8) { return 1; }
+    if (bits <= 16) { return 2; }
+    if (bits <= 32) { return 4; }
+    if (bits <= 64) { return 8; }
+    usize bytes{1};
+    while (bytes * 8 < bits) { bytes *= 2; }
+    return bytes;
+}
+
 [[nodiscard]] auto capture_field_align(const sema::types::closure_capture& capture, usize ptr_size)
     -> usize {
     return const_eval::type_align_of(*capture.storage_type, ptr_size);
@@ -212,16 +224,9 @@ namespace {
 auto const_eval::type_align_of(const sema::type& type, usize ptr_size) -> usize {
     PROFILE_FUNCTION();
     switch (type.get_kind()) {
-    case sema::type_kind::I8:
-    case sema::type_kind::U8:
+    case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
     case sema::type_kind::BOOL:      return 1;
-    case sema::type_kind::I16:
-    case sema::type_kind::U16:       return 2;
-    case sema::type_kind::I32:
-    case sema::type_kind::U32:
     case sema::type_kind::F32:       return 4;
-    case sema::type_kind::I64:
-    case sema::type_kind::U64:
     case sema::type_kind::F64:       return 8;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
@@ -282,16 +287,9 @@ auto const_eval::type_size_of(const sema::type& type, usize ptr_size) -> usize {
     PROFILE_FUNCTION();
     switch (type.get_kind()) {
     case sema::type_kind::VOID_:     return 0;
-    case sema::type_kind::I8:
-    case sema::type_kind::U8:
+    case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
     case sema::type_kind::BOOL:      return 1;
-    case sema::type_kind::I16:
-    case sema::type_kind::U16:       return 2;
-    case sema::type_kind::I32:
-    case sema::type_kind::U32:
     case sema::type_kind::F32:       return 4;
-    case sema::type_kind::I64:
-    case sema::type_kind::U64:
     case sema::type_kind::F64:       return 8;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
@@ -500,28 +498,23 @@ auto const_eval::eval_node(ast::node_id id) -> stdx::option<const_value> {
         [&](ast::i32_expr data) {
             const auto sema_type{module_->get_sema_type_opt(id)};
             return const_value{static_cast<i64>(data.value),
-                               sema_type ? *sema_type
-                                         : ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+                               sema_type ? *sema_type : ctx_.get_int(32, true)};
         },
         [&](ast::i64_expr data) {
-            return const_value{static_cast<i64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::I64)};
+            return const_value{static_cast<i64>(data.value), ctx_.get_int(64, true)};
         },
         [&](ast::isize_expr data) {
             return const_value{static_cast<i64>(data.value),
                                ctx_.get_builtin_resolved_type(sema::type_kind::ISIZE)};
         },
         [&](ast::u8_expr data) {
-            return const_value{static_cast<u64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::U8)};
+            return const_value{static_cast<u64>(data.value), ctx_.get_int(8, false)};
         },
         [&](ast::u32_expr data) {
-            return const_value{static_cast<u64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            return const_value{static_cast<u64>(data.value), ctx_.get_int(32, false)};
         },
         [&](ast::u64_expr data) {
-            return const_value{static_cast<u64>(data.value),
-                               ctx_.get_builtin_resolved_type(sema::type_kind::U64)};
+            return const_value{static_cast<u64>(data.value), ctx_.get_int(64, false)};
         },
         [&](ast::usize_expr data) {
             return const_value{static_cast<u64>(data.value),
@@ -667,8 +660,7 @@ auto const_eval::eval_index(ast::node_id id, const ast::index_expr& index_expr)
                 module_->ast.location_of(id));
             return const_value::make_poison();
         }
-        return const_value{static_cast<u64>(static_cast<u8>((*str)[idx])),
-                           ctx_.get_builtin_resolved_type(sema::type_kind::U8)};
+        return const_value{static_cast<u64>(static_cast<u8>((*str)[idx])), ctx_.get_int(8, false)};
     }
 
     return stdx::none;
@@ -1740,7 +1732,7 @@ auto const_eval::eval_builtin(ast::node_id          id,
 
         // Match the resolver: a fixed-length, null-terminated byte array (like a string literal).
         auto  name{ctx_.type_display_name(*target_type)};
-        auto& t_u8{ctx_.get_builtin_resolved_type(sema::type_kind::U8)};
+        auto& t_u8{ctx_.get_int(8, false)};
         auto& arr_type{ctx_.get_array(sema::types::mut::CONSTANT, true, name.size() + 1, t_u8)};
         return const_value{std::move(name), arr_type};
     }
@@ -1777,7 +1769,7 @@ auto const_eval::eval_builtin(ast::node_id          id,
         const auto   loc{id.is_valid() ? module_->ast.location_of(id)
                                        : module_->ast.location_of(call.function)};
         const_struct src_struct;
-        auto&        t_u32{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+        auto&        t_u32{ctx_.get_int(32, false)};
         src_struct.fields["file"]   = const_value::make_string(ctx_, module_->path.string());
         src_struct.fields["line"]   = const_value{static_cast<u64>(loc.line), t_u32};
         src_struct.fields["column"] = const_value{static_cast<u64>(loc.column), t_u32};

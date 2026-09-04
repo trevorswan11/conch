@@ -61,9 +61,9 @@ namespace {
 
 [[nodiscard]] auto is_signed_type(const gir::instruction& inst) noexcept -> bool {
     if (!inst.operands.empty() && inst.operands[0].type) {
-        return sema::is_signed_integer(inst.operands[0].type->get_kind());
+        return sema::is_signed_integer(*inst.operands[0].type);
     }
-    if (inst.type) { return sema::is_signed_integer(inst.type->get_kind()); }
+    if (inst.type) { return sema::is_signed_integer(*inst.type); }
     return false;
 }
 
@@ -1589,7 +1589,7 @@ auto llvm_lowering::emit_cast(const gir::instruction& inst) -> llvm::Value* {
                                         : builder_.CreateUIToFP(val, target_ty, "uitofp");
         }
         if (src_is_flt && !dst_is_flt) {
-            const bool dst_is_sgn{sema::is_signed_integer(inst.type->get_kind())};
+            const bool dst_is_sgn{sema::is_signed_integer(*inst.type)};
             return dst_is_sgn ? builder_.CreateFPToSI(val, target_ty, "fptosi")
                               : builder_.CreateFPToUI(val, target_ty, "fptoui");
         }
@@ -2031,7 +2031,7 @@ auto llvm_lowering::emit_builtin_call(const gir::instruction& inst) -> llvm::Val
             auto* b{lower_value(inst.operands[1])};
             if (!a || !b) { return nullptr; }
             const bool is_max{*builtin_tok == syntax::token_type_t::BUILTIN_MAX};
-            const bool is_signed{inst.type && sema::is_signed_integer(inst.type->get_kind())};
+            const bool is_signed{inst.type && sema::is_signed_integer(*inst.type)};
             if (a->getType()->isFloatingPointTy()) {
                 auto  id{is_max ? llvm::Intrinsic::maxnum : llvm::Intrinsic::minnum};
                 auto* fn{llvm::Intrinsic::getOrInsertDeclaration(
@@ -2051,7 +2051,7 @@ auto llvm_lowering::emit_builtin_call(const gir::instruction& inst) -> llvm::Val
             auto* a{lower_value(inst.operands[0])};
             auto* b{lower_value(inst.operands[1])};
             if (!a || !b) { return nullptr; }
-            const bool is_signed{inst.type && sema::is_signed_integer(inst.type->get_kind())};
+            const bool is_signed{inst.type && sema::is_signed_integer(*inst.type)};
             const bool is_rem{*builtin_tok == syntax::token_type_t::BUILTIN_REM};
             if (is_rem) {
                 return is_signed ? builder_.CreateSRem(a, b) : builder_.CreateURem(a, b);
@@ -2065,7 +2065,7 @@ auto llvm_lowering::emit_builtin_call(const gir::instruction& inst) -> llvm::Val
             auto* a{lower_value(inst.operands[0])};
             auto* b{lower_value(inst.operands[1])};
             if (!a || !b) { return nullptr; }
-            const bool is_signed{inst.type && sema::is_signed_integer(inst.type->get_kind())};
+            const bool is_signed{inst.type && sema::is_signed_integer(*inst.type)};
             const bool is_mod{*builtin_tok == syntax::token_type_t::BUILTIN_MOD};
             if (!is_signed) {
                 return is_mod ? builder_.CreateURem(a, b) : builder_.CreateUDiv(a, b);
@@ -2101,7 +2101,7 @@ auto llvm_lowering::emit_builtin_call(const gir::instruction& inst) -> llvm::Val
             auto* out_ptr{lower_value(inst.operands[2])};
             if (!a || !b || !out_ptr) { return nullptr; }
             const bool is_signed{inst.operands[0].type &&
-                                 sema::is_signed_integer(inst.operands[0].type->get_kind())};
+                                 sema::is_signed_integer(*inst.operands[0].type)};
 
             llvm::Value* result{nullptr};
             llvm::Value* overflow{nullptr};

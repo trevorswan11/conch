@@ -499,8 +499,9 @@ auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest
 
     // An integer that is narrower than the destination widens implicitly
     if (val.type && sema::is_integer(dest_type.get_kind()) &&
-        sema::is_integer(val.type->get_kind()) && val.type->get_kind() != dest_type.get_kind() &&
-        sema::is_implicit_widenable(val.type->get_kind(), dest_type.get_kind())) {
+        sema::is_integer(val.type->get_kind()) &&
+        !sema::is_same_unqualified(*val.type, dest_type) &&
+        sema::is_implicit_widenable(*val.type, dest_type)) {
         auto& widened{const_cast<sema::type&>(dest_type)};
         return value{builder_.emit_cast(instruction_kind::WIDEN_CAST, val, widened), widened};
     }
@@ -1356,8 +1357,8 @@ auto emitter::emit_decl_stmt(ast::node_id id, const ast::decl_stmt& decl) -> voi
         if (decl.explicit_type && val.type && !sema::is_assignable(*val.type, *sema_type)) {
             ctx_.diags.emplace_back(
                 fmt::format("Type mismatch in store: cannot assign '{}' to '{}'",
-                            sema::type_kind_display_name(val.type->get_kind()),
-                            sema::type_kind_display_name(sema_type->get_kind())),
+                            sema::type_kind_display_name(*(val.type)),
+                            sema::type_kind_display_name(*sema_type)),
                 sema::error::TYPE_MISMATCH,
                 active_ast().location_of(*decl.value));
         }
@@ -1442,28 +1443,23 @@ auto emitter::emit_expression_id_raw(ast::node_id id) -> value {
         [&](ast::i32_expr data) -> value {
             const auto sema_type{active_mod().get_sema_type_opt(id)};
             return value{static_cast<i64>(data.value),
-                         sema_type ? *sema_type
-                                   : ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+                         sema_type ? *sema_type : ctx_.get_int(32, true)};
         },
         [&](ast::i64_expr data) -> value {
-            return value{static_cast<i64>(data.value),
-                         ctx_.get_builtin_resolved_type(sema::type_kind::I64)};
+            return value{static_cast<i64>(data.value), ctx_.get_int(64, true)};
         },
         [&](ast::isize_expr data) -> value {
             return value{static_cast<i64>(data.value),
                          ctx_.get_builtin_resolved_type(sema::type_kind::ISIZE)};
         },
         [&](ast::u8_expr data) -> value {
-            return value{static_cast<u64>(data.value),
-                         ctx_.get_builtin_resolved_type(sema::type_kind::U8)};
+            return value{static_cast<u64>(data.value), ctx_.get_int(8, false)};
         },
         [&](ast::u32_expr data) -> value {
-            return value{static_cast<u64>(data.value),
-                         ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            return value{static_cast<u64>(data.value), ctx_.get_int(32, false)};
         },
         [&](ast::u64_expr data) -> value {
-            return value{static_cast<u64>(data.value),
-                         ctx_.get_builtin_resolved_type(sema::type_kind::U64)};
+            return value{static_cast<u64>(data.value), ctx_.get_int(64, false)};
         },
         [&](ast::usize_expr data) -> value {
             return value{static_cast<u64>(data.value),
@@ -1673,7 +1669,7 @@ auto emitter::try_emit_union_field_eq(ast::node_id lhs, ast::node_id rhs)
 
 // Compares a tagged union's runtime discriminant (index 0) against a `.field` pattern's ordinal.
 auto emitter::emit_union_tag_eq(value union_addr, ast::node_id member_pattern_id) -> local_id {
-    auto&      i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+    auto&      i32_type{ctx_.get_int(32, true)};
     auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
     const auto tag_ptr{builder_.emit_get_element_ptr(
         union_addr, {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}}, i32_type)};
@@ -1760,7 +1756,7 @@ auto emitter::sync_tagged_union_tag(ast::node_id assign_lhs) -> void {
     ASSERT(proxy, "Union field write must reference a valid field");
 
     const auto union_addr{emit_lvalue(dot->object)};
-    auto&      i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+    auto&      i32_type{ctx_.get_int(32, true)};
     auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
     const auto tag_ptr{builder_.emit_get_element_ptr(
         union_addr, {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}}, i32_type)};
@@ -2064,7 +2060,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
         case syntax::token_type_t::BUILTIN_SRC: {
             // `@src()` yields a `builtin::SourceLocation` aggregate
             const auto         loc{active_ast().location_of(id)};
-            auto&              u32_type{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            auto&              u32_type{ctx_.get_int(32, false)};
             std::vector<value> args;
             args.emplace_back(
                 const_value::make_string(ctx_, active_mod().path.string()).to_gir_value());
@@ -2104,7 +2100,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             }
 
             const auto loc{active_ast().location_of(id)};
-            auto&      u32_type{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            auto&      u32_type{ctx_.get_int(32, false)};
 
             std::vector<value> args;
             args.emplace_back(std::move(cond_val));
@@ -2151,7 +2147,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             }
 
             const auto loc{active_ast().location_of(id)};
-            auto&      u32_type{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            auto&      u32_type{ctx_.get_int(32, false)};
 
             std::vector<value> args;
             args.emplace_back(emit_expression(*call.arguments[0].as_opt<ast::expr_handle>()));
@@ -2176,7 +2172,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             }
 
             const auto loc{active_ast().location_of(id)};
-            auto&      u32_type{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+            auto&      u32_type{ctx_.get_int(32, false)};
             auto&      void_type{ctx_.get_builtin_resolved_type(sema::type_kind::VOID_)};
             auto&      bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
 
@@ -2969,8 +2965,7 @@ auto emitter::emit_for(ast::node_id                   id,
             const bool open_upper{!range->rhs};
             const auto end_val{open_upper ? value{u64{0}, usize_type}
                                           : emit_expression(*range->rhs)};
-            auto*      elem_type{start_val.type ? &*start_val.type
-                                                : &ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+            auto*      elem_type{start_val.type ? &*start_val.type : &ctx_.get_int(32, true)};
 
             const auto slot{builder_.emit_alloca(*elem_type, cap_name.value_or(""))};
             builder_.emit_store(slot, start_val);
@@ -2992,9 +2987,8 @@ auto emitter::emit_for(ast::node_id                   id,
             const auto idx_slot{builder_.emit_alloca(usize_type)};
             builder_.emit_store(idx_slot, value{static_cast<u64>(0), usize_type});
 
-            stdx::option<sema::type&> elem_type{
-                ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
-            value end_val{static_cast<u64>(0), usize_type};
+            stdx::option<sema::type&> elem_type{ctx_.get_int(32, true)};
+            value                     end_val{static_cast<u64>(0), usize_type};
 
             if (arr_val.type) {
                 // The container's own mutability governs element const correctness
@@ -3422,7 +3416,7 @@ auto emitter::materialize_const(const const_value& cv) -> value {
             const auto [sym, field_idx]{*proxy};
             auto& field_type{union_data->type_at(field_idx)};
 
-            auto&      i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+            auto&      i32_type{ctx_.get_int(32, true)};
             const auto tag_ptr{builder_.emit_get_element_ptr(
                 value{slot, type}, {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}}, i32_type)};
             builder_
@@ -3455,7 +3449,7 @@ auto emitter::lvalue_of_expr(ast::node_id id, sema::type& sema_type) -> value {
 
 auto emitter::emit_panic_call(std::string_view message, ast::node_id site) -> void {
     const auto loc{active_ast().location_of(site)};
-    auto&      u32_type{ctx_.get_builtin_resolved_type(sema::type_kind::U32)};
+    auto&      u32_type{ctx_.get_int(32, false)};
     auto&      noreturn_type{ctx_.get_builtin_resolved_type(sema::type_kind::NORETURN)};
 
     std::vector<value> args;
@@ -3567,7 +3561,7 @@ auto emitter::emit_checked_binary(instruction_kind kind,
     const bool checkable{runtime_safety_ && sema::is_integer(k) &&
                          (((kind == instruction_kind::ADD || kind == instruction_kind::SUB ||
                             kind == instruction_kind::MUL) &&
-                           sema::is_signed_integer(k)) ||
+                           sema::is_signed_integer(result_type)) ||
                           kind == instruction_kind::DIV || kind == instruction_kind::MOD ||
                           kind == instruction_kind::SHL || kind == instruction_kind::SHR)};
     return builder_.emit_binary(kind, std::move(lhs), std::move(rhs), result_type, checkable);
@@ -3578,7 +3572,7 @@ auto emitter::emit_checked_unary(instruction_kind kind,
                                  sema::type&      result_type,
                                  ast::node_id) -> local_id {
     const bool checkable{runtime_safety_ && kind == instruction_kind::NEG &&
-                         sema::is_signed_integer(result_type.get_kind())};
+                         sema::is_signed_integer(result_type)};
     return builder_.emit_unary(kind, std::move(operand), result_type, checkable);
 }
 
@@ -3802,10 +3796,7 @@ auto emitter::emit_lvalue(ast::node_id id) -> value {
                     auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
                     auto&      isize_type{ctx_.get_builtin_resolved_type(sema::type_kind::ISIZE)};
                     auto&      bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
-                    const bool is_signed{idx_val.type &&
-                                         (idx_val.type->get_kind() == sema::type_kind::I32 ||
-                                          idx_val.type->get_kind() == sema::type_kind::I64 ||
-                                          idx_val.type->get_kind() == sema::type_kind::ISIZE)};
+                    const bool is_signed{idx_val.type && sema::is_signed_integer(*idx_val.type)};
                     auto&      index_type{is_signed ? isize_type : usize_type};
 
                     value idx_cmp{idx_val};
@@ -3854,10 +3845,7 @@ auto emitter::emit_lvalue(ast::node_id id) -> value {
                         base_lval, {value{SLICE_LEN_FIELD_INDEX, usize_type}}, usize_type)};
                     const auto len_val{builder_.emit_load(value{len_slot, usize_type}, usize_type)};
 
-                    const bool is_signed{idx_val.type &&
-                                         (idx_val.type->get_kind() == sema::type_kind::I32 ||
-                                          idx_val.type->get_kind() == sema::type_kind::I64 ||
-                                          idx_val.type->get_kind() == sema::type_kind::ISIZE)};
+                    const bool is_signed{idx_val.type && sema::is_signed_integer(*idx_val.type)};
                     auto&      index_type{is_signed ? isize_type : usize_type};
 
                     value idx_cmp{idx_val};
@@ -4029,9 +4017,8 @@ auto emitter::emit_match(ast::node_id id, const ast::match_expr& match) -> value
             // `|_|` is an anonymous capture: it consumes the arm's payload slot but binds nothing.
             if (arm.capture && arm.capture->is<ast::identifier_expr>()) {
                 const auto& cap_ident{active_ast().get_as<ast::identifier_expr>(*arm.capture)};
-                auto&       cap_type{active_mod()
-                                   .get_sema_type_opt(*arm.capture)
-                                   .value_or(ctx_.get_builtin_resolved_type(sema::type_kind::I32))};
+                auto&       cap_type{
+                    active_mod().get_sema_type_opt(*arm.capture).value_or(ctx_.get_int(32, true))};
                 ASSERT(matcher_addr, "A capturing arm must have a computed matcher address");
 
                 // Unwrap a ref/ptr modifier to the type used to address the aliased storage.
@@ -4155,7 +4142,7 @@ auto emitter::emit_union_active_field_guard(value            union_addr,
     if (!fn_opt) { return; }
     auto& fn{*fn_opt};
 
-    auto& i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+    auto& i32_type{ctx_.get_int(32, true)};
     auto& usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
     auto& bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
 
@@ -4196,7 +4183,7 @@ auto emitter::emit_unwrap(ast::node_id id, const ast::unwrap_expr& unwrap) -> va
     ASSERT(fn_opt, "unwrap must be within an active function");
     [[maybe_unused]] auto& fn{*fn_opt};
 
-    [[maybe_unused]] auto& i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+    [[maybe_unused]] auto& i32_type{ctx_.get_int(32, true)};
     auto&                  usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
     [[maybe_unused]] auto& bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
 
@@ -4261,7 +4248,7 @@ auto emitter::emit_unwrap_propagation(value             operand_addr,
 
     const auto ret_layout{unwrap_layout_of(ctx_, ret_type)};
 
-    auto& i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+    auto& i32_type{ctx_.get_int(32, true)};
     auto& usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
 
     builder_.set_location(active_ast().location_of(site));
@@ -4346,7 +4333,7 @@ auto emitter::emit_initializer(ast::node_id id, const ast::initializer_expr& ini
         ASSERT(proxy, "Member must exist in union symbol table");
         const auto [sym, field_idx]{*proxy};
 
-        auto&      i32_type{ctx_.get_builtin_resolved_type(sema::type_kind::I32)};
+        auto&      i32_type{ctx_.get_int(32, true)};
         const auto tag_ptr{
             builder_.emit_get_element_ptr(value{struct_slot, *sema_type},
                                           {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}},

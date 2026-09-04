@@ -3,6 +3,7 @@
 #include <concepts>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 #include <ankerl/unordered_dense.h>
 #include <gsl/pointers>
@@ -27,15 +28,8 @@ namespace ghoti::sema {
 
 enum class type_kind : u8 {
     POISON,
-    I8,
-    I16,
-    I32,
-    I64,
+    INT,
     ISIZE,
-    U8,
-    U16,
-    U32,
-    U64,
     USIZE,
     BOOL,
     F32,
@@ -67,43 +61,23 @@ enum class type_kind : u8 {
 
 [[nodiscard]] auto type_kind_display_name(type_kind kind) noexcept -> std::string_view;
 
+class type;
+
+// Spelled-out name of a type, honoring an INT type's width (`i32`, `u17`, ...).
+[[nodiscard]] auto type_kind_display_name(const type& t) -> std::string;
+
 [[nodiscard]] constexpr auto is_integer(type_kind kind) noexcept -> bool {
     switch (kind) {
-    case type_kind::I8:
-    case type_kind::I16:
-    case type_kind::I32:
-    case type_kind::I64:
+    case type_kind::INT:
     case type_kind::ISIZE:
-    case type_kind::U8:
-    case type_kind::U16:
-    case type_kind::U32:
-    case type_kind::U64:
     case type_kind::USIZE: return true;
     default:               return false;
     }
 }
 
-[[nodiscard]] constexpr auto is_signed_integer(type_kind kind) noexcept -> bool {
-    switch (kind) {
-    case type_kind::I8:
-    case type_kind::I16:
-    case type_kind::I32:
-    case type_kind::I64:
-    case type_kind::ISIZE: return true;
-    default:               return false;
-    }
-}
-
-[[nodiscard]] constexpr auto is_unsigned_integer(type_kind kind) noexcept -> bool {
-    switch (kind) {
-    case type_kind::U8:
-    case type_kind::U16:
-    case type_kind::U32:
-    case type_kind::U64:
-    case type_kind::USIZE: return true;
-    default:               return false;
-    }
-}
+// Signedness lives in the INT payload, so these need the resolved type, not just the kind.
+[[nodiscard]] auto is_signed_integer(const type& t) noexcept -> bool;
+[[nodiscard]] auto is_unsigned_integer(const type& t) noexcept -> bool;
 
 [[nodiscard]] constexpr auto is_float(type_kind kind) noexcept -> bool {
     switch (kind) {
@@ -117,24 +91,9 @@ enum class type_kind : u8 {
     return is_integer(kind) || is_float(kind);
 }
 
-[[nodiscard]] constexpr auto is_implicit_widenable(type_kind from, type_kind to) noexcept -> bool {
-    switch (from) {
-    case type_kind::U8:
-        return to == type_kind::U16 || to == type_kind::U32 || to == type_kind::U64 ||
-               to == type_kind::USIZE;
-    case type_kind::U16:
-        return to == type_kind::U32 || to == type_kind::U64 || to == type_kind::USIZE;
-    case type_kind::U32: return to == type_kind::U64 || to == type_kind::USIZE;
-    case type_kind::I8:
-        return to == type_kind::I16 || to == type_kind::I32 || to == type_kind::I64 ||
-               to == type_kind::ISIZE;
-    case type_kind::I16:
-        return to == type_kind::I32 || to == type_kind::I64 || to == type_kind::ISIZE;
-    case type_kind::I32: return to == type_kind::I64 || to == type_kind::ISIZE;
-    case type_kind::F32: return to == type_kind::F64;
-    default:             return false;
-    }
-}
+// Whether `from` implicitly widens to `to` (`iW -> iV`/`uW -> uV` for `V > W`,
+// `uW -> iV` for `V > W`, narrow ints -> `isize`/`usize`, `f32 -> f64`).
+[[nodiscard]] auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool;
 
 [[nodiscard]] constexpr auto is_value_type(type_kind kind) noexcept -> bool {
     switch (kind) {
@@ -187,6 +146,14 @@ struct unresolved {};
 struct poison {};
 
 using builtin_type = stdx::monostate;
+
+// Payload of a `type_kind::INT` type: an arbitrary-width integer.
+struct integer {
+    u16  bits;
+    bool is_signed;
+
+    [[nodiscard]] constexpr auto operator==(const integer&) const noexcept -> bool = default;
+};
 
 struct slice {
     type& underlying;
@@ -346,12 +313,31 @@ class key_t {
     constexpr key_t(type_kind kind, mutability_modifiers mut, Markers&&... markers) noexcept
         : kind_{kind}, mut_{mut} {
         (..., markers_.combine(markers));
+        // An `INT` key spells its identity as `(bits, is_signed)` markers; mirror them into
+        // named fields so width/signedness survive even on an unresolved pooled twin.
+        if constexpr (sizeof...(Markers) == 2 &&
+                      (std::integral<std::remove_cvref_t<Markers>> && ...)) {
+            if (kind == type_kind::INT) {
+                const u64 packed[]{static_cast<u64>(markers)...};
+                int_bits_   = static_cast<u16>(packed[0]);
+                int_signed_ = packed[1] != 0;
+            }
+        }
     }
 
     MAKE_GETTER(kind, type_kind)
     MAKE_GETTER(mut, mutability_modifiers)
+    MAKE_GETTER(int_bits, u16)
+    MAKE_GETTER(int_signed, bool)
 
-    auto set_kind(type_kind kind) noexcept -> void { kind_ = kind; }
+    auto set_kind(type_kind kind) noexcept -> void {
+        kind_ = kind;
+        // Repurposing a copied `INT` key to another kind must drop its width identity.
+        if (kind != type_kind::INT) {
+            int_bits_   = 0;
+            int_signed_ = false;
+        }
+    }
     auto set_mut(mutability_modifiers mut) noexcept -> void { mut_ = mut; }
 
     // This is a high quality hash for the purposes of `unordered_dense`
@@ -371,7 +357,11 @@ class key_t {
         markers_.combine(marker);
     }
 
-    constexpr auto clear_markers() noexcept -> void { markers_ = {}; }
+    constexpr auto clear_markers() noexcept -> void {
+        markers_    = {};
+        int_bits_   = 0;
+        int_signed_ = false;
+    }
 
     [[nodiscard]] constexpr auto operator==(const key_t&) const noexcept -> bool = default;
 
@@ -381,6 +371,8 @@ class key_t {
   private:
     type_kind            kind_;
     mutability_modifiers mut_;
+    u16                  int_bits_{0};
+    bool                 int_signed_{false};
     stdx::hasher         markers_;
 
     friend class sema::type;
@@ -417,6 +409,7 @@ class type {
     using data_t = stdx::variant<types::unresolved,
                                  types::poison,
                                  types::builtin_type,
+                                 types::integer,
                                  types::slice,
                                  types::array,
                                  types::pointer,
@@ -515,6 +508,15 @@ class type {
 };
 
 static_assert(stdx::TriviallyDestructible<type>);
+
+// `{bits, is_signed}` of a resolved `type_kind::INT`, or none for any other kind.
+[[nodiscard]] auto as_integer(const type& t) noexcept -> stdx::option<types::integer>;
+
+// Bit width of a resolved `type_kind::INT`; asserts the kind.
+[[nodiscard]] auto int_width(const type& t) noexcept -> u16;
+
+// Whether `t` is exactly the signed 32-bit integer type.
+[[nodiscard]] auto is_i32(const type& t) noexcept -> bool;
 
 // All associated type lifetimes are tied to the pool
 class type_pool {

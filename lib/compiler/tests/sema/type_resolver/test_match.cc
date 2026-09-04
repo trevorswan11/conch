@@ -77,12 +77,11 @@ TEST_CASE("Resolving capturing match arms") {
                          return ctx.get_type(sema::type_kind::ENUM, 1);
                      });
 
-    test_arm_capture("using U = union { a: i32 }; _ = match (U) { .a => |a| 5 };",
-                     "a",
-                     2,
-                     [](helpers::sema_test_context& ctx) -> auto& {
-                         return ctx.get_type(sema::type_kind::I32);
-                     });
+    test_arm_capture(
+        "using U = union { a: i32 }; _ = match (U) { .a => |a| 5 };",
+        "a",
+        2,
+        [](helpers::sema_test_context& ctx) -> auto& { return ctx.get_int_type(32, true); });
 }
 
 TEST_CASE("Resolving well-formed builtin-type matching") {

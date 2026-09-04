@@ -34,7 +34,7 @@ TEST_CASE("if constexpr: a folded non-generic condition resolves only the live a
 
         const auto [sym, _, node, type]{
             ctx->get_ast_type_sym_info<syms::node_t, ast::decl_stmt>("chosen", idx)};
-        CHECK(type == ctx->get_type(sema::type_kind::I32));
+        CHECK(type == ctx->get_int_type(32, true));
     }
 
     SECTION("Node takes the alternate's type, not the consequence's") {

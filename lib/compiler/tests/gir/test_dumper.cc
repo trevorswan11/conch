@@ -23,9 +23,9 @@ TEST_CASE("GIR dumper formatting") {
 
     sema::arena_alloc arena;
     sema::type_pool   pool{arena};
-    auto&             i32_type{*pool[{sema::type_kind::I32, sema::types::mut::CONSTANT}]};
-    auto&             bool_type{*pool[{sema::type_kind::BOOL, sema::types::mut::CONSTANT}]};
-    auto&             fn_type{*pool[{sema::type_kind::FUNCTION, sema::types::mut::CONSTANT}]};
+    auto& i32_type{*pool[{sema::type_kind::INT, sema::types::mut::CONSTANT, u16{32}, true}]};
+    auto& bool_type{*pool[{sema::type_kind::BOOL, sema::types::mut::CONSTANT}]};
+    auto& fn_type{*pool[{sema::type_kind::FUNCTION, sema::types::mut::CONSTANT}]};
 
     SECTION("Dump linear function") {
         gir::function fn{arena, "add", fn_type};
