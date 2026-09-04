@@ -2425,6 +2425,27 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
             if (const auto cv{const_eval_.try_eval(id)}) { return cv->to_gir_value(); }
             break;
         }
+        case syntax::token_type_t::BUILTIN_TAG_NAME: {
+            if (const auto cv{const_eval_.try_eval(id)}) {
+                // A bare string constant's `to_gir_value()` carries only a data pointer, not the
+                // full `{ptr, len}` slice pair `@tagName` returns; materialize it properly.
+                if (const auto s{cv->as_opt<std::string>()}) {
+                    return materialize_string_slice(*s, ret_type);
+                }
+                return cv->to_gir_value();
+            }
+            if (!call.arguments.empty()) {
+                if (const auto expr_h{call.arguments.front().as_opt<ast::expr_handle>()}) {
+                    if (auto operand_type{active_mod().get_sema_type_opt(*expr_h)}) {
+                        if (const auto res{
+                                emit_runtime_tag_name(*expr_h, *operand_type, ret_type)}) {
+                            return *res;
+                        }
+                    }
+                }
+            }
+            break;
+        }
         case syntax::token_type_t::BUILTIN_EXPECT:
         case syntax::token_type_t::BUILTIN_REQUIRE: {
             const auto is_expect{fn_token == syntax::token_type_t::BUILTIN_EXPECT};
@@ -3893,6 +3914,29 @@ auto emitter::emit_null_pointer_check(value ptr, ast::node_id site) -> void {
     builder_.set_segment(ok_seg);
 }
 
+auto emitter::enum_discriminants(const sema::types::enum_t& en) -> std::vector<i64> {
+    std::vector<i64> discriminants;
+    discriminants.reserve(en.ast_enumerations.size());
+
+    // A variant's initializer node is only valid against the enum's defining module's AST arena,
+    // which may differ from whichever module `const_eval_` is currently scoped to.
+    auto&      enclosing_mod{const_cast<mod::module&>(en.enclosing)};
+    const_eval enclosing_eval{ctx_, enclosing_mod};
+    enclosing_eval.set_symbol_scoping(symbol_scoping_);
+
+    for (usize idx{0}; idx < en.ast_enumerations.size(); ++idx) {
+        const auto& enumeration{en.ast_enumerations[idx]};
+        i64         disc{static_cast<i64>(idx)};
+        if (enumeration.value) {
+            if (const auto ev{enclosing_eval.try_eval(*enumeration.value)}) {
+                disc = static_cast<i64>(ev->as_int_opt().value_or(disc));
+            }
+        }
+        discriminants.emplace_back(disc);
+    }
+    return discriminants;
+}
+
 auto emitter::emit_enum_cast_guard(ast::node_id     site,
                                    const value&     enum_val,
                                    const value&     src_val,
@@ -3904,19 +3948,7 @@ auto emitter::emit_enum_cast_guard(ast::node_id     site,
     const auto en{enum_val.type->get_data().as_opt<sema::types::enum_t>()};
     if (!en || en->non_exhaustive) { return; }
 
-    // Gather the enum's listed discriminant values, mirroring const-eval's ordinal model.
-    std::vector<i64> discriminants;
-    discriminants.reserve(en->ast_enumerations.size());
-    for (usize idx{0}; idx < en->ast_enumerations.size(); ++idx) {
-        const auto& enumeration{en->ast_enumerations[idx]};
-        i64         disc{static_cast<i64>(idx)};
-        if (enumeration.value) {
-            if (const auto ev{const_eval_.try_eval(*enumeration.value)}) {
-                disc = static_cast<i64>(ev->as_int_opt().value_or(disc));
-            }
-        }
-        discriminants.emplace_back(disc);
-    }
+    const std::vector<i64> discriminants{enum_discriminants(*en)};
     if (discriminants.empty()) { return; }
 
     // A compile-time-known value that already lands on a variant needs no runtime check.
@@ -3962,6 +3994,118 @@ auto emitter::emit_enum_cast_guard(ast::node_id     site,
     builder_.set_segment(bad_seg);
     emit_panic_call("invalid enum value", site);
     builder_.set_segment(ok_seg);
+}
+
+auto emitter::materialize_string_slice(std::string_view text, sema::type& slice_type) -> value {
+    auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
+    auto&      slice_data{slice_type.get_data().as<sema::types::slice>()};
+    // Mutable, even though the slice itself may be `[]const u8`: this only types the scratch
+    // field address used to initialize `slot`, not the loaded result handed back to the caller.
+    auto&      elem_ptr_type{ctx_.get_pointer(sema::types::mut::MUTABLE, slice_data.underlying)};
+    const auto slot{builder_.emit_alloca(slice_type)};
+
+    // A slice value can't be written with a single `store` (a bare string constant lowers to
+    // just a data pointer, not the full `{ptr, len}` pair), so its two fields are addressed and
+    // stored separately, as `@sliceFromPtr` does, then loaded back into one genuine value.
+    const auto ptr_field{builder_.emit_get_element_ptr(
+        value{slot, slice_type}, {value{SLICE_PTR_FIELD_INDEX, usize_type}}, elem_ptr_type)};
+    builder_.emit_store(value{ptr_field, elem_ptr_type}, value{std::string{text}, elem_ptr_type})
+        .is_initializer = true;
+    const auto len_field{builder_.emit_get_element_ptr(
+        value{slot, slice_type}, {value{SLICE_LEN_FIELD_INDEX, usize_type}}, usize_type)};
+    builder_.emit_store(value{len_field, usize_type}, value{static_cast<u64>(text.size()), usize_type})
+        .is_initializer = true;
+
+    return value{builder_.emit_load(value{slot, slice_type}, slice_type), slice_type};
+}
+
+auto emitter::emit_runtime_tag_name(ast::expr_handle operand_expr,
+                                    sema::type&      operand_type,
+                                    sema::type&      ret_type) -> stdx::option<value> {
+    const auto en{operand_type.get_data().as_opt<sema::types::enum_t>()};
+    const auto ut{operand_type.get_data().as_opt<sema::types::union_t>()};
+    if ((!en) && (!ut || ut->is_untagged)) { return stdx::none; }
+
+    auto fn_opt{builder_.get_function()};
+    if (!fn_opt) { return stdx::none; }
+    auto& fn{*fn_opt};
+
+    auto&      bool_type{ctx_.get_builtin_resolved_type(sema::type_kind::BOOL)};
+    auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
+    auto&      merge_seg{fn.add_segment()};
+    const auto res_slot{builder_.emit_alloca(ret_type)};
+
+    const auto store_name{[&](std::string_view name) {
+        builder_.emit_store(value{res_slot, ret_type}, materialize_string_slice(name, ret_type));
+    }};
+
+    // Tests one discriminant/tag value; if it matches, stores `name` and joins the merge
+    // segment, mirroring `emit_match`'s per-arm dispatch shape.
+    const auto emit_named_case{[&](value cond, std::string_view name) {
+        auto& body_seg{fn.add_segment()};
+        auto& next_seg{fn.add_segment()};
+        builder_.emit_cond_goto(cond, body_seg.get_id(), next_seg.get_id());
+
+        builder_.set_segment(body_seg);
+        store_name(name);
+        builder_.emit_goto(merge_seg.get_id());
+
+        builder_.set_segment(next_seg);
+    }};
+
+    if (en) {
+        const auto operand_val{emit_expression(operand_expr)};
+        auto&      underlying{en->underlying};
+        const value raw_val{builder_.emit_cast(instruction_kind::BIT_CAST, operand_val, underlying),
+                            underlying};
+        const auto discriminants{enum_discriminants(*en)};
+        for (usize idx{0}; idx < en->ast_enumerations.size(); ++idx) {
+            const auto& vname{
+                en->enclosing.ast.get_as<ast::identifier_expr>(en->ast_enumerations[idx].name).name};
+            const value rhs{static_cast<u64>(discriminants[idx]), underlying};
+            const auto  eq{builder_.emit_binary(instruction_kind::EQ, raw_val, rhs, bool_type)};
+            emit_named_case(value{eq, bool_type}, vname);
+        }
+
+        if (en->non_exhaustive) {
+            // A non-exhaustive enum may legitimately hold a raw value with no listed variant.
+            store_name("_");
+            builder_.emit_goto(merge_seg.get_id());
+        } else {
+            // Every valid value of an exhaustive enum was just tested above.
+            builder_.emit_unreachable();
+        }
+    } else {
+        // Address of the scrutinee: reuse its storage when it is an lvalue, else spill the rvalue.
+        const bool is_lvalue_shape{active_ast().get_as_opt<ast::identifier_expr>(operand_expr) ||
+                                   active_ast().get_as_opt<ast::dot_expr>(operand_expr) ||
+                                   active_ast().get_as_opt<ast::index_expr>(operand_expr) ||
+                                   active_ast().get_as_opt<ast::dereference_expr>(operand_expr)};
+        const auto operand_addr{is_lvalue_shape
+                                    ? emit_lvalue(operand_expr)
+                                    : spill_to_temporary(emit_expression(operand_expr),
+                                                         operand_type,
+                                                         operand_type.is_constant())};
+
+        auto&      i32_type{ctx_.get_int(32, true)};
+        const auto tag_ptr{builder_.emit_get_element_ptr(
+            operand_addr, {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}}, i32_type)};
+        const value tag_val{builder_.emit_load(value{tag_ptr, i32_type}, i32_type), i32_type};
+
+        for (usize idx{0}; idx < ut->ast_fields.size(); ++idx) {
+            const auto& fname{
+                ut->enclosing.ast.get_as<ast::identifier_expr>(ut->ast_fields[idx].name).name};
+            const value rhs{static_cast<u64>(idx), i32_type};
+            const auto  eq{builder_.emit_binary(instruction_kind::EQ, tag_val, rhs, bool_type)};
+            emit_named_case(value{eq, bool_type}, fname);
+        }
+
+        // Every tag a well-formed tagged union can hold names one of its declared fields.
+        builder_.emit_unreachable();
+    }
+
+    builder_.set_segment(merge_seg);
+    return value{builder_.emit_load(value{res_slot, ret_type}, ret_type), ret_type};
 }
 
 auto emitter::emit_checked_binary(instruction_kind kind,

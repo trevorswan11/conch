@@ -899,7 +899,13 @@ auto const_eval::eval_dot(ast::node_id, const ast::dot_expr& dot) -> stdx::optio
                 if (vname == member_name) {
                     auto val{static_cast<i64>(idx)};
                     if (e.value) {
-                        if (const auto ev{try_eval(*e.value)}) {
+                        // The initializer expression is a node in the enum's defining module's
+                        // AST arena, which is not necessarily the module currently being
+                        // const-evaluated; evaluate it against the defining module.
+                        auto&      enclosing_mod{const_cast<mod::module&>(en->enclosing)};
+                        const_eval enclosing_eval{ctx_, enclosing_mod};
+                        enclosing_eval.set_symbol_scoping(symbol_scoping_);
+                        if (const auto ev{enclosing_eval.try_eval(*e.value)}) {
                             val = static_cast<i64>(ev->as_int_opt().value_or(val));
                         }
                     }
@@ -976,7 +982,12 @@ auto const_eval::eval_implicit_access(ast::node_id id, const ast::implicit_acces
                 if (vname == member_name) {
                     auto val{static_cast<i64>(idx)};
                     if (e.value) {
-                        if (const auto ev{try_eval(*e.value)}) {
+                        // As in eval_dot: the initializer lives in the enum's defining module's
+                        // AST arena, which may differ from the module currently being evaluated.
+                        auto&      enclosing_mod{const_cast<mod::module&>(en->enclosing)};
+                        const_eval enclosing_eval{ctx_, enclosing_mod};
+                        enclosing_eval.set_symbol_scoping(symbol_scoping_);
+                        if (const auto ev{enclosing_eval.try_eval(*e.value)}) {
                             val = static_cast<i64>(ev->as_int_opt().value_or(val));
                         }
                     }

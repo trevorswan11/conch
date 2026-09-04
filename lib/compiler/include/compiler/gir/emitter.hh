@@ -151,6 +151,24 @@ class emitter {
                               const value&     src_val,
                               ast::expr_handle src_expr) -> void;
 
+    // An enum variant's declared value (if any) lives in the enum's defining module's AST arena,
+    // which may differ from whichever module is currently being emitted; evaluates each variant
+    // against that defining module rather than `const_eval_`'s current one. Falls back to the
+    // variant's positional index when it has no explicit value or the value fails to fold.
+    [[nodiscard]] auto enum_discriminants(const sema::types::enum_t& en) -> std::vector<i64>;
+
+    // `@tagName` at runtime: dispatches on `operand_type`'s runtime discriminant (an enum's raw
+    // backing value, or a tagged union's stored tag) to the matching variant/field name. Returns
+    // `stdx::none` when `operand_type` is neither an enum nor a tagged union.
+    auto emit_runtime_tag_name(ast::expr_handle operand_expr,
+                               sema::type&      operand_type,
+                               sema::type&      ret_type) -> stdx::option<value>;
+
+    // Builds a genuine `{ptr, len}` slice value naming `text`, safe to store anywhere. A bare
+    // string constant lowers to just a data pointer, not the full slice pair, so it can't be
+    // used as a store's source value directly (see `emit_runtime_tag_name`).
+    auto materialize_string_slice(std::string_view text, sema::type& slice_type) -> value;
+
     auto emit_null_pointer_check(value ptr, ast::node_id site) -> void;
     // `wrapping` forces the overflow guard off unconditionally, for `+% -% *% <<%` / `-%x`
     auto emit_checked_binary(instruction_kind kind,
