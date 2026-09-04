@@ -4403,7 +4403,15 @@ auto type_resolver::visit(ast::node_id id, const ast::int_literal_expr& expr) ->
         if (const auto implicit_type{implicit_type_stack_.peek()};
             implicit_type &&
             (is_integer(implicit_type->get_kind()) || is_float(implicit_type->get_kind()))) {
-            resolved = implicit_type.get();
+            // Adopt the concrete context only when the literal's magnitude fits it; an
+            // over-range literal stays `constexpr_int` so the coercion site reports it (and a
+            // `-` in front can still bring `-(2^(N-1))` into range).
+            const auto ptr_bits{
+                codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits};
+            if (is_float(implicit_type->get_kind()) ||
+                constexpr_int_fits(static_cast<i128>(expr.value), *implicit_type, ptr_bits)) {
+                resolved = implicit_type.get();
+            }
         }
     }
     last_type_.emplace(*resolved);

@@ -99,6 +99,7 @@ enum class error : u8 {
     UNSUPPORTED_TARGET,
     ILLEGAL_PACKED_FIELD,
     ILLEGAL_PACKED_FIELD_ADDRESS,
+    LITERAL_OUT_OF_RANGE,
 };
 
 using diagnostic  = diagnostic<error>;

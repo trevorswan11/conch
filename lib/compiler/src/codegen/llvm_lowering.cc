@@ -50,17 +50,28 @@ namespace ghoti::codegen {
 
 namespace {
 
+// A `constexpr_float` materializes as `f64`; a `constexpr_int` as `i32`.
+[[nodiscard]] auto materialized_is_float(sema::type_kind k) noexcept -> bool {
+    return sema::is_float(k) || k == sema::type_kind::CONSTEXPR_FLOAT;
+}
+
 [[nodiscard]] auto is_float_type(const gir::instruction&    inst,
                                  stdx::option<llvm::Value&> val) noexcept -> bool {
-    if (!inst.operands.empty() && inst.operands[0].type) {
-        return sema::is_float(inst.operands[0].type->get_kind());
+    // Any float (or `constexpr_float`) operand makes the operation floating point.
+    for (const auto& op : inst.operands) {
+        if (op.type && materialized_is_float(op.type->get_kind())) { return true; }
     }
-    if (inst.type) { return sema::is_float(inst.type->get_kind()); }
+    if (!inst.operands.empty() && inst.operands[0].type &&
+        sema::is_integer(inst.operands[0].type->get_kind())) {
+        return false;
+    }
+    if (inst.type) { return materialized_is_float(inst.type->get_kind()); }
     return val && val->getType()->isFloatingPointTy();
 }
 
 [[nodiscard]] auto is_signed_type(const gir::instruction& inst) noexcept -> bool {
     if (!inst.operands.empty() && inst.operands[0].type) {
+        if (inst.operands[0].type->get_kind() == sema::type_kind::CONSTEXPR_INT) { return true; }
         return sema::is_signed_integer(*inst.operands[0].type);
     }
     if (inst.type) { return sema::is_signed_integer(*inst.type); }

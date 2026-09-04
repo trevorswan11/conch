@@ -448,6 +448,26 @@ auto emitter::emit_dyn_coercion(ast::expr_handle src, const sema::type& fat_type
     return value{builder_.emit_load(value{slot, dyn_mut}, fat_mut), fat_mut};
 }
 
+auto emitter::folded_int(const value& v) noexcept -> stdx::option<i128> {
+    if (const auto x{v.as_opt<i64>()}) { return static_cast<i128>(*x); }
+    if (const auto x{v.as_opt<i128>()}) { return *x; }
+    if (const auto x{v.as_opt<u64>()}) { return static_cast<i128>(*x); }
+    if (const auto x{v.as_opt<u128>()}) { return static_cast<i128>(*x); }
+    return stdx::none;
+}
+
+auto emitter::coerce_constexpr_int(value v, sema::type& target, ast::node_id at) -> value {
+    if (const auto folded{folded_int(v)};
+        folded && !sema::constexpr_int_fits(*folded, target, target_ptr_bits_)) {
+        ctx_.diags.emplace_back(fmt::format("integer literal is out of range for type '{}'",
+                                            sema::type_kind_display_name(target)),
+                                sema::error::LITERAL_OUT_OF_RANGE,
+                                active_ast().location_of(at));
+    }
+    v.type.emplace(target);
+    return v;
+}
+
 auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest_type) -> value {
     PROFILE_FUNCTION();
     // Build the fat pointer for `&T` / `^T` -> `&dyn I` / `^dyn I`
@@ -515,6 +535,11 @@ auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest
             if (const auto uv{val.as_opt<u128>()}) {
                 return value{static_cast<f64>(*uv), concrete};
             }
+        }
+        // Reject a compile-time integer that does not fit its concrete integer target.
+        if (val.type->get_kind() == sema::type_kind::CONSTEXPR_INT &&
+            sema::is_integer(dest_type.get_kind())) {
+            return coerce_constexpr_int(val, concrete, *expr_id);
         }
         return value{val.data, concrete};
     }
@@ -1370,12 +1395,19 @@ auto emitter::emit_decl_stmt(ast::node_id id, const ast::decl_stmt& decl) -> voi
         }
 
         if (const auto cv{const_eval_.try_eval(*decl.value)}) {
+            auto bound{cv->to_gir_value()};
+            // `const x: iN = <constexpr literal>` : range-check and pin the concrete type.
+            if (decl.explicit_type && bound.type &&
+                bound.type->get_kind() == sema::type_kind::CONSTEXPR_INT &&
+                sema::is_integer(sema_type->get_kind())) {
+                bound = coerce_constexpr_int(bound, *sema_type, *decl.value);
+            }
             scopes_.back().bindings.emplace(name,
                                             local_binding{
                                                 .id        = {0, local_kind::TEMPORARY},
                                                 .type      = *sema_type,
                                                 .is_alloca = false,
-                                                .const_val = cv->to_gir_value(),
+                                                .const_val = bound,
                                                 .is_const  = true,
                                             });
             return;

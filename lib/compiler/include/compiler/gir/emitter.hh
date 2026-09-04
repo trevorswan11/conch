@@ -286,6 +286,13 @@ class emitter {
         sema::type* field_type{nullptr};
     };
     [[nodiscard]] auto packed_layout_of(const ast::dot_expr& dot) -> packed_field_layout;
+
+    // The i64/u64/i128/u128 payload of a compile-time integer `value`, as a 128-bit signed
+    // int; none when `v` has no integer payload.
+    [[nodiscard]] static auto folded_int(const value& v) noexcept -> stdx::option<i128>;
+    // Emits a `LITERAL_OUT_OF_RANGE` diagnostic at `at` if the `constexpr_int` `v` does not
+    // fit `target` (a concrete integer type). Returns `v` retyped to `target`.
+    [[nodiscard]] auto coerce_constexpr_int(value v, sema::type& target, ast::node_id at) -> value;
     auto               emit_packed_store(const ast::dot_expr& dot, value field_val) -> void;
     [[nodiscard]] auto emit_packed_field_assign(ast::node_id                id,
                                                 const ast::dot_expr&        dot,

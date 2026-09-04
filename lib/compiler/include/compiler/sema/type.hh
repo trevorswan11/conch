@@ -573,6 +573,12 @@ static_assert(stdx::TriviallyDestructible<type>);
 // Whether `t` is exactly the signed 32-bit integer type.
 [[nodiscard]] auto is_i32(const type& t) noexcept -> bool;
 
+// Whether the compile-time integer `value` (two's-complement, up to 128 bits) is representable
+// in the concrete integer type `target` (`iN`/`uN`/`isize`/`usize`; `ptr_bits` sizes the
+// latter two). Returns true for any non-integer `target` so callers can skip the check.
+[[nodiscard]] auto constexpr_int_fits(i128 value, const type& target, u32 ptr_bits) noexcept
+    -> bool;
+
 // Bit width of `t` when used as a field of a bit-packed `packed struct`/`packed union`, or
 // none when `t` is not packed-eligible. `ptr_bits` sizes pointer-like fields.
 [[nodiscard]] auto packed_field_bits(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32>;

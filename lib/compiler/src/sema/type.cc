@@ -86,6 +86,37 @@ auto is_i32(const type& t) noexcept -> bool {
     return info && info->bits == 32 && info->is_signed;
 }
 
+auto constexpr_int_fits(i128 value, const type& target, u32 ptr_bits) noexcept -> bool {
+    u16  bits{0};
+    bool is_signed{false};
+    switch (target.get_kind()) {
+    case type_kind::INT: {
+        const auto info{as_integer(target)};
+        if (!info) { return true; }
+        bits      = info->bits;
+        is_signed = info->is_signed;
+        break;
+    }
+    case type_kind::ISIZE:
+        bits      = static_cast<u16>(ptr_bits);
+        is_signed = true;
+        break;
+    case type_kind::USIZE: bits = static_cast<u16>(ptr_bits); break;
+    default:               return true; // not a concrete integer target
+    }
+    if (bits == 0) { return false; }
+    if (bits >= 128) { return true; }
+
+    if (is_signed) {
+        const i128 max{(i128{1} << (bits - 1)) - 1};
+        const i128 min{-(i128{1} << (bits - 1))};
+        return value >= min && value <= max;
+    }
+    if (value < 0) { return false; }
+    const u128 umax{bits >= 128 ? ~u128{0} : ((u128{1} << bits) - 1)};
+    return static_cast<u128>(value) <= umax;
+}
+
 auto packed_field_bits(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32> {
     switch (t.get_kind()) {
     case type_kind::INT:       return int_width(t);
