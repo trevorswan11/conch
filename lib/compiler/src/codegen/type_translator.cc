@@ -176,6 +176,16 @@ auto type_translator::translate_union(const sema::types::union_t& u, const sema:
     }
 
     const auto& dl{module_.getDataLayout()};
+
+    // A bit-packed `packed union` is a bare backing integer wide enough for its largest field.
+    if (u.is_bit_packed()) {
+        const auto bits{sema::packed_union_backing_bits(u, dl.getPointerSizeInBits())};
+        ASSERT(bits, "a bit-packed union must have an eligible, in-range layout");
+        auto* int_ty{llvm::IntegerType::get(context_, *bits)};
+        union_cache_[&original] = int_ty;
+        return int_ty;
+    }
+
     if (u.is_untagged) {
         u64 max_size{0};
         for (const auto* field : u.fields) {

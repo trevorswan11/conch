@@ -111,4 +111,58 @@ TEST_CASE("extern packed struct keeps C field layout, not bit-packing") {
     )") == 49);
 }
 
+// A non-extern `packed union` is a single backing integer wide enough for its largest
+// field; every field is laid out at bit offset 0.
+
+TEST_CASE("packed union is sized to its widest field") {
+    CHECK(helpers::compile_and_run(R"(
+        const U := packed union { a: u8, b: u3 };
+        pub const main := fn(): i32 {
+            if (@sizeOf(U) != 1) { return 1; }
+            var u: U = .{ .a = 200 };
+            if (@as(i32, u.a) != 200) { return 2; }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("packed union field write overwrites the shared bits") {
+    CHECK(helpers::compile_and_run(R"(
+        const U := packed union { a: u8, b: u3 };
+        pub const main := fn(): i32 {
+            var u: U = .{ .a = 255 };
+            u.b = 2;
+            // b wrote the low 3 bits; the upper 5 bits of `a` were left untouched by the
+            // read-modify-write, so a == 0b11111010 == 250
+            if (@as(i32, u.b) != 2) { return 1; }
+            if (@as(i32, u.a) != 250) { return 2; }
+            u.a = 9;
+            if (@as(i32, u.a) != 9 or @as(i32, u.b) != 1) { return 3; }
+            return 0;
+        };
+    )") == 0);
+}
+
+TEST_CASE("packed union with float and int views of the same bits") {
+    CHECK(helpers::compile_and_run(R"(
+        const U := packed union { bits: u32, f: f32 };
+        pub const main := fn(): i32 {
+            var u: U = .{ .bits = 0 };
+            u.f = 1.0;
+            // IEEE-754 single 1.0 == 0x3F800000
+            return @as(i32, @as(i64, u.bits) - 1065353216);
+        };
+    )") == 0);
+}
+
+TEST_CASE("extern packed union is not bit-packed") {
+    CHECK(helpers::compile_and_run(R"(
+        const U := extern packed union { a: i32, b: f32 };
+        pub const main := fn(): i32 {
+            var u: U = .{ .a = 17 };
+            return u.a;
+        };
+    )") == 17);
+}
+
 } // namespace ghoti::tests

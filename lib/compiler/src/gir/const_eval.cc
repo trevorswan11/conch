@@ -284,6 +284,12 @@ auto const_eval::type_align_of(const sema::type& type, usize ptr_size) -> usize 
         UNREACHABLE("type_kind::STRUCT associated with improper type");
     case sema::type_kind::UNION:
         if (const auto un{type.get_data().as_opt<sema::types::union_t>()}) {
+            if (un->is_bit_packed()) {
+                if (const auto bits{
+                        sema::packed_union_backing_bits(*un, static_cast<u32>(ptr_size) * 8)}) {
+                    return int_abi_bytes(static_cast<u16>(*bits));
+                }
+            }
             return std::ranges::fold_left(un->fields | std::views::filter([](const auto* f) {
                                               return f != nullptr;
                                           }) | std::views::transform([ptr_size](const auto* f) {
@@ -365,6 +371,12 @@ auto const_eval::type_size_of(const sema::type& type, usize ptr_size) -> usize {
         UNREACHABLE("type_kind::STRUCT associated with improper type");
     case sema::type_kind::UNION:
         if (const auto un{type.get_data().as_opt<sema::types::union_t>()}) {
+            if (un->is_bit_packed()) {
+                if (const auto bits{
+                        sema::packed_union_backing_bits(*un, static_cast<u32>(ptr_size) * 8)}) {
+                    return int_abi_bytes(static_cast<u16>(*bits));
+                }
+            }
             usize max_size{0};
             usize max_align{1};
             for (const auto* field : un->fields) {

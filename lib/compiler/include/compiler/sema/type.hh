@@ -215,6 +215,15 @@ struct union_t {
     gsl::span<type*>                        members;
     const mod::module&                      enclosing;
     bool                                    is_untagged{false};
+    bool                                    is_c_abi{false};
+    bool                                    is_packed{false};
+
+    // `packed` without `extern`: a Zig-style bit-packed union backed by a single integer
+    // wide enough for its largest field; every field sits at bit offset 0.
+    // `extern packed union` keeps C-ABI byte semantics.
+    [[nodiscard]] constexpr auto is_bit_packed() const noexcept -> bool {
+        return is_packed && !is_c_abi;
+    }
 
     // The index location entirely depends on the number of fields which always come first
     [[nodiscard]] auto type_at(usize idx) const noexcept -> type& {
@@ -555,6 +564,11 @@ static_assert(stdx::TriviallyDestructible<type>);
 // LSB-first bit offset of field `idx` in a bit-packed `packed struct`.
 [[nodiscard]] auto packed_field_offset(const types::struct_t& s, usize idx, u32 ptr_bits) noexcept
     -> u32;
+
+// Backing width `N` of a bit-packed `packed union`: the width of its widest field (every
+// field is laid out at bit offset 0). None if any field is ineligible or `N` exceeds 65535.
+[[nodiscard]] auto packed_union_backing_bits(const types::union_t& u, u32 ptr_bits) noexcept
+    -> stdx::option<u32>;
 
 // All associated type lifetimes are tied to the pool
 class type_pool {

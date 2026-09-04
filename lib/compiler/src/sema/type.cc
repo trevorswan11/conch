@@ -109,6 +109,11 @@ auto packed_field_bits(const type& t, u32 ptr_bits) noexcept -> stdx::option<u32
             return packed_backing_bits(*st, ptr_bits);
         }
         return stdx::none;
+    case type_kind::UNION:
+        if (const auto ut{t.get_data().as_opt<types::union_t>()}; ut && ut->is_bit_packed()) {
+            return packed_union_backing_bits(*ut, ptr_bits);
+        }
+        return stdx::none;
     case type_kind::ARRAY:
         if (const auto arr{t.get_data().as_opt<types::array>()}) {
             if (const auto elem{packed_field_bits(arr->underlying, ptr_bits)}) {
@@ -141,6 +146,19 @@ auto packed_field_offset(const types::struct_t& s, usize idx, u32 ptr_bits) noex
         }
     }
     return static_cast<u32>(offset);
+}
+
+auto packed_union_backing_bits(const types::union_t& u, u32 ptr_bits) noexcept
+    -> stdx::option<u32> {
+    u64 widest{0};
+    for (const auto* field : u.fields) {
+        if (!field) { continue; }
+        const auto bits{packed_field_bits(*field, ptr_bits)};
+        if (!bits) { return stdx::none; }
+        widest = std::max<u64>(widest, *bits);
+    }
+    if (widest < 1 || widest > 65'535) { return stdx::none; }
+    return static_cast<u32>(widest);
 }
 
 auto is_signed_integer(const type& t) noexcept -> bool {

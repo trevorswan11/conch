@@ -774,6 +774,10 @@ auto dumper::visit(node_id, const union_expr& node) -> void {
         fmt::println(out_, "{}Extern: {}", indent_.current_branch(), node.is_extern);
     }
     {
+        const indent::guard g{indent_, false};
+        fmt::println(out_, "{}Packed: {}", indent_.current_branch(), node.is_packed);
+    }
+    {
         const indent::guard g{indent_, !has_cfg && !has_members};
         fmt::println(out_, "{}Fields:", indent_.current_branch());
         dump_container(node.fields, [this](const union_expr::field& field) -> void {

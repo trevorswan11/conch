@@ -1176,8 +1176,13 @@ auto register_type_ctor_members(context&         ctx,
                                            s.field_alignments);
         },
         [&](const types::union_t& u) {
-            fresh.resolve<types::union_t>(
-                rebind(u.fields), u.ast_fields, rebind(u.members), u.enclosing, u.is_untagged);
+            fresh.resolve<types::union_t>(rebind(u.fields),
+                                          u.ast_fields,
+                                          rebind(u.members),
+                                          u.enclosing,
+                                          u.is_untagged,
+                                          u.is_c_abi,
+                                          u.is_packed);
         },
         [&](const types::enum_t& e) {
             fresh.resolve<types::enum_t>(
@@ -4066,7 +4071,8 @@ namespace {
 
 namespace {
 
-// A `packed struct` has no per-field address, so `&p.field` / `^p.field` is rejected.
+// A bit-packed `packed struct`/`packed union` has no per-field address, so `&p.field` /
+// `^p.field` is rejected.
 [[nodiscard]] auto rhs_is_packed_field(const mod::module& mod, auto rhs) -> bool {
     const auto dot{mod.ast.template get_as_opt<ast::dot_expr>(rhs)};
     if (!dot) { return false; }
@@ -4078,8 +4084,9 @@ namespace {
     } else if (const auto r{ot->get_data().as_opt<types::reference>()}) {
         ot = &r->underlying;
     }
-    const auto st{ot->get_data().as_opt<types::struct_t>()};
-    return st && st->is_bit_packed();
+    if (const auto st{ot->get_data().as_opt<types::struct_t>()}) { return st->is_bit_packed(); }
+    if (const auto ut{ot->get_data().as_opt<types::union_t>()}) { return ut->is_bit_packed(); }
+    return false;
 }
 
 } // namespace
@@ -4791,15 +4798,63 @@ auto type_resolver::visit(ID id, const ast::union_expr& union_expr) -> void {
             }
         }
 
+        // A bit-packed `packed union` may only hold packed-eligible fields (64 is a stand-in
+        // for the target pointer width; eligibility does not depend on its exact value).
+        if (union_expr.is_packed && !union_expr.is_extern &&
+            !sema::packed_field_bits(field_type, 64)) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("field '{}' of type '{}' cannot appear in a 'packed union'; only "
+                            "integers, floats, 'bool', enums, pointers, packed aggregates, and "
+                            "fixed arrays of those are allowed",
+                            ident.name,
+                            ctx_.type_display_name(field_type)),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(field.explicit_type)));
+        }
+        if (union_expr.is_packed && !union_expr.is_extern && field.explicit_alignment) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("a 'packed union' field cannot specify 'alignas' (field '{}')",
+                            ident.name),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(field.explicit_type)));
+        }
+
         resolving_.set_sema_type(field.name, field_type);
         sym->set_kind(symbol_kind::VALUE);
         sym->set_status(symbol_status::RESOLVED);
         field_types[i++] = &field_type;
     }
 
+    if (union_expr.is_packed && !union_expr.is_extern) {
+        u64 widest{0};
+        for (const auto* ft : field_types) {
+            widest = std::max<u64>(widest, ft ? sema::packed_field_bits(*ft, 64).value_or(0) : 0);
+        }
+        if (widest < 1 || widest > 128) {
+            return last_type_.emplace(ctx_.poison_node(
+                resolving_,
+                id,
+                fmt::format("a 'packed union' backing width of {} bits is unsupported (the "
+                            "current limit is 128 bits)",
+                            widest),
+                error::ILLEGAL_PACKED_FIELD,
+                resolving_.ast.location_of(id)));
+        }
+    }
+
     auto member_types{ctx_.pool.get_many_unsafe(union_expr.members.size())};
-    committable_resolution<types::union_t> resolution{
-        union_type, field_types, union_expr.fields, member_types, resolving_, union_expr.is_extern};
+    committable_resolution<types::union_t> resolution{union_type,
+                                                      field_types,
+                                                      union_expr.fields,
+                                                      member_types,
+                                                      resolving_,
+                                                      union_expr.is_extern || union_expr.is_packed,
+                                                      union_expr.is_extern,
+                                                      union_expr.is_packed};
     if (!resolve_members(member_types, union_expr.members)) {
         return last_type_.emplace(ctx_.poison_node(resolving_, id));
     }

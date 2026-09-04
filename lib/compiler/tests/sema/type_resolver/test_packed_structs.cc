@@ -48,4 +48,26 @@ TEST_CASE("extern packed struct is not bit-packed and keeps its relaxed rules") 
         "const S := extern packed struct { @alignas(4) a: i32, b: u8, c: i32 };");
 }
 
+TEST_CASE("packed union accepts packable fields and rejects the rest") {
+    helpers::resolve_and_check("const U := packed union { a: u8, b: u3, f: f16, p: ^i32 };");
+    CHECK(helpers::raised("const U := packed union { a: u8, b: []i32 };",
+                          sema::error::ILLEGAL_PACKED_FIELD));
+    CHECK(helpers::raised("const U := packed union { @alignas(4) a: u8, b: u3 };",
+                          sema::error::ILLEGAL_PACKED_FIELD));
+    CHECK(helpers::raised("const U := packed union { a: u200, b: u8 };",
+                          sema::error::ILLEGAL_PACKED_FIELD));
+}
+
+TEST_CASE("taking the address of a bit-packed union field is rejected") {
+    CHECK(helpers::raised(R"(
+        const U := packed union { a: u8, b: u3 };
+        pub const main := fn(): i32 {
+            var u: U = .{ .a = 1 };
+            const p := &u.a;
+            return 0;
+        };
+    )",
+                          sema::error::ILLEGAL_PACKED_FIELD_ADDRESS));
+}
+
 } // namespace ghoti::tests

@@ -714,9 +714,14 @@ auto type_checker::check_store(const gir::instruction& inst) -> void {
     // A bit-packed struct slot is really a backing integer; the emitter builds it by
     // storing integers (zero-init, then shifted-in fields), so allow int -> packed struct.
     const auto packed_backing_store{[](const type* dest, const type* val) -> bool {
-        if (!dest || !val) { return false; }
-        const auto st{dest->get_data().as_opt<types::struct_t>()};
-        return st && st->is_bit_packed() && is_integer(val->get_kind());
+        if (!dest || !val || !is_integer(val->get_kind())) { return false; }
+        if (const auto st{dest->get_data().as_opt<types::struct_t>()}) {
+            return st->is_bit_packed();
+        }
+        if (const auto ut{dest->get_data().as_opt<types::union_t>()}) {
+            return ut->is_bit_packed();
+        }
+        return false;
     }};
 
     if (inst.result && !inst.operands.empty()) {

@@ -240,7 +240,7 @@ class emitter {
     auto sync_tagged_union_tag(ast::node_id assign_lhs) -> void;
     auto emit_assignment(ast::node_id id, const ast::assignment_expr& assign) -> value;
 
-    // Bit-packed `packed struct` field access: shift/mask over the backing integer.
+    // Bit-packed `packed struct`/`packed union` field access: shift/mask over the backing int.
     [[nodiscard]] auto emit_packed_field_read(value                        backing_addr,
                                               const sema::types::struct_t& st,
                                               usize                        field_idx,
@@ -254,11 +254,32 @@ class emitter {
                                                usize                        field_idx,
                                                sema::type&                  field_type,
                                                value                        new_field_val) -> void;
+    [[nodiscard]] auto emit_packed_field_read(value                       backing_addr,
+                                              const sema::types::union_t& ut,
+                                              sema::type&                 field_type) -> value;
+    auto               emit_packed_field_write(value                       backing_addr,
+                                               const sema::types::union_t& ut,
+                                               sema::type&                 field_type,
+                                               value                       new_field_val) -> void;
+    [[nodiscard]] auto
+    emit_packed_bits_extract(value backing, u32 n, u32 offset, u32 fbits, sema::type& field_type)
+        -> value;
+    auto               emit_packed_bits_insert(value       backing_addr,
+                                               u32         n,
+                                               u32         offset,
+                                               u32         fbits,
+                                               sema::type& field_type,
+                                               value       new_field_val) -> void;
     [[nodiscard]] auto emit_packed_field_assign(ast::node_id                 id,
                                                 const ast::dot_expr&         dot,
                                                 const ast::assignment_expr&  assign,
                                                 syntax::token_type_t         op_type,
                                                 const sema::types::struct_t& st) -> value;
+    [[nodiscard]] auto emit_packed_union_field_assign(ast::node_id                id,
+                                                      const ast::dot_expr&        dot,
+                                                      const ast::assignment_expr& assign,
+                                                      syntax::token_type_t        op_type,
+                                                      const sema::types::union_t& ut) -> value;
     auto               emit_call(ast::node_id id, const ast::call_expr& call) -> value;
     auto               emit_asm(ast::node_id id, const ast::asm_expr& node) -> value;
     auto               emit_ident(ast::node_id id, const ast::identifier_expr& ident) -> value;

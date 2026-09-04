@@ -391,6 +391,7 @@ auto formatter::format_struct(const struct_expr& node) -> syntax::doc_id {
 auto formatter::format_union(const union_expr& node) -> syntax::doc_id {
     std::vector<syntax::doc_id> head;
     if (node.is_extern) { head.emplace_back(doc_manager_.text("extern ")); }
+    if (node.is_packed) { head.emplace_back(doc_manager_.text("packed ")); }
     head.emplace_back(doc_manager_.text("union "));
 
     const auto field_item{[&](const union_expr::field& field) -> syntax::doc_id {
