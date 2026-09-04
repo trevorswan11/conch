@@ -2288,7 +2288,28 @@ auto type_resolver::register_non_generic_type_ctor_members(type&                
 template <ast::IndexableID ID>
 auto type_resolver::resolve_ident(ID id, const ast::identifier_expr& ident) -> void {
     const auto name{ident.name};
-    auto       lookup{ctx_.registry.lookup_with_depth(table_stack_, name)};
+
+    // `iN` / `uN` are primitive integer types, not looked-up symbols.
+    if (syntax::token_type::is_int_type_lexeme(name)) {
+        u64 width{0};
+        for (const char c : name.substr(1)) {
+            width = width * 10 + static_cast<u64>(c - '0');
+            if (width > 65'535) { break; }
+        }
+        if (width < 1 || width > 65'535) {
+            return last_type_.emplace(
+                ctx_.poison_node(resolving_,
+                                 id,
+                                 fmt::format("Integer width must be 1..65535; found '{}'", name),
+                                 error::TYPE_MISMATCH,
+                                 resolving_.ast.location_of(id)));
+        }
+        auto& int_type{ctx_.get_int(static_cast<u16>(width), name.front() == 'i')};
+        resolving_.set_sema_type(id, int_type);
+        return last_type_.emplace(int_type);
+    }
+
+    auto lookup{ctx_.registry.lookup_with_depth(table_stack_, name)};
 
     // Check for an undeclared identifier and poison the ident
     if (!lookup) {
@@ -3677,6 +3698,7 @@ auto type_resolver::visit(ast::node_id id, const ast::match_expr& match) -> void
                 return self(self, *ref->rhs);
             }
             if (const auto id_e{resolving_.ast.get_as_opt<ast::identifier_expr>(n)}) {
+                if (syntax::token_type::is_int_type_lexeme(id_e->name)) { return true; }
                 const auto sym{ctx_.registry.lookup(table_stack_, id_e->name)};
                 if (!sym) { return false; }
                 if (sym->has_kind() && sym->get_kind() == symbol_kind::TYPE) { return true; }
@@ -6102,6 +6124,15 @@ auto type_resolver::apply_explicit_modifiers(ast::explicit_type_id id, type& inn
 
 auto type_resolver::visit(ast::explicit_type_id id, const ast::identifier_expr& ident) -> void {
     PROFILE_FUNCTION();
+
+    // `iN` / `uN` resolve straight to a pooled integer type, no symbol lookup.
+    if (syntax::token_type::is_int_type_lexeme(ident.name)) {
+        resolve_ident(id, ident);
+        auto& resolved{apply_explicit_modifiers(id, *last_type_.take())};
+        resolving_.set_sema_type(id, resolved);
+        return last_type_.emplace(resolved);
+    }
+
     auto symbol_opt{ctx_.registry.lookup(table_stack_, ident.name)};
     if (!symbol_opt) {
         return last_type_.emplace(

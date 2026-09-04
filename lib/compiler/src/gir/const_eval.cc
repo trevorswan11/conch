@@ -1336,6 +1336,18 @@ auto const_eval::eval_ident(ast::node_id id, const ast::identifier_expr& ident)
     if (auto local_val{lookup_local_binding(ident.name)}) { return local_val; }
     if (const auto cx{ctx_.lookup_constexpr_binding(ident.name)}) { return *cx; }
 
+    // `iN` / `uN` name a primitive integer type; yield it as a compile-time type value.
+    if (syntax::token_type::is_int_type_lexeme(ident.name)) {
+        u64 width{0};
+        for (const char c : ident.name.substr(1)) {
+            width = width * 10 + static_cast<u64>(c - '0');
+            if (width > 65'535) { break; }
+        }
+        if (width >= 1 && width <= 65'535) {
+            return const_value{ctx_.get_int(static_cast<u16>(width), ident.name.front() == 'i')};
+        }
+    }
+
     // A bare identifier inside a member body may name a sibling static `const` member.
     if (enclosing_type_) {
         if (const auto tbl{enclosing_type_->get_symbol_table_idx_opt()}) {

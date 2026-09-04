@@ -149,16 +149,9 @@ enum class token_type_t : u8 {
     INTERFACE,
     DYN,
 
-    I8_TYPE,
-    I16_TYPE,
-    I32_TYPE,
-    I64_TYPE,
+    INT_TYPE, // `iN` / `uN` for N in 1..65535; width and sign carried in the lexeme
     ISIZE_TYPE,
-    U16_TYPE,
-    U32_TYPE,
-    U64_TYPE,
     USIZE_TYPE,
-    U8_TYPE,
     F32_TYPE,
     F64_TYPE,
     BOOL_TYPE,
@@ -342,6 +335,10 @@ enum class integer_category : u8 {
 }
 
 [[nodiscard]] auto is_primitive(token_type_t type) noexcept -> bool;
+
+// Whether `s` has the shape of an arbitrary-width integer type: `i`/`u` then `[1-9][0-9]*`
+// (the numeric range 1..65535 is validated later, where a diagnostic can be issued).
+[[nodiscard]] auto is_int_type_lexeme(std::string_view s) noexcept -> bool;
 
 // Check whether the token is an ident, primitive type, or builtin function.
 [[nodiscard]] auto is_valid_ident(token_type_t type) noexcept -> bool;

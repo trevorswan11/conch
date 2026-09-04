@@ -95,17 +95,17 @@ const func := other::BarE.bar;
 
 TEST_CASE("Union resolved access") {
     auto [ctx, idx]{setup_access_test(R"(
-var u1: other::BarU = .{ .A = 1, };
-const u2 := other::BarU{ .A = 1, };
-const u3 := u1.bar('a');
+var ua: other::BarU = .{ .A = 1, };
+const ub := other::BarU{ .A = 1, };
+const uc := ua.bar('a');
 
 const func := other::BarU.bar;
 )")};
 
     const auto& union_type{ctx->get_type(sema::type_kind::UNION, 5)};
-    check_access_decl(*ctx, idx, "u1", union_type);
-    check_access_decl(*ctx, idx, "u2", union_type);
-    check_access_decl(*ctx, idx, "u3", u8_slice_type(*ctx));
+    check_access_decl(*ctx, idx, "ua", union_type);
+    check_access_decl(*ctx, idx, "ub", union_type);
+    check_access_decl(*ctx, idx, "uc", u8_slice_type(*ctx));
     check_access_decl(*ctx, idx, "func", bar_fn_type(*ctx, 6));
 }
 

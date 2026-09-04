@@ -85,29 +85,14 @@ auto inject_types(symbol_table& prelude, type_pool& pool) -> void {
         register_symbol(keyword, type);
     };
 
-    const auto inject_int =
-        [&](const syntax::keyword_t& keyword, u16 bits, bool is_signed) -> void {
-        auto& type{*pool[{type_kind::INT, types::mut::CONSTANT, bits, is_signed}]};
-        ASSERT(!type.is_resolved(), "Builtin types should only be resolved once");
-        type.resolve<types::integer>(bits, is_signed);
-        register_symbol(keyword, type);
-    };
-
     namespace kws = syntax::keywords;
 
-    // Primitives
-    inject_int(kws::I8, 8, true);
-    inject_int(kws::I16, 16, true);
-    inject_int(kws::I32, 32, true);
-    inject_int(kws::I64, 64, true);
+    // Primitives. `iN` / `uN` are not prelude symbols; they resolve straight to a pooled
+    // `type_kind::INT` from their spelling (see `type_resolver::resolve_ident`).
     inject_type(kws::ISIZE, type_kind::ISIZE);
-    inject_int(kws::U16, 16, false);
-    inject_int(kws::U32, 32, false);
-    inject_int(kws::U64, 64, false);
     inject_type(kws::USIZE, type_kind::USIZE);
     inject_type(kws::F32, type_kind::F32);
     inject_type(kws::F64, type_kind::F64);
-    inject_int(kws::U8, 8, false);
     inject_type(kws::BOOL, type_kind::BOOL);
     inject_type(kws::VOID, type_kind::VOID_);
 
