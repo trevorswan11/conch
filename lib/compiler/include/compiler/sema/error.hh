@@ -96,6 +96,7 @@ enum class error : u8 {
     DYN_UNBOUND_ASSOC,
     DYN_BY_VALUE_SELF,
     STATIC_REQUIREMENT_UNSUPPORTED,
+    UNSUPPORTED_TARGET,
 };
 
 using diagnostic  = diagnostic<error>;

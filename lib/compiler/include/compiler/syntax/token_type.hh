@@ -131,8 +131,11 @@ enum class token_type_t : u8 {
     INT_TYPE, // `iN` / `uN` for N in 1..65535; width and sign carried in the lexeme
     ISIZE_TYPE,
     USIZE_TYPE,
+    F16_TYPE,
     F32_TYPE,
     F64_TYPE,
+    F80_TYPE,
+    F128_TYPE,
     BOOL_TYPE,
     VOID_TYPE,
 

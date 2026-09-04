@@ -246,8 +246,11 @@ auto const_eval::type_align_of(const sema::type& type, usize ptr_size) -> usize 
     switch (type.get_kind()) {
     case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
     case sema::type_kind::BOOL:      return 1;
+    case sema::type_kind::F16:       return 2;
     case sema::type_kind::F32:       return 4;
     case sema::type_kind::F64:       return 8;
+    case sema::type_kind::F80:
+    case sema::type_kind::F128:      return 16;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
     case sema::type_kind::POINTER:
@@ -309,8 +312,11 @@ auto const_eval::type_size_of(const sema::type& type, usize ptr_size) -> usize {
     case sema::type_kind::VOID_:     return 0;
     case sema::type_kind::INT:       return int_abi_bytes(sema::int_width(type));
     case sema::type_kind::BOOL:      return 1;
+    case sema::type_kind::F16:       return 2;
     case sema::type_kind::F32:       return 4;
     case sema::type_kind::F64:       return 8;
+    case sema::type_kind::F80:
+    case sema::type_kind::F128:      return 16;
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:
     case sema::type_kind::POINTER:
@@ -524,7 +530,13 @@ auto const_eval::eval_node(ast::node_id id) -> stdx::option<const_value> {
             return make_scalar_const(static_cast<i128>(data.value), t);
         },
         [&](const ast::float_literal_expr& data) -> stdx::option<const_value> {
+            // `f80`/`f128` cannot be represented exactly at compile time; refuse to fold (D3).
+            if (data.width == 80 || data.width == 128) { return stdx::none; }
             const auto sema_type{module_->get_sema_type_opt(id)};
+            if (sema_type && (sema_type->get_kind() == sema::type_kind::F80 ||
+                              sema_type->get_kind() == sema::type_kind::F128)) {
+                return stdx::none;
+            }
             return const_value{data.value,
                                sema_type ? *sema_type
                                          : ctx_.get_builtin_resolved_type(sema::type_kind::F64)};
@@ -1173,6 +1185,11 @@ auto const_eval::fold_binary_values(syntax::token_type_t op_type,
             return static_cast<f64>(v.as_int_opt().value_or(0));
         };
         const auto res_type{lhs.get_type() ? lhs.get_type() : rhs.get_type()};
+        // `f80`/`f128` results cannot be represented exactly at compile time; refuse to fold (D3).
+        if (res_type && (res_type->get_kind() == sema::type_kind::F80 ||
+                         res_type->get_kind() == sema::type_kind::F128)) {
+            return stdx::none;
+        }
         return fold_binary_arithmetic(
             op_type, to_f64(lhs), to_f64(rhs), res_type, bool_type, on_div_zero);
     }

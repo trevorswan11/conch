@@ -498,9 +498,10 @@ auto emitter::emit_coerced_expr(ast::expr_handle expr_id, const sema::type& dest
 
     const auto val{emit_expression(expr_id)};
 
-    // An integer that is narrower than the destination widens implicitly
-    if (val.type && sema::is_integer(dest_type.get_kind()) &&
-        sema::is_integer(val.type->get_kind()) &&
+    // A numeric value narrower than the destination widens implicitly (`iW`->`iV`, `f32`->`f64`,
+    // ...)
+    if (val.type && sema::is_numeric(dest_type.get_kind()) &&
+        sema::is_numeric(val.type->get_kind()) &&
         !sema::is_same_unqualified(*val.type, dest_type) &&
         sema::is_implicit_widenable(*val.type, dest_type)) {
         auto& widened{const_cast<sema::type&>(dest_type)};

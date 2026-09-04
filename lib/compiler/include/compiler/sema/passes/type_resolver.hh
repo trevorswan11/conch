@@ -400,6 +400,9 @@ class type_resolver {
         VERIFY(ctx.prelude_index, "TypeResolver must be used after prelude-injection");
     }
 
+    // Whether the compilation target has the `x86_fp80` type (`f80`).
+    [[nodiscard]] auto target_has_x86_fp80() const -> bool;
+
   private:
     mod::module&              resolving_;
     usize                     table_idx_;

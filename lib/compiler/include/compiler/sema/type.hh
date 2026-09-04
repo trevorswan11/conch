@@ -33,8 +33,11 @@ enum class type_kind : u8 {
     ISIZE,
     USIZE,
     BOOL,
+    F16,
     F32,
     F64,
+    F80,
+    F128,
     VOID_,
     UNDEFINED,
     NULLPTR,
@@ -82,9 +85,24 @@ class type;
 
 [[nodiscard]] constexpr auto is_float(type_kind kind) noexcept -> bool {
     switch (kind) {
+    case type_kind::F16:
     case type_kind::F32:
-    case type_kind::F64: return true;
-    default:             return false;
+    case type_kind::F64:
+    case type_kind::F80:
+    case type_kind::F128: return true;
+    default:              return false;
+    }
+}
+
+// Bit width of a floating-point kind (16/32/64/80/128); 0 for a non-float.
+[[nodiscard]] constexpr auto float_bits(type_kind kind) noexcept -> u16 {
+    switch (kind) {
+    case type_kind::F16:  return 16;
+    case type_kind::F32:  return 32;
+    case type_kind::F64:  return 64;
+    case type_kind::F80:  return 80;
+    case type_kind::F128: return 128;
+    default:              return 0;
     }
 }
 

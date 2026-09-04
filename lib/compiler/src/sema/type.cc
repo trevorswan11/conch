@@ -100,7 +100,10 @@ auto is_implicit_widenable(const type& from, const type& to) noexcept -> bool {
     const auto from_kind{from.get_kind()};
     const auto to_kind{to.get_kind()};
 
-    if (from_kind == type_kind::F32) { return to_kind == type_kind::F64; }
+    // A float widens to any wider float (`f16 -> f32 -> f64 -> f80 -> f128`).
+    if (is_float(from_kind)) {
+        return is_float(to_kind) && float_bits(from_kind) < float_bits(to_kind);
+    }
 
     const auto from_int{as_integer(from)};
     if (!from_int) { return false; }

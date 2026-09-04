@@ -36,8 +36,11 @@ constexpr keyword_t BREAK{"break", token_type_t::BREAK};
 constexpr keyword_t IMPORT{"import", token_type_t::IMPORT};
 constexpr keyword_t ISIZE{"isize", token_type_t::ISIZE_TYPE};
 constexpr keyword_t USIZE{"usize", token_type_t::USIZE_TYPE};
+constexpr keyword_t F16{"f16", token_type_t::F16_TYPE};
 constexpr keyword_t F32{"f32", token_type_t::F32_TYPE};
 constexpr keyword_t F64{"f64", token_type_t::F64_TYPE};
+constexpr keyword_t F80{"f80", token_type_t::F80_TYPE};
+constexpr keyword_t F128{"f128", token_type_t::F128_TYPE};
 constexpr keyword_t BOOL{"bool", token_type_t::BOOL_TYPE};
 constexpr keyword_t VOID{"void", token_type_t::VOID_TYPE};
 constexpr keyword_t TYPE{"type", token_type_t::TYPE_TYPE};
@@ -80,8 +83,9 @@ constexpr std::array ALL_KEYWORDS{
     keywords::MATCH,     keywords::RETURN,       keywords::DEFER,
     keywords::LOOP,      keywords::FOR,          keywords::WHILE,
     keywords::CONTINUE,  keywords::BREAK,        keywords::IMPORT,
-    keywords::ISIZE,     keywords::USIZE,        keywords::F32,
-    keywords::F64,       keywords::BOOL,         keywords::VOID,
+    keywords::ISIZE,     keywords::USIZE,        keywords::F16,
+    keywords::F32,       keywords::F64,          keywords::F80,
+    keywords::F128,      keywords::BOOL,         keywords::VOID,
     keywords::TYPE,      keywords::AUTO,         keywords::OPAQUE,
     keywords::AS,        keywords::PUBLIC,       keywords::EXTERN,
     keywords::EXPORT,    keywords::THREADLOCAL,  keywords::WEAK,
@@ -97,8 +101,11 @@ constexpr std::array ALL_PRIMITIVES{
     token_type_t::INT_TYPE,
     keywords::ISIZE.type,
     keywords::USIZE.type,
+    keywords::F16.type,
     keywords::F32.type,
     keywords::F64.type,
+    keywords::F80.type,
+    keywords::F128.type,
     keywords::BOOL.type,
     keywords::VOID.type,
 };

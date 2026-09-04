@@ -60,10 +60,11 @@ struct sema_test_context {
     mod::module&                  root_mod;
 
     // The root is automatically added to the internal loader and can be immediately analyzed
-    explicit sema_test_context(const std::vector<mock_file>& imports,
-                               const std::filesystem::path&  root_path,
-                               std::string_view              input,
-                               std::ostream&                 error_stream = std::cerr);
+    explicit sema_test_context(const std::vector<mock_file>&  imports,
+                               const std::filesystem::path&   root_path,
+                               std::string_view               input,
+                               std::ostream&                  error_stream  = std::cerr,
+                               stdx::option<std::string_view> target_triple = stdx::none);
     ~sema_test_context() = default;
 
     MAKE_MOVE_CONSTRUCTABLE_ONLY(sema_test_context)
@@ -191,6 +192,9 @@ auto collect_and_check(std::string_view input, const std::vector<mock_file>& imp
 // Resolves the input, checks errors, asserts 100% symbol resolution, and returns the parent index
 auto resolve_and_check(std::string_view input, const std::vector<mock_file>& imports = {})
     -> ctx_idx_pair;
+
+// Resolves the input for a specific target triple (used to exercise target-gated types).
+auto resolve_for_target(std::string_view input, std::string_view target_triple) -> ctx_idx_pair;
 
 // Runs the entire Analyzer on the provided input without checking semantic validity (no errors)
 template <std::same_as<mock_file>... Mocks>

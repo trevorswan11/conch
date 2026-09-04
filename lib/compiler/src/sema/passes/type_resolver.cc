@@ -2120,13 +2120,28 @@ auto type_resolver::attach_closure_type(ast::node_id fn_id, type& fn_type, bool 
     return *closure_type;
 }
 
+auto type_resolver::target_has_x86_fp80() const -> bool {
+    const auto arch{codegen::target_facts::resolve(ctx_.target_opts.triple_str).arch};
+    return arch == "x86_64" || arch == "x86";
+}
+
 template <ast::IndexableID ID> auto type_resolver::resolve_symbol(ID id, symbol& sym) -> void {
     auto& symbol_data{sym.get_data()};
     switch (sym.get_status()) {
-    case symbol_status::RESOLVED:
+    case symbol_status::RESOLVED: {
         // Identifier handles are not unique in the tree, but their symbol can be used to find root
-        resolving_.set_sema_type(id, get_resolved_symbol_type(symbol_data));
+        auto& resolved{get_resolved_symbol_type(symbol_data)};
+        if (resolved.get_kind() == type_kind::F80 && !target_has_x86_fp80()) {
+            return last_type_.emplace(
+                ctx_.poison_node(resolving_,
+                                 id,
+                                 "the 'f80' type is only available on x86 and x86_64 targets",
+                                 error::UNSUPPORTED_TARGET,
+                                 resolving_.ast.location_of(id)));
+        }
+        resolving_.set_sema_type(id, resolved);
         break;
+    }
     case symbol_status::RESOLVING:
         if (const auto forwarded_type{forward_type(resolving_, stdx::none, sym)}) {
             resolving_.set_sema_type_if(id, *forwarded_type);
@@ -4312,11 +4327,26 @@ auto type_resolver::visit(ast::node_id id, const ast::int_literal_expr& expr) ->
 
 auto type_resolver::visit(ast::node_id id, const ast::float_literal_expr& expr) -> void {
     PROFILE_FUNCTION();
-    // f16/f80/f128 land in a later phase; treat their literals as width-less real for now.
-    type* resolved{&ctx_.get_builtin_resolved_type(type_kind::F64)};
-    if (expr.width == 32) {
-        resolved = &ctx_.get_builtin_resolved_type(type_kind::F32);
-    } else if (expr.width == 0 || expr.width == 16 || expr.width == 80 || expr.width == 128) {
+    type_kind kind{type_kind::F64};
+    switch (expr.width) {
+    case 16:  kind = type_kind::F16; break;
+    case 32:  kind = type_kind::F32; break;
+    case 80:  kind = type_kind::F80; break;
+    case 128: kind = type_kind::F128; break;
+    default:  kind = type_kind::F64; break; // 0 (width-less) and 64
+    }
+
+    if (kind == type_kind::F80 && !target_has_x86_fp80()) {
+        return last_type_.emplace(
+            ctx_.poison_node(resolving_,
+                             id,
+                             "the 'f80' type is only available on x86 and x86_64 targets",
+                             error::UNSUPPORTED_TARGET,
+                             resolving_.ast.location_of(id)));
+    }
+
+    type* resolved{&ctx_.get_builtin_resolved_type(kind)};
+    if (expr.width == 0) {
         if (const auto implicit_type{implicit_type_stack_.peek()};
             implicit_type && is_float(implicit_type->get_kind())) {
             resolved = implicit_type.get();

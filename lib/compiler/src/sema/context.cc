@@ -91,8 +91,11 @@ auto inject_types(symbol_table& prelude, type_pool& pool) -> void {
     // `type_kind::INT` from their spelling (see `type_resolver::resolve_ident`).
     inject_type(kws::ISIZE, type_kind::ISIZE);
     inject_type(kws::USIZE, type_kind::USIZE);
+    inject_type(kws::F16, type_kind::F16);
     inject_type(kws::F32, type_kind::F32);
     inject_type(kws::F64, type_kind::F64);
+    inject_type(kws::F80, type_kind::F80);
+    inject_type(kws::F128, type_kind::F128);
     inject_type(kws::BOOL, type_kind::BOOL);
     inject_type(kws::VOID, type_kind::VOID_);
 

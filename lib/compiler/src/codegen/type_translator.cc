@@ -22,8 +22,11 @@ auto type_translator::translate(const sema::type& type) -> llvm::Type* {
     case sema::type_kind::ISIZE:
     case sema::type_kind::USIZE:     return get_usize_ty();
     case sema::type_kind::BOOL:      return get_int1_ty();
+    case sema::type_kind::F16:       return llvm::Type::getHalfTy(context_);
     case sema::type_kind::F32:       return get_float_ty();
     case sema::type_kind::F64:       return get_double_ty();
+    case sema::type_kind::F80:       return llvm::Type::getX86_FP80Ty(context_);
+    case sema::type_kind::F128:      return llvm::Type::getFP128Ty(context_);
     case sema::type_kind::VOID_:
     case sema::type_kind::NORETURN:  return get_void_ty();
     case sema::type_kind::POINTER:
