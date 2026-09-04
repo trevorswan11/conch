@@ -409,6 +409,9 @@ class type_resolver {
     }
 
     [[nodiscard]] auto target_has_x86_fp80() const -> bool;
+    // Real pointer width (16/32/64) of the compilation target, for sizing pointer-like
+    // `packed struct`/`packed union` fields consistently with the emitter.
+    [[nodiscard]] auto target_ptr_bits() const -> u32;
 
   private:
     mod::module&              resolving_;

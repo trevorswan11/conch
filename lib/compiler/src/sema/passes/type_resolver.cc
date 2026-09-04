@@ -2147,6 +2147,10 @@ auto type_resolver::target_has_x86_fp80() const -> bool {
     return arch == "x86_64" || arch == "x86";
 }
 
+auto type_resolver::target_ptr_bits() const -> u32 {
+    return codegen::target_facts::resolve(ctx_.target_opts.triple_str).ptr_bits;
+}
+
 template <ast::IndexableID ID> auto type_resolver::resolve_symbol(ID id, symbol& sym) -> void {
     auto& symbol_data{sym.get_data()};
     switch (sym.get_status()) {
@@ -4738,7 +4742,7 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
 
         // A bit-packed `packed struct` may only hold packed-eligible fields
         if (struct_expr.is_packed && !struct_expr.is_extern &&
-            !sema::packed_field_bits(*field_type, 64)) { // 64 is technically arbitrary here
+            !sema::packed_field_bits(*field_type, target_ptr_bits())) {
             return last_type_.emplace(ctx_.poison_node(
                 resolving_,
                 id,
@@ -4807,7 +4811,7 @@ auto type_resolver::visit(ID id, const ast::struct_expr& struct_expr) -> void {
     if (struct_expr.is_packed && !struct_expr.is_extern) {
         u64 total_bits{0};
         for (const auto* ft : field_types) {
-            total_bits += ft ? sema::packed_field_bits(*ft, 64).value_or(0) : 0;
+            total_bits += ft ? sema::packed_field_bits(*ft, target_ptr_bits()).value_or(0) : 0;
         }
         if (total_bits < 1 || total_bits > 128) {
             return last_type_.emplace(ctx_.poison_node(
@@ -4893,7 +4897,7 @@ auto type_resolver::visit(ID id, const ast::union_expr& union_expr) -> void {
 
         // A bit-packed `packed union` may only hold packed-eligible fields
         if (union_expr.is_packed && !union_expr.is_extern &&
-            !sema::packed_field_bits(field_type, 64)) { // here too
+            !sema::packed_field_bits(field_type, target_ptr_bits())) {
             return last_type_.emplace(ctx_.poison_node(
                 resolving_,
                 id,
@@ -4922,9 +4926,11 @@ auto type_resolver::visit(ID id, const ast::union_expr& union_expr) -> void {
     }
 
     if (union_expr.is_packed && !union_expr.is_extern) {
-        u64 widest{0};
+        u64        widest{0};
+        const auto ptr_bits{target_ptr_bits()};
         for (const auto* ft : field_types) {
-            widest = std::max<u64>(widest, ft ? sema::packed_field_bits(*ft, 64).value_or(0) : 0);
+            widest =
+                std::max<u64>(widest, ft ? sema::packed_field_bits(*ft, ptr_bits).value_or(0) : 0);
         }
         if (widest < 1 || widest > 128) {
             return last_type_.emplace(ctx_.poison_node(
