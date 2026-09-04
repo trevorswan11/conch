@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "compiler/sema/error.hh"
+#include "ghoti/config.h"
 #include "helpers/sema.hh"
 
 namespace ghoti::tests {
@@ -67,7 +68,9 @@ TEST_CASE("f128 is rejected on an extern global") {
 TEST_CASE("C-ABI extern signatures and aggregates are accepted") {
     helpers::resolve_and_check("extern const ok: fn(x: u32, y: usize, z: isize): f64;");
     helpers::resolve_and_check("const S := extern struct { a: i64, b: bool };");
+#if GHOTI_ASM_HOST_X86_64
     helpers::resolve_and_check("extern const with_f80: fn(x: f80): void;");
+#endif
 }
 
 } // namespace ghoti::tests

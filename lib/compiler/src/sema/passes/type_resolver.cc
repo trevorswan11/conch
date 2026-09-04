@@ -346,10 +346,8 @@ namespace {
            name == "seq_cst";
 }
 
-// A total order over `MemoryOrder` matching C++11 [atomics.types.operations]'s
-// "fail_order shall not be stronger than succ_order" rule closely enough for this purpose;
-// `release`/`acq_rel` are rejected outright as `fail_order` before this is ever consulted.
-[[nodiscard]] auto memory_order_rank(std::string_view name) noexcept -> int {
+// A total order over `MemoryOrder` matching C++11 [atomics.types.operations]
+[[nodiscard]] auto memory_order_rank(std::string_view name) noexcept -> i32 {
     if (name == "relaxed") { return 0; }
     if (name == "acquire" || name == "release") { return 1; }
     if (name == "acq_rel") { return 2; }
@@ -358,9 +356,9 @@ namespace {
 }
 
 [[nodiscard]] auto is_valid_atomic_rmw_op_name(std::string_view name) noexcept -> bool {
-    constexpr std::array<std::string_view, 11> names{
+    static constexpr std::array names{
         "xchg", "add", "sub", "band", "nand", "bor", "bxor", "max", "min", "umax", "umin"};
-    return std::ranges::find(names, name) != names.end();
+    return std::ranges::contains(names, name);
 }
 
 } // namespace
@@ -769,7 +767,7 @@ template <ast::IndexableID ID>
             break;
         }
 
-        // `@atomicStore` has no leading `T: type` argument -- `T` is `ptr`'s pointee instead.
+        // `@atomicStore` has no leading `T: type` argument; `T` is `ptr`'s pointee instead.
         const bool  has_t_arg{builtin_id != token_type_t::BUILTIN_ATOMIC_STORE};
         const usize ptr_idx{has_t_arg ? 1UZ : 0UZ};
 
@@ -821,10 +819,7 @@ template <ast::IndexableID ID>
         // Every non-`ptr`/order/op operand (`val`, `expected`, `new`) must agree with `T`.
         const auto check_matches_t = [&](usize            arg_idx,
                                          std::string_view name) -> stdx::option<diagnostic> {
-            auto& arg_type{*get_resolved_call_arg_type(call.arguments[arg_idx])};
-            // A width-less `constexpr_int`/`constexpr_float` literal (e.g. a bare `1`) has no
-            // fixed type yet to compare unqualified against `T`; it coerces to any matching
-            // numeric family instead, mirroring ordinary call-argument coercion.
+            auto&      arg_type{*get_resolved_call_arg_type(call.arguments[arg_idx])};
             const bool ok{
                 is_same_unqualified(arg_type, t) ||
                 (arg_type.get_kind() == type_kind::CONSTEXPR_INT && is_integer(t.get_kind())) ||
@@ -2884,8 +2879,7 @@ auto type_resolver::visit(ast::node_id, const ast::cfg_stmt&) -> void {
 
 namespace {
 
-// A wrapping (`+% -% *% <<%` / `-%`) operator's operand: a concrete integer, or a width-less
-// `constexpr_int` (which wraps as the plain operator, having no fixed width to wrap to).
+// True only for concrete integer, or width-less `constexpr_int`
 [[nodiscard]] auto wrapping_operand_ok(const type& t) noexcept -> bool {
     return is_integer(t.get_kind()) || t.get_kind() == type_kind::CONSTEXPR_INT;
 }
@@ -4569,8 +4563,7 @@ auto type_resolver::visit(ast::node_id id, const ast::unary_expr& node) -> void 
     if (id.get_token_type() == syntax::token_type_t::BANG) {
         last_type_.emplace(ctx_.get_builtin_resolved_type(type_kind::BOOL));
     } else if (id.get_token_type() == syntax::token_type_t::MINUS_PERCENT) {
-        // Mirrors plain unary '-': signed integers only (an unsigned '-x' is already rejected
-        // there too); '-%' only changes overflow behavior, not operand typing.
+        // Mirrors plain unary '-': signed integers only with overflow safety
         auto&      operand_type{*last_type_};
         const bool ok{operand_type.get_kind() == type_kind::CONSTEXPR_INT ||
                       is_signed_integer(operand_type)};
@@ -4985,9 +4978,7 @@ struct cabi_offenders {
     bool has_nonabi_scalar{false};
 };
 
-// A leaf integer/float width with no defined C ABI representation. `usize`/`isize` map to
-// `size_t`/`intptr_t` and are always fine; `f80` is C `long double` on x86 and is already
-// rejected off-x86 by `target_has_x86_fp80`, so it is not flagged here.
+// A leaf integer/float width with no defined C ABI representation
 [[nodiscard]] auto is_nonabi_scalar(const type& t) noexcept -> bool {
     if (t.get_kind() == type_kind::INT) {
         const auto bits{int_width(t)};

@@ -46,7 +46,6 @@ enum class token_type_t : u8 {
     NOT,
     CARET,
 
-    // Wrapping (never-trap, two's-complement) arithmetic
     PLUS_PERCENT,
     MINUS_PERCENT,
     STAR_PERCENT,
@@ -299,6 +298,16 @@ namespace token_type {
     case syntax::token_type_t::STAR_PERCENT_ASSIGN:  return syntax::token_type_t::STAR_PERCENT;
     case syntax::token_type_t::SHL_PERCENT_ASSIGN:   return syntax::token_type_t::SHL_PERCENT;
     default:                                         return stdx::none;
+    }
+}
+
+[[nodiscard]] constexpr auto is_wrapping_op(syntax::token_type_t tok) noexcept -> bool {
+    switch (tok) {
+    case syntax::token_type_t::PLUS_PERCENT:
+    case syntax::token_type_t::MINUS_PERCENT:
+    case syntax::token_type_t::STAR_PERCENT:
+    case syntax::token_type_t::SHL_PERCENT:   return true;
+    default:                                  return false;
     }
 }
 

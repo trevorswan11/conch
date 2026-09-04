@@ -8,6 +8,7 @@
 #include "compiler/codegen/opt_level.hh"
 #include "helpers/codegen.hh"
 #include "helpers/sema.hh"
+#include "support/test.hh"
 
 namespace ghoti::tests {
 

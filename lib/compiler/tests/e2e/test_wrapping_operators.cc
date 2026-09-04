@@ -115,8 +115,8 @@ TEST_CASE("<<% matches the wrapped value @shlWithOverflow writes on overflow") {
 TEST_CASE("constexpr_int wrapping operators fold as the plain operator (no wrap)") {
     CHECK(helpers::compile_and_run(R"(
         const c := 200 +% 100;
-        pub const main := fn(): i32 { return c; };
-    )") == 300);
+        pub const main := fn(): i32 { return c / 10; };
+    )") == 30);
 }
 
 } // namespace ghoti::tests

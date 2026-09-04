@@ -1776,8 +1776,10 @@ auto emitter::emit_binary(ast::node_id id, const ast::binary_expr& binary) -> va
 
     const auto lhs{emit_expression(binary.lhs)};
     const auto rhs{emit_expression(binary.rhs)};
-    return value{emit_checked_binary(*kind_opt, lhs, rhs, *sema_type, id, is_wrapping_op(op_type)),
-                 sema_type};
+    return value{
+        emit_checked_binary(
+            *kind_opt, lhs, rhs, *sema_type, id, syntax::token_type::is_wrapping_op(op_type)),
+        sema_type};
 }
 
 auto emitter::emit_unary(ast::node_id id, const ast::unary_expr& unary) -> value {
@@ -1794,8 +1796,8 @@ auto emitter::emit_unary(ast::node_id id, const ast::unary_expr& unary) -> value
         operand.type->get_kind() == sema::type_kind::POINTER) {
         return pointer_to_bool(operand, true);
     }
-    const auto dest{
-        emit_checked_unary(*kind_opt, operand, *sema_type, id, is_wrapping_op(op_type))};
+    const auto dest{emit_checked_unary(
+        *kind_opt, operand, *sema_type, id, syntax::token_type::is_wrapping_op(op_type))};
     return value{dest, sema_type};
 }
 
@@ -2072,8 +2074,12 @@ auto emitter::emit_packed_field_assign(ast::node_id                id,
         if (const auto b{syntax::token_type::get_compound_base_op(op_type)}) { base_tok = *b; }
         const auto base_kind{map_binary_op(base_tok).value_or(instruction_kind::ADD)};
         const auto rhs{emit_expression(assign.rhs)};
-        new_field = value{emit_checked_binary(
-                              base_kind, old_field, rhs, field_type, id, is_wrapping_op(base_tok)),
+        new_field = value{emit_checked_binary(base_kind,
+                                              old_field,
+                                              rhs,
+                                              field_type,
+                                              id,
+                                              syntax::token_type::is_wrapping_op(base_tok)),
                           field_type};
     }
 
@@ -2145,7 +2151,7 @@ auto emitter::emit_assignment(ast::node_id id, const ast::assignment_expr& assig
                                                      rhs,
                                                      target_type,
                                                      id,
-                                                     is_wrapping_op(base_tok)),
+                                                     syntax::token_type::is_wrapping_op(base_tok)),
                                  target_type}};
         builder_.emit_store(lhs_lval, res_val);
         return res_val;
@@ -2427,8 +2433,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
         }
         case syntax::token_type_t::BUILTIN_TAG_NAME: {
             if (const auto cv{const_eval_.try_eval(id)}) {
-                // A bare string constant's `to_gir_value()` carries only a data pointer, not the
-                // full `{ptr, len}` slice pair `@tagName` returns; materialize it properly.
+                // A bare string constant's `to_gir_value()` carries only a data pointer
                 if (const auto s{cv->as_opt<std::string>()}) {
                     return materialize_string_slice(*s, ret_type);
                 }
@@ -2604,8 +2609,7 @@ auto emitter::emit_call(ast::node_id id, const ast::call_expr& call) -> value {
         case syntax::token_type_t::BUILTIN_FENCE:          {
             const auto name{*syntax::get_builtin_opt(fn_token)};
 
-            // The order/op arguments are compile-time enum constants, sema-verified already;
-            // they ride on the instruction as ordinals rather than as GIR operand values.
+            // The order/op arguments are compile-time enum constants, sema-verified already
             const auto eval_order = [&](usize arg_idx) -> u8 {
                 const auto expr_h{*call.arguments[arg_idx].as_opt<ast::expr_handle>()};
                 const auto val{const_eval_.try_eval(expr_h)};
@@ -3919,7 +3923,7 @@ auto emitter::enum_discriminants(const sema::types::enum_t& en) -> std::vector<i
     discriminants.reserve(en.ast_enumerations.size());
 
     // A variant's initializer node is only valid against the enum's defining module's AST arena,
-    // which may differ from whichever module `const_eval_` is currently scoped to.
+    // which may differ from whichever module `const_eval_` is currently scoped to
     auto&      enclosing_mod{const_cast<mod::module&>(en.enclosing)};
     const_eval enclosing_eval{ctx_, enclosing_mod};
     enclosing_eval.set_symbol_scoping(symbol_scoping_);
@@ -3997,23 +4001,22 @@ auto emitter::emit_enum_cast_guard(ast::node_id     site,
 }
 
 auto emitter::materialize_string_slice(std::string_view text, sema::type& slice_type) -> value {
-    auto&      usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
-    auto&      slice_data{slice_type.get_data().as<sema::types::slice>()};
+    auto& usize_type{ctx_.get_builtin_resolved_type(sema::type_kind::USIZE)};
+    auto& slice_data{slice_type.get_data().as<sema::types::slice>()};
     // Mutable, even though the slice itself may be `[]const u8`: this only types the scratch
     // field address used to initialize `slot`, not the loaded result handed back to the caller.
     auto&      elem_ptr_type{ctx_.get_pointer(sema::types::mut::MUTABLE, slice_data.underlying)};
     const auto slot{builder_.emit_alloca(slice_type)};
 
-    // A slice value can't be written with a single `store` (a bare string constant lowers to
-    // just a data pointer, not the full `{ptr, len}` pair), so its two fields are addressed and
-    // stored separately, as `@sliceFromPtr` does, then loaded back into one genuine value.
+    // A slice value can't be written with a single `store`
     const auto ptr_field{builder_.emit_get_element_ptr(
         value{slot, slice_type}, {value{SLICE_PTR_FIELD_INDEX, usize_type}}, elem_ptr_type)};
     builder_.emit_store(value{ptr_field, elem_ptr_type}, value{std::string{text}, elem_ptr_type})
         .is_initializer = true;
     const auto len_field{builder_.emit_get_element_ptr(
         value{slot, slice_type}, {value{SLICE_LEN_FIELD_INDEX, usize_type}}, usize_type)};
-    builder_.emit_store(value{len_field, usize_type}, value{static_cast<u64>(text.size()), usize_type})
+    builder_
+        .emit_store(value{len_field, usize_type}, value{static_cast<u64>(text.size()), usize_type})
         .is_initializer = true;
 
     return value{builder_.emit_load(value{slot, slice_type}, slice_type), slice_type};
@@ -4054,14 +4057,15 @@ auto emitter::emit_runtime_tag_name(ast::expr_handle operand_expr,
     }};
 
     if (en) {
-        const auto operand_val{emit_expression(operand_expr)};
-        auto&      underlying{en->underlying};
+        const auto  operand_val{emit_expression(operand_expr)};
+        auto&       underlying{en->underlying};
         const value raw_val{builder_.emit_cast(instruction_kind::BIT_CAST, operand_val, underlying),
                             underlying};
-        const auto discriminants{enum_discriminants(*en)};
+        const auto  discriminants{enum_discriminants(*en)};
         for (usize idx{0}; idx < en->ast_enumerations.size(); ++idx) {
             const auto& vname{
-                en->enclosing.ast.get_as<ast::identifier_expr>(en->ast_enumerations[idx].name).name};
+                en->enclosing.ast.get_as<ast::identifier_expr>(en->ast_enumerations[idx].name)
+                    .name};
             const value rhs{static_cast<u64>(discriminants[idx]), underlying};
             const auto  eq{builder_.emit_binary(instruction_kind::EQ, raw_val, rhs, bool_type)};
             emit_named_case(value{eq, bool_type}, vname);
@@ -4081,14 +4085,13 @@ auto emitter::emit_runtime_tag_name(ast::expr_handle operand_expr,
                                    active_ast().get_as_opt<ast::dot_expr>(operand_expr) ||
                                    active_ast().get_as_opt<ast::index_expr>(operand_expr) ||
                                    active_ast().get_as_opt<ast::dereference_expr>(operand_expr)};
-        const auto operand_addr{is_lvalue_shape
-                                    ? emit_lvalue(operand_expr)
-                                    : spill_to_temporary(emit_expression(operand_expr),
-                                                         operand_type,
-                                                         operand_type.is_constant())};
+        const auto operand_addr{is_lvalue_shape ? emit_lvalue(operand_expr)
+                                                : spill_to_temporary(emit_expression(operand_expr),
+                                                                     operand_type,
+                                                                     operand_type.is_constant())};
 
-        auto&      i32_type{ctx_.get_int(32, true)};
-        const auto tag_ptr{builder_.emit_get_element_ptr(
+        auto&       i32_type{ctx_.get_int(32, true)};
+        const auto  tag_ptr{builder_.emit_get_element_ptr(
             operand_addr, {value{TAGGED_UNION_DISCRIMINANT_INDEX, usize_type}}, i32_type)};
         const value tag_val{builder_.emit_load(value{tag_ptr, i32_type}, i32_type), i32_type};
 

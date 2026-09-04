@@ -9,10 +9,6 @@ namespace ghoti::tests {
 
 namespace {
 
-// A non-exhaustive enum with explicit, non-positional discriminant values. The bug this file
-// guards against silently falls back to each variant's *positional index* when its declared
-// value is re-evaluated from a different module than the one that defines the enum, so the
-// values here are deliberately chosen to differ from their positional index (A -> 0, B -> 1).
 constexpr std::string_view MOD_A{R"(
     pub const MyErr := enum { A = 1, B = 2, _ };
     pub const make := fn(v: i32): MyErr { return @as(MyErr, v); };
@@ -29,7 +25,7 @@ TEST_CASE("E2E: match on a cross-module enum honors explicit discriminant values
                 return match (e) { .A => 1, .B => 2, _ => 99 };
             };
         )",
-        { helpers::mock_file{"a.gh", MOD_A, "a"} })};
+        {helpers::mock_file{"a.gh", MOD_A, "a"}})};
     CHECK(exit_code == 2);
 }
 
@@ -43,7 +39,7 @@ TEST_CASE("E2E: `==` against a cross-module enum's `Type.Variant` honors explici
                 return 0;
             };
         )",
-        { helpers::mock_file{"a.gh", MOD_A, "a"} })};
+        {helpers::mock_file{"a.gh", MOD_A, "a"}})};
     CHECK(exit_code == 7);
 }
 
@@ -52,7 +48,7 @@ TEST_CASE("E2E: an exhaustive cross-module enum match doesn't trap on a legitima
         pub const Status := enum { ok = 10, fail = 20 };
         pub const make := fn(v: i32): Status { return @as(Status, v); };
     )"};
-    const auto exit_code{helpers::compile_and_run(
+    const auto                 exit_code{helpers::compile_and_run(
         R"(
             import "s.gh" as s;
             pub const main := fn(): i32 {
@@ -63,7 +59,7 @@ TEST_CASE("E2E: an exhaustive cross-module enum match doesn't trap on a legitima
                 };
             };
         )",
-        { helpers::mock_file{"s.gh", mod, "s"} })};
+        {helpers::mock_file{"s.gh", mod, "s"}})};
     CHECK(exit_code == 2);
 }
 
@@ -71,7 +67,7 @@ TEST_CASE("E2E: `@tagName` of a cross-module enum with explicit values reports t
     constexpr std::string_view mod{R"(
         pub const Color := enum { red = 5, green = 6, blue = 7 };
     )"};
-    const auto exit_code{helpers::compile_and_run(
+    const auto                 exit_code{helpers::compile_and_run(
         R"(
             import "c.gh" as c;
             pub const main := fn(): i32 {
@@ -80,7 +76,7 @@ TEST_CASE("E2E: `@tagName` of a cross-module enum with explicit values reports t
                 return @as(i32, s.len) * 10 + @as(i32, s[0]);
             };
         )",
-        { helpers::mock_file{"c.gh", mod, "c"} })};
+        {helpers::mock_file{"c.gh", mod, "c"}})};
     CHECK(exit_code == (5 * 10 + 'g'));
 }
 

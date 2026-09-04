@@ -28,12 +28,8 @@ constexpr std::string_view LEAF{R"(
 
     pub const Tag := enum { red, green, blue };
 
-    // Explicit, non-positional discriminants (green's declared value 20 differs from its
-    // positional index 1), reached via a runtime cast so a wrong-value bug can't hide behind a
-    // fallback to the positional index the way a bare `.green` literal would.
     pub const Level := enum { low = 10, mid = 20, high = 30, _ };
     pub const to_level := fn(v: i32): Level { return @as(Level, v); };
-
     pub const Box := fn(T: type): type { return struct { pub val: T }; };
 )"};
 

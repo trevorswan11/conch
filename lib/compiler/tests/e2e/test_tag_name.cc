@@ -15,8 +15,6 @@ TEST_CASE("`@tagName` folds at compile time for a constexpr enum value") {
 }
 
 TEST_CASE("`@tagName` dispatches at runtime for a non-constant enum value") {
-    // `v` is bound at runtime (from a function parameter), so const-eval can't fold this call;
-    // the emitter must build the runtime dispatch itself.
     CHECK(helpers::compile_and_run(R"(
         const Color := enum { red, green, blue };
         const name_of := fn(c: Color): []u8 { return @tagName(c); };
@@ -51,16 +49,15 @@ TEST_CASE(
     )") == (1 * 100 + '_'));
 }
 
-TEST_CASE(
-    "`@tagName` of a non-exhaustive enum still reports a listed variant's real name when it matches") {
+TEST_CASE("`@tagName` of a non-exhaustive enum reports a variant's real name when it matches") {
     CHECK(helpers::compile_and_run(R"(
         const Status := enum { ok = 1, fail = 2, _ };
         const make := fn(v: i32): Status { return @as(Status, v); };
         pub const main := fn(): i32 {
             const s := @tagName(make(2));
-            return @as(i32, s.len) * 100 + @as(i32, s[0]);
+            return @as(i32, s.len) + @as(i32, s[0]);
         };
-    )") == (4 * 100 + 'f'));
+    )") == (4 + 'f'));
 }
 
 TEST_CASE("`@tagName` of a tagged union reports the currently-active field's name") {

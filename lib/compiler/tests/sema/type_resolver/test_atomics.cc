@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 
 #include "compiler/sema/error.hh"
+#include "compiler/sema/symbol.hh"
 #include "compiler/sema/type.hh"
 #include "helpers/sema.hh"
 

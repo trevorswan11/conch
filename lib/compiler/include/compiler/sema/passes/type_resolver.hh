@@ -217,8 +217,7 @@ class type_resolver {
     auto resolve_call_args(gsl::span<const ast::call_expr::argument> args) -> resolve_result;
     [[nodiscard]] auto get_resolved_call_arg_type(const ast::call_expr::argument& arg)
         -> gsl::not_null<type*>;
-    // Evaluates `arg` as a compile-time enum constant (an atomic builtin's `order`/`op`
-    // argument), mirroring the `@fieldParentPtr` compile-time-string-literal precedent.
+    // Evaluates `arg` as a compile-time enum constant
     [[nodiscard]] auto resolve_const_enum_arg(const ast::call_expr::argument& arg,
                                               std::string_view                builtin_name,
                                               std::string_view                what)
@@ -415,10 +414,7 @@ class type_resolver {
     }
 
     [[nodiscard]] auto target_has_x86_fp80() const -> bool;
-    // Real pointer width (16/32/64) of the compilation target, for sizing pointer-like
-    // `packed struct`/`packed union` fields consistently with the emitter.
     [[nodiscard]] auto target_ptr_bits() const -> u32;
-    // Whether the target has a native (lock-free) 128-bit `cmpxchg`/atomic RMW instruction.
     [[nodiscard]] auto target_has_128bit_atomics() const -> bool;
 
   private:

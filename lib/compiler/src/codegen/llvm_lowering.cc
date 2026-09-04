@@ -100,34 +100,57 @@ namespace {
     }
 }
 
-// `ord` is a `MemoryOrder` enum ordinal (declaration order: relaxed, acquire, release, acq_rel,
-// seq_cst), as folded from the atomic builtin's call-site argument during GIR emission.
+enum memory_order_t : u8 {
+    mo_relaxed = 0,
+    mo_acquire = 1,
+    mo_release = 2,
+    mo_acq_rel = 3,
+    mo_seq_cst = 4,
+};
+
+// `ord` is a `MemoryOrder` enum ordinal as folded from the atomic builtin
 [[nodiscard]] auto to_llvm_ordering(u8 ord) noexcept -> llvm::AtomicOrdering {
     switch (ord) {
-    case 0:  return llvm::AtomicOrdering::Monotonic; // relaxed
-    case 1:  return llvm::AtomicOrdering::Acquire;
-    case 2:  return llvm::AtomicOrdering::Release;
-    case 3:  return llvm::AtomicOrdering::AcquireRelease;         // acq_rel
-    default: return llvm::AtomicOrdering::SequentiallyConsistent; // seq_cst
+    case mo_relaxed: return llvm::AtomicOrdering::Monotonic;
+    case mo_acquire: return llvm::AtomicOrdering::Acquire;
+    case mo_release: return llvm::AtomicOrdering::Release;
+    case mo_acq_rel: return llvm::AtomicOrdering::AcquireRelease;
+    case mo_seq_cst:
+    default:         return llvm::AtomicOrdering::SequentiallyConsistent;
     }
 }
 
-// `op` is an `AtomicRmwOp` enum ordinal (declaration order: xchg, add, sub, band, nand, bor,
-// bxor, max, min, umax, umin).
+// Weak enum mirroring builtin.gh.inc
+enum atomic_rmw_op_t : u8 {
+    rmw_xchg = 0,
+    rmw_add  = 1,
+    rmw_sub  = 2,
+    rmw_band = 3,
+    rmw_nand = 4,
+    rmw_bor  = 5,
+    rmw_bxor = 6,
+    rmw_max  = 7,
+    rmw_min  = 8,
+    rmw_umax = 9,
+    rmw_umin = 10,
+};
+
+// `op` is an `AtomicRmwOp` enum ordinal
 [[nodiscard]] auto to_llvm_rmw_op(u8 op) noexcept -> llvm::AtomicRMWInst::BinOp {
     using Op = llvm::AtomicRMWInst::BinOp;
     switch (op) {
-    case 0:  return Op::Xchg;
-    case 1:  return Op::Add;
-    case 2:  return Op::Sub;
-    case 3:  return Op::And;
-    case 4:  return Op::Nand;
-    case 5:  return Op::Or;
-    case 6:  return Op::Xor;
-    case 7:  return Op::Max;
-    case 8:  return Op::Min;
-    case 9:  return Op::UMax;
-    default: return Op::UMin;
+    case rmw_xchg: return Op::Xchg;
+    case rmw_add:  return Op::Add;
+    case rmw_sub:  return Op::Sub;
+    case rmw_band: return Op::And;
+    case rmw_nand: return Op::Nand;
+    case rmw_bor:  return Op::Or;
+    case rmw_bxor: return Op::Xor;
+    case rmw_max:  return Op::Max;
+    case rmw_min:  return Op::Min;
+    case rmw_umax: return Op::UMax;
+    case rmw_umin:
+    default:       return Op::UMin;
     }
 }
 

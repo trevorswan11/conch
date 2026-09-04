@@ -223,10 +223,7 @@ auto inject_functions(symbol_table& prelude, type_pool& pool) -> void {
     inject_function(bis::VERIFY, params(t_bool, t_c_str), t_void);
     inject_function(bis::DYN_CAST, params(t_type, t_auto), t_auto);
 
-    // `order`/`op`/`succ_order`/`fail_order` are declared `auto` here (the `MemoryOrder` /
-    // `AtomicRmwOp` prelude enums aren't resolved until `inject_builtin_module`, which runs
-    // after this); `resolve_builtin_call` computes the real per-call-site types and validates
-    // the enum arguments directly.
+    // Prelude enums aren't resolved until `inject_builtin_module` runs so use auto here
     inject_function(bis::ATOMIC_LOAD, params(t_type, t_auto, t_auto), t_auto);
     inject_function(bis::ATOMIC_STORE, params(t_auto, t_auto, t_auto), t_void);
     inject_function(bis::ATOMIC_RMW, params(t_type, t_auto, t_auto, t_auto, t_auto), t_auto);
