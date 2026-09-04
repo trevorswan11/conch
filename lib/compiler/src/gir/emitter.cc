@@ -1780,6 +1780,7 @@ auto emitter::emit_unary(ast::node_id id, const ast::unary_expr& unary) -> value
     ASSERT(kind_opt, "Unary operator must be mapped to instruction kind");
     ASSERT(sema_type, "Unary expression must have a resolved sema type");
 
+    if (const auto cv{const_eval_.try_eval(id)}) { return cv->to_gir_value(); }
     const auto operand{emit_expression(unary.rhs)};
     if (op_type == syntax::token_type_t::BANG && operand.type &&
         operand.type->get_kind() == sema::type_kind::POINTER) {
